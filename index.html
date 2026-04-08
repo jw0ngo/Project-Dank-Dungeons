@@ -2262,8 +2262,36 @@ function eNearestTarget(e, idx){
   if(e._tgtTimer<=0||!e._tgt||e._tgt.dead){
     e._tgt=mpNearestTarget(e.wx,e.wy);
     e._tgtTimer=12+((idx*7)%8); // 12-19 frames, staggered
+    return e._tgt;
+  }
+  // Also refresh early if a remote player is now significantly closer than the cached target.
+  // This ensures joining players activate enemies even while the cache is still warm.
+  if(MP.active && Object.keys(MP.players).length > 0){
+    const cachedD = Math.hypot(e.wx-e._tgt.wx, e.wy-e._tgt.wy);
+    for(const p of Object.values(MP.players)){
+      if(p.wx==null||p.dead) continue;
+      if(Math.hypot(e.wx-p.wx,e.wy-p.wy) < cachedD - 48){ // 2 tiles closer = refresh
+        e._tgt=mpNearestTarget(e.wx,e.wy);
+        e._tgtTimer=12+((idx*7)%8);
+        break;
+      }
+    }
   }
   return e._tgt;
+}
+
+// Returns true if any player (local or remote) is within `range` px of (ex,ey).
+// Used for activation checks — bypasses the target cache so joining players
+// activate enemies independently of who the enemy is currently chasing.
+function eAnyPlayerNear(ex, ey, range) {
+  if (gPlayer && !gPlayer.dead && Math.hypot(ex-gPlayer.wx, ey-gPlayer.wy) < range) return true;
+  if (MP.active) {
+    for (const p of Object.values(MP.players)) {
+      if (p.wx==null || p.dead) continue;
+      if (Math.hypot(ex-p.wx, ey-p.wy) < range) return true;
+    }
+  }
+  return false;
 }
 
 function gUpdateEnemies(){
@@ -2279,7 +2307,7 @@ function gUpdateEnemies(){
     const d=Math.hypot(e.wx-tgt.wx,e.wy-tgt.wy);
     e.angle=Math.atan2(tgt.wy-e.wy,tgt.wx-e.wx);
     const STOP=(tgt.r||11)+e.r+14;
-    if(d<300){
+    if(eAnyPlayerNear(e.wx,e.wy,300)){
       e.activated=true;
       if(d>STOP){
         e.pathTimer--;
@@ -2322,7 +2350,7 @@ function gUpdateEnemies(){
     e.hitFlash=Math.max(0,e.hitFlash-1);e.attackCooldown=Math.max(0,e.attackCooldown-1);e.vx*=.78;e.vy*=.78;
     const tgt=eNearestTarget(e,_ai);
     const d=Math.hypot(e.wx-tgt.wx,e.wy-tgt.wy);
-    if(d<EntityDefs.archer.arrowRange+20){
+    if(eAnyPlayerNear(e.wx,e.wy,EntityDefs.archer.arrowRange+20)){
       e.activated=true;
       // Only compute angle when in range — saves atan2 cost for distant archers
       e.angle=Math.atan2(tgt.wy-e.wy,tgt.wx-e.wx);
