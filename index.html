@@ -1587,7 +1587,7 @@ function gUpdateArrows(){
         if(d.broken)continue;
         if(Math.hypot(a.wx-d.wx,a.wy-d.wy)<d.r+4){
           spawnGP(d.wx,d.wy,'#c89050',3,2);
-          gMaybeDropPotion(d.wx,d.wy);gArrows.splice(i,1);hitD=true;killed=true;break;
+          gMaybeDropPotion(d.wx,d.wy);mpSyncDestructibles();mpSyncPotions();gArrows.splice(i,1);hitD=true;killed=true;break;
         }
       }
       if(hitD)break;
@@ -1877,15 +1877,25 @@ function gCheckHits(p){
   // Send hit report to host
   if(pendingHits.length) Net.sendHits(pendingHits);
 
-  // Destructibles — safe to apply locally on all peers (pure cosmetic, no enemy sync needed)
+  // Destructibles — host/SP applies directly; client reports to host via hits channel
   for(const d of gDestructibles){
     if(d.broken||p.hitRegistry.has(d))continue;
     const pts=[[d.wx,d.wy],[d.wx+d.r,d.wy],[d.wx-d.r,d.wy],[d.wx,d.wy+d.r],[d.wx,d.wy-d.r]];
     if(!pts.some(([ex,ey])=>pInArc(smr,ex,ey)))continue;
-    p.hitRegistry.add(d);d.hp--;
-    if(d.hp<=0){d.broken=true;d.breakAnim=20;gPlayWoodBreak();spawnGP(d.wx,d.wy,'#c89050',10,3);gMaybeDropPotion(d.wx,d.wy);gRebuildNav();for(const e of gEnemies){e.path=null;e.pathTimer=0;}}
-    else{gPlayWoodHit();spawnGP(d.wx,d.wy,'#c89050',5,2);}
-    anyHit=true;
+    p.hitRegistry.add(d); anyHit=true;
+    if(MP.active&&!MP.isHost){
+      // Client: send break report — host applies authoritatively and syncs to all
+      const dIdx=gDestructibles.indexOf(d);
+      Net.sendHits([{destructIdx:dIdx}]);
+      // Apply visuals immediately for responsive feel
+      d.hp--; if(d.hp<=0){d.broken=true;d.breakAnim=20;}
+      gPlayWoodHit();spawnGP(d.wx,d.wy,'#c89050',5,2);
+    } else {
+      // Host or singleplayer: apply directly
+      d.hp--;
+      if(d.hp<=0){d.broken=true;d.breakAnim=20;gPlayWoodBreak();spawnGP(d.wx,d.wy,'#c89050',10,3);gMaybeDropPotion(d.wx,d.wy);mpSyncDestructibles();mpSyncPotions();gRebuildNav();for(const e of gEnemies){e.path=null;e.pathTimer=0;}}
+      else{gPlayWoodHit();spawnGP(d.wx,d.wy,'#c89050',5,2);}
+    }
   }
   if(anyHit&&p.freezeUntil===0)p.freezeUntil=performance.now()+40;
 }
@@ -1950,9 +1960,20 @@ function gUpdateWhirlwind(p){
       spawnGP(t.wx,t.wy,'#ff6622',10,4);addGDmg(t.wx,t.wy-16,wwDmg,'#ffcc44');
       gPlayHit();p.freezeUntil=performance.now()+40;
     } else {
-      t.hp=0;t.broken=true;t.breakAnim=20;gPlayWoodBreak();
-      spawnGP(t.wx,t.wy,'#c89050',14,4);spawnGP(t.wx,t.wy,'#ffcc88',6,3);
-      gMaybeDropPotion(t.wx,t.wy);gRebuildNav();for(const e of gEnemies){e.path=null;e.pathTimer=0;}
+      // Destructible hit by whirlwind
+      if (MP.active && !MP.isHost) {
+        // Client: report to host and apply visuals only
+        const dIdx = gDestructibles.indexOf(t);
+        if (dIdx >= 0) Net.sendHits([{destructIdx: dIdx}]);
+        t.broken = true; t.breakAnim = 20;
+        gPlayWoodBreak(); spawnGP(t.wx,t.wy,'#c89050',14,4);
+      } else {
+        // Host or singleplayer: apply directly
+        t.hp=0;t.broken=true;t.breakAnim=20;gPlayWoodBreak();
+        spawnGP(t.wx,t.wy,'#c89050',14,4);spawnGP(t.wx,t.wy,'#ffcc88',6,3);
+        gMaybeDropPotion(t.wx,t.wy);mpSyncDestructibles();mpSyncPotions();
+        gRebuildNav();for(const e of gEnemies){e.path=null;e.pathTimer=0;}
+      }
       p.freezeUntil=performance.now()+40;
     }
   }
@@ -2075,16 +2096,18 @@ function gUpdateTraps(){
       }
     }
 
-    // ── Beam vs destructibles ─────────────────────────────────
-    for(const d of gDestructibles){
-      if(d.broken) continue;
-      for(const b of trap.beams){
-        if(Math.hypot(d.wx-b.wx,d.wy-b.wy)<d.r+T*0.45){
-          d.hp=0; d.broken=true; d.breakAnim=20;
-          gPlayWoodBreak();
-          spawnGP(d.wx,d.wy,'#c89050',12,4);
-          gMaybeDropPotion(d.wx,d.wy);gRebuildNav();
-          break;
+    // ── Beam vs destructibles (host-only — synced to clients via mpSyncDestructibles) ──
+    if (!MP.active || MP.isHost) {
+      for(const d of gDestructibles){
+        if(d.broken) continue;
+        for(const b of trap.beams){
+          if(Math.hypot(d.wx-b.wx,d.wy-b.wy)<d.r+T*0.45){
+            d.hp=0; d.broken=true; d.breakAnim=20;
+            gPlayWoodBreak();
+            spawnGP(d.wx,d.wy,'#c89050',12,4);
+            gMaybeDropPotion(d.wx,d.wy);mpSyncDestructibles();mpSyncPotions();gRebuildNav();
+            break;
+          }
         }
       }
     }
@@ -2184,6 +2207,7 @@ function gUpdatePotions() {
       addGDmg(gPlayer.wx, gPlayer.wy - 20, '+' + heal, '#ff6666');
       spawnGP(gPlayer.wx, gPlayer.wy, '#ff4444', 10, 2.5);
       gPotions.splice(i, 1);
+      mpSyncPotions();
       continue;
     }
     // In MP, also check remote players (host removes potion; client sees it disappear next sync)
@@ -2193,6 +2217,7 @@ function gUpdatePotions() {
         if (Math.hypot(p.wx - pot.wx, p.wy - pot.wy) < POTION_RADIUS + 11) {
           // Remote player picks it up — remove on host; client HP handled by sendInput packet
           gPotions.splice(i, 1);
+          mpSyncPotions();
           break;
         }
       }
@@ -2765,8 +2790,9 @@ function mpGenCode(){
 }
 
 
-let _prevEnemyState = [];
-let _prevArrowState = [];
+let _prevEnemyState    = [];
+let _prevArrowState    = [];
+// _prevDestructState and _prevPotionState removed — event-driven sync needs no prev state
 
 // ── §7.2  Net adapter (Firebase) ────────────────────────────────
 const Net = {
@@ -2796,13 +2822,30 @@ const Net = {
     Net._on(hitsRef, 'child_added', (snap) => {
       const hits = snap.val();
       if (!hits || !Array.isArray(hits)) return;
-      hits.forEach(({idx, dmg}) => {
-        const e = gEnemies[idx];
-        if (!e || e.dead) return;
-        e.hp -= dmg;
-        e.hitFlash = 12;
-        if (e.hp <= 0) { e.dead = true; }
+      let destructChanged = false;
+      hits.forEach(hit => {
+        if (hit.destructIdx !== undefined) {
+          // Destructible break report from a client
+          const d = gDestructibles[hit.destructIdx];
+          if (!d || d.broken) return;
+          d.hp--;
+          if (d.hp <= 0) {
+            d.broken = true; d.breakAnim = 20;
+            gPlayWoodBreak(); spawnGP(d.wx, d.wy, '#c89050', 10, 3);
+            gMaybeDropPotion(d.wx, d.wy);
+            gRebuildNav(); for(const e of gEnemies){e.path=null;e.pathTimer=0;}
+            destructChanged = true;
+          }
+        } else {
+          // Enemy damage report from a client
+          const e = gEnemies[hit.idx];
+          if (!e || e.dead) return;
+          e.hp -= hit.dmg;
+          e.hitFlash = 12;
+          if (e.hp <= 0) { e.dead = true; }
+        }
       });
+      if (destructChanged) { mpSyncDestructibles(); mpSyncPotions(); }
       // Acknowledge — clear the hit report so it doesn't re-fire
       snap.ref.remove();
     });
@@ -2853,7 +2896,11 @@ const Net = {
     Net._on(playersRef, 'child_changed', Net._onPlayerChanged);
     Net._on(playersRef, 'child_removed', Net._onPlayerRemoved);
 
-    Net._on(db.ref(`rooms/${roomId}/world`), 'value', Net._onWorldUpdate);
+    // Four independent listeners — each system owns its own path and handler
+    Net._on(db.ref(`rooms/${roomId}/world/enemies`),       'value', Net._onEnemiesUpdate);
+    Net._on(db.ref(`rooms/${roomId}/world/arrows`),        'value', Net._onArrowsUpdate);
+    Net._on(db.ref(`rooms/${roomId}/world/destructibles`), 'value', Net._onDestructiblesUpdate);
+    Net._on(db.ref(`rooms/${roomId}/world/potions`),       'value', Net._onPotionsUpdate);
 
     // Client: listen for custom sprites from all players
     Net._on(db.ref(`rooms/${roomId}/sprites`), 'child_added', (snap) => {
@@ -2976,12 +3023,16 @@ const Net = {
   /** Client: report sword/ww hits to host so it can apply them authoritatively */
   sendHits(hits) {
     if (!MP.active || MP.isHost || !window._FB || !hits.length) return;
+    // push() gives each report a unique key — guarantees child_added fires every time.
+    // set() on the same key only fires child_added once then child_changed,
+    // which would require a second listener and risks reports overwriting each other.
     window._FB.db
-      .ref(`rooms/${MP.roomId}/hits/${MP.localId}`)
-      .set(hits);
+      .ref(`rooms/${MP.roomId}/hits`)
+      .push(hits);
   },
 
-  sendWorld() {
+  /** §7.2a  Stream: enemy positions + state (8 hz, delta-compressed) */
+  sendEnemies() {
     if (!MP.active || !MP.isHost || !window._FB) return;
     if (MP.sendTick % Math.round(60 / MP_ENEMY_HZ) !== 0) return;
 
@@ -2990,29 +3041,34 @@ const Net = {
       wy:   Math.round(e.wy),
       hp:   e.hp,
       dead: !!e.dead,
-      // Include attackCooldown so clients can do accurate hit timing
       attackCooldown: e.attackCooldown||0,
       hitFlash: e.hitFlash||0,
     }));
 
-    // Delta: only write if something changed beyond the threshold
+    // Delta — only write when something meaningful changed
     let changed = snapshot.length !== _prevEnemyState.length;
     if (!changed) {
       for (let i = 0; i < snapshot.length; i++) {
-        const p = _prevEnemyState[i];
-        const n = snapshot[i];
+        const p = _prevEnemyState[i], n = snapshot[i];
         if (!p ||
             Math.abs(n.wx - p.wx) > MP_ENEMY_DELTA ||
             Math.abs(n.wy - p.wy) > MP_ENEMY_DELTA ||
-            n.hp   !== p.hp ||
-            n.dead !== p.dead) {
+            n.hp !== p.hp || n.dead !== p.dead) {
           changed = true; break;
         }
       }
     }
+    if (!changed) return;
+    _prevEnemyState = snapshot;
+    window._FB.db.ref(`rooms/${MP.roomId}/world/enemies`).set(snapshot);
+  },
 
-    // Also sync arrows — filter out any malformed arrows before serialising
-    const arrowSnapshot = gArrows
+  /** §7.2b  Stream: arrow positions + physics (8 hz) */
+  sendArrows() {
+    if (!MP.active || !MP.isHost || !window._FB) return;
+    if (MP.sendTick % Math.round(60 / MP_ENEMY_HZ) !== 0) return;
+
+    const snapshot = gArrows
       .filter(a => Number.isFinite(a.wx) && Number.isFinite(a.wy) &&
                    Number.isFinite(a.vx) && Number.isFinite(a.vy) &&
                    Number.isFinite(a.angle) && Number.isFinite(a.life))
@@ -3021,20 +3077,10 @@ const Net = {
         vx: +a.vx.toFixed(2), vy: +a.vy.toFixed(2),
         angle: +a.angle.toFixed(3), life: a.life,
       }));
-    const arrowsChanged = JSON.stringify(arrowSnapshot) !== JSON.stringify(_prevArrowState);
-
-    if (!changed && !arrowsChanged) return;
-    if (changed) _prevEnemyState = snapshot;
-    if (arrowsChanged) _prevArrowState = arrowSnapshot;
-
-    const potionSnapshot = gPotions.map(p => ({
-      wx: Math.round(p.wx), wy: Math.round(p.wy)
-    }));
-    window._FB.db.ref(`rooms/${MP.roomId}/world`).set({
-      enemies: snapshot,
-      arrows:  arrowSnapshot,
-      potions: potionSnapshot,
-    });
+    const changed = JSON.stringify(snapshot) !== JSON.stringify(_prevArrowState);
+    if (!changed) return;
+    _prevArrowState = snapshot;
+    window._FB.db.ref(`rooms/${MP.roomId}/world/arrows`).set(snapshot);
   },
 
   // ── Receive handlers ──────────────────────────────────────────
@@ -3103,81 +3149,82 @@ const Net = {
     mpUpdateHUD();
   },
 
-  _onWorldUpdate(snap) {
+  // ── §7.2a  Receive: enemy positions + state ───────────────────
+  _onEnemiesUpdate(snap) {
     if (!MP.active || MP.isHost) return;
-    const world = snap.val();
-    if (!world) return;
-
-    // Sync enemy state — apply as many as we have slots for.
-    // Lengths may differ briefly on first frame; that's fine, just skip extras.
-    if (world.enemies) {
-      const src = world.enemies;
-      const len = Math.min(src.length, gEnemies.length);
-      for (let i = 0; i < len; i++) {
-        const e = src[i], g = gEnemies[i];
-        if (!g) continue;
-        // Detect transitions for client-side visual effects
-        const wasAlive = !g.dead;
-        const hadNoFlash = (g.hitFlash||0) === 0;
-        const prevHp = g.hp;
-        // Store authoritative position as interpolation target (smooth movement)
-        g._tx = e.wx; g._ty = e.wy;
-        // Snap immediately on first update or when dead (no point lerping a corpse)
-        if (g.wx === undefined || g.dead || !!e.dead) { g.wx = e.wx; g.wy = e.wy; }
-        g.hp             = e.hp;
-        g.dead           = !!e.dead;
-        g.attackCooldown = e.attackCooldown || 0;
-        g.hitFlash       = e.hitFlash || 0;
-        // Spawn hit particles when enemy takes damage (hitFlash just turned on)
-        if (hadNoFlash && g.hitFlash > 0 && wasAlive) {
-          const dmg = prevHp - g.hp;
-          if (dmg > 0) addGDmg(g.wx, g.wy-16, dmg, '#fff');
-          spawnGP(g.wx, g.wy, '#ff4444', 6, 3);
-          gShake(3, 5);
-          gPlayHit();
-        }
-        // Spawn death particles when enemy dies
-        if (wasAlive && g.dead) {
-          spawnGP(g.wx, g.wy, '#cc2222', 18, 5);
-        }
+    const src = snap.val();
+    if (!src) return;
+    const len = Math.min(src.length, gEnemies.length);
+    for (let i = 0; i < len; i++) {
+      const e = src[i], g = gEnemies[i];
+      if (!g) continue;
+      const wasAlive  = !g.dead;
+      const hadNoFlash = (g.hitFlash||0) === 0;
+      const prevHp    = g.hp;
+      g._tx = e.wx; g._ty = e.wy;
+      if (g.wx === undefined || g.dead || !!e.dead) { g.wx = e.wx; g.wy = e.wy; }
+      g.hp             = e.hp;
+      g.dead           = !!e.dead;
+      g.attackCooldown = e.attackCooldown || 0;
+      g.hitFlash       = e.hitFlash || 0;
+      if (hadNoFlash && g.hitFlash > 0 && wasAlive) {
+        const dmg = prevHp - g.hp;
+        if (dmg > 0) addGDmg(g.wx, g.wy-16, dmg, '#fff');
+        spawnGP(g.wx, g.wy, '#ff4444', 6, 3);
+        gShake(3, 5); gPlayHit();
       }
-    }
-
-    // Sync potion positions from host
-    if (world.potions) {
-      gPotions.length = 0;
-      world.potions.forEach(p => {
-        if (Number.isFinite(p.wx) && Number.isFinite(p.wy))
-          gPotions.push({wx:p.wx, wy:p.wy, pulse:Math.random()*Math.PI*2});
-      });
-    } else {
-      gPotions.length = 0;
-    }
-
-    // Trap on/off is derived from gFrame locally — no sync needed
-    // (see gUpdateTraps: trap.on = ((gFrame + phaseOffset) % FIRE_PERIOD) < FIRE_HALF)
-
-    // Sync arrows — snap count and physics from host, preserve local extrapolation
-    if (world.arrows) {
-      // Match array length to host
-      while (gArrows.length > world.arrows.length) gArrows.pop();
-      world.arrows.forEach((a, i) => {
-        // Validate each field — skip malformed arrows entirely
-        if (!Number.isFinite(a.wx) || !Number.isFinite(a.wy) ||
-            !Number.isFinite(a.vx) || !Number.isFinite(a.vy) ||
-            !Number.isFinite(a.angle) || !Number.isFinite(a.life)) return;
-        if (gArrows[i]) {
-          gArrows[i].wx = a.wx; gArrows[i].wy = a.wy;
-          gArrows[i].vx = a.vx; gArrows[i].vy = a.vy;
-          gArrows[i].angle = a.angle; gArrows[i].life = a.life;
-        } else {
-          gArrows.push({wx:a.wx, wy:a.wy, vx:a.vx, vy:a.vy, angle:a.angle, life:a.life});
-        }
-      });
-    } else {
-      gArrows.length = 0;
+      if (wasAlive && g.dead) spawnGP(g.wx, g.wy, '#cc2222', 18, 5);
     }
   },
+
+  // ── §7.2b  Receive: arrow positions + physics ─────────────────
+  _onArrowsUpdate(snap) {
+    if (!MP.active || MP.isHost) return;
+    const src = snap.val();
+    if (!src) { gArrows.length = 0; return; }
+    while (gArrows.length > src.length) gArrows.pop();
+    src.forEach((a, i) => {
+      if (!Number.isFinite(a.wx) || !Number.isFinite(a.wy) ||
+          !Number.isFinite(a.vx) || !Number.isFinite(a.vy) ||
+          !Number.isFinite(a.angle) || !Number.isFinite(a.life)) return;
+      if (gArrows[i]) {
+        gArrows[i].wx = a.wx; gArrows[i].wy = a.wy;
+        gArrows[i].vx = a.vx; gArrows[i].vy = a.vy;
+        gArrows[i].angle = a.angle; gArrows[i].life = a.life;
+      } else {
+        gArrows.push({wx:a.wx, wy:a.wy, vx:a.vx, vy:a.vy, angle:a.angle, life:a.life});
+      }
+    });
+  },
+
+  // ── §7.2c  Receive: destructible broken state (event-driven) ──
+  _onDestructiblesUpdate(snap) {
+    if (!MP.active || MP.isHost) return;
+    const src = snap.val();
+    if (!src || !Array.isArray(src)) return;
+    src.forEach((broken, i) => {
+      const d = gDestructibles[i];
+      if (!d || !broken || d.broken) return;
+      d.broken = true; d.breakAnim = 20;
+      spawnGP(d.wx, d.wy, '#c89050', 10, 3);
+      gRebuildNav();
+    });
+  },
+
+  // ── §7.2d  Receive: potion positions (event-driven) ───────────
+  _onPotionsUpdate(snap) {
+    if (!MP.active || MP.isHost) return;
+    const src = snap.val();
+    gPotions.length = 0;
+    if (!src) return;
+    src.forEach(p => {
+      if (Number.isFinite(p.wx) && Number.isFinite(p.wy))
+        gPotions.push({wx:p.wx, wy:p.wy, pulse:Math.random()*Math.PI*2});
+    });
+  },
+
+  // Trap on/off is derived from gFrame locally — no sync needed
+  // (see gUpdateTraps: trap.on = ((gFrame + phaseOffset) % FIRE_PERIOD) < FIRE_HALF)
 
   // ── Listener management ───────────────────────────────────────
 
@@ -3322,7 +3369,24 @@ function _mpClientStart(room){
 // Called every frame from startGameLoop() when MP.active === true
 function mpTick(){
   Net.sendInput();
-  Net.sendWorld();
+  Net.sendEnemies();
+  Net.sendArrows();
+}
+
+/** Event-driven: call whenever a destructible breaks. Host-only. */
+function mpSyncDestructibles() {
+  if (!MP.active || !MP.isHost || !window._FB) return;
+  window._FB.db
+    .ref(`rooms/${MP.roomId}/world/destructibles`)
+    .set(gDestructibles.map(d => d.broken ? 1 : 0));
+}
+
+/** Event-driven: call whenever a potion spawns or is picked up. Host-only. */
+function mpSyncPotions() {
+  if (!MP.active || !MP.isHost || !window._FB) return;
+  window._FB.db
+    .ref(`rooms/${MP.roomId}/world/potions`)
+    .set(gPotions.map(p => ({wx: Math.round(p.wx), wy: Math.round(p.wy)})));
 }
 
 // ── Remote player interpolation ─────────────────────────────────
