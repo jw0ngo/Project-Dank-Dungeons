@@ -1318,7 +1318,7 @@ let gBlocked = new Uint8Array(1);
 function gCI(cx,cy){return cy*gMapW+cx;}
 function ghp(h,n){h.push(n);let i=h.length-1;while(i>0){const p=(i-1)>>1;if(h[p].f<=h[i].f)break;const t=h[p];h[p]=h[i];h[i]=t;i=p;}}
 function gpp(h){const top=h[0];const last=h.pop();if(h.length){h[0]=last;let i=0;for(;;){let s=i;const l=2*i+1,r=2*i+2,n=h.length;if(l<n&&h[l].f<h[s].f)s=l;if(r<n&&h[r].f<h[s].f)s=r;if(s===i)break;const t=h[s];h[s]=h[i];h[i]=t;i=s;}}return top;}
-function gRebuildNav(){gBlocked=new Uint8Array(gMapW*gMapH);for(let i=0;i<gMapW*gMapH;i++)gBlocked[i]=gTiles[i]===TILE_WALL?1:0;for(const d of gDestructibles){if(!d.broken)gBlocked[Math.floor(d.wy/T)*gMapW+Math.floor(d.wx/T)]=1;}}
+function gRebuildNav(){gBlocked=new Uint8Array(gMapW*gMapH);for(let i=0;i<gMapW*gMapH;i++)gBlocked[i]=gTiles[i]===TILE_WALL?1:0;for(const d of gDestructibles){if(!d.broken)gBlocked[Math.floor(d.wy/T)*gMapW+Math.floor(d.wx/T)]=1;}for(const t of gTraps){gBlocked[t.ty*gMapW+t.tx]=1;}}
 function gAstar(sx,sy,gx,gy){
   let scx=Math.max(0,Math.min(gMapW-1,Math.floor(sx/T))),scy=Math.max(0,Math.min(gMapH-1,Math.floor(sy/T)));
   let gcx=Math.max(0,Math.min(gMapW-1,Math.floor(gx/T))),gcy=Math.max(0,Math.min(gMapH-1,Math.floor(gy/T)));
@@ -1340,6 +1340,19 @@ function gRCDestructibles(wx,wy,r){
     const minDist=r+d.r;
     if(dd<minDist&&dd>0.001){
       const nx=(x-d.wx)/dd,ny=(y-d.wy)/dd;
+      x+=nx*(minDist-dd+0.5);
+      y+=ny*(minDist-dd+0.5);
+    }
+  }
+  return[x,y];
+}
+function gRCTraps(wx,wy,r){
+  let x=wx,y=wy;
+  for(const t of gTraps){
+    const dd=Math.hypot(x-t.wx,y-t.wy);
+    const minDist=r+10; // trap radius matches visual stone base (~10px)
+    if(dd<minDist&&dd>0.001){
+      const nx=(x-t.wx)/dd,ny=(y-t.wy)/dd;
       x+=nx*(minDist-dd+0.5);
       y+=ny*(minDist-dd+0.5);
     }
@@ -1935,6 +1948,7 @@ function gUpdateWhirlwind(p){
   p.wy+=Math.sin(ww.angle)*step;
   let[rx,ry]=gRC(p.wx,p.wy,p.r);
   [rx,ry]=gRCDestructibles(rx,ry,p.r);
+  [rx,ry]=gRCTraps(rx,ry,p.r);
   p.wx=rx;p.wy=ry;
   ww.traveled+=step;
   ww.spinAngle+=0.18;
@@ -2001,7 +2015,7 @@ function gUpdatePlayer(){
   }
   const csm=(p.charging||p.swinging)?0.4:1.0;
   p.wx+=dx*p.speed*csm;p.wy+=dy*p.speed*csm;
-  let[rx,ry]=gRC(p.wx,p.wy,p.r);[rx,ry]=gRCDestructibles(rx,ry,p.r);p.wx=rx;p.wy=ry;
+  let[rx,ry]=gRC(p.wx,p.wy,p.r);[rx,ry]=gRCDestructibles(rx,ry,p.r);[rx,ry]=gRCTraps(rx,ry,p.r);p.wx=rx;p.wy=ry;
   if(p.moving){p.walkTimer++;if(p.walkTimer%8===0){p.walkFrame=(p.walkFrame+1)%4;if(p.walkFrame===1||p.walkFrame===3)gPlayStep();}p.stepTimer++;}else{p.walkFrame=0;p.walkTimer=0;}
   if(p.swinging){p.swingTimer++;if(p.smear){p.smear.cx=p.wx;p.smear.cy=p.wy;p.smear.sweepEnd=p.swingStartAngle+(p.swingEndAngle-p.swingStartAngle)*easeSwing(p.swingTimer/W().swingDur);}gCheckHits(p);if(p.swingTimer>=W().swingDur){p.swinging=false;p.swingCooldown=W().swingCd;if(p.smear)p.smear.fading=true;p._chargeDmg=null;}}
   if(p.smear&&p.smear.fading){p.smear.life-=.1;if(p.smear.life<=0)p.smear=null;}
@@ -2339,7 +2353,7 @@ function gUpdateEnemies(){
       gPlayGrunt();if(gPlayer.hp<=0)gPlayer.dead=true;
     }
     e.wx+=e.vx;e.wy+=e.vy;
-    let[ex2,ey2]=gRC(e.wx,e.wy,e.r);[ex2,ey2]=gRCDestructibles(ex2,ey2,e.r);e.wx=ex2;e.wy=ey2;
+    let[ex2,ey2]=gRC(e.wx,e.wy,e.r);[ex2,ey2]=gRCDestructibles(ex2,ey2,e.r);[ex2,ey2]=gRCTraps(ex2,ey2,e.r);e.wx=ex2;e.wy=ey2;
   }
 
   // Archer AI + arrow update
@@ -2369,7 +2383,7 @@ function gUpdateEnemies(){
       if(e.activated){e.patrolTimer++;if(e.patrolTimer>80){e.patrolAngle+=(Math.random()-.5)*1.2;e.patrolTimer=0;}e.vx+=Math.cos(e.patrolAngle)*.15;e.vy+=Math.sin(e.patrolAngle)*.15;}
     }
     e.wx+=e.vx;e.wy+=e.vy;
-    const[ex2,ey2]=gRC(e.wx,e.wy,e.r);e.wx=ex2;e.wy=ey2;
+    let[ex2,ey2]=gRC(e.wx,e.wy,e.r);[ex2,ey2]=gRCDestructibles(ex2,ey2,e.r);[ex2,ey2]=gRCTraps(ex2,ey2,e.r);e.wx=ex2;e.wy=ey2;
   }
 
   // Separate enemies from local player and each other
