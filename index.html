@@ -715,6 +715,7 @@ function newMapConfirm() {
   currentMapData = m;
   editorLoad(m);
   showScreen('editor');
+  edCentreView();
 }
 
 function newMapCancel() {
@@ -727,6 +728,7 @@ function editMapById(id) {
   currentMapData = m;
   editorLoad(m);
   showScreen('editor');
+  edCentreView();
 }
 
 function playMapById(id) {
@@ -753,7 +755,7 @@ function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(name).classList.add('active');
   if (name === 'hub') refreshHub();
-  if (name === 'editor') { edResizeCanvas(); editorRender(); document.getElementById('ed-canvas').focus(); }
+  if (name === 'editor') { document.getElementById('ed-canvas').focus(); }
   if (name === 'game') { startGameLoop(); document.getElementById('gc').focus(); }
   if (name === 'cc-screen') { ccInit(); }
 }
@@ -1153,10 +1155,18 @@ function editorLoad(mapData) {
   document.getElementById('ed-name').value = mapData.name || 'Dungeon';
   document.getElementById('ed-w').value = edMapW;
   document.getElementById('ed-h').value = edMapH;
+  // Centring is deferred to edCentreView(), called after the screen is visible
+}
+
+// Centre and fit the map in the editor viewport.
+// Must be called after the editor screen is visible so canvas has real dimensions.
+function edCentreView() {
   edResizeCanvas();
   edZoom = Math.min(1.8, Math.min(edCanvas.width / (edMapW*T), edCanvas.height / (edMapH*T)) * 0.9);
-  edPanX = (edCanvas.width - edMapW*T*edZoom) / 2;
-  edPanY = (edCanvas.height - edMapH*T*edZoom) / 2;
+  edPanX = (edCanvas.width  - edMapW * T * edZoom) / 2;
+  edPanY = (edCanvas.height - edMapH * T * edZoom) / 2;
+  document.getElementById('ed-zoom').textContent = Math.round(edZoom*100) + '%';
+  editorRender();
 }
 
 function edResize() {
@@ -1208,7 +1218,7 @@ let gMapW=80, gMapH=36;
 let gTiles = new Uint8Array(gMapW*gMapH).fill(TILE_WALL);
 let gEntsRaw = [];
 let camX=0, camY=0;
-let gDestructibles=[], gEnemies=[], gTorches=[], gArrows=[], gTraps=[];
+let gDestructibles=[], gEnemies=[], gTorches=[], gArrows=[], gTraps=[], gPotions=[];
 let gPlayer=null;
 let gLoopId=null;
 let gFrame=0, gLastTS=0, exitReached=false;
@@ -1577,7 +1587,7 @@ function gUpdateArrows(){
         if(d.broken)continue;
         if(Math.hypot(a.wx-d.wx,a.wy-d.wy)<d.r+4){
           spawnGP(d.wx,d.wy,'#c89050',3,2);
-          gArrows.splice(i,1);hitD=true;killed=true;break;
+          gMaybeDropPotion(d.wx,d.wy);gArrows.splice(i,1);hitD=true;killed=true;break;
         }
       }
       if(hitD)break;
@@ -1606,7 +1616,7 @@ function gameLoad(mapData) {
   gMapW=mapData.width; gMapH=mapData.height;
   gTiles = tilesFromRows(mapData.rows, gMapW, gMapH);
   gEntsRaw = JSON.parse(JSON.stringify(mapData.entities || []));
-  gDestructibles=[]; gEnemies=[]; gTorches=[]; gArrows=[]; gTraps=[];
+  gDestructibles=[]; gEnemies=[]; gTorches=[]; gArrows=[]; gTraps=[]; gPotions=[];
   exitReached=false; gPaused=false;
   gParticles.length=0; gDmgNums.length=0;
   gShakeX=0;gShakeY=0;gShakeDur=0;camX=0;camY=0;
@@ -1873,7 +1883,7 @@ function gCheckHits(p){
     const pts=[[d.wx,d.wy],[d.wx+d.r,d.wy],[d.wx-d.r,d.wy],[d.wx,d.wy+d.r],[d.wx,d.wy-d.r]];
     if(!pts.some(([ex,ey])=>pInArc(smr,ex,ey)))continue;
     p.hitRegistry.add(d);d.hp--;
-    if(d.hp<=0){d.broken=true;d.breakAnim=20;gPlayWoodBreak();spawnGP(d.wx,d.wy,'#c89050',10,3);gRebuildNav();for(const e of gEnemies){e.path=null;e.pathTimer=0;}}
+    if(d.hp<=0){d.broken=true;d.breakAnim=20;gPlayWoodBreak();spawnGP(d.wx,d.wy,'#c89050',10,3);gMaybeDropPotion(d.wx,d.wy);gRebuildNav();for(const e of gEnemies){e.path=null;e.pathTimer=0;}}
     else{gPlayWoodHit();spawnGP(d.wx,d.wy,'#c89050',5,2);}
     anyHit=true;
   }
@@ -1942,7 +1952,7 @@ function gUpdateWhirlwind(p){
     } else {
       t.hp=0;t.broken=true;t.breakAnim=20;gPlayWoodBreak();
       spawnGP(t.wx,t.wy,'#c89050',14,4);spawnGP(t.wx,t.wy,'#ffcc88',6,3);
-      gRebuildNav();for(const e of gEnemies){e.path=null;e.pathTimer=0;}
+      gMaybeDropPotion(t.wx,t.wy);gRebuildNav();for(const e of gEnemies){e.path=null;e.pathTimer=0;}
       p.freezeUntil=performance.now()+40;
     }
   }
@@ -2073,7 +2083,7 @@ function gUpdateTraps(){
           d.hp=0; d.broken=true; d.breakAnim=20;
           gPlayWoodBreak();
           spawnGP(d.wx,d.wy,'#c89050',12,4);
-          gRebuildNav();
+          gMaybeDropPotion(d.wx,d.wy);gRebuildNav();
           break;
         }
       }
@@ -2150,6 +2160,77 @@ function gDrawTraps(){
   }
 }
 
+
+// ── §6.3 Potions ─────────────────────────────────────────────────
+const POTION_HEAL   = 0.5;   // fraction of maxHp restored
+const POTION_RADIUS = 10;    // pickup radius px
+const POTION_DROP   = 0.10;  // 10% drop chance
+
+function gMaybeDropPotion(wx, wy) {
+  if (Math.random() < POTION_DROP) {
+    gPotions.push({wx, wy, pulse: Math.random() * Math.PI * 2});
+  }
+}
+
+function gUpdatePotions() {
+  for (let i = gPotions.length - 1; i >= 0; i--) {
+    const pot = gPotions[i];
+    pot.pulse += 0.08;
+    // Check local player
+    if (gPlayer && !gPlayer.dead &&
+        Math.hypot(gPlayer.wx - pot.wx, gPlayer.wy - pot.wy) < POTION_RADIUS + gPlayer.r) {
+      const heal = Math.round(gPlayer.maxHp * POTION_HEAL);
+      gPlayer.hp = Math.min(gPlayer.maxHp, gPlayer.hp + heal);
+      addGDmg(gPlayer.wx, gPlayer.wy - 20, '+' + heal, '#ff6666');
+      spawnGP(gPlayer.wx, gPlayer.wy, '#ff4444', 10, 2.5);
+      gPotions.splice(i, 1);
+      continue;
+    }
+    // In MP, also check remote players (host removes potion; client sees it disappear next sync)
+    if (MP.active && MP.isHost) {
+      for (const p of Object.values(MP.players)) {
+        if (p.wx == null || p.dead) continue;
+        if (Math.hypot(p.wx - pot.wx, p.wy - pot.wy) < POTION_RADIUS + 11) {
+          // Remote player picks it up — remove on host; client HP handled by sendInput packet
+          gPotions.splice(i, 1);
+          break;
+        }
+      }
+    }
+  }
+}
+
+function gDrawPotions() {
+  const now = Date.now();
+  for (const pot of gPotions) {
+    const sx = pot.wx - camX, sy = pot.wy - camY;
+    if (sx < -20 || sx > VW + 20 || sy < -20 || sy > VH + 20) continue;
+    const pulse = 0.75 + 0.25 * Math.sin(pot.pulse);
+    gctx.save();
+    gctx.translate(sx, sy);
+    // Glow
+    gctx.globalAlpha = 0.25 * pulse;
+    gctx.fillStyle = '#ff3030';
+    gctx.beginPath(); gctx.arc(0, 0, 11, 0, Math.PI * 2); gctx.fill();
+    gctx.globalAlpha = 1;
+    // Flask body
+    gctx.fillStyle = '#8b1a1a';
+    gctx.fillRect(-4, -1, 8, 7);
+    gctx.fillStyle = '#e03030';
+    gctx.fillRect(-3, 0, 6, 5);
+    // Flask neck
+    gctx.fillStyle = '#1a8040';
+    gctx.fillRect(-2, -5, 4, 4);
+    // Cork
+    gctx.fillStyle = '#8b5c2a';
+    gctx.fillRect(-2, -7, 4, 2);
+    // Shine
+    gctx.globalAlpha = 0.5;
+    gctx.fillStyle = '#ffaaaa';
+    gctx.fillRect(-2, 1, 2, 3);
+    gctx.restore();
+  }
+}
 
 function eNearestTarget(e, idx){
   e._tgtTimer--;
@@ -2432,6 +2513,7 @@ function gRender(){
   for(let ty=r0;ty<=r1;ty++)for(let tx=c0;tx<=c1;tx++)gDrawTile(tx*T-camX,ty*T-camY,T,gTiles[ty*gMapW+tx],tx,ty);
   gDrawTorches();
   gDrawTraps();
+  gDrawPotions();
   for(const d of gDestructibles)gDrawDestructible(d);
   gDrawSmear();
   // Charge cone (dungeon)
@@ -2596,6 +2678,7 @@ function startGameLoop(){
     if(gPlayer)gUpdatePlayer();
     if(gPlayer&&!gPlayer.dead&&(!MP.active||MP.isHost))gUpdateEnemies();
     if(gPlayer&&!gPlayer.dead)gUpdateTraps(); // all peers run traps — state derived from gFrame
+    if(gPlayer)gUpdatePotions();
     if(gPlayer&&!gPlayer.dead)mpCheckEnemyAttacks();
     mpInterpolateEnemies(); // smooth enemy positions on client between world syncs
     // Unified client arrow pass: extrapolation + hit detection + NaN purge
@@ -2944,9 +3027,13 @@ const Net = {
     if (changed) _prevEnemyState = snapshot;
     if (arrowsChanged) _prevArrowState = arrowSnapshot;
 
+    const potionSnapshot = gPotions.map(p => ({
+      wx: Math.round(p.wx), wy: Math.round(p.wy)
+    }));
     window._FB.db.ref(`rooms/${MP.roomId}/world`).set({
       enemies: snapshot,
       arrows:  arrowSnapshot,
+      potions: potionSnapshot,
     });
   },
 
@@ -3054,6 +3141,17 @@ const Net = {
           spawnGP(g.wx, g.wy, '#cc2222', 18, 5);
         }
       }
+    }
+
+    // Sync potion positions from host
+    if (world.potions) {
+      gPotions.length = 0;
+      world.potions.forEach(p => {
+        if (Number.isFinite(p.wx) && Number.isFinite(p.wy))
+          gPotions.push({wx:p.wx, wy:p.wy, pulse:Math.random()*Math.PI*2});
+      });
+    } else {
+      gPotions.length = 0;
     }
 
     // Trap on/off is derived from gFrame locally — no sync needed
