@@ -22,6 +22,17 @@ The project root is a git repository (GitHub remote `jw0ngo/Project-Dank-Dungeon
 - Releases get a `CHANGELOG.md` entry and an annotated tag (`git tag -a vX.Y.Z`). Pre-1.0: minor = features, patch = fixes.
 - Pushing `main` deploys the latest `index.html` via GitHub Pages, so commit deliberately.
 
+### Where previous builds live
+- **`main` history + annotated tags** — every commit's `index.html` is recoverable (`git show vX.Y.Z:index.html` or `git checkout vX.Y.Z`). Named releases are the tags (`v0.9.0`, `v0.10.0`, …).
+- **`origin/archive/legacy-builds`** — the old pre-consolidation filename-versioned snapshots (`dungeon_forge_MP_v2.html`, `build_47.html`, etc.), quarantined off `main`.
+- GitHub Pages does **not** keep old deploys — it only serves current `main`. Old builds survive only via git history / tags / the archive branch.
+
+### Cutting a release (the habit)
+Every deploy to `main` should become a **named version**, not just a loose commit:
+1. Commit (and push) your build to `main` as usual.
+2. Run **`.\tools\release.ps1 <X.Y.Z> ["message"]`** — it promotes the `CHANGELOG.md` `[Unreleased]` section to `## [X.Y.Z] - <date>` (leaving a fresh empty `[Unreleased]`), commits that, creates the annotated `vX.Y.Z` tag, and pushes `main` + the tag. It refuses to run off `main`, on a duplicate tag, with an empty `[Unreleased]`, or with other uncommitted tracked changes (so a tag always points at a committed build).
+   - Manual equivalent: edit `CHANGELOG.md`, then `git tag -a vX.Y.Z -m "…" && git push origin main vX.Y.Z`.
+
 > A modular split of `index.html` is on the table (an earlier doc called the single-file form a hard constraint — it is not). If asked to refactor toward modules, the stale `dungeon-forge-project/` Vite scaffold is the reference for the intended structure.
 
 ## Companion docs — read before working
