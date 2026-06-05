@@ -40,7 +40,7 @@ if ($dirty) { Write-Error ("Commit your build first. Pending changes:`n" + ($dir
 
 # Promote CHANGELOG: insert the version heading right under the first [Unreleased]
 $clPath = Join-Path $root 'CHANGELOG.md'
-$text = Get-Content $clPath -Raw
+$text = Get-Content $clPath -Raw -Encoding UTF8  # WS 5.1 default is cp1252; UTF-8 file would mojibake
 if ($text -notmatch '## \[Unreleased\]') { Write-Error "No '## [Unreleased]' heading in CHANGELOG.md"; exit 1 }
 $unrel = [regex]::Match($text, '## \[Unreleased\](.*?)(?=\n## \[)', 'Singleline').Groups[1].Value
 if ($unrel.Trim() -eq '') { Write-Error "The [Unreleased] section is empty - add entries before releasing."; exit 1 }
