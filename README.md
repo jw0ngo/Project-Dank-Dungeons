@@ -4,17 +4,31 @@ A browser action-RPG — vanilla JS + Canvas, with Firebase Realtime Database
 multiplayer. The entire game is one self-contained file: **`index.html`**
 (CSS, JS, and pixel-art all inlined). No build step — open it in a browser.
 
-## Run it
-
-Open `index.html` directly, or serve the folder:
+## Develop & test (fast loop)
 
 ```sh
-# any static server works, e.g.
-python -m http.server 8000
-# then visit http://localhost:8000
+python dev.py
 ```
 
-The game boots straight into the town hub (The Sanctum).
+This serves the game on `http://localhost:5500/index.html`, opens it in your
+browser, and **auto-reloads the tab every time you save `index.html`**. Edit →
+save → watch it update live. No commit or push needed to test — that's only for
+publishing. (One-time setup for auto-reload: `python -m pip install --user livereload`;
+without it `dev.py` still serves, you just refresh with F5.)
+
+The game boots straight into the town hub (The Sanctum). Press Ctrl+C to stop the server.
+
+## Publish (deploy to GitHub Pages)
+
+When a change is good and you want it live:
+
+```sh
+git add index.html
+git commit -m "…"
+git push                      # updates main → GitHub Pages redeploys
+```
+
+Live site: https://jw0ngo.github.io/Project-Dank-Dungeons/
 
 ## Repository layout
 

@@ -38,7 +38,7 @@ There is no test suite and no lint config. The verification loop is:
 1. Make the change in `index.html`.
 2. Extract the `<script>` JS and run `node --check` on it to confirm no syntax error.
 3. Run a **targeted** check (grep or a small node snippet) proving the change is present and correct — `node --check` alone is not sufficient.
-4. For behavior, open the HTML in a browser (the game boots straight into the town hub via `goTown()`).
+4. For behavior, run `python dev.py` — serves `index.html` at `http://localhost:5500` and auto-reloads the browser on every save (the game boots straight into the town hub via `goTown()`). Testing is local; `git push` is only for publishing to GitHub Pages. No Node toolchain is installed — Python 3 is the only runtime here, so the nested `dungeon-forge-project/` Vite project cannot be run as-is.
 
 **Caveat:** `node --check` passes even with **duplicate function declarations**. A later duplicate silently shadows an earlier one, so a system can look wired yet have no effect. When a feature seems connected but does nothing, grep for duplicate `function name(` first.
 
