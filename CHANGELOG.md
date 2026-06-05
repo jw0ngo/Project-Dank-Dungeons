@@ -7,6 +7,8 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-06-05
+
 ### Added
 - **Image-based tile art** — stone dungeon floors (`tile.floor.0–3`) and dirt patches
   (`tile.dirt.0–3`) render painterly art from `ART_MANIFEST` instead of procedural
