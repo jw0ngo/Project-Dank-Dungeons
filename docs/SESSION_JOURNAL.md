@@ -98,6 +98,71 @@ Built: sword combat, dungeon editor, enemy AI (goblin/archer/warrior/bomber/king
 
 ---
 
+## Session 10 — Art Pass: Tile & FX Sprites
+*June 2026*
+
+### Built
+- Image-based **tile art** wired through `ART_MANIFEST` → `gArtReg` → `gTileArt`: stone
+  dungeon floors (`tile.floor.*`) and dirt (`tile.dirt.*`), sliced from 2×2 source sheets
+  and baked to device tile size (`gRebakeTiles`).
+- **Fire-wave sprite** (`FW_SPR`) for Cilia's imbued normal attack — black-background flame
+  crescent blitted additively (`'lighter'`), convex edge leading the travel direction,
+  scaled to the arc's lateral spread.
+- Whirlwind now draws the `fx.slash` crescent; fire-pillar sprite 2×, ≥50%-charge gate with
+  a red armed-telegraph, pillars start at 50% of the heavy's range.
+- `tools/dev-window.ps1` + a personal PostToolUse hook: reopen the live-reload dev window if
+  it's closed when `index.html` is edited (detects via the livereload websocket on port 5500).
+
+### Bugs Fixed This Session
+
+**Art tiles spawned in a uniform diagonal pattern**
+- *Symptom:* 4-variant stone/dirt floors tiled in an obvious repeating diagonal
+  (`0 1 2 3 / 3 2 1 0 …`), while 9-variant grass looked random.
+- *Root cause:* `gTileArt` picked the variant with `((imul(tx,P1))^(imul(ty,P2)))>>>0 % n`.
+  A multiplicative hash's low bits stay linear in (tx,ty); `% n` for n=4 (a power of two)
+  reads only those low bits → a periodic pattern. Grass escaped it only because `% 9` mixes
+  high and low bits.
+- *Fix:* Select the variant from the shared `gWallVar` random table (the same source the
+  procedural tiles use): `gWallVar[(ty*120+tx)%len] % n`. Widened `gWallVar` from `*4` to
+  `*256` so it distributes for any variant count (256 is a multiple of 4 → the procedural
+  `% 4` consumer stays uniform).
+- *Lesson:* `hash % (power of two)` exposes the hash's low bits. For small variant counts use
+  a real random table (or an avalanche finalizer) — never the raw low bits of a
+  multiplicative hash.
+
+**Dungeon FPS tanked after adding floor art**
+- *Symptom:* Significant slowdown in dungeons once `tile.floor.*` art existed; wilderness fine.
+- *Root cause:* `gDrawTile` wrapped every art tile in `imageSmoothingEnabled=true; …=false;`
+  — two canvas state changes per tile. A dungeon viewport is ~100% `TILE_FLOOR`, so this ran
+  ~1000×/frame; those tiles were previously cheap `fillRect`s. Tiles bake to device size, so
+  the blit is already 1:1 and needs no smoothing at all.
+- *Fix:* Drop the per-tile toggle; set `imageSmoothingEnabled=false` once per frame before the
+  tile loop (the previous frame's sprite draws leave it `true`).
+- *Lesson:* Toggling canvas state per-primitive in the densest draw loop is a silent perf
+  killer. Hoist state out of hot loops; if tiles bake 1:1, don't smooth.
+
+**Cutting character sprites from a turnaround sheet (Goblin King)**
+- *Symptom 1:* Keying out a **black** background by brightness also punched holes in the
+  King's internal shadows (between arm and body) — they're the same near-black as the bg.
+- *Symptom 2:* A fixed equal-thirds crop of the 3×3 grid pulled neighbour figures (rows
+  above/below) into the left/right side cells.
+- *Symptom 3:* A thin white halo remained when keying a white-bg sheet (anti-aliased edge
+  pixels kept their white-blended colour).
+- *Fixes / lessons:*
+  - Background of the **same colour family** as interior detail can't be keyed by brightness
+    alone. Use an **edge-seeded flood fill** (remove only border-connected bg), or supply a
+    **white** background and key on `min(R,G,B)` (shadows are dark → opaque, white → cut).
+  - Don't assume an even grid — isolate each pose with **connected-component labeling** and
+    use that blob's own mask, so a neighbour inside the crop rectangle isn't included.
+  - Kill edge halos by defining the body mask a touch tighter (`min(R,G,B)<212`) so edges
+    are body-coloured, then feather with a small alpha blur — never leave white-blended pixels.
+- *Scaling note:* `KING_SCALE` (draw) is independent of `EntityDefs.king.radius` (body hitbox)
+  and the attack-zone radii (`swipeRange`/`jumpRadius`/`spinRadius`). Resize all together;
+  keep the body hitbox just inside the visible sprite for playability. Re-slice source frames
+  at higher resolution when drawing much larger, or they upscale blurry.
+
+---
+
 ## Debugging Heuristics Reference
 
 | Symptom | First thing to check |
@@ -112,6 +177,8 @@ Built: sword combat, dungeon editor, enemy AI (goblin/archer/warrior/bomber/king
 | `beforeunload` not showing dialog | Handler must be unconditional |
 | Bitwise hash gives constant values | `Date.now()` overflows 32-bit |
 | Buff system makes enemies unkillable | maxHp division of rounded integers; store original |
+| Tiles/variants form a repeating pattern | `hash % 2^k` reads low bits — use the `gWallVar` table |
+| Sudden FPS drop after a draw change | Per-primitive canvas state toggle in a hot loop |
 
 ---
 
@@ -127,3 +194,6 @@ Built: sword combat, dungeon editor, enemy AI (goblin/archer/warrior/bomber/king
 | `_shamanBaseMaxHp` stored on entity | Avoids rounding drift on buff expiry | 9 |
 | Shrine always visible on minimap | Player needs to locate it; fog-gating would make it unfindable | 9 |
 | `beforeunload` unconditional | Conditional guards are pre-classified as non-blocking by browsers | 9 |
+| Art-tile variants via `gWallVar` table | Coordinate hash `% 4` showed a diagonal pattern; the table is structure-free | 10 |
+| Tile art baked to device size, smoothing off | 1:1 blit; per-tile smoothing toggle killed dungeon FPS | 10 |
+| FX sprites (fire pillar/wave) additive on black | Black bg drops out, flames glow over the scene | 10 |

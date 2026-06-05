@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Other paths are historical/parallel and are NOT the live game:
 - `dungeon-forge-project/dungeon-forge/` — an April attempt to split the game into Vite ES modules (`src/engine/`, `src/hub/`, etc.). Stale. Only touch it if explicitly asked to work on the modular port.
-- `art/` — source PNGs for the four patron gods (with/without background), embedded into the game as base64.
+- `art/` — source PNGs embedded into the game as base64: the four patron gods, plus tile sheets (`tile stone.png`, `tile dirt.png`, `tile grass.png`) and FX/character sprites (fire wave, fire pillar, sword slash, player, goblins). Sliced/encoded into `index.html` (see Art pipeline below).
 - `docs/` — the authoritative project docs (see below); `docs/archive/` holds older snapshots.
 
 ## Versioning
@@ -67,6 +67,17 @@ Adding content means registering it, not editing the loop:
 
 `_wildScaleEnt` early-returns when `!inWilderness`, so its stat scaling applies only to wilderness enemies; dungeon enemies use raw `EntityDefs` values.
 
+### Art pipeline (image-based art)
+Two art layers coexist. **Pixel-array sprites** (`bsc()` / `SpriteRegistry`) are the blocky retro fallbacks. **Base64 PNG art** lives in `ART_MANIFEST` (keyed `char.<id>.<dir>`, `tile.<name>.<n>`, `fx.<name>`) → loaded into `gArtReg` and, when present, overrides the procedural draw.
+- **Adding art:** save the PNG under `art/`, slice if it's a sheet, base64-encode, add a manifest entry. Tiles auto-wire: `gTileArt` maps `TILE_FLOOR→'floor'`, `TILE_DIRT→'dirt'`, `TILE_GRASS→'grass'`, and `gInitArt` counts `tile.<name>.*` into `gTileVarCount`. No draw-loop edits needed.
+- **Tiles bake to device size** (`gRebakeTiles`, on resize) so `gDrawTile` blits 1:1 — leave smoothing off, never toggle it per tile (see gotchas).
+- **Tile variant selection uses the `gWallVar` random table** (`gWallVar[(ty*120+tx)%len] % n`), NOT a coordinate hash — a multiplicative hash `% (power of two)` shows a diagonal pattern (see gotchas).
+- **FX sprites with a black background** (fire pillar `FP_SPR`, fire wave `FW_SPR`) are blitted with `globalCompositeOperation='lighter'` so the black drops out and flames glow.
+- **Character cutouts from a turnaround sheet** (`char.<id>.<dir>`, e.g. the Goblin King): prefer a **white-background** source and key on `min(R,G,B)` (dark internal shadows stay opaque, white → transparent) — a black bg can't be keyed by brightness without eating same-colour shadows. Isolate each pose with **connected-component labeling** (its own blob mask), not a fixed grid, so neighbours don't bleed in. The King draws **upright** (no rotation) via `gDirBody('king', oct, …)`, facing the target by 8-way octant — same pattern as goblin/archer. Its draw size (`KING_SCALE`) is independent of its body hitbox (`EntityDefs.king.radius`) and attack-zone radii (`swipeRange`/`jumpRadius`/`spinRadius`) — resize all together.
+
+### Local dev
+`tools/dev-window.ps1` + a personal PostToolUse hook (in `.claude/settings.local.json`, gitignored) reopen the live-reload dev window if it's closed when `index.html` is edited. It detects an open window via the livereload websocket on port 5500 — no polling. `tools/doc-drift-check.ps1` (Stop hook) nudges when `index.html` changed but the tracking docs (CHANGELOG/SESSION_JOURNAL/CLAUDE.md) didn't.
+
 ### Multiplayer
 Firebase Realtime DB. Config is embedded near the top of the file (`§1` region) and exposed as `window._FB`. Streams run at ~8 Hz, delta-compressed. All net code is gated on `window._FB && window._FB.db`, so single-player works if Firebase never initializes.
 
@@ -78,3 +89,5 @@ Firebase Realtime DB. Config is embedded near the top of the file (`§1` region)
 - **Click handler attached but not firing?** Check the parent container's `pointer-events` before debugging the handler. `#skill-bar` must stay `pointer-events:auto`; slots default to `none`.
 - **maxHP buffs** must store the original value (`_shamanBaseMaxHp`, etc.) and restore from it — never divide back out, integer rounding is lossy.
 - In large procedural generators, **declaration order matters**: if a later step's data is referenced earlier, move the declaration up.
+- **Tiles/variants forming a visible repeating pattern?** A multiplicative coordinate hash `% (power of two)` only reads the hash's low bits (linear in tx,ty). Use the `gWallVar` random table for variant selection, not the hash.
+- **Sudden FPS drop in dungeons after a draw change?** Look for per-primitive canvas state changes (e.g. `imageSmoothingEnabled` toggled per tile) in the densest loop — a dungeon viewport is ~all `TILE_FLOOR`. Hoist state out of hot loops; baked tiles blit 1:1 and need no smoothing.
