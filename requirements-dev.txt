@@ -1,0 +1,5 @@
+# Development dependencies for Dungeon Forge.
+# Install with:  python -m pip install --user -r requirements-dev.txt
+#
+# livereload powers `python dev.py` (local server + auto-refresh on save).
+livereload>=2.7
