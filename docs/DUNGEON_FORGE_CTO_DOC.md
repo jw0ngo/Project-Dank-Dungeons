@@ -1,7 +1,7 @@
 # Dungeon Forge — CTO Technical Document
 **Session 9 | June 2026**
-**Active file:** `/mnt/user-data/outputs/dungeon_forge.html` (~11,752 lines, single-file architecture)
-**Companion docs:** `SESSION_JOURNAL.md` · `WORKING_AGREEMENT.md`
+**Active file:** `index.html` at repo root (single self-contained HTML file)
+**Companion docs:** `ENGINEERING_CHARTER.md` (read first) · `SESSION_JOURNAL.md` · `WORKING_AGREEMENT.md`
 
 ---
 
@@ -314,14 +314,17 @@ window.addEventListener('beforeunload', e=>{
 ---
 
 ## File Locations
+All paths are relative to the repo root (`Project-Dank-Dungeons/`).
 | Path | Description |
 |------|-------------|
-| `/mnt/user-data/outputs/dungeon_forge.html` | Active game (~11,752 lines) |
-| `/mnt/user-data/outputs/DUNGEON_FORGE_CTO_DOC.md` | This document |
-| `/mnt/user-data/outputs/SESSION_JOURNAL.md` | Debugging lessons + session log |
-| `/mnt/user-data/outputs/WORKING_AGREEMENT.md` | Collaboration patterns |
-| `/mnt/transcripts/journal.txt` | Transcript index (sessions 1–9) |
-| `/mnt/user-data/uploads/Cilia_Fire_Goddess.png` | Embedded in game as base64 |
-| `/mnt/user-data/uploads/Ikras_Wind_God.png` | Embedded in game as base64 |
-| `/mnt/user-data/uploads/Bhumi_Earth_Goddess.png` | Embedded in game as base64 |
-| `/mnt/user-data/uploads/Boreas_Ice_God.png` | Embedded in game as base64 |
+| `index.html` | Active game — one self-contained HTML file (CSS + JS + base64 art inlined) |
+| `docs/ENGINEERING_CHARTER.md` | Engineering operating model & standing authority (read first) |
+| `docs/DUNGEON_FORGE_CTO_DOC.md` | This document — system-by-system architecture |
+| `docs/SESSION_JOURNAL.md` | Debugging lessons + session log |
+| `docs/WORKING_AGREEMENT.md` | Collaboration mechanics |
+| `docs/archive/` | Frozen historical CTO-doc snapshots |
+| `CHANGELOG.md` | Release notes; `[Unreleased]` promoted by `tools/release.ps1` |
+| `art/` | Source PNGs (patron gods, tile sheets, FX/character sprites) sliced + base64-encoded into `index.html` |
+| `tools/` | `release.ps1`, `slice-turnaround.py`, `dev-window.ps1`, `doc-drift-check.ps1` |
+| `dev.py` | Local live-reload server (`python dev.py` → `localhost:5500`) |
+| `dungeon-forge-project/` | Dormant Vite ES-module port (reference for a future modular split; not the live game) |

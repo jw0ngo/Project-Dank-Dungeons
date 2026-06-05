@@ -7,6 +7,52 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+### Added
+- **Goblin Warrior art** — static 8-directional sprite (`char.warrior.*`), cut from a
+  black-background turnaround sheet (`art/enemy goblin warrior.png`) via edge-seeded
+  flood fill (preserves internal shadows) + connected-component isolation per pose.
+  Replaces the procedural pixel sprite; drawn upright like the goblin/archer/king,
+  facing the target via the 8-way octant. New reusable slicer: `tools/slice-turnaround.py`.
+- **Cilia's Fire — imbued Whirlwind** — channelling the whirlwind while fire-imbued emits
+  an expanding ring of fire every 2 seconds. Each ring travels outward from the player and
+  ignites every enemy its edge sweeps over (impact + 3s burn, once per enemy). Uses the new
+  `art/fire ring.png` sprite (black-bg, blitted additively). Damage routes through
+  `gDealEnemyDamage` (MP-safe), and the ring replays as a render-only visual on remote peers
+  via a per-player `fr` cast signal (mirrors the fire wave's `fw`) — no double damage.
+- **Cilia's Fire — imbued Leap** — a fire-imbued leap leaves a burning cross (X) of flames at
+  the impact point (`art/fire X.png`, blitted additively as a floor decal beneath characters).
+  It lingers ~2s and burns enemies standing on either diagonal arm, re-ticking every 0.5s with
+  a refreshing 3s burn. Damage
+  via `gDealEnemyDamage` (MP-safe); replays render-only on peers via a per-player `fc` signal.
+- **Cilia's Fire — imbued Dash** — a fire-imbued dash leaves a trail of burning ground in its
+  wake (`art/burning ground.png`, black keyed to transparent so it reads as a scorched floor
+  decal under characters). Patches drop every ~18px along the dash, linger ~1.6s, and burn
+  enemies on them (re-tick every 0.4s + 3s burn). Damage via `gDealEnemyDamage` (MP-safe);
+  peers replay a damage-free trail under a remote fire-dasher via a per-player `df` flag.
+  This completes the four imbued warrior sword skills (swing, whirlwind, leap, dash).
+
+### Changed
+- **Enemy sizes** — Goblin Warrior sprite drawn 2× larger; normal Goblin sprite ~1.33×
+  (≈⅔ the player's height) and Goblin Archer ~1.2× (≈90% of the goblin). Each enemy's
+  body hitbox (`radius`) and ground shadow scale with its sprite; HP bars are unchanged.
+- **Thinner enemy health bars** — all in-world enemy HP bars reduced from 4px (King 6px)
+  to 1.5px thick (≈⅓–¼) so they take up less screen space; bar widths unchanged.
+- **Player hitbox** — collision radius 11→9 so it hugs the body silhouette just inside the
+  2× player sprite (was overshooting the visible body).
+- **Imbue balance pass** — fire-dash trail patches overlapped (~3 deep) and each ticked the
+  same enemy independently, so standing on a trail dealt ~3× intended (~60 DPS on a cheap
+  mobility skill). Trail damage now shares one per-enemy cooldown across all patches
+  (predictable ~25 DPS regardless of overlap); per-tick base 8→10 to offset the change.
+
+### Fixed
+- **Hit-flash red box** — the on-hit red flash tinted the opaque tile background inside the
+  sprite's bounding box (a flashing red square), because `gDrawSprite` filled `source-atop`
+  directly on the main canvas. Now it tints a sprite-shaped offscreen copy and blits that, so
+  only the sprite itself flashes red. Fixes the player and all enemies.
+- **Dash white box** — dashing (evasion) drew a white rectangle overlay (`#aabbcc`,
+  `lighter`) around the player. Removed; the dash now flashes the player **sprite** white
+  for its i-frame window (and the dash's `iFrames=999` no longer triggers the red hit flash).
+
 ## [0.10.0] - 2026-06-05
 
 ### Added

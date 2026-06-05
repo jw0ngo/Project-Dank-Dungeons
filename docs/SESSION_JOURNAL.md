@@ -163,6 +163,24 @@ Built: sword combat, dungeon editor, enemy AI (goblin/archer/warrior/bomber/king
 
 ---
 
+## Session 11 — Imbued Warrior Skills + Balance & Doc Health
+
+### Built
+- Completed **Cilia's Fire** imbues for all four sword skills: whirlwind → expanding **fire ring**, leap → **fire cross** (X), dash → **fire trail** of burning ground (swing → fire wave and heavy → fire pillars already existed). Each follows one shape: a `gFire*` array + spawn/update/draw, damage via `gDealEnemyDamage` (MP-safe), reset on map load, wired into the loop.
+- **Remote-peer visual sync** for all three: ring/cross use a per-player monotonic cast seq (`fr`/`fc`) on the player packet → `gSpawnRemote*` replays a `_visual` patch; trail uses a `df` dash-fire flag → peers drop `_visual` patches in `mpInterpolateRemotes`. `_visual` effects never damage, so no double-hit.
+- New reusable turnaround slicer `tools/slice-turnaround.py`; Goblin Warrior 8-dir art; enemy/HP-bar/player-hitbox sizing pass.
+- Adopted the **Engineering Charter** (`docs/ENGINEERING_CHARTER.md`) as the standing operating model; doc health pass fixed stale sandbox paths in the CTO doc and a contradicted single-file "constraint".
+
+### Lessons
+- **The on-hit flash drew a red BOX, not a tinted sprite.** `gDrawSprite` applied the tint with `globalCompositeOperation='source-atop'` directly on the main canvas — but the opaque tile background inside the sprite's bounding box is also "destination", so the whole box tinted. Fix: tint a sprite-shaped offscreen copy (transparent elsewhere) and blit that. The same bug produced the white dash box. **Rule: to recolour only a sprite, composite in an offscreen buffer — never `source-atop` on the shared canvas.**
+- **"Goblins render at 50% of the player" wasn't the art.** Both fill ~96% of their frame and draw in an equal box; the player has a separate `PLAYER_DRAW_SCALE = 2` multiplier. **Rule: when comparing on-screen sizes, look for per-entity draw multipliers, not just the sprite/box.**
+- **Overlapping ground hazards multi-hit.** Fire-trail patches drop every 18px with 26px reach (~3 deep); each had its own per-patch hit-cooldown, so an enemy on the trail took ~3× damage. **Rule: a field of overlapping same-source AoE patches needs ONE shared per-enemy cooldown (keyed off `gFrame`), not per-patch.**
+- **Burn refreshes, it doesn't stack.** `gApplyEnemyBurn` uses `Math.max` on duration and tick damage — re-applying every tick just tops it up. Effects can re-ignite freely without compounding DoT.
+- **Floor decal vs. over-entity FX:** draw ground hazards (fire cross/trail) on the `gDrawBombFireZones` layer *before* the entity pass so characters stand on them; pure flame bursts (ring/wave/pillars) draw after entities.
+- **Black-bg vs. charred sprites:** pure-flame sprites (ring/cross) blit additively (`lighter`, black drops out); the "burning ground" sprite has a dark charred base, so key its black to transparency and draw source-over — additive would erase the char and overlapping patches would blow out to white.
+
+---
+
 ## Debugging Heuristics Reference
 
 | Symptom | First thing to check |
@@ -179,6 +197,9 @@ Built: sword combat, dungeon editor, enemy AI (goblin/archer/warrior/bomber/king
 | Buff system makes enemies unkillable | maxHp division of rounded integers; store original |
 | Tiles/variants form a repeating pattern | `hash % 2^k` reads low bits — use the `gWallVar` table |
 | Sudden FPS drop after a draw change | Per-primitive canvas state toggle in a hot loop |
+| On-hit flash shows a square box | `source-atop` fill on the shared canvas tints the opaque bg too — tint an offscreen sprite copy |
+| Sprite looks wrong size vs. another | Per-entity draw multiplier (e.g. `PLAYER_DRAW_SCALE`), not the sprite/box |
+| Overlapping AoE patches over-damage | Per-patch hit-cooldowns multi-hit — use one shared per-enemy cooldown |
 
 ---
 
@@ -197,3 +218,6 @@ Built: sword combat, dungeon editor, enemy AI (goblin/archer/warrior/bomber/king
 | Art-tile variants via `gWallVar` table | Coordinate hash `% 4` showed a diagonal pattern; the table is structure-free | 10 |
 | Tile art baked to device size, smoothing off | 1:1 blit; per-tile smoothing toggle killed dungeon FPS | 10 |
 | FX sprites (fire pillar/wave) additive on black | Black bg drops out, flames glow over the scene | 10 |
+| Imbued effects as `gFire*` arrays (ring/cross/trail) | One shape per effect: spawn/update/draw + `gDealEnemyDamage`; MP-synced via cast seq / dash flag | 11 |
+| Shared per-enemy trail cooldown (`gTrailHits`) | Overlapping patches would otherwise multi-hit; keep DPS predictable | 11 |
+| Engineering Charter as standing operating model | Codifies CTO authority, refactor cadence, and repo verification reality | 11 |

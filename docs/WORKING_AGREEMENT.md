@@ -1,7 +1,7 @@
 # Dungeon Forge — Working Agreement
 **How the developer and AI assistant collaborate on this project**
 
-This document captures the working patterns established across 9+ sessions. A new LLM should read this before starting any work session.
+This document captures the working patterns established across many sessions. Read [`ENGINEERING_CHARTER.md`](ENGINEERING_CHARTER.md) **first** — it is the engineering operating model and standing authority (how decisions get made and how the codebase is kept healthy). This doc covers the complementary piece: *how the developer and engineer communicate and work*.
 
 ---
 
@@ -20,8 +20,8 @@ This document captures the working patterns established across 9+ sessions. A ne
 **Read before writing.** Before any code change, read the relevant section of the file. Never assume a function's signature or a variable's location from memory — always grep and verify.
 
 **Verify after every change.** Every code change must be followed by:
-1. `node --check` on the extracted JS to confirm no syntax errors
-2. A targeted verification check (grep or node module) confirming the change is present and correct
+1. A syntax check of the extracted `<script>` — `node --check` when a Node runtime is available. **The current dev environment has only Python 3 (no Node);** when Node is absent, validate structurally instead (balanced braces/parens on the changed region, decode any inlined base64).
+2. A targeted verification check (grep or a small script) confirming the change is present and correct. `node --check` alone is insufficient — it passes on duplicate function declarations, where a later duplicate silently shadows the earlier one.
 
 **30-line str_replace minimum context.** When using str_replace, include enough surrounding context to be unique. Never replace a 1-line string that appears multiple times.
 
@@ -61,7 +61,7 @@ This document captures the working patterns established across 9+ sessions. A ne
 - The developer playtests between sessions and reports bugs via screenshot + one-line description
 - Architecture decisions (refactors, new systems) are discussed briefly before implementation
 - Performance is checked periodically — if gEnemies grows unbounded or a loop is O(n²), flag it
-- The single-file constraint (`dungeon_forge.html`) is intentional — do not propose splitting
+- The live game is one self-contained file, `index.html` (not the old `dungeon_forge.html`). The single-file form is a product of history, **not** a hard constraint — a modular split is on the table (see `CLAUDE.md`). It's a legitimate refactor to propose; just don't split casually.
 
 ---
 

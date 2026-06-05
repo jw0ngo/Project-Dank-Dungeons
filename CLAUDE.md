@@ -38,9 +38,10 @@ Every deploy to `main` should become a **named version**, not just a loose commi
 ## Companion docs — read before working
 
 Living documentation lives in `docs/`:
+- `ENGINEERING_CHARTER.md` — **read first.** The standing operating model: you are CTO & lead engineer with standing authority to keep the codebase healthy. Bias to act on in-codebase changes; check in only when the cost of being wrong is high; preserve behavior in refactors; refactor on a cadence; no half-measures. Includes how the charter's generic assumptions (tests, build, deps) map onto this repo's reality.
 - `DUNGEON_FORGE_CTO_DOC.md` — system-by-system architecture reference (enemy registry, wilderness gen, shrines, skills, audio map). Keep current as systems change.
 - `SESSION_JOURNAL.md` — append-only log of debugging lessons. The most portable value in the repo; read the recent entries before debugging.
-- `WORKING_AGREEMENT.md` — collaboration style (terse requests, screenshots are bug reports, "assess" = diagnose before fixing).
+- `WORKING_AGREEMENT.md` — collaboration mechanics (terse requests, screenshots are bug reports, "assess" = diagnose before fixing).
 
 ## Workflow & verification
 
