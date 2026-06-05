@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Archives / zipped backups (use git history instead)
+*.zip
+
+# OS / sync cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Claude Code local/personal settings (keep shared .claude/settings.json if added)
+.claude/settings.local.json

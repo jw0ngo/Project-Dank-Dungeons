@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dungeon Forge</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Cinzel:wght@400;600&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0d0b10;--surf:#141118;--surf2:#1c1824;--border:#2e2640;
+  --acc:#c89050;--acc2:#7a50c0;--txt:#d4c8a8;--dim:#6a5a4a;
+  --danger:#c04040;
+}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Share Tech Mono','Courier New',monospace;overflow:hidden;}
+button{font-family:inherit;cursor:pointer;}
+
+.screen{position:absolute;inset:0;display:none;flex-direction:column;}
+.screen.active{display:flex;}
+
+/* ── HUB ── */
+#hub{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+  background:rgba(6,4,8,.78);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  z-index:50;}
+#hub.active{display:flex;}
+.hub-inner{width:480px;max-width:92vw;background:rgba(10,8,18,.82);
+  border:1px solid var(--border);border-radius:8px;padding:24px 28px;
+  box-shadow:0 8px 48px rgba(0,0,0,.7);}
+.hub-title{font-size:22px;color:var(--acc);letter-spacing:3px;margin-bottom:4px;text-align:center;font-family:'Cinzel',serif;}
+.hub-sub{font-size:10px;color:var(--dim);text-align:center;margin-bottom:16px;letter-spacing:3px;}
+.hub-actions{display:flex;gap:8px;margin-bottom:16px;}
+.hub-btn{flex:1;padding:10px;border:1px solid var(--border);background:var(--surf);color:var(--txt);font-size:11px;letter-spacing:2px;border-radius:4px;transition:all .15s;}
+.hub-btn:hover{border-color:var(--acc);background:var(--surf2);color:var(--acc);}
+.hub-btn.primary{border-color:var(--acc2);color:var(--acc2);}
+.hub-btn.primary:hover{background:#1a1430;box-shadow:0 0 12px rgba(122,80,192,.2);}
+.maps-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:9px;color:var(--dim);letter-spacing:2px;text-transform:uppercase;}
+.maps-list{display:flex;flex-direction:column;gap:5px;max-height:220px;overflow-y:auto;padding-right:4px;}
+.maps-list::-webkit-scrollbar{width:3px;}
+.maps-list::-webkit-scrollbar-thumb{background:var(--border);}
+.map-card{background:rgba(20,16,30,.9);border:1px solid var(--border);border-radius:4px;padding:9px 14px;display:flex;align-items:center;gap:12px;}
+.map-card-info{flex:1;min-width:0;}
+.map-card-name{font-size:12px;color:var(--txt);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.map-card-meta{font-size:9px;color:var(--dim);}
+.map-card-btns{display:flex;gap:5px;flex-shrink:0;}
+.mc-btn{padding:4px 9px;border:1px solid var(--border);background:transparent;color:var(--dim);font-family:inherit;font-size:9px;letter-spacing:1px;border-radius:2px;transition:all .12s;}
+.mc-btn:hover{color:var(--acc);border-color:var(--acc);}
+.mc-btn.play:hover{color:#50e080;border-color:#50e080;}
+.mc-btn.del:hover{color:var(--danger);border-color:var(--danger);}
+.empty-state{text-align:center;padding:36px;color:var(--dim);font-size:10px;border:1px dashed var(--border);border-radius:4px;line-height:1.8;}
+
+/* ── BASE ── */
+#base{background:#1a2a14;align-items:center;justify-content:center;}
+.base-inner{display:flex;flex-direction:column;align-items:center;position:relative;}
+#bc{display:block;cursor:none;outline:none;image-rendering:pixelated;border-radius:4px 4px 0 0;}
+.base-hud{display:flex;justify-content:space-between;align-items:center;padding:5px 12px;background:#0f1a0a;border-radius:0 0 4px 4px;width:700px;max-width:100%;}
+.base-back{position:absolute;top:10px;left:10px;z-index:20;padding:5px 12px;border:1px solid rgba(80,160,60,.4);background:rgba(0,0,0,.55);color:#70c050;font-family:inherit;font-size:9px;letter-spacing:1px;border-radius:2px;transition:all .12s;}
+.base-back:hover{border-color:#70c050;color:#a0e080;}
+
+/* ── BASE TOOLBAR ── */
+#base-toolbar{display:none;position:absolute;bottom:44px;left:50%;transform:translateX(-50%);
+  background:rgba(8,18,6,0.93);border:1px solid rgba(80,160,60,0.4);border-radius:8px;
+  padding:7px 12px;gap:8px;align-items:center;backdrop-filter:blur(4px);z-index:5;pointer-events:all;}
+#base-toolbar.bvis{display:flex!important;}
+.bbtni{width:56px;height:56px;border-radius:6px;border:2px solid rgba(80,160,60,0.25);
+  background:rgba(255,255,255,0.04);cursor:pointer;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:3px;transition:border-color .15s,background .15s;pointer-events:all;}
+.bbtni:hover{background:rgba(255,255,255,0.1);border-color:rgba(100,200,80,0.7);}
+.bbtni.bact{background:rgba(80,200,60,0.12);border-color:#70c050;box-shadow:0 0 10px rgba(80,200,60,0.2);}
+.bbtni canvas{image-rendering:pixelated;pointer-events:none;}
+.bbtni span{color:#7ab870;font-size:8px;font-family:monospace;text-transform:uppercase;letter-spacing:0.5px;}
+#besc{color:#4a7a3a;font-size:9px;font-family:monospace;margin-left:6px;padding-left:10px;border-left:1px solid rgba(255,255,255,0.1);}
+
+/* ── EDITOR ── */
+#editor{flex-direction:row;}
+.ed-sidebar{width:178px;min-width:178px;background:var(--surf);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.ed-topbar{height:34px;background:var(--surf);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 10px;gap:8px;font-size:10px;color:var(--dim);flex-shrink:0;}
+.ed-topbar-right{margin-left:auto;display:flex;gap:5px;}
+.tbar-btn{padding:3px 9px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:9px;letter-spacing:1px;border-radius:2px;transition:all .12s;}
+.tbar-btn:hover{color:var(--acc);border-color:var(--acc);}
+.tbar-btn.save{border-color:var(--acc2);color:var(--acc2);}
+.tbar-btn.save:hover{background:#1a1430;}
+#ed-canvas-wrap{flex:1;overflow:hidden;position:relative;background:repeating-conic-gradient(#0f0d14 0% 25%,#0d0b10 0% 50%) 0 0/14px 14px;}
+#ed-canvas{display:block;cursor:crosshair;outline:none;}
+.ed-right{width:155px;min-width:155px;background:var(--surf);border-left:1px solid var(--border);display:flex;flex-direction:column;font-size:10px;}
+.er-section{padding:7px 10px;border-bottom:1px solid var(--border);}
+.er-label{font-size:8px;color:var(--dim);letter-spacing:2px;margin-bottom:5px;text-transform:uppercase;}
+.er-row{display:flex;align-items:center;gap:5px;margin-bottom:4px;}
+.er-row label{color:var(--dim);width:40px;font-size:9px;}
+.er-row input[type=number]{background:var(--surf2);border:1px solid var(--border);color:var(--txt);padding:2px 4px;width:52px;font-family:inherit;font-size:9px;border-radius:2px;}
+.er-btn{width:100%;padding:5px;background:var(--surf2);border:1px solid var(--border);color:var(--dim);font-family:inherit;font-size:9px;letter-spacing:1px;border-radius:2px;margin-bottom:3px;transition:all .12s;}
+.er-btn:hover{border-color:var(--acc);color:var(--acc);}
+.er-btn.primary{border-color:var(--acc2);color:var(--acc2);}
+.ed-pal-scroll{flex:1;overflow-y:auto;padding:6px 8px;}
+.ed-pal-scroll::-webkit-scrollbar{width:3px;}
+.ed-pal-scroll::-webkit-scrollbar-thumb{background:var(--border);}
+.cat-label{font-size:8px;color:var(--dim);letter-spacing:2px;margin:6px 0 4px;border-bottom:1px solid var(--border);padding-bottom:2px;text-transform:uppercase;}
+.pal-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:2px;}
+.pal-item{background:var(--surf2);border:1px solid var(--border);border-radius:2px;padding:4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;transition:all .1s;}
+.pal-item:hover{border-color:var(--acc);}
+.pal-item.sel{border-color:var(--acc);background:#2a1e3a;}
+.pal-item canvas{image-rendering:pixelated;}
+.pal-item span{font-size:7px;color:var(--dim);text-align:center;}
+.tool-row{display:flex;gap:3px;flex-wrap:wrap;}
+.t-btn{width:32px;height:27px;background:var(--surf2);border:1px solid var(--border);border-radius:2px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .12s;color:var(--txt);}
+.t-btn:hover{border-color:var(--acc);}
+.t-btn.active{border-color:var(--acc);background:#2a1e3a;}
+
+/* ── GAME ── */
+#game{background:#060408;align-items:center;justify-content:center;}
+.game-inner{display:flex;flex-direction:column;align-items:center;position:relative;}
+#gc{display:block;cursor:none;outline:none;image-rendering:pixelated;}
+.game-hud{display:flex;justify-content:space-between;align-items:center;padding:5px 12px;background:#0a0a0f;width:700px;max-width:100%;}
+.ghud-hp{display:flex;gap:6px;align-items:center;}
+.ghud-bar{width:90px;height:6px;background:#2a1a0a;border-radius:2px;overflow:hidden;}
+.ghud-fill{height:100%;background:#c85030;border-radius:2px;transition:width .1s;}
+.ghud-lbl{font-size:9px;color:var(--dim);}
+#g-death{display:none;position:absolute;inset:0;background:rgba(0,0,0,.82);align-items:center;justify-content:center;flex-direction:column;gap:12px;z-index:10;}
+#g-death.show{display:flex!important;}
+#g-complete{display:none;position:absolute;inset:0;background:rgba(0,0,0,.88);align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:10;}
+#g-complete.show{display:flex!important;}
+.gc-title{color:#60c880;font-size:26px;letter-spacing:3px;font-family:'Cinzel',serif;}
+.gc-sub{color:#3a7a4a;font-size:10px;letter-spacing:2px;}
+.gc-kills{color:var(--acc);font-size:12px;letter-spacing:2px;margin-top:2px;}
+.gd-title{color:#c85030;font-size:24px;letter-spacing:2px;}
+.gd-sub{color:#7a5a3a;font-size:10px;}
+.gd-btns{display:flex;gap:10px;margin-top:4px;}
+.gd-btn{padding:7px 22px;border:1px solid var(--border);background:transparent;color:var(--dim);font-family:inherit;font-size:10px;letter-spacing:1px;border-radius:3px;transition:all .12s;}
+.gd-btn.respawn{border-color:#c85030;color:#c85030;}
+.gd-btn.respawn:hover{background:#2a1010;}
+.gd-btn:hover{border-color:var(--acc);color:var(--acc);}
+/* g-exit-msg replaced by g-complete */
+.game-back{position:absolute;top:10px;left:10px;z-index:20;padding:5px 12px;border:1px solid var(--border);background:rgba(0,0,0,.6);color:var(--dim);font-family:inherit;font-size:9px;letter-spacing:1px;border-radius:2px;transition:all .12s;}
+.game-back:hover{border-color:var(--acc);color:var(--acc);}
+
+/* ── CHARACTER CREATOR ── */
+#cc-screen{background:var(--bg);align-items:center;justify-content:center;}
+.cc-inner{display:flex;flex-direction:column;align-items:center;gap:16px;width:640px;max-width:98vw;}
+.cc-title{font-size:16px;color:var(--acc);letter-spacing:3px;font-family:'Cinzel',serif;}
+.cc-body{display:flex;gap:20px;align-items:flex-start;width:100%;}
+.cc-canvas-wrap{display:flex;flex-direction:column;align-items:center;gap:8px;}
+#cc-canvas{cursor:crosshair;image-rendering:pixelated;border:2px solid var(--border);border-radius:4px;background:repeating-conic-gradient(#1a1624 0% 25%,#14101e 0% 50%) 0 0/16px 16px;}
+#cc-canvas:hover{border-color:var(--acc);}
+.cc-preview-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.cc-preview-label{font-size:9px;color:var(--dim);letter-spacing:2px;}
+#cc-preview{image-rendering:pixelated;border:1px solid var(--border);border-radius:2px;background:repeating-conic-gradient(#1a1624 0% 25%,#14101e 0% 50%) 0 0/8px 8px;}
+.cc-sidebar{display:flex;flex-direction:column;gap:12px;flex:1;}
+.cc-section-label{font-size:9px;color:var(--dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;}
+.cc-palette{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;}
+.cc-swatch{width:28px;height:28px;border-radius:3px;border:2px solid transparent;cursor:pointer;transition:all .1s;}
+.cc-swatch:hover{transform:scale(1.15);}
+.cc-swatch.active{border-color:#fff;box-shadow:0 0 0 1px var(--acc);}
+.cc-eraser{width:28px;height:28px;border-radius:3px;border:2px solid var(--border);background:transparent;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .1s;}
+.cc-eraser:hover,.cc-eraser.active{border-color:#fff;background:var(--surf2);}
+.cc-custom-color{display:flex;gap:6px;align-items:center;}
+.cc-custom-color input[type=color]{width:36px;height:28px;border:none;border-radius:3px;cursor:pointer;padding:0;background:none;}
+.cc-custom-color input[type=text]{flex:1;background:var(--surf);border:1px solid var(--border);color:var(--txt);font-family:inherit;font-size:10px;padding:4px 8px;border-radius:3px;outline:none;width:80px;}
+.cc-custom-color input[type=text]:focus{border-color:var(--acc);}
+.cc-tools{display:flex;gap:6px;}
+.cc-tool-btn{padding:5px 10px;border:1px solid var(--border);background:var(--surf);color:var(--dim);font-family:inherit;font-size:9px;letter-spacing:1px;border-radius:3px;cursor:pointer;transition:all .12s;}
+.cc-tool-btn:hover{color:var(--txt);border-color:var(--txt);}
+.cc-tool-btn.active{color:var(--acc);border-color:var(--acc);}
+.cc-upload{width:100%;padding:7px;border:1px dashed var(--border);background:transparent;color:var(--dim);font-family:inherit;font-size:9px;letter-spacing:1px;border-radius:3px;cursor:pointer;transition:all .12s;text-align:center;}
+.cc-upload:hover{border-color:var(--acc);color:var(--acc);}
+.cc-actions{display:flex;gap:10px;width:100%;}
+.cc-action-btn{flex:1;padding:10px;border:1px solid var(--border);background:var(--surf);color:var(--txt);font-family:inherit;font-size:10px;letter-spacing:2px;border-radius:4px;cursor:pointer;transition:all .15s;}
+.cc-action-btn:hover{border-color:var(--acc);color:var(--acc);}
+.cc-action-btn.primary{border-color:var(--acc2);color:var(--acc2);}
+.cc-action-btn.primary:hover{background:#1a1430;}
+
+.cc-chars-list{display:flex;flex-direction:column;gap:5px;max-height:140px;overflow-y:auto;padding-right:2px;}
+.cc-chars-list::-webkit-scrollbar{width:3px;}
+.cc-chars-list::-webkit-scrollbar-thumb{background:var(--border);}
+.cc-char-row{display:flex;align-items:center;gap:8px;background:var(--surf);border:1px solid var(--border);border-radius:3px;padding:5px 8px;}
+.cc-char-row:hover{border-color:var(--acc);}
+.cc-char-thumb{image-rendering:pixelated;width:26px;height:26px;border-radius:2px;flex-shrink:0;}
+.cc-char-name{flex:1;font-size:10px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cc-char-btn{padding:3px 7px;border:1px solid var(--border);background:transparent;color:var(--dim);font-family:inherit;font-size:9px;letter-spacing:1px;border-radius:2px;cursor:pointer;transition:all .12s;flex-shrink:0;}
+.cc-char-btn:hover{color:var(--acc);border-color:var(--acc);}
+.cc-char-btn.del:hover{color:var(--danger);border-color:var(--danger);}
+.cc-char-active{border-color:var(--acc2)!important;}
+.cc-name-row{display:flex;gap:6px;align-items:center;}
+.cc-name-input{flex:1;background:var(--surf);border:1px solid var(--border);color:var(--txt);font-family:inherit;font-size:10px;padding:5px 8px;border-radius:3px;outline:none;}
+.cc-name-input:focus{border-color:var(--acc);}
+
+/* ── SEED MODAL ── */
+#seed-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);align-items:center;justify-content:center;z-index:300;}
+#seed-modal.show{display:flex;}
+.seed-box{background:var(--surf);border:1px solid var(--border);border-radius:6px;padding:24px;width:480px;max-width:96vw;display:flex;flex-direction:column;gap:14px;}
+.seed-title{font-size:13px;color:var(--acc);letter-spacing:3px;}
+.seed-string{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--txt);background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:10px 12px;word-break:break-all;line-height:1.6;max-height:120px;overflow-y:auto;cursor:text;user-select:all;}
+.seed-actions{display:flex;gap:8px;}
+.seed-btn{flex:1;padding:8px;border:1px solid var(--border);background:transparent;color:var(--dim);font-family:inherit;font-size:9px;letter-spacing:2px;border-radius:3px;cursor:pointer;transition:all .12s;}
+.seed-btn:hover{color:var(--acc);border-color:var(--acc);}
+.seed-btn.primary{border-color:var(--acc2);color:var(--acc2);}
+.seed-btn.primary:hover{background:#1a1430;}
+.seed-import-wrap{display:flex;flex-direction:column;gap:8px;}
+.seed-import-label{font-size:9px;color:var(--dim);letter-spacing:2px;}
+.seed-import-input{background:var(--bg);border:1px solid var(--border);color:var(--txt);font-family:inherit;font-size:10px;padding:8px 12px;border-radius:3px;outline:none;width:100%;}
+.seed-import-input:focus{border-color:var(--acc);}
+.seed-import-err{font-size:9px;color:var(--danger);min-height:12px;}
+.mc-btn.seed:hover{color:#60d0c0;border-color:#60d0c0;}
+
+/* ── INVENTORY OVERLAY ─────────────────────────────────────── */
+#inv-overlay{display:none;position:absolute;inset:0;background:rgba(0,0,0,.85);
+  align-items:center;justify-content:center;z-index:25;}
+#inv-overlay.show{display:flex;}
+.inv-panel{display:flex;gap:20px;background:#0d0b14;border:1px solid var(--border);
+  border-radius:6px;padding:20px;user-select:none;}
+
+/* Left — character + equip slots */
+.inv-left{display:flex;flex-direction:column;gap:10px;width:160px;}
+.inv-char-preview{width:160px;height:120px;background:#0a0812;border:1px solid var(--border);
+  border-radius:4px;display:flex;align-items:center;justify-content:center;position:relative;}
+.inv-char-canvas{image-rendering:pixelated;}
+.inv-equip-slots{display:flex;flex-direction:column;gap:6px;}
+.inv-slot-row{display:flex;align-items:center;gap:8px;}
+.inv-slot-label{font-size:8px;color:var(--dim);letter-spacing:1px;width:42px;text-align:right;}
+.inv-slot{width:44px;height:44px;background:#080610;border:1px solid var(--border);
+  border-radius:3px;display:flex;align-items:center;justify-content:center;
+  position:relative;transition:border-color .12s;cursor:pointer;}
+.inv-slot.drag-over{border-color:var(--acc);background:#15101e;}
+.inv-slot.equipped{border-color:#60c880;}
+
+/* Right — inventory grid */
+.inv-right{display:flex;flex-direction:column;gap:8px;}
+.inv-right-title{font-size:9px;color:var(--dim);letter-spacing:2px;text-align:center;}
+.inv-grid{display:grid;grid-template-columns:repeat(3,52px);gap:5px;}
+.inv-cell{width:52px;height:52px;background:#080610;border:1px solid var(--border);
+  border-radius:3px;display:flex;align-items:center;justify-content:center;
+  position:relative;transition:border-color .12s;cursor:pointer;}
+.inv-cell.drag-over{border-color:var(--acc);background:#15101e;}
+
+/* Draggable item */
+.inv-item{width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+  cursor:grab;position:relative;border-radius:2px;}
+.inv-item canvas{image-rendering:pixelated;pointer-events:none;}
+.inv-item-tip{position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);
+  background:#1a1528;border:1px solid var(--border);border-radius:3px;padding:3px 7px;
+  font-size:8px;color:var(--txt);white-space:nowrap;pointer-events:none;display:none;z-index:30;}
+.inv-item:hover .inv-item-tip{display:block;}
+
+/* Dragging ghost */
+#inv-drag-ghost{position:fixed;pointer-events:none;z-index:100;opacity:.85;display:none;}
+
+/* Q key hint */
+.inv-q-hint{font-size:8px;color:var(--dim);text-align:center;letter-spacing:1px;}
+</style>
+<!-- Firebase SDK -->
+<!-- Firebase compat SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+// Initialise Firebase lazily — called the first time the player opens the MP lobby.
+// This way we don't race against the SDK <script> tags finishing.
+window._fbInitDone = false;
+function _fbInit() {
+  if (window._fbInitDone) return true;
+  if (typeof firebase === 'undefined') return false;
+  var FB_CONFIG = {
+    apiKey:      "AIzaSyAPW0MIEc9n5s9fl4jD450E3TV7DOUSfzk",
+    authDomain:  "dank-dungeons.firebaseapp.com",
+    databaseURL: "https://dank-dungeons-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId:   "dank-dungeons",
+  };
+  // Avoid re-initialising if already done (hot-reload safe)
+  var app = firebase.apps && firebase.apps.length
+              ? firebase.apps[0]
+              : firebase.initializeApp(FB_CONFIG);
+  var db = firebase.database(app);
+  window._FB = {
+    db: db,
+    ref:          function(db, path){ return db.ref(path); },
+    set:          function(r, val)  { return r.set(val); },
+    get:          function(r)       { return r.get(); },
+    remove:       function(r)       { return r.remove(); },
+    onValue:      function(r, cb)   { r.on('value', cb); },
+    onDisconnect: function(r)       { return r.onDisconnect(); },
+    push:         function(r)       { return r.push(); },
+    off:          function(r)       { return r.off(); },
+  };
+  window._fbInitDone = true;
+  console.log('[Firebase] Initialised OK');
+  return true;
+}
+</script>
+</head>
+<body>
+
+<!-- ═══════════ HUB ═══════════ -->
+<div id="hub" onclick="if(event.target===this)hubClose()">
+  <div class="hub-inner">
+    <div class="hub-title">⚔ DUNGEON FORGE</div>
+    <button onclick="returnToTown()" style="position:absolute;top:10px;left:10px;padding:5px 12px;border:1px solid rgba(180,140,80,.4);background:rgba(0,0,0,.6);color:#b89050;font-family:inherit;font-size:9px;letter-spacing:1px;border-radius:2px;cursor:pointer;">← THE SANCTUM</button>
+    <div class="hub-sub">CREATE · EDIT · PLAY</div>
+    <div style="text-align:center;margin-bottom:20px;">
+      <button style="padding:10px 32px;border:1px solid var(--acc);background:transparent;color:var(--acc);font-family:inherit;font-size:11px;letter-spacing:3px;border-radius:4px;cursor:pointer;transition:all .15s;" onmouseover="this.style.background='rgba(200,144,80,.08)'" onmouseout="this.style.background='transparent'" onclick="loadDemo()">▶ PLAY DEMO</button>
+    </div>
+    <div class="hub-actions">
+      <button class="hub-btn primary" onclick="newMap()">+ NEW MAP</button>
+      <button class="hub-btn" style="border-color:#5a3a9a;color:#c080ff;margin-top:4px;" onclick="mpShowLobby()">⚔ MULTIPLAYER</button>
+      <button class="hub-btn" style="border-color:#3a7a6a;color:#60c0a0;margin-top:4px;" onclick="showScreen('cc-screen');ccInit()">🎨 CHARACTER</button>
+      <button class="hub-btn" style="border-color:#2a6a6a;color:#40c0c0;margin-top:4px;" onclick="seedShowImport()">↓ IMPORT SEED</button>
+    </div>
+    <div class="maps-header">
+      <span>MY MAPS</span>
+      <span id="map-count">0 maps</span>
+    </div>
+    <div class="maps-list" id="maps-list">
+      <div class="empty-state">No maps yet.<br>Create one to get started.</div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════ CHARACTER CREATOR ═══════════ -->
+<div class="screen" id="cc-screen">
+  <div class="cc-inner">
+    <div class="cc-title">CHARACTER CREATOR</div>
+    <div class="cc-body">
+      <!-- Canvas + preview -->
+      <div class="cc-canvas-wrap">
+        <canvas id="cc-canvas" width="256" height="256"></canvas>
+        <div class="cc-preview-wrap">
+          <div class="cc-preview-label">IN-GAME PREVIEW</div>
+          <canvas id="cc-preview" width="52" height="52"></canvas>
+        </div>
+      </div>
+      <!-- Sidebar -->
+      <div class="cc-sidebar">
+        <div>
+          <div class="cc-section-label">Color Palette</div>
+          <div class="cc-palette" id="cc-palette"></div>
+        </div>
+        <div>
+          <div class="cc-section-label">Custom Color</div>
+          <div class="cc-custom-color">
+            <input type="color" id="cc-colorpicker" value="#ffffff">
+            <input type="text" id="cc-hexinput" value="#ffffff" maxlength="7" placeholder="#rrggbb">
+            <button class="cc-tool-btn" onclick="ccAddCustomColor()">ADD</button>
+          </div>
+        </div>
+        <div>
+          <div class="cc-section-label">Tools</div>
+          <div class="cc-tools" style="flex-wrap:wrap;">
+            <button class="cc-tool-btn active" id="cc-tool-paint" onclick="ccSetTool('paint')">✏ PAINT</button>
+            <button class="cc-tool-btn" id="cc-tool-fill" onclick="ccSetTool('fill')">▣ FILL</button>
+            <button class="cc-tool-btn" id="cc-tool-erase" onclick="ccSetTool('erase')">✕ ERASE</button>
+            <button class="cc-tool-btn" onclick="ccMirrorH()" title="Flip horizontally">⇄ FLIP</button>
+            <button class="cc-tool-btn" onclick="ccClear()">✕ CLEAR</button>
+            <button class="cc-tool-btn" onclick="ccFillDefault()">↺ RESET</button>
+          </div>
+        </div>
+        <div>
+          <div class="cc-section-label">Import</div>
+          <button class="cc-upload" onclick="ccTriggerUpload()">↑ UPLOAD 16×16 PNG</button>
+          <input type="file" id="cc-file-input" accept="image/png,image/gif,image/jpeg" style="display:none" onchange="ccHandleUpload(event)">
+        </div>
+        <div>
+          <div class="cc-section-label">My Characters</div>
+          <div class="cc-chars-list" id="cc-chars-list"></div>
+          <div class="cc-name-row" style="margin-top:6px;">
+            <input class="cc-name-input" id="cc-char-name" type="text" placeholder="Name this character..." maxlength="24">
+            <button class="cc-char-btn" onclick="ccSaveNamed()">SAVE</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cc-actions">
+      <button class="cc-action-btn" onclick="hubOpen()">← BACK</button>
+      <button class="cc-action-btn primary" onclick="ccSave()">✓ USE THIS CHARACTER</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════ SEED MODAL ═══════════ -->
+<div id="seed-modal">
+  <div class="seed-box">
+    <div class="seed-title" id="seed-modal-title">MAP SEED</div>
+    <!-- Export view -->
+    <div id="seed-export-view">
+      <div class="seed-string" id="seed-string" onclick="const r=document.createRange();r.selectNodeContents(this);const sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);"></div>
+      <div class="seed-actions">
+        <button class="seed-btn primary" onclick="seedCopy()">⎘ COPY SEED</button>
+        <button class="seed-btn" onclick="seedModalClose()">CLOSE</button>
+      </div>
+    </div>
+    <!-- Import view -->
+    <div id="seed-import-view" style="display:none;">
+      <div class="seed-import-wrap">
+        <div class="seed-import-label">Paste a seed code below</div>
+        <input class="seed-import-input" id="seed-import-input" type="text"
+          placeholder="DF1:..." spellcheck="false"
+          onkeydown="if(event.key==='Enter')seedImportConfirm();if(event.key==='Escape')seedModalClose();">
+        <div class="seed-import-err" id="seed-import-err"></div>
+      </div>
+      <div class="seed-actions">
+        <button class="seed-btn primary" onclick="seedImportConfirm()">↓ IMPORT MAP</button>
+        <button class="seed-btn" onclick="seedModalClose()">CANCEL</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ EDITOR ═══════════ -->
+<div class="screen" id="editor">
+  <div class="ed-sidebar">
+    <div style="padding:7px 10px;border-bottom:1px solid var(--border);">
+      <div style="font-size:10px;color:var(--acc);letter-spacing:1px;margin-bottom:1px;">DUNGEON EDITOR</div>
+      <div style="font-size:8px;color:var(--dim);">P paint · E erase · F fill · I pick</div>
+    </div>
+    <div style="padding:5px 8px;border-bottom:1px solid var(--border);">
+      <div class="er-label">Tools</div>
+      <div class="tool-row" id="ed-tools">
+        <div class="t-btn active" data-tool="paint"  title="Paint (P)">✏</div>
+        <div class="t-btn"        data-tool="erase"  title="Erase (E)">⌫</div>
+        <div class="t-btn"        data-tool="fill"   title="Fill (F)">▣</div>
+        <div class="t-btn"        data-tool="pick"   title="Pick (I)">✦</div>
+      </div>
+    </div>
+    <div class="ed-pal-scroll">
+      <div class="cat-label">Terrain</div>
+      <div class="pal-grid" id="pal-terrain"></div>
+      <div class="cat-label">Entities</div>
+      <div class="pal-grid" id="pal-entities"></div>
+    </div>
+  </div>
+
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+    <div class="ed-topbar">
+      <span id="ed-pos">X:0 Y:0</span>
+      <span style="color:var(--border);">|</span>
+      <span id="ed-zoom">100%</span>
+      <span style="color:var(--border);">|</span>
+      <span id="ed-hover">—</span>
+      <div class="ed-topbar-right">
+        <button class="tbar-btn" onclick="goHub()">← HUB</button>
+        <button class="tbar-btn" onclick="testPlay()">▶ PLAY</button>
+        <button class="tbar-btn save" onclick="saveMap()">💾 SAVE</button>
+      </div>
+    </div>
+    <div id="ed-canvas-wrap">
+      <canvas id="ed-canvas" tabindex="0"></canvas>
+    </div>
+  </div>
+
+  <div class="ed-right">
+    <div class="er-section">
+      <div class="er-label">Map Name</div>
+      <input id="ed-name" style="width:100%;background:var(--surf2);border:1px solid var(--border);color:var(--txt);padding:3px 6px;font-family:inherit;font-size:10px;border-radius:2px;" value="My Dungeon">
+    </div>
+    <div class="er-section">
+      <div class="er-label">Dimensions</div>
+      <div class="er-row"><label>Width</label><input type="number" id="ed-w" value="40" min="10" max="120"></div>
+      <div class="er-row"><label>Height</label><input type="number" id="ed-h" value="24" min="8" max="80"></div>
+      <button class="er-btn" onclick="edResize()">RESIZE</button>
+    </div>
+    <div class="er-section">
+      <div class="er-label">Fill</div>
+      <button class="er-btn" onclick="edFill(2)">FILL WALL</button>
+      <button class="er-btn" onclick="edFill(1)">FILL FLOOR</button>
+      <button class="er-btn" style="color:var(--danger);border-color:var(--danger);" onclick="edClear()">CLEAR MAP</button>
+    </div>
+    <div style="padding:8px 10px;font-size:8px;color:var(--dim);line-height:1.9;">
+      Scroll = zoom<br>
+      Middle drag = pan<br>
+      Right click = erase<br>
+      Ctrl+Z = undo<br>
+      One Player Start per map
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ GAME ═══════════ -->
+<div class="screen" id="game">
+  <button class="game-back" onclick="inTown?hubOpen():goHub()">☰</button>
+  <div class="game-inner">
+    <canvas id="gc" tabindex="0" width="700" height="420"></canvas>
+    <div class="game-hud">
+      <div class="ghud-hp">
+        <span class="ghud-lbl">HP</span>
+        <div class="ghud-bar"><div class="ghud-fill" id="ghp"></div></div>
+      </div>
+      <div class="ghud-lbl" id="g-area">DUNGEON</div>
+      <div class="ghud-lbl" id="g-kills">Goblins: 0</div>
+      <div class="ghud-lbl" id="g-ww" style="color:#55ccff;letter-spacing:1px;min-width:80px;text-align:right;"></div>
+    </div>
+    <div id="g-death">
+      <div class="gd-title" id="g-death-title">MISSION FAILED</div>
+      <div class="gd-sub" id="g-death-sub">Your party has been defeated...</div>
+      <div class="gd-btns">
+        <button class="gd-btn respawn" id="g-respawn-btn" onclick="mpRespawn()">RESPAWN</button>
+        <button class="gd-btn" onclick="mpLeaveAfterDeath()">LEAVE</button>
+      </div>
+    </div>
+    <div id="g-complete">
+      <div class="gc-title">DUNGEON COMPLETE</div>
+      <div class="gc-sub">YOU CONQUERED THE DARKNESS</div>
+      <div class="gc-kills" id="gc-kills"></div>
+      <div class="gd-btns">
+        <button class="gd-btn" style="border-color:#60c880;color:#60c880;" onclick="goHub()">← MAIN MENU</button>
+      </div>
+    </div>
+    <div id="g-pause" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.75);align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:15;">
+      <div style="color:var(--acc);font-size:18px;letter-spacing:3px;margin-bottom:6px;">PAUSED</div>
+      <button class="gd-btn" onclick="gResume()" style="width:180px;text-align:center;">RESUME</button>
+      <button class="gd-btn" onclick="goHub()" style="width:180px;text-align:center;">MAIN MENU</button>
+    </div>
+
+    <!-- ═══════════ INVENTORY OVERLAY ═══════════ -->
+    <div id="inv-overlay">
+      <div class="inv-panel">
+        <!-- LEFT: character preview + equipment slots -->
+        <div class="inv-left">
+          <div class="inv-char-preview">
+            <canvas id="inv-char-canvas" class="inv-char-canvas" width="64" height="64"
+              style="width:64px;height:64px;"></canvas>
+          </div>
+          <div class="inv-equip-slots">
+            <div class="inv-slot-row">
+              <span class="inv-slot-label">WEAPON</span>
+              <div class="inv-slot" id="inv-equip-weapon" data-slot="weapon"
+                ondragover="invDragOver(event,this)" ondragleave="invDragLeave(this)"
+                ondrop="invDrop(event,this)"></div>
+            </div>
+            <div class="inv-slot-row">
+              <span class="inv-slot-label">HELMET</span>
+              <div class="inv-slot" id="inv-equip-helmet" data-slot="helmet"
+                ondragover="invDragOver(event,this)" ondragleave="invDragLeave(this)"
+                ondrop="invDrop(event,this)"></div>
+            </div>
+            <div class="inv-slot-row">
+              <span class="inv-slot-label">CHEST</span>
+              <div class="inv-slot" id="inv-equip-chest" data-slot="chest"
+                ondragover="invDragOver(event,this)" ondragleave="invDragLeave(this)"
+                ondrop="invDrop(event,this)"></div>
+            </div>
+            <div class="inv-slot-row">
+              <span class="inv-slot-label">GLOVES</span>
+              <div class="inv-slot" id="inv-equip-gloves" data-slot="gloves"
+                ondragover="invDragOver(event,this)" ondragleave="invDragLeave(this)"
+                ondrop="invDrop(event,this)"></div>
+            </div>
+            <div class="inv-slot-row">
+              <span class="inv-slot-label">BOOTS</span>
+              <div class="inv-slot" id="inv-equip-boots" data-slot="boots"
+                ondragover="invDragOver(event,this)" ondragleave="invDragLeave(this)"
+                ondrop="invDrop(event,this)"></div>
+            </div>
+          </div>
+          <div class="inv-q-hint">[Q] quick-swap weapon</div>
+        </div>
+        <!-- RIGHT: inventory grid -->
+        <div class="inv-right">
+          <div class="inv-right-title">INVENTORY</div>
+          <div class="inv-grid" id="inv-grid">
+            <!-- 9 cells generated by invRender() -->
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Drag ghost -->
+    <div id="inv-drag-ghost"><canvas id="inv-ghost-canvas" width="36" height="36"
+      style="width:36px;height:36px;image-rendering:pixelated;"></canvas></div>
+  </div>
+</div>
+
+<!-- ═══════════ BASE ═══════════ -->
+<div class="screen" id="base">
+  <button class="base-back" onclick="goHub()">← HUB</button>
+  <div class="base-inner">
+    <canvas id="bc" tabindex="0" width="700" height="420"></canvas>
+    <div id="base-toolbar">
+      <div class="bbtni" id="bb-campfire"  onclick="bSelectTool('campfire')"><canvas id="bic-campfire"  width="40" height="40"></canvas><span>Campfire</span></div>
+      <div class="bbtni" id="bb-tent"      onclick="bSelectTool('tent')">    <canvas id="bic-tent"      width="40" height="40"></canvas><span>Tent</span></div>
+      <div class="bbtni" id="bb-hut"       onclick="bSelectTool('hut')">     <canvas id="bic-hut"       width="40" height="40"></canvas><span>Hut</span></div>
+      <div class="bbtni" id="bb-house"     onclick="bSelectTool('house')">   <canvas id="bic-house"     width="40" height="40"></canvas><span>House</span></div>
+      <div class="bbtni" id="bb-forge"     onclick="bSelectTool('forge')">   <canvas id="bic-forge"     width="40" height="40"></canvas><span>Forge</span></div>
+      <span id="besc">B / Esc exit</span>
+    </div>
+    <div class="base-hud">
+      <div class="ghud-lbl" style="color:#70c050;font-size:10px;">🏡 PLAYER BASE</div>
+      <div class="ghud-lbl" style="color:#4a7a3a;font-size:9px;">WASD to explore · ESC to return</div>
+      <div class="ghud-lbl" id="base-pos" style="color:#4a7a3a;font-size:9px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ TOWN ═══════════ -->
+<div class="screen" id="town">
+  <button class="game-back" style="border-color:rgba(180,140,80,.4);color:#b89050;" onclick="hubOpen()" title="Open menu">☰ MENU</button>
+  <div style="display:flex;flex-direction:column;align-items:center;position:relative;">
+    <canvas id="tc" tabindex="0" width="700" height="420" style="display:block;cursor:none;outline:none;image-rendering:pixelated;border-radius:4px 4px 0 0;"></canvas>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 12px;background:#0f0c08;border-radius:0 0 4px 4px;width:700px;">
+      <div style="font-size:10px;color:#c8a050;letter-spacing:1px;">⚔ THE SANCTUM</div>
+      <div id="town-loc" style="font-size:9px;color:#6a5030;"></div>
+      <div style="font-size:9px;color:#6a5030;letter-spacing:1px;">WASD to explore · ESC to return</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ MULTIPLAYER LOBBY ═══════════ -->
+<div id="mp-lobby" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:200;align-items:center;justify-content:center;flex-direction:column;gap:18px;">
+  <div style="font-size:16px;color:#c080ff;letter-spacing:3px;">⚔ MULTIPLAYER</div>
+  <div style="font-size:9px;color:#6a5080;letter-spacing:1px;text-align:center;max-width:360px;line-height:1.8;">
+    Host a room and share your code, or join with a friend's code.<br>
+    Meet in The Sanctum, then choose a dungeon together.
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:10px;width:300px;">
+    <div style="font-size:10px;color:#9060c0;letter-spacing:1px;">HOST A ROOM</div>
+    <div style="font-size:9px;color:#6a5080;line-height:1.7;">Opens The Sanctum for your party.<br>Share the code and choose a dungeon together.</div>
+    <button onclick="mpHost()" style="background:#2a1840;border:1px solid #9060c0;color:#c080ff;padding:8px;font-family:inherit;font-size:10px;cursor:pointer;letter-spacing:1px;border-radius:2px;">HOST ROOM</button>
+  </div>
+
+  <div style="width:300px;height:1px;background:#2e2640;"></div>
+
+  <div style="display:flex;flex-direction:column;gap:10px;width:300px;">
+    <div style="font-size:10px;color:#9060c0;letter-spacing:1px;">JOIN A ROOM</div>
+    <input id="mp-room-input" maxlength="6" placeholder="Enter 6-letter room code"
+      style="background:#1a1428;color:#c080ff;border:1px solid #5a3a9a;padding:8px;font-family:inherit;font-size:13px;letter-spacing:4px;text-transform:uppercase;text-align:center;border-radius:2px;width:100%;" />
+    <button onclick="mpJoin()" style="background:#1a1428;border:1px solid #9060c0;color:#c080ff;padding:8px;font-family:inherit;font-size:10px;cursor:pointer;letter-spacing:1px;border-radius:2px;">JOIN ROOM</button>
+  </div>
+
+  <div id="mp-status" style="font-size:10px;color:#c080ff;letter-spacing:1px;min-height:20px;text-align:center;"></div>
+  <div id="mp-code-display" style="display:none;text-align:center;">
+    <div style="font-size:9px;color:#6a5080;margin-bottom:4px;">YOUR ROOM CODE</div>
+    <div id="mp-code-val" style="font-size:28px;letter-spacing:8px;color:#c080ff;font-weight:bold;"></div>
+    <div style="font-size:8px;color:#6a5080;margin-top:4px;">Share this with friends · Waiting for players...</div>
+    <button onclick="mpStartGame()" style="margin-top:10px;background:#2a1840;border:1px solid #9060c0;color:#c080ff;padding:8px 24px;font-family:inherit;font-size:10px;cursor:pointer;letter-spacing:1px;border-radius:2px;">▶ START GAME</button>
+  </div>
+
+  <button onclick="mpCloseLobby()" style="background:transparent;border:1px solid #2e2640;color:#4a3a5a;padding:6px 20px;font-family:inherit;font-size:9px;cursor:pointer;letter-spacing:1px;border-radius:2px;">CANCEL</button>
+</div>
+
+<!-- In-game MP HUD (room code + player count) -->
+<div id="mp-hud" style="display:none;position:fixed;top:8px;right:110px;z-index:50;background:rgba(20,10,40,.85);border:1px solid #5a3a9a;border-radius:3px;padding:4px 10px;font-size:9px;color:#c080ff;letter-spacing:1px;pointer-events:none;">
+  <span id="mp-hud-code"></span> · <span id="mp-hud-players"></span>
+</div>
+
+<!-- ── New Map overlay ── -->
+<div id="new-map-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);align-items:center;justify-content:center;z-index:200;" onclick="if(event.target===this)newMapCancel();">
+  <div style="background:var(--surf);border:1px solid var(--border);border-radius:6px;padding:24px 28px;width:320px;display:flex;flex-direction:column;gap:14px;">
+    <div style="font-size:13px;color:var(--acc);letter-spacing:2px;">NEW MAP</div>
+    <div>
+      <div style="font-size:9px;color:var(--dim);letter-spacing:2px;margin-bottom:6px;">MAP NAME</div>
+      <input id="new-map-name"
+        style="width:100%;background:var(--surf2);border:1px solid var(--border);color:var(--txt);padding:7px 10px;font-family:inherit;font-size:12px;border-radius:3px;outline:none;"
+        value="New Dungeon"
+        onkeydown="if(event.key==='Enter')newMapConfirm();if(event.key==='Escape')newMapCancel();">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="newMapConfirm()" style="flex:1;padding:9px;background:var(--acc2);border:1px solid var(--acc2);color:#fff;font-family:inherit;font-size:10px;letter-spacing:2px;border-radius:3px;cursor:pointer;">CREATE</button>
+      <button onclick="newMapCancel()"  style="flex:1;padding:9px;background:transparent;border:1px solid var(--border);color:var(--dim);font-family:inherit;font-size:10px;letter-spacing:2px;border-radius:3px;cursor:pointer;">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<!-- Game scripts — loaded in dependency order -->
+<!-- Phase 1: all scripts share global scope, same as before -->
+<!-- Phase 2: these become ES modules with explicit imports -->
+<script src="/src/config.js"></script>
+<script src="/src/maps/maps.js"></script>
+<script src="/src/hub/navigation.js"></script>
+<script src="/src/editor/editor.js"></script>
+<script src="/src/engine/registries.js"></script>
+<script src="/src/engine/engine.js"></script>
+<script src="/src/multiplayer/multiplayer.js"></script>
+<script src="/src/ui/characterCreator.js"></script>
+<script src="/src/maps/seed.js"></script>
+<script src="/src/ui/inventory.js"></script>
+<script src="/src/hub/town.js"></script>
+<script src="/src/_init.js"></script>
+
+</body>
+</html>
