@@ -99,9 +99,10 @@ Co-op synergy (pillar 4) falls out of the contrast — e.g. Boreas freezes → C
 
 ## Later — the idea pool (one big rock always visible)
 
-- **🪨 BIG ROCK: a fifth god, or a new mode** — the horizon beyond the next patch. A fifth patron expands the build matrix; a new mode (e.g. endless dungeon, horde, or a meta-progression layer) opens a fresh loop. Keep exactly one of these visible as the long-horizon anchor.
-- **Meta-progression between runs** — a reason to come back: unlocks, account-light persistence that fits the single-file vanilla-JS constraint.
-- **Wilderness content depth** — events, named encounters, or objectives layered onto the seeded 600×300 world beyond villages/obelisks/shrines.
+- **🪨 BIG ROCK: the "Reclaim-the-Shrine" run loop** — the horizon structure the game is building toward (full design in [`WORLDBUILDING_CONCEPTS.md`](WORLDBUILDING_CONCEPTS.md)). A run = an incursion into a procedural **area** (first: the Goblin Forest) with **one usurped shrine**: fight to it and **reactivate it** (opening conquest; Goblin King as the usurper), then it's your **hearth** — return by day to imbue/deepen via **banked imbue charges** (pull, not a forced gate), survive sieges by night, with **random map events** keeping each return-trip fresh. Ties together Nightfall (shipped), the card-draft, and the Favor-gradient imbue system. **Depends on:** card-draft landing + ≥2 imbued gods (Boreas) + Favor design — so it's post-slice. Open forks live in the worldbuilding doc (one-vs-many areas; siege-threatens-shrine fusion).
+- **A fifth god, or a new mode** — still a horizon expander (a fifth patron grows the build matrix; an endless/horde mode opens a fresh loop), but secondary to the run loop above as the anchor.
+- **Meta-progression between runs** — a reason to come back: unlocks, account-light persistence that fits the single-file vanilla-JS constraint. (The "journey through areas / wider world" could live here.)
+- **Day-lull content (slice-adjacent slice of the big rock)** — repopulating goblin camps + a few random events so Nightfall's day-lull isn't dead air. The smallest first taste of the run loop; could come sooner than the rest.
 - **Audio/juice pass** — a dedicated game-feel sweep once a content arc lands (screen shake curve, hit-stop, layered SFX).
 - **New enemy + boss variant (parked)** — a fast-flanker archetype that punishes tunnel-vision was proposed 2026-06-06; Josh deferred it ("not now — slice first"). Revisit if the slice's felt-wall is best answered by roster *variety* rather than a new power lever. Recipe documented (def → registry → exclusion list → sprite → palette).
 

@@ -97,6 +97,52 @@ route.)*
 
 ---
 
+## World structure — areas, shrines & the run loop
+
+*(Added 2026-06-06.)*
+
+**The world is a set of areas; a run is an incursion into one.** Each **area** = a biome + an
+enemy faction + **one usurped shrine** to reclaim. The first area is the **Goblin Forest**,
+inhabited by goblins. (This is a scalable content *template*: future areas reskin biome + faction
++ shrine — the engine for the "wider world.")
+
+- **Maps are procedurally generated and non-persistent** (as today) — each run feels fresh; you do
+  not learn one fixed map. **One shrine per map.**
+- **The shrine is held by the enemy.** In the Goblin Forest the shrine was abandoned by humans and
+  **usurped by goblins**, who exploit the gods' *remnant* power for their own benefit (their
+  shamans channel the perverted version). The remnant divinity is *why* the forest is theirs and
+  *why* there's power to harvest.
+- **The player reactivates the shrine** to draw on the gods' true power in service of their quest.
+
+### Two beats — keep them separate
+
+- **Reactivation = a one-time conquest.** Fight to the held shrine, clear the usurpers, reclaim it.
+  The run's opening objective + a power-fantasy beat + the natural home for the **Goblin King**
+  (the usurper holding it). Optional mechanic: while corrupted, the shrine **buffs nearby goblins**
+  — so reclaiming it both *unlocks your power* and *debuffs the enemy* (a contested aura, not a
+  passive unlock).
+- **Pilgrimage = the recurring return.** Once reclaimed, the shrine is **your hearth** in hostile
+  territory — where you imbue/deepen skills, spend Favor, restock, recover between sieges. You
+  return because it's *yours and rewarding*, not because a rule forces you (the bonfire pattern).
+
+### The run loop (the emerging structure)
+
+> **Day:** explore the procedural map — raid goblin camps, hit shops, trigger random events, build
+> Favor/gold. **Night:** survive the siege (Nightfall, shipped). **Every few levels:** an imbue
+> charge banks → pilgrimage back to your reclaimed shrine to imbue or deepen a skill → the build
+> inflects. World pressure escalates. Repeat.
+
+**Anti-tedium = random events, not multiple shrines.** With one shrine, the return trip stays fresh
+because the map **spawns varied, mostly-opt-in, net-positive events** (roaming mini-boss over loot,
+goblin caravan ambush, remnant-cache, captive) that *reward* traversal and feed the run economy.
+Events that **block** a mandatory return reintroduce friction — keep most skippable.
+
+**Bank the imbue, don't gate the level.** Reaching the level milestone grants an *imbue charge*;
+the shrine is where you cash it. The player is **never blocked** from leveling/playing — only
+*pulled* back by an available reward. "Must return" → "want to return."
+
+---
+
 ## Decisions locked (this session)
 
 - **Favor is a single shared pool** — spend it on any god; pure opportunity cost. (Chosen over a
@@ -104,6 +150,13 @@ route.)*
 - **The "individuality / no-god" path is deferred** — a hero who takes *no* god and powers up
   their own soul instead is a tempting playable build (makes individuality literal, not just a
   restraint on devotion), but it's ~a fifth god's worth of content. Revisit later.
+- **One shrine per map; maps stay procedurally generated & non-persistent** — freshness via random
+  events, not a learnable fixed world or distributed shrines.
+- **Area template:** biome + enemy faction + one usurped shrine to reclaim. First area = Goblin
+  Forest.
+- **Shrine = reclaimed hub** (reactivate-once conquest), not a vending machine; **pilgrimage is a
+  pull** (banked imbue charges), not a hard gate. *(Recommended/locked-in-intent; validate in
+  playtest.)*
 
 ---
 
@@ -113,6 +166,13 @@ route.)*
 - How Favor is earned in a run (shrines, kills, milestones?) and whether it's respec-able.
 - Whether deeper tiers are linear (tier 1→2→3) or branching (the within-god specialization tree).
 - The player character's actual **mission** (the "self" the devotion path extinguishes).
+- **One area per run, or several?** Lean: one (Goblin Forest) = the slice; multi-area becomes a
+  later layer or meta-progression. Don't build the world map yet.
+- **Shrine economy unification:** reclaim (unlock) + Favor (breadth-vs-depth spend) + imbue charges
+  (cadence) should be designed as *one* system, not three bolted-together currencies.
+- **Big synergy to weigh (bigger scope):** should the **night siege threaten the reclaimed
+  shrine** — defend your base by night, pilgrimage by day — fusing Nightfall + the shrine loop into
+  one structure? Powerful, but a meaningfully larger design.
 
 ---
 
