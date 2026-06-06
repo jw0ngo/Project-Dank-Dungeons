@@ -181,6 +181,54 @@ Built: sword combat, dungeon editor, enemy AI (goblin/archer/warrior/bomber/king
 
 ---
 
+## Session 12 — Nightfall Sieges, Multi-Imbue, Auto-Unlocks & the Card-Draft Core
+*June 2026 | ~12,600 lines | engineer + PM (Telegram bot) handoff*
+
+### Built
+- **Nightfall Sieges** — replaced the hidden 90s threat faucet with the **day/night cycle as the
+  difficulty clock**. Each night builds a **fixed roster** from a tunable table (`_wildSiegeRoster(n)`:
+  goblins `10+5n`, archers/bombers/warriors/shaman unlocking by night, kings `min(5,⌊n/2⌋)`) and a
+  **budget spawner** (`gWildSpawnTick`) trickles it across the night window, throttled by the live
+  cap; leftover drops at dawn ("held the line"). `wildThreatLevel` now = night number (stat scaling
+  steps once per nightfall). Day = lull. Then a pacing tune: 3-min day / 2-min night, **aggro**
+  daytime patrol bands, `NIGHT_GRUNT_SCALE` so the longer night stays busier than the day.
+- **Multi-imbue + level-gated shrine** — imbues went from a single `imbuedSkill` to a `gPlayer.imbues`
+  map (skillId→patron); shrine re-arms every 5 levels (glows) to imbue another skill; town meditation
+  is ungated. All read-sites route through one null-safe `gIsImbued(p, skill[, patron])`.
+- **Automatic skill unlocks** — retired the `skillPoints` currency; skills unlock at fixed levels
+  (`gWildSyncUnlocks`: dash@2 / whirl@3 / leap@4 / Grit@5; swing+heavy from L1).
+- **Card-draft Core** (3 staged increments): (1) per-player `skillMods` + `pSkillStat`; (2) deleted
+  STR/DEX/INT, level-up is a rarity card draft → `wildBuffs`; (3) active-skill + Grit card pools,
+  guaranteed mix, per-run caps, reroll. Removed the dead `WILD_ABILITIES` (the global-mutation code).
+- XP retune: `wildXpToNext` → linear `50 × level` (VS-style; L2=5 goblins, L3=+10).
+
+### Lessons
+- **No Node here, and a pure-Python ES parser is the `node --check` substitute — but `esprima`-python
+  predates ES2019+.** A whole-file parse fails on perfectly valid code. To use it, neutralize newer
+  syntax in an in-memory copy before parsing: `catch {` → `catch (e) {` (optional catch binding),
+  `??` → `||`, `?.` → `.` **only before an identifier** (NOT before a digit — `x?.3:0` is a *ternary*,
+  not optional chaining), and strip BigInt suffixes (`0n`→`0`). Or just slice out the section you
+  edited and parse that, dodging unrelated quirks elsewhere. **And scale rigor to the edit: a numeric
+  or comment-only change in already-balanced code needs no parse at all — only structural edits
+  (moved braces/parens/strings, added/removed functions) can break the parse.**
+- **To delete a stat system woven through 50+ call-sites, neuter the helper functions to their
+  neutral return values — don't edit every site.** STR/DEX/INT all started at 0, so every scaling
+  helper (`weaponScalingMult`, `wildDexSpeedMult`, …) already returned 1/0 at baseline. Turning them
+  into `return 1`/`return 0` shims made the deletion **behavior-identical at baseline** with ~10 edits
+  instead of ~50 risky ones, and kept the one live term (`wildBuffs.cdPct` in `wildDexCdMult`).
+- **The MP/cross-run "shared registry" landmine: never mutate a global like `WeaponRegistry.sword`
+  for per-player upgrades** — in co-op one player's cards buff everyone, and it leaks across runs.
+  Fix: a per-player modifier map (`skillMods`/`gritMods`) read at use-time via an accessor
+  (`pSkillStat(p,key) = base + p.skillMods[key]`), with per-key floors so −cooldown/−MP can't hit 0.
+- **Single-value → map refactors: route every read through one null-safe helper.** `gIsImbued` guards
+  `p && p.imbues && p.imbues[id]`, so remote peers (who never get an `imbues` map) return false
+  instead of throwing. Same shape for the card mods.
+- **Design boundary that simplified a whole feature:** cards are **magnitude** (rarity = ×multiplier),
+  the god **imbues** are **transformation**. Cutting "transformative cards" removed the spec's biggest
+  design sink and made the card pools pure numbers.
+
+---
+
 ## Debugging Heuristics Reference
 
 | Symptom | First thing to check |
@@ -200,6 +248,10 @@ Built: sword combat, dungeon editor, enemy AI (goblin/archer/warrior/bomber/king
 | On-hit flash shows a square box | `source-atop` fill on the shared canvas tints the opaque bg too — tint an offscreen sprite copy |
 | Sprite looks wrong size vs. another | Per-entity draw multiplier (e.g. `PLAYER_DRAW_SCALE`), not the sprite/box |
 | Overlapping AoE patches over-damage | Per-patch hit-cooldowns multi-hit — use one shared per-enemy cooldown |
+| `node --check` unavailable / parser rejects valid code | No Node here; use esprima-python but neutralize ES2019+ first (`catch{}`, `??`, `?.`-before-ident, BigInt `0n`) — and skip the parse entirely for numeric/comment-only edits |
+| Deleting a stat used in 50+ places | Neuter the helper to its neutral return (1/0); don't edit every call-site (works when the stat's baseline is 0) |
+| MP: one player's upgrade buffs everyone | A shared registry (`WeaponRegistry`) was mutated for a per-player effect — use a per-player modifier map read at use-time |
+| Map/field read throws on remote peers | Route single→map reads through one null-safe helper (`gIsImbued` guards `p && p.imbues`) |
 
 ---
 

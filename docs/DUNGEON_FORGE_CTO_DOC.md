@@ -49,7 +49,7 @@ TILE_SPIKE=10, TILE_HUT=11
 - §9 Enemy damage / gCheckEnemyDamage
 - §10 Init & gameLoad
 - §11 Render pipeline
-- §12 Wilderness XP, levelling, threat
+- §12 Wilderness XP, levelling, Nightfall Sieges, card draft
 - §12b Obelisk system
 - §13 Fog of War
 - §14 Goblin Village system
@@ -127,11 +127,17 @@ Row chars: `R`=rock, `T`=tree, `H`=hut, `S`=spike, `W`=wall (shrine border), `F`
 | village | gVillages[] (data object) |
 | shrine | gShrine {wx,wy,tx,ty,activated,patron,promptRange} |
 
-### Spawning
-- **Horde:** player-centred ring, `visRadius+3` to `+20` tiles, `activated=true` immediately
-- **Patrol bands:** 12–30s interval, outside vision, shared velocity, activate on contact
-- **Boss milestones:** 10min→1 king, 20min→3 kings, 30min→10 kings
-- **Despawn:** 85-tile radius, excludes `isPatrol` and `isHeld` enemies
+### Spawning — Nightfall Sieges (the difficulty clock)
+The day/night cycle (3-min day / 2-min night, `WILD_DAY_DURATION`/`WILD_NIGHT_DURATION`) **is** the
+difficulty curve — there is no 90s threat timer anymore. `wildThreatLevel` = `wildNight` (capped), so
+enemy stat scaling steps once per nightfall.
+- **Night = a fixed roster:** `_wildSiegeRoster(n)` (goblins `10+5n`, archers/bombers/warriors/shaman
+  unlock by night, kings `min(5,⌊n/2⌋)`); `_wildBuildSiegeQueue` flattens+shuffles (×`NIGHT_GRUNT_SCALE`,
+  kings last). `gWildSpawnTick` is a **budget spawner**: deploys the queue at `roster/night_duration`
+  per second, throttled by `wildCurrentCap()`. Unspawned remainder is dropped at dawn.
+- **Day = lull:** no horde spawning; only `gWildPatrolTick` bands (now aggro-on-spawn), ~16s cadence.
+- **Despawn:** 85-tile radius, excludes `isPatrol` and `isHeld` enemies.
+- Spawn ring: player-centred, `visRadius+3` to `+20` tiles, `activated=true`.
 
 ---
 
@@ -206,31 +212,38 @@ gBombFireZones = []; // {wx, wy, radius, life, maxLife}
 
 ---
 
-## MOBA Skill System
+## Skills & Progression
 
-### Skill Unlock Order
-All skills start **locked** in wilderness. Player starts with only Normal Attack.
+### Skill Unlock Order — automatic (no skill-point currency)
+Skills auto-unlock at fixed levels via `gWildSyncUnlocks` (`SKILL_UNLOCK_LEVEL`). It just sets the
+skill's level field to 1 at the threshold; the existing per-player `xLevel < 1` firing/`isLocked`
+checks are untouched (so MP semantics hold). The old `skillPoints` currency / CTRL-unlock is retired.
 
-| Skill | Key | CTRL unlock | Level field |
-|-------|-----|-------------|-------------|
-| Attack | LMB | — (always unlocked) | — |
-| Heavy | RMB | CTRL+R | `heavyLevel` |
-| Dash | SPC | CTRL+SPACE | `dashLevel` |
-| Whirlwind | Q | CTRL+Q | `wwLevel` |
-| Leap | E | CTRL+E | `leapLevel` |
+| Skill | Key | Unlocks at | Level field |
+|-------|-----|------------|-------------|
+| Attack | LMB | L1 (always) | — |
+| Heavy | RMB | L1 (start kit) | `heavyLevel` |
+| Dash | SPC | L2 | `dashLevel` |
+| Whirlwind | Q | L3 | `wwLevel` |
+| Leap | E | L4 | `leapLevel` |
+| Grit (passive) | — | L5 | gated in `gGritGain` (`GRIT_UNLOCK_LEVEL`) |
 
-### Skill Points
-- 1 point granted per level-up (stored on `gPlayer.skillPoints`)
-- Spend by: clicking a pulsing (sk-spendable) slot OR CTRL+hotkey
-- `sk-spendable` CSS: blue pulse animation, `pointer-events:all`
-- `sk-slot` default: `pointer-events:none` (doesn't interfere with game)
-- `#skill-bar` container: `pointer-events:auto` (must NOT be none)
+### Level-Up Screen — Card Draft (replaces STR/DEX/INT)
+- `gWildShowStatPick` deals **3 rarity-rolled cards, pick one** (Common/Rare/Epic/Legendary =
+  ×1.0/1.7/2.6/4.0 magnitude; `CARD_RARITIES`). Rarity is pure magnitude — no transformative cards.
+- Three pools: **passive** (`PASSIVE_CARDS` → `wildBuffs`), **active-skill** (`SKILL_CARDS`, ww/leap →
+  per-player `gPlayer.skillMods`, read via `pSkillStat`), **Grit** (`GRIT_CARDS` → `gPlayer.gritMods`,
+  read via `gGritShield/Duration/CapPct/Streak`). `gDrawCards` guarantees ≥1 passive + ≥1 skill/Grit
+  (when available), de-dupes, and excludes cards at their per-run `cap` (`gPlayer.cardPicks`).
+- **Reroll** (`gWildReroll`): interim free charge (1 +1/5-levels); spec retargets it to **Favor**
+  pricing (`docs/specs/favor-imbue.md`) once that system lands.
+- **STR/DEX/INT removed** — the scaling helpers (`weaponScalingMult`/`wildDex*`/…) are neutral shims.
+- Left panel: patron god portrait, src pulled from the shrine card img tag.
 
-### Level-Up Screen
-- Shows only stat cards (STR/INT/DEX) — no ability cards
-- One stat pick → CONFIRM
-- Left panel: patron god portrait (150→82% height, `object-fit:cover`)
-- God image src pulled from shrine card img tag
+### Imbues (multi-imbue, level-gated shrine)
+`gPlayer.imbues` is a `skillId → patron` map (was a single field). The wilderness shrine re-arms every
+5 levels (`gShrineHasUnclaimed` / `gImbueAllowance` = `⌊level/5⌋`) to imbue another skill; town
+meditation is ungated. All combat/UI reads go through the null-safe `gIsImbued(p, skill[, patron])`.
 
 ---
 

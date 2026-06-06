@@ -7,6 +7,79 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+### Changed
+- **Faster wilderness leveling** — XP-to-next is now linear (`50 × level`, arithmetic growth à la
+  Vampire Survivors) instead of `floor(100 · level^1.4)`. With a base goblin worth 10 XP this
+  benchmarks to L2 = 5 goblins, L3 = +10, +5 goblins per level after. Master tuning lever for the
+  card-draft pacing playtest.
+- **Card draft — skill & Grit cards, guaranteed mix, reroll (Stage 3, Core complete)** — the
+  level-up draft now mixes three pools: **passive** (→`wildBuffs`), **active-skill** (whirlwind &
+  leap: +damage/radius/range, −cooldown — written to the per-player `skillMods`), and **Grit**
+  (+shield/cap/duration, −streak — per-player `gritMods`; Grit constants are now run-modifiable
+  accessors). Skill cards are gated on that skill's unlock; Grit cards on level 5. Each draw
+  **guarantees ≥1 passive and ≥1 skill/Grit card** (when available), de-dupes, and excludes cards
+  at their **per-run pick cap**. Added a **reroll** that re-draws all three — currently an
+  **interim** free charge (1, +1 each 5-level milestone); the spec now prices reroll in **Favor**
+  (`docs/specs/favor-imbue.md`), which lands when that system is built. `pSkillStat` now floors
+  cooldown/MP stats so reduction cards can't zero them.
+  Removed the dead `WILD_ABILITIES` (the old global-`WeaponRegistry` mutation — the landmine).
+  *(Completes the `docs/specs/card-draft.md` Core; rarity-frame art and odds-by-night are stretch.)*
+- **Card draft replaces STR/DEX/INT (Stage 2)** — level-up no longer offers a STR/INT/DEX
+  point; it now deals a **3-card draft (pick one)**. Each card rolls a rarity
+  (Common 64% ×1.0 / Rare 26% ×1.7 / Epic 8% ×2.6 / Legendary 2% ×4.0) that scales a numeric
+  passive bonus — rarity is pure magnitude, never a behavior change. The passive pool (damage,
+  move speed, cooldowns, max HP, HP/s, max MP, MP/s, XP, pickup) routes through the existing
+  `wildBuffs` pipeline (same as Obelisks), so no new combat wiring. STR/DEX/INT and the Dark-Souls
+  scaling-grade subsystem are retired — the scaling helpers (`weaponScalingMult`,
+  `skillScalingMult`, `wildDex*`, etc.) are now neutral shims, so the ~50 combat call-sites are
+  unchanged and baseline power is identical (those stats started at 0). Character screen drops the
+  STR/INT/DEX panel and sources regen/speed from `wildBuffs`. *(Stage 2 of `docs/specs/card-draft.md`.
+  Active-skill + Grit card pools, guaranteed-mix, reroll, rarity-frame styling, and the MP
+  per-player draw are Stage 3.)*
+- **Card-draft groundwork — per-player skill stats (MP-correctness landmine fixed)** — active
+  skill stats (whirlwind/leap damage·radius·range·cooldown·MP) are now read through
+  `pSkillStat(player, key)` = weapon base **+ that player's `skillMods`**, instead of the shared
+  `WeaponRegistry.sword`. Card upgrades (coming) will write to the per-player, per-run `skillMods`
+  map so one player's cards can't buff everyone in co-op and stats don't leak across runs. All 22
+  combat/render/HUD/char-screen reads migrated; behavior-identical until cards write mods.
+  *(Stage 1 of the card-draft spec — `docs/specs/card-draft.md`.)*
+- **Automatic skill unlocks (skill-point currency retired)** — wilderness skills no longer cost
+  a "skill point" spent by Ctrl+hotkey / clicking a locked slot. They now unlock at fixed player
+  levels via `gWildSyncUnlocks`: **dash @2, whirlwind @3, leap @4, Grit (warrior passive) @5**;
+  swing + heavy are the level-1 starting kit. Each level-up floats an "X UNLOCKED!" tag. The
+  existing per-player `xLevel < 1` lock checks (firing gates + toolbar) are unchanged — unlock
+  just sets the level to 1 — so multiplayer semantics are preserved. Grit's shield is gated to
+  level 5 in the wilderness. Removes the `skillPoints` grant/spend/HUD and the `sk-spendable`
+  styling. *(Resolves the card-draft spec's Open Call #1 — the unlock prerequisite for that
+  system; STR/DEX/INT + the card draft itself are the remaining multi-session build.)*
+
+### Added
+- **Multi-imbue + level-gated shrine** — the wilderness shrine now re-arms **every 5 player
+  levels**: it glows (pulsing aura + floating runes) and the patron/imbue flow opens (auto in
+  the wilderness when you walk into range, or [E] in town) to imbue **another** skill. More than
+  one skill can be imbued at once — imbues are now a `skillId → patron` map (`gPlayer.imbues`),
+  replacing the old single `imbuedSkill`. The imbue menu shows already-imbued skills locked in
+  (`✓ IMBUED`), dims out skills once your level allowance is spent, and is multi-pick (Esc to
+  leave). Wilderness allowance = `⌊level/5⌋` capped by unlocked skills; **town meditation is
+  ungated** (imbue any/all unlocked skills, persisting into dungeons via `gImbuedSkills`). All
+  combat/render/UI/multiplayer read-sites route through a single null-safe `gIsImbued()` helper.
+
+### Changed
+- **Nightfall Sieges (spine)** — the wilderness difficulty clock is now the day/night cycle
+  instead of a hidden 90s threat faucet. Each **night is a discrete siege**: at nightfall a
+  **fixed roster** is built from a tunable table (goblins `10+5n`, archers `(n−1)·4` @n≥2,
+  bombers `(n−2)·2` @n≥3, warriors `(n−4)·2` @n≥5, shaman `n−6` @n≥7, kings `min(5,⌊n/2⌋)`)
+  and deployed across the fixed night window by a **budget spawner** (cadence =
+  `roster/night_duration`, throttled by the live-enemy cap). Whatever isn't deployed when the
+  fixed-timer night ends is **dropped at dawn** ("held the line"). Cycle is a **3-min day /
+  2-min night**; grunt roster counts are scaled (`NIGHT_GRUNT_SCALE`) so the longer night
+  stays clearly busier than the day. **Day is the lull** but no longer dead — patrol bands run a
+  tighter cadence (~16s vs 30s gaps early) and now **aggro on spawn** (chasing waves, not a
+  passive march). Enemy stat scaling (`wildThreatLevel`) now steps once per nightfall (= night
+  number, capped) rather than every 90s. HUD shows `NIGHT n · siege: X left` / `DAY n · calm`.
+  Removed the old run-minute King milestones (10/20/30 min) — kings come from the roster now.
+  *(Implements ROADMAP "Now" item 1.)*
+
 ### Fixed
 - **Release tooling** - `tools/release.ps1` read `CHANGELOG.md` without `-Encoding UTF8`, so
   Windows PowerShell 5.1 decoded it as cp1252 and rewrote em-dashes / `x` / fractions as
