@@ -1,0 +1,131 @@
+# Dungeon Forge — Worldbuilding & Design Concepts
+
+**Status: EXPLORATORY.** Setting themes and core-design thinking, captured so it isn't lost.
+Everything here is **subject to change** and is **upstream of the approval gate** — it is *not* a
+build spec and *not* on the roadmap. The build queue is [`ROADMAP.md`](ROADMAP.md); nothing here
+becomes engineering work until it's proposed, approved, and moved there. This doc is the "why the
+world works this way" that future proposals draw on.
+
+Captured 2026-06-06 from a design ideation session (Josh + PM).
+
+---
+
+## Setting (dark fantasy — Souls / Elden Ring lineage)
+
+- The world is **dark fantasy**: gods **come and go**. The patrons we know (Cilia, Boreas, Ikras,
+  Bhumi) are **waning** — their myths fading — and they survive only by being *remembered and
+  wielded*. So they hunt for **champions** to relight their myth and keep them alive.
+- The **player character is a potential champion** — but they are an **individual with their own
+  mission** (TBD), not a born servant. They take on the gods' blessings to further *their own*
+  ends.
+- **Using a god's blessings in battle relights that god's myth.** The gameplay loop *is* the
+  fiction: wielding power feeds the power.
+
+*(General themes, subject to change.)*
+
+---
+
+## The core fantasy
+
+> **An individual hero who wields the gods' blessings for their own benefit, while retaining their
+> own creativity and individuality.**
+
+Not "a devotee who has mastered one god." The skilled/creative player uses blessings *as it suits
+them*. Full devotion to a single god is **a valid path, but a dark one** — it means extinguishing
+one's own soul/desires and replacing them with the patron's.
+
+This is the load-bearing design decision: the build system must let players **mix** gods'
+blessings (that's the expression of individuality and mastery), while making mixing a **meaningful
+tradeoff** rather than a free buffet.
+
+---
+
+## Core build philosophy — the Devotion gradient
+
+**Mixing is allowed and central — but costed.** Imbuing skills with gods' power draws on a finite
+per-run resource, **Favor**, and deeper power costs more. This single mechanic turns the fantasy
+into a system and controls the design risks (balance, identity, co-op, readability) at once.
+
+Three poles on one gradient:
+
+- **Spread wide — the individual hero.** Sample several gods; each blessing stays **shallow**.
+  Flexible, creative, "you" — but no single god's power fully blooms.
+- **Concentrate — toward devotion.** Pour Favor into one god to unlock its **deeper imbue tiers**
+  (within-god specialization). Stronger, narrower.
+- **Full devotion — extinguish the self.** Max one god → a **champion capstone** (transformation /
+  ultimate; the god's myth fully relit through you). Enormous power, but flexibility is gone and
+  your skills become *the god's*, not yours. The dark pact: power for selfhood.
+
+**The self axis already exists.** Your **base class kit and its leveling are *yours*** (the
+warrior's skills). Imbues are a god's flavor *wielded on top*. So the build tension is literally
+**self ↔ god(s)**, and the "self" half is already built. Full devotion = the god *overwrites* your
+skills.
+
+### Why the gradient works (the four risks it neutralizes)
+
+| Risk of *free* mixing | Neutralized by Favor scarcity |
+|---|---|
+| Balance explosion (max fire **and** max ice) | Can't afford to max two gods; mixed builds are made of *shallow* blessings — only focus buys depth. The combinatorial space collapses to a curve. |
+| Identity dilution → "soup" | Scarcity nudges every build toward a **dominant god + accents** — a clear silhouette. |
+| Co-op contrast lost (pillar 4) | Deep power needs a primary, so two players naturally anchor **different mains** → freeze→shatter-style cross-god contrast survives emergently. |
+| Visual noise (pillar 1) | A dominant primary = coherent, readable FX with an accent, not a chaos of unrelated effects. |
+
+### Fiction → system mapping
+
+- *Gods waning, hunting champions to relight their myth* → **Favor is the relighting**; using a
+  god's skills feeds it.
+- *Use blessings as it suits you, keep your individuality* → the **skilled player threads the
+  gradient** — enough of two gods to create combos, without surrendering self.
+- *Full devotion = extinguish the soul* → the **capstone path**: the god overwrites your skills.
+  Powerful, narrow, a sacrifice.
+- *Hero with their own mission* → the **self axis** (base kit + leveling) is yours; gods are tools.
+
+---
+
+## North star: Souls / Elden Ring
+
+ER builds mix freely (faith/strength hybrids are real and expressive) but are constrained by
+**stat investment, limited slots, FP, equip load, costly respec** — identity comes from *what you
+committed to*, never a forced mono-theme. Translate directly: **Favor = stat investment, imbue
+slots = limited, deeper tiers cost more, swapping has friction.** The thing to avoid is *free*
+mixing, not mixing itself.
+
+*(Contrast: Hades makes free god-mixing its whole spine, but via run-to-run randomness + authored
+Duo boons — a different, bigger commitment that fights the "pre-selected class + kit" determinism
+and the single-god co-op fantasy. We're taking the ER-style costed-hybrid route, not the Hades
+route.)*
+
+---
+
+## Decisions locked (this session)
+
+- **Favor is a single shared pool** — spend it on any god; pure opportunity cost. (Chosen over a
+  per-god track for legibility; per-god *flavor* can layer on top later.)
+- **The "individuality / no-god" path is deferred** — a hero who takes *no* god and powers up
+  their own soul instead is a tempting playable build (makes individuality literal, not just a
+  restraint on devotion), but it's ~a fifth god's worth of content. Revisit later.
+
+---
+
+## Open questions (for later)
+
+- Exact capstone (full-devotion) design per god — transformation? ultimate skill? what's traded?
+- How Favor is earned in a run (shrines, kills, milestones?) and whether it's respec-able.
+- Whether deeper tiers are linear (tier 1→2→3) or branching (the within-god specialization tree).
+- The player character's actual **mission** (the "self" the devotion path extinguishes).
+
+---
+
+## Sequencing (how this reaches the game — not yet)
+
+- **The gradient can't be tested with one god** — it needs ≥2 imbue sets to mean anything, so it
+  sequences **after Boreas**, not now.
+- **The vertical slice is unaffected and still correct:** one god vs. the difficulty curve = a
+  *high-devotion Cilia build* on this model. Prove that feel first ([`ROADMAP.md`](ROADMAP.md) →
+  *Now*).
+- **Cheap MVP when we get there:** skip the full Favor economy at first — just give the player
+  **fewer imbue slots than skills.** Choosing *which* skills get *which* god, under scarcity,
+  already creates the wide-vs-deep tension for almost no system cost. Grow the economy later.
+
+See also: the **god identities** table in [`ROADMAP.md`](ROADMAP.md) (each patron's distinct
+combat identity — the blessings this system mixes).
