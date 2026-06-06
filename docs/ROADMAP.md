@@ -28,27 +28,33 @@ Co-op synergy (pillar 4) falls out of the contrast — e.g. Boreas freezes → C
 
 ## Now — approved or next in line (1–3 items)
 
-1. **Nightfall Sieges — unified cycle-threat + defined night waves** · `approved` 2026-06-06 · pillar: game feel (rhythm) + mastery
-   - One-liner: the **fixed** day-night cycle *becomes* the difficulty clock — each night is a discrete siege with a fixed enemy roster scaled by night number; day is the lull. Replaces the unbounded night-rate faucet.
-   - **★ THIS IS THE VERTICAL SLICE (Josh's call 2026-06-06).** The deliverable is a *tunable* spawn/difficulty curve to playtest the **current Cilia fire kit + warrior toolkit** against. No new content — no Boreas, no new enemy — until the slice feels good. Build the curve, then tune until the existing kit scales fairly. This is balance + playtest, not content.
-   - Why now: live balance fire (night over-spawns at high threat). Foundational — **sequenced ahead of Boreas** (Josh's call 2026-06-06): frost's zoning/slow/freeze tunes directly against *how many* enemies arrive, so this must land first or Boreas gets re-tuned later.
-   - The fix — three changes:
-     1. **One clock:** kill the 90s threat timer; `wildThreatLevel` → **night counter** (`wildNight`), increments once at each nightfall. Stat scaling (`wildThreatMult`) reuses the same formula keyed off night #. Difficulty now steps up on a telegraphed beat, not invisibly.
-     2. **Night = a fixed roster** from a wave table (starting numbers, tune live): goblins `10+5n`, archers `(n−1)·4` @n≥2, bombers `(n−2)·2` @n≥3, warriors `(n−4)·2` @n≥5, shaman `(n−6)` @n≥7, King `n%5`. (Josh's "30 gob / 20 arch" ≈ night 4–5.)
-     3. **Day = lull:** gut day horde spawning → sparse ambient/patrol only. Calm makes the siege read as a siege.
-   - **Night length: FIXED TIMER (option B — Josh's call 2026-06-06).** Difficulty ramps on a clock that never slows, so the player must out-scale it. The roster deploys *within* the fixed window: spawn cadence = `roster_total / night_duration`, throttled by the live-cap; unspawned remainder drops at dawn (reads as "held the line"). Intensity (enemies/sec) rises every cycle on top of per-cycle stat scaling → compounding pressure. NOT clear-to-dawn.
-   - Scope — Core: roster table + budget spawner (replaces `_wildSpawnPool`/`wildWaveSize`/`wildSpawnInterval`/`wildCurrentCap`), threat→night-counter, day spawn gutted, HUD "NIGHT n · siege: X left." Stretch: fold boss-milestone timer (10min→king) into the roster's boss column · dawn recovery bonus · clear-streak escalation.
-   - Touches: `wildThreatLevel`/`wildThreatTimer`/`WILD_THREAT_INTERVAL` (remove 90s tick ~11883), `gWildSpawnTick` + 4 spawn helpers, `gWildDayNightTick`/`_wildOnNightBegin`, boss milestones (optional), HUD threat label.
-   - Size: multi-session; spine (table + budget spawner + one clock) is one solid first session. New art: none (HUD tweak only).
-   - Balance: table above is the live-tune starting point; the depleting budget makes nights *testable* (a known count) for the first time. Day stat-scaling pace is slower than today (one step/cycle vs every 90s) — tune day length down if escalation feels slow.
-   - **Slice success criteria (what "good" is — the playtest target):**
-     - Each night reads as a discrete *siege* with a clear lull between (rhythm, not soup).
-     - The current Cilia/warrior kit can **out-scale the early curve** with skilled play, and there's a **felt wall** somewhere mid-curve (a night where the kit *stops* keeping up) — that wall tells us where the next power lever (Boreas, an upgrade, a new enemy) is actually needed. We're hunting for it, not patching around it.
+1. **Vertical slice — the current kit vs. the difficulty curve** · `in-progress` · pillar: game feel (rhythm) + mastery
+   - **The slice goal (Josh's call 2026-06-06):** prove the **current Cilia fire kit + warrior toolkit** scales fairly against rising difficulty. No new content (no Boreas, no new enemy) until it feels good. The slice has **two halves** — the difficulty *curve* (Nightfall, shipped) and the *progression* that scales the kit against it (card-draft, building now).
+   - **Half A — Nightfall Sieges · `SHIPPED` 2026-06-06.** The day/night cycle is now the difficulty clock: `wildNight` counter, fixed 60s siege window, roster-table budget spawner (`_wildBuildSiegeQueue` / `_wildSiegeRoster`), gutted day spawns → lull, `NIGHT n · siege: X left` HUD. Replaced the 90s threat faucet. **Mechanics done — roster counts / night length / live cap remain live-tune levers for the playtest.**
+   - **Half B — Card-Draft Level-Up rework · `approved` (ACTIVE BUILD).** Full spec at *Now #2* ▼ — replaces STR/DEX/INT with a 3-card draft; this is the progression that makes the kit's scaling *tunable*.
+   - **Slice success criteria (the playtest target, spanning both halves):**
+     - Each night reads as a discrete *siege* with a clear lull between (rhythm, not soup). ✓ *mechanics shipped — now tune.*
+     - The kit can **out-scale the early curve** with skilled play, with a **felt wall** mid-curve where it stops keeping up — that wall tells us where the next power lever (Boreas / deeper card pool / a new enemy) is actually needed. Hunting for it, not patching around it.
      - Spawn cadence never spikes into an unreadable wall; the live-cap keeps the screen fair.
-     - Each imbued skill (swing / whirlwind / leap / dash) has at least one night-situation where it's the *right* answer (so the kit feels deep against the curve, not one-button).
-   - **Tuning levers (engineer's dials for the playtest loop):** roster table counts per night · night duration / day duration · live spawn cap · `wildThreatMult` stat-scaling slope. Hold the Cilia kit's numbers fixed first — tune the *curve* to the kit, not the kit to the curve, so the slice tells us how the existing power scales.
+     - Each imbued skill (swing / whirlwind / leap / dash) has ≥1 night-situation where it's the *right* answer (kit feels deep, not one-button).
+   - **Tuning levers (the playtest dials):** roster counts/night · night & day duration · live spawn cap · stat-scaling slope · **card rarity-odds + magnitudes (Half B)**. Hold the Cilia kit's *base* numbers fixed — tune the *curve and the card economy* around it, so the slice tells us how the existing power scales.
 
-2. **Boreas's Frost — control imbue kit (warrior)** · `held — behind slice` (was approved 2026-06-06) · pillar: build-craft depth + game feel
+2. **Card-Draft Level-Up rework — replaces STR/DEX/INT** · `approved` 2026-06-06 · pillar: mastery + build-craft depth + game feel
+   - One-liner: every level-up offers a **choice of 3 cards** (upgrade a skill *or* take a passive), drawn from a weighted pool with **bounded-magnitude rarity tiers**. STR/DEX/INT removed entirely; the power they gave is reborn as passive cards.
+   - Why now: the slice asks "does the kit scale fairly?" — that answer is *delivered by the progression system*. STR/DEX/INT is a CRPG allocation pattern (no drama, pre-solvable, opaque scaling grades — the confusion Josh flagged) that fits a roguelite poorly and competes with the gods/imbues identity axis. Collapsing it into a Hades/VS-style draft is the right genre fit and **the other half of the slice** (Half B above).
+   - **Randomness-but-balanced design (the core of it):**
+     - **Randomize *which* card + *what tier* — never unbounded magnitude.** Each card rolls a rarity (Common/Rare/Epic) scaling its number within a fixed band (e.g. +8 / +14 / +22% dmg). Excitement lives in the tier; balance is that you can't roll a 10×.
+     - **Guaranteed-useful draws:** always ≥1 skill card + ≥1 passive; 3rd wild. De-dupe within an offer.
+     - **Reroll** (limited charges / small currency) — the 80/20 anti-brick tool; luck must not decide a run (mastery pillar). Banish/skip = stretch.
+     - **Guardrails:** per-skill upgrade cap (no one-skill degeneracy) · diminishing returns on stacked passives (no snowball).
+   - **Skill cards must out-shine passives** (avoid the VS safe-pick trap): some skill cards are **transformative** (whirlwind pulls enemies in, leap leaves a shockwave), not just +numbers. Keep **distinct from imbues** — cards tune mechanics/numbers *within a run*; imbues add the *god element/identity*. (Card↔imbue cross-interactions are post-slice.)
+   - Scope — Core: delete `WILD_STATS` + the scaling-grade subsystem (`SKILL_SCALING` / `SCALING_BONUS_PER_POINT` / `wildStr|Dex|Int*` helpers) · add passive-card pool · weighted 3-card draw + rarity roll · the draft UI · reroll. Reuse `WILD_ABILITIES`' card shape for skill cards. Stretch: transformative cards · banish/skip · rarity-odds-by-night curve.
+   - Touches: `WILD_STATS` / `WILD_ABILITIES` (~11618–11700), `SKILL_SCALING` / `SCALING_BONUS_PER_POINT` / `wildStr|Dex|Int*` (delete, ~11561–11602), level-up handler (`wildLevel++` ~11541), stat-pick UI, HUD stat readout (~10357).
+   - **⚠️ Landmine (load-bearing for "fairly balanced" + MP):** skill upgrades currently mutate `WeaponRegistry.sword` **globally** (`sw.wwDamage += 5` ~11670), not per-player — so upgrades leak across runs and, in multiplayer, **one player's cards buff everyone** (shared registry). Move per-run upgrade state onto the player / a per-run modifier object from the start; retrofitting is worse.
+   - Size: multi-session; spine (remove stats → weighted 3-card draw + rarity → reroll) is one solid session because the card data model already exists. New art: none (CSS/canvas card frames; reuse existing glyph icons).
+   - Balance: rarity odds + card magnitudes are tuning levers sitting next to the spawn curve — tune them together so kit power tracks the night counter (Half A). More enemies → faster XP → faster cards → power keeps pace; tune XP/level pacing alongside the roster.
+
+3. **Boreas's Frost — control imbue kit (warrior)** · `held — behind slice` (was approved 2026-06-06) · pillar: build-craft depth + game feel
    - **HELD (Josh's call 2026-06-06):** not active work. Building a second god now contradicts the slice focus (scale the *current* kit first). Boreas is the prime candidate for the power lever the slice's "felt wall" will call for — unhold it once the slice playtests well and we know what the curve needs. Spec below is intact and ready.
    - One-liner: a four-skill Frost kit built on **defense / zoning / freeze**, mechanically
      distinct from fire (static fields, walls that block pathing, self-armor — not expanding DoT).
@@ -82,7 +88,7 @@ Co-op synergy (pillar 4) falls out of the contrast — e.g. Boreas freezes → C
 
 ## Next — proposed, sized, sequenced
 
-> Everything here is **gated behind the vertical slice.** Sequence is determined by what the slice's playtest reveals: the "felt wall" tells us whether the next move is a new power lever (Boreas), an upgrade/progression layer, or roster variety. Don't pull from *Next* until the slice plays well.
+> Everything here is **gated behind the vertical slice.** With Nightfall shipped and the card-draft progression now in *Now*, the slice's "felt wall" will tell us whether the next move is a new power lever (Boreas), deeper card content, or roster variety. Don't pull from *Next* until the slice plays well.
 
 1. **Co-op build synergy pass** · `proposed` · pillar: co-op that amplifies
    - One-liner: make two different gods' imbues *combine* on shared targets (e.g. one ignites, one detonates) so co-op is more than parallel play.
