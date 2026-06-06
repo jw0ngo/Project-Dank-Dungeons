@@ -19,3 +19,11 @@ desktop.ini
 
 # Claude Code local/personal settings (keep shared .claude/settings.json if added)
 .claude/settings.local.json
+
+# Python cruft
+__pycache__/
+*.pyc
+
+# PM Telegram bot — secrets and local conversation state
+tools/pm-bot/.env
+tools/pm-bot/state/

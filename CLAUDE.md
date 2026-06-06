@@ -39,6 +39,7 @@ Every deploy to `main` should become a **named version**, not just a loose commi
 
 Living documentation lives in `docs/`:
 - `ENGINEERING_CHARTER.md` — **read first.** The standing operating model: you are CTO & lead engineer with standing authority to keep the codebase healthy. Bias to act on in-codebase changes; check in only when the cost of being wrong is high; preserve behavior in refactors; refactor on a cadence; no half-measures. Includes how the charter's generic assumptions (tests, build, deps) map onto this repo's reality.
+- `PRODUCT_MANIFESTO.md` — the operating model for the **Product Manager** role (parallel to the engineering charter, on the product side): the pillars (game feel, build-craft depth, mastery, co-op), the developer's taste, the decision-ready proposal format, the approval gate, and roadmap cadence. Read this when generating product direction or running the PM agent.
 - `DUNGEON_FORGE_CTO_DOC.md` — system-by-system architecture reference (enemy registry, wilderness gen, shrines, skills, audio map). Keep current as systems change.
 - `SESSION_JOURNAL.md` — append-only log of debugging lessons. The most portable value in the repo; read the recent entries before debugging.
 - `WORKING_AGREEMENT.md` — collaboration mechanics (terse requests, screenshots are bug reports, "assess" = diagnose before fixing).
@@ -89,6 +90,9 @@ Two art layers coexist. **Pixel-array sprites** (`bsc()` / `SpriteRegistry`) are
 
 ### Local dev
 `tools/dev-window.ps1` + a personal PostToolUse hook (in `.claude/settings.local.json`, gitignored) reopen the live-reload dev window if it's closed when `index.html` is edited. It detects an open window via the livereload websocket on port 5500 — no polling. `tools/doc-drift-check.ps1` (Stop hook) nudges when `index.html` changed but the tracking docs (CHANGELOG/SESSION_JOURNAL/CLAUDE.md) didn't.
+
+### Product roadmap (engineer's handoff)
+Sanctioned product work lands in **`docs/ROADMAP.md`** under *Now* with status `approved` — treat that as the build queue. Producing and approving those items is a separate **Product Manager** role with its own operating context under **`product/`** (`product/CLAUDE.md`) — the engineer doesn't load or maintain that; it just consumes `ROADMAP.md`.
 
 ### Multiplayer
 Firebase Realtime DB. Config is embedded near the top of the file (`§1` region) and exposed as `window._FB`. Streams run at ~8 Hz, delta-compressed. All net code is gated on `window._FB && window._FB.db`, so single-player works if Firebase never initializes.
