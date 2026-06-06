@@ -48,7 +48,15 @@ Co-op synergy (pillar 4) falls out of the contrast — e.g. Boreas freezes → C
    - **Open call resolved (Josh):** cards own skill *power upgrades*; unlocks stay level-gates; the MOBA `skillPoints` currency retires.
    - Size: multi-session; spine ~1 session (overlay + data model already exist). New art: none for Core. Core = rarities + draft + three pools + per-run state + reroll + STR/DEX/INT removal; transformative cards + odds-by-night = stretch.
 
-3. **Boreas's Frost — control imbue kit (warrior)** · `held — behind slice` (was approved 2026-06-06) · pillar: build-craft depth + game feel
+3. **Favor & the Imbue Economy** · `proposed` 2026-06-06 · pillar: build-craft depth + mastery + game feel
+   - **Full spec: [`specs/favor-imbue.md`](specs/favor-imbue.md).** Fast-follow to the card-draft (the transformation layer to the cards' magnitude layer).
+   - One-liner: **Favor** = a rare run-scoped currency that drops from kills, spent to **imbue skills** with the current patron (1st imbue free at lvl 5, rest cost Favor) and to **reroll** level-up cards. Imbuing surfaces *on the level-up screen* — spend Favor to imbue a displayed skill card with the patron's effect.
+   - Grounds on the existing imbue system (`gPlayer.imbues`, `gImbueAllowance` = 1/5 levels, `gShrineSelectGod`, `gIsImbued`) — Favor adds a **cost layer + a level-up touchpoint**, not a new economy.
+   - **Open calls (need Josh):** (1) shrine = pick patron / level-up = apply imbues for Favor — confirm; (2) keep the `floor(level/5)` allowance as cadence + Favor as price, or Favor-only? Also: escalating vs flat imbue cost; respec deferred.
+   - Reconciliation: moving imbue *application* to level-up narrows the run-loop "pilgrimage to imbue" → shrine = patron selection / reactivation (propagate to [`WORLDBUILDING_CONCEPTS.md`](WORLDBUILDING_CONCEPTS.md) once confirmed).
+   - Size: multi-session; spine ~1 session (imbue machinery + orb/pickup patterns exist). New art: a Favor orb + small HUD glyph. Fully expressed once ≥2 gods imbue, but buildable/testable now with Cilia.
+
+4. **Boreas's Frost — control imbue kit (warrior)** · `held — behind slice` (was approved 2026-06-06) · pillar: build-craft depth + game feel
    - **HELD (Josh's call 2026-06-06):** not active work. Building a second god now contradicts the slice focus (scale the *current* kit first). Boreas is the prime candidate for the power lever the slice's "felt wall" will call for — unhold it once the slice playtests well and we know what the curve needs. Spec below is intact and ready.
    - One-liner: a four-skill Frost kit built on **defense / zoning / freeze**, mechanically
      distinct from fire (static fields, walls that block pathing, self-armor — not expanding DoT).

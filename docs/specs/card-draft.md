@@ -8,7 +8,9 @@
 
 **Why now:** the slice asks "does the kit scale fairly vs. the Nightfall siege curve?" — *this system delivers that scaling*. STR/DEX/INT is a pre-solvable allocation screen with no drama; a rarity draft is the genre-correct roguelite loop (Hades/VS) and makes every level a decision with a spike of excitement.
 
-**Player experience:** ding a level → world pauses → three cards fan out. A common +6% damage, a blue (Rare) Whirlwind upgrade, and — gold border, screen-pop — a **Legendary** "Leap now erupts a shockwave." You feel the pull of the gold card vs. the safe stat, pick, watch it flare into your build, and you're back in the fight. Over a run a bare warrior becomes a specific, lucky, *yours* build.
+**Player experience:** ding a level → world pauses → three cards fan out. A common +6% damage, a blue (Rare) Whirlwind upgrade, and — gold border, screen-pop — a **Legendary** "Leap: +32 damage, +24px radius." You feel the pull of the gold card (a big magnitude spike) vs. the safe stat, pick, watch it flare into your build, and you're back in the fight. Over a run a bare warrior becomes a specific, lucky, *yours* build.
+
+> **Design boundary (Josh, 2026-06-06): cards are MAGNITUDE, not transformation.** Every rarity of a card does the *same thing*, just bigger — a Legendary skill card simply boosts its stat(s) more than a lower rarity (per the ×tier multiplier). Cards never change *how* a skill behaves. The **transformative milestones for skills are the patron-god imbues** (the shrine run-loop — see `gIsImbued` / [`WORLDBUILDING_CONCEPTS.md`](../WORLDBUILDING_CONCEPTS.md)). This supersedes every "transformative card" mention below.
 
 ---
 
@@ -36,10 +38,10 @@ Core balance trick: **randomize *which* card and *what tier* — never unbounded
 +5% damage · +6% move speed · +12 max HP · +5% attack speed · −4% cooldowns · +3% lifesteal · +0.4 HP/s regen · +12 max MP / +0.3 MP/s · +12% XP gain · +pickup range.
 
 **B — Grit (warrior passive skill)** — current base: +20 shield/trigger, 20% maxHP cap, 3s duration, 5-hit streak:
-+6 shield/trigger · +4% shield cap · +0.5s duration · −1 streak to trigger (5→4→3, floored). **Legendary Grit:** absorbed shield *reflects* a % of damage (transformative).
++6 shield/trigger · +4% shield cap · +0.5s duration · −1 streak to trigger (5→4→3, floored). Higher rarities scale these numbers up (×tier) — no transformative Grit card (a Legendary Grit is just a bigger shield/cap/duration roll).
 
 **C — Active skill upgrades** (one card targets one of swing / whirlwind / leap / dash / heavy):
-+damage · +radius/range · −cooldown · −MP cost (all ×tier). **Epic/Legendary add a transformative property** — whirlwind *pulls enemies inward*, leap emits a *shockwave*, dash leaves a *damaging afterimage*, heavy gains a *stun*. The build-moment cards.
++damage · +radius/range · −cooldown · −MP cost (all ×tier). Higher rarities just roll **bigger numbers** — there are no transformative skill cards (a Legendary is a large stat spike, not a behavior change). Skill *transformation* is the patron-god imbues' job (see Design boundary above), keeping the two systems cleanly separated.
 
 ---
 
@@ -48,7 +50,7 @@ Core balance trick: **randomize *which* card and *what tier* — never unbounded
 - **3 cards, pick 1** per level-up (reuse the existing confirm overlay).
 - **Guaranteed-useful mix:** always ≥1 active-skill card and ≥1 passive/Grit card; 3rd wild — so neither axis starves.
 - **De-dupe within an offer;** never offer a maxed item.
-- **Reroll:** start ~1 charge, refreshes all 3; more from level milestones / events / shops (hooks into the future run loop). Anti-brick tool — luck must not decide a run (mastery pillar).
+- **Reroll:** refreshes all 3; **priced in Favor** (escalating per reroll, resets each level) — see [`favor-imbue.md`](favor-imbue.md). Anti-brick tool — luck must not decide a run (mastery pillar).
 
 ## Guardrails — the "stays balanced" half
 
@@ -69,8 +71,9 @@ Core balance trick: **randomize *which* card and *what tier* — never unbounded
 - Rarity styling on the existing overlay.
 
 **Stretch (same arc, fast-follow):**
-- Transformative Epic/Legendary skill cards (ship numbers-only first).
 - Rarity-odds-by-night curve · a Luck stat · per-rarity frame art · banish/skip.
+
+*(Transformative skill cards are **cut**, not deferred — cards are numbers-only at every rarity; skill transformation lives in the god imbues. See the Design boundary above.)*
 
 ---
 
@@ -96,7 +99,7 @@ Core balance trick: **randomize *which* card and *what tier* — never unbounded
 
 1. **`skillPoints` reconciliation — RESOLVED (Josh, 2026-06-06): cards own skill *power upgrades*; skill *unlocks* stay as level-gates (auto-unlock at set levels); the separate MOBA `skillPoints` currency (Ctrl+click toolbar, ~3118 / grant ~11801) retires.** Toolbar UX barely changes. *(Engineer: confirm no other system reads `skillPoints` before removing.)*
 2. **Per-run state migration** off `WeaponRegistry` — non-negotiable for correctness/MP (see landmine).
-3. **Transformative cards** are where most design time goes — Core ships numbers-only; transformatives are stretch in the same arc.
-4. **Cards ≠ imbues.** Cards tune within-run mechanics/numbers; the god *imbues* (shrine run-loop, later — see [`../WORLDBUILDING_CONCEPTS.md`](../WORLDBUILDING_CONCEPTS.md)) own identity. Keep the pools from colliding.
+3. **Transformative cards — RESOLVED (Josh, 2026-06-06): cut entirely.** Cards are magnitude-only at every rarity (Legendary = a bigger stat roll, not a behavior change). Skill transformation is owned by the patron-god imbues. This removes the spec's largest design-time sink — Core is now purely the numeric card economy.
+4. **Cards ≠ imbues — load-bearing now.** Cards tune within-run numbers (magnitude); the god *imbues* (shrine run-loop, already shipping — `gIsImbued`; see [`../WORLDBUILDING_CONCEPTS.md`](../WORLDBUILDING_CONCEPTS.md)) own *identity / behavior change*. With transformative cards cut, this is the clean split between the two systems — keep the pools from colliding.
 
-**Recommendation:** ship **Core** now, transformatives + odds-by-night as fast-follow stretch.
+**Recommendation:** ship **Core** now (numbers-only — no transformatives to defer); odds-by-night curve as fast-follow stretch.
