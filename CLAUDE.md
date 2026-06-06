@@ -2,6 +2,20 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Roles & context routing
+
+This repo is operated by two roles, each with its own context:
+
+- **Engineer / CTO — the default (this file).** Owns *how*: builds and refactors `index.html`,
+  the systems, the art pipeline, releases. This file auto-loads into every session, so unless
+  you switch, **you are the engineer.** Full operating model: `docs/ENGINEERING_CHARTER.md`.
+- **Product Manager — opt-in.** Owns *what* and *why*: the roadmap. Operating context is
+  `product/CLAUDE.md` (model: `docs/PRODUCT_MANIFESTO.md`). Switch into it with **`/pm`**.
+
+The two roles hand off through `docs/ROADMAP.md` (PM fills it; engineer builds from *Now*).
+Switch roles explicitly: **`/pm`** to become the Product Manager, **`/cto`** to return to (or
+assert) the engineer role. Everything below this section is the engineer's context.
+
 ## What this is
 
 **Dungeon Forge** — a browser action-RPG written in vanilla JS + Canvas API, with Firebase Realtime Database for multiplayer. The whole game is one self-contained HTML file with all CSS, JS, and base64 art inlined. No framework, no transpile.
