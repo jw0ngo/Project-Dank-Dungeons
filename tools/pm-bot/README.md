@@ -10,6 +10,21 @@ It's a plain Python long-polling bot (no Node, no public server). It runs on you
 and reaches Telegram outbound, so it works behind your home network with no port
 forwarding. Your PC must stay on while you're away for the bot to answer.
 
+**Provider-agnostic.** The PM agent's brain is swappable — any LLM can drive it, not
+just Claude. The bot speaks one neutral message/tool-call format internally and
+translates to whichever backend you select with `LLM_PROVIDER`:
+
+| `LLM_PROVIDER` | Backend | Covers |
+|---|---|---|
+| `anthropic` (default) | Anthropic Messages API | Claude (`claude-opus-4-8`, …) |
+| `openai` | OpenAI-compatible `/v1/chat/completions` | OpenAI, OpenRouter, Groq, Together, Mistral, DeepSeek, local Ollama / LM Studio / vLLM |
+
+The agent's *operating model* is plain markdown (`docs/PRODUCT_MANIFESTO.md`,
+`product/CLAUDE.md`), loaded as the system prompt — so any model reads the same brief.
+The PM needs a **tool-calling-capable** model to write/commit the roadmap; models
+without function calling can still chat but can't update `ROADMAP.md`. Backend
+translation lives in `llm_backends.py` — add a new provider by adding one class there.
+
 ## What it can do
 
 - **Talk product** — propose features, rank ideas, pull the top of the backlog.
@@ -33,8 +48,11 @@ conversation; the roadmap on disk is untouched).
 
 3. **Configure.** Copy `tools\pm-bot\.env.example` to `tools\pm-bot\.env` and fill in:
    - `TELEGRAM_BOT_TOKEN` — from BotFather
-   - `ANTHROPIC_API_KEY` — from console.anthropic.com
    - `TELEGRAM_ALLOWED_CHAT_ID` — leave blank for now
+   - `LLM_PROVIDER` — `anthropic` (default) or `openai`
+   - the credential for your provider:
+     - `anthropic` → `ANTHROPIC_API_KEY` (from console.anthropic.com)
+     - `openai` → `OPENAI_API_KEY` (+ `OPENAI_BASE_URL` and `LLM_MODEL` for non-OpenAI hosts)
 
 4. **Find your chat id.** Start the bot (`.\tools\pm-bot\run.ps1`), open the bot in
    Telegram, send it any message. It replies with your chat id. Paste that into

@@ -22,12 +22,12 @@ import sys
 import time
 from pathlib import Path
 
-import requests
-
 try:
-    import anthropic
+    import requests
 except ImportError:
-    sys.exit("Missing dependency. Run: pip install anthropic requests")
+    sys.exit("Missing dependency. Run: pip install -r tools/pm-bot/requirements.txt")
+
+from llm_backends import LLMError, get_backend
 
 
 # ── Config (from environment / .env) ─────────────────────────────────────────
@@ -36,7 +36,6 @@ REPO_DIR = Path(__file__).resolve().parents[2]  # tools/pm-bot/ -> repo root
 STATE_DIR = Path(__file__).resolve().parent / "state"
 CONVO_PATH = STATE_DIR / "conversation.json"
 
-MODEL = "claude-opus-4-8"
 TELEGRAM_API = "https://api.telegram.org/bot{token}/{method}"
 TELEGRAM_MSG_LIMIT = 4000  # Telegram hard limit is 4096; leave headroom
 MAX_HISTORY_MESSAGES = 60  # bound context so token cost stays sane
@@ -76,10 +75,13 @@ ALLOWED_CHAT_ID = os.environ.get("TELEGRAM_ALLOWED_CHAT_ID", "").strip()
 
 if not BOT_TOKEN:
     sys.exit("Set TELEGRAM_BOT_TOKEN (see tools/pm-bot/README.md).")
-if not os.environ.get("ANTHROPIC_API_KEY", "").strip():
-    sys.exit("Set ANTHROPIC_API_KEY (see tools/pm-bot/README.md).")
 
-client = anthropic.Anthropic()
+# The LLM provider is selected by LLM_PROVIDER (default: anthropic). The chosen
+# backend validates its own API key / endpoint here and fails fast on misconfig.
+try:
+    backend = get_backend()
+except LLMError as exc:
+    sys.exit(str(exc))
 
 
 # ── Telegram helpers ─────────────────────────────────────────────────────────
@@ -185,11 +187,13 @@ def tool_commit_and_push(args: dict) -> str:
         return f"Git error: {(e.stderr or str(e)).strip()[:500]}"
 
 
+# Neutral tool schemas (name / description / JSON-Schema parameters). The active
+# backend translates these into Anthropic or OpenAI-compatible tool definitions.
 TOOLS = [
     {
         "name": "list_repo_docs",
         "description": "List the product/engineering docs you may read for grounding.",
-        "input_schema": {"type": "object", "properties": {}},
+        "parameters": {"type": "object", "properties": {}},
     },
     {
         "name": "read_repo_doc",
@@ -198,7 +202,7 @@ TOOLS = [
             "changelog, CTO architecture doc, etc.). Call this before pitching anything "
             "non-trivial so the idea fits the real game."
         ),
-        "input_schema": {
+        "parameters": {
             "type": "object",
             "properties": {"path": {"type": "string", "description": "Repo-relative path, e.g. CHANGELOG.md"}},
             "required": ["path"],
@@ -211,7 +215,7 @@ TOOLS = [
             "approves a change (promote an item to Now, re-rank, add a proposal). Read the "
             "current roadmap first, then pass the COMPLETE updated document. Does not commit."
         ),
-        "input_schema": {
+        "parameters": {
             "type": "object",
             "properties": {"content": {"type": "string", "description": "The complete new ROADMAP.md contents"}},
             "required": ["content"],
@@ -223,7 +227,7 @@ TOOLS = [
             "Commit docs/ROADMAP.md and push to origin/main so the engineering session sees "
             "approved items. Call only after write_roadmap and after the developer has approved."
         ),
-        "input_schema": {
+        "parameters": {
             "type": "object",
             "properties": {"message": {"type": "string", "description": "Short commit message, e.g. 'Roadmap: approve second-god imbue arc'"}},
             "required": ["message"],
@@ -269,44 +273,32 @@ def build_system() -> str:
 # ── Claude turn (manual tool-use loop) ───────────────────────────────────────
 
 def run_turn(chat_id, history: list) -> list:
-    """Run one PM turn: call Claude, execute tools, loop until end_turn. Returns
-    the updated message history (assistant + tool turns appended)."""
+    """Run one PM turn via the active backend: call the LLM, execute any tool
+    calls, loop until it stops calling tools. Mutates and returns the neutral
+    message history (assistant + tool turns appended)."""
     system = build_system()
     while True:
         send_typing(chat_id)
         try:
-            response = client.messages.create(
-                model=MODEL,
-                max_tokens=8000,
-                thinking={"type": "adaptive"},
-                system=system,
-                tools=TOOLS,
-                messages=history,
-            )
-        except anthropic.APIError as e:
-            send_message(chat_id, f"(API error: {e}. Try again in a moment.)")
+            resp = backend.complete(system, history, TOOLS)
+        except LLMError as e:
+            send_message(chat_id, f"(LLM error: {e}. Try again in a moment.)")
             return history
 
-        history.append({"role": "assistant", "content": response.content})
+        history.append({"role": "assistant", "content": resp.text,
+                        "tool_calls": resp.tool_calls})
 
-        if response.stop_reason != "tool_use":
-            text = "".join(b.text for b in response.content if b.type == "text").strip()
-            send_message(chat_id, text or "(done)")
+        if not resp.tool_calls:
+            send_message(chat_id, resp.text or "(done)")
             return history
 
-        # Execute every requested tool, send results back as one user turn.
-        tool_results = []
-        for block in response.content:
-            if block.type != "tool_use":
-                continue
-            impl = TOOL_IMPLS.get(block.name)
-            result = impl(block.input) if impl else f"Unknown tool: {block.name}"
-            tool_results.append({
-                "type": "tool_result",
-                "tool_use_id": block.id,
-                "content": result,
-            })
-        history.append({"role": "user", "content": tool_results})
+        # Execute each requested tool; append one neutral tool result per call.
+        for call in resp.tool_calls:
+            impl = TOOL_IMPLS.get(call["name"])
+            args = call.get("arguments") or {}
+            result = impl(args) if impl else f"Unknown tool: {call['name']}"
+            history.append({"role": "tool", "tool_call_id": call["id"],
+                            "name": call["name"], "content": result})
 
 
 # ── Command handling ──────────────────────────────────────────────────────────
@@ -340,6 +332,7 @@ def main() -> None:
     if not me:
         sys.exit("Could not reach Telegram — check TELEGRAM_BOT_TOKEN.")
     print(f"[pm-bot] connected as @{me.get('username')}", flush=True)
+    print(f"[pm-bot] LLM provider: {backend.name} (model: {backend.model})", flush=True)
     if not ALLOWED_CHAT_ID:
         print("[pm-bot] WARNING: TELEGRAM_ALLOWED_CHAT_ID is not set. The bot will reply to the "
               "first chat that messages it with its chat id, then refuse everyone. Set that id in "

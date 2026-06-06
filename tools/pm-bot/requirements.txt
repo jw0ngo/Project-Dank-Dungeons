@@ -1,2 +1,6 @@
-anthropic>=0.92.0
+# Always required (Telegram + the OpenAI-compatible backend use raw HTTP):
 requests>=2.31.0
+
+# Only required when LLM_PROVIDER=anthropic (the default — Claude backend).
+# Not needed if you run an OpenAI-compatible provider instead.
+anthropic>=0.92.0
