@@ -42,6 +42,14 @@ tradeoff** rather than a free buffet.
 
 ## Core build philosophy — the Devotion gradient
 
+> **⚑ Concrete model finalized 2026-06-06 — source of truth: [`specs/favor-imbue.md`](specs/favor-imbue.md).**
+> Favor has **one job: the price of a *new patron*.** Imbuing with a god you're already attuned to is
+> **free** (paced by level-ups, applied on the level-up screen); attuning to an *additional* god costs
+> escalating Favor. So **depth is free, breadth is paid** — that's the gradient, expressed by one
+> currency. The shrine = **patron attunement / reactivation**, not a per-imbue pilgrimage. The prose
+> below is the original framing; where it says "pour Favor in for deeper tiers" or "spend Favor per
+> imbue," read it as *refined* by this note. *(Favor mechanics remain provisional — may be revisited.)*
+
 **Mixing is allowed and central — but costed.** Imbuing skills with gods' power draws on a finite
 per-run resource, **Favor**, and deeper power costs more. This single mechanic turns the fantasy
 into a system and controls the design risks (balance, identity, co-op, readability) at once.
@@ -128,25 +136,28 @@ inhabited by goblins. (This is a scalable content *template*: future areas reski
 ### The run loop (the emerging structure)
 
 > **Day:** explore the procedural map — raid goblin camps, hit shops, trigger random events, build
-> Favor/gold. **Night:** survive the siege (Nightfall, shipped). **Every few levels:** an imbue
-> charge banks → pilgrimage back to your reclaimed shrine to imbue or deepen a skill → the build
-> inflects. World pressure escalates. Repeat.
+> Favor/gold. **Night:** survive the siege (Nightfall, shipped). **Each level-up:** draw cards and
+> (if attuned) imbue a skill on the level-up screen → the build inflects. The shrine is reactivated
+> *once* to attune your first patron; Favor pays to attune additional gods. World pressure escalates. Repeat.
 
 **Anti-tedium = random events, not multiple shrines.** With one shrine, the return trip stays fresh
 because the map **spawns varied, mostly-opt-in, net-positive events** (roaming mini-boss over loot,
 goblin caravan ambush, remnant-cache, captive) that *reward* traversal and feed the run economy.
 Events that **block** a mandatory return reintroduce friction — keep most skippable.
 
-**Bank the imbue, don't gate the level.** Reaching the level milestone grants an *imbue charge*;
-the shrine is where you cash it. The player is **never blocked** from leveling/playing — only
-*pulled* back by an available reward. "Must return" → "want to return."
+**Imbue at level-up; the shrine is for patrons.** Imbues are applied on the level-up screen (with an
+attuned god), so the player is **never forced to trek back mid-action** to power up. The shrine is
+reactivated once to attune a patron, and revisited as the run-loop hearth (shop / restock / new
+patron) — a *pull*, not a per-imbue leash.
 
 ---
 
 ## Decisions locked (this session)
 
-- **Favor is a single shared pool** — spend it on any god; pure opportunity cost. (Chosen over a
-  per-god track for legibility; per-god *flavor* can layer on top later.)
+- **Favor = the price of a new patron** (single run-scoped pool; drops from kills). Imbuing with an
+  *attuned* god is free (paced by level-ups); attuning to an *additional* god costs escalating Favor.
+  **Depth free, breadth paid.** Supersedes the earlier per-imbue-cost / dual-gate model — see
+  [`specs/favor-imbue.md`](specs/favor-imbue.md). *(Provisional — may be revisited.)*
 - **The "individuality / no-god" path is deferred** — a hero who takes *no* god and powers up
   their own soul instead is a tempting playable build (makes individuality literal, not just a
   restraint on devotion), but it's ~a fifth god's worth of content. Revisit later.
@@ -163,7 +174,7 @@ the shrine is where you cash it. The player is **never blocked** from leveling/p
 ## Open questions (for later)
 
 - Exact capstone (full-devotion) design per god — transformation? ultimate skill? what's traded?
-- How Favor is earned in a run (shrines, kills, milestones?) and whether it's respec-able.
+- Respec — re-imbuing a skill to a different attuned god (deferred for now). *(Favor-earning resolved: drops from kills; elites guaranteed later.)*
 - Whether deeper tiers are linear (tier 1→2→3) or branching (the within-god specialization tree).
 - The player character's actual **mission** (the "self" the devotion path extinguishes).
 - **One area per run, or several?** Lean: one (Goblin Forest) = the slice; multi-area becomes a
