@@ -38,7 +38,43 @@ def is_bg(px, x, y, bg, thresh):
     return min(r, g, b) >= 255 - thresh
 
 
-def cut_cell(cell, bg, thresh, feather, glob=False, erode=0):
+def _cut_severed(cell, px, w, h, bg, thresh, sever, feather):
+    """Morphological cut for figures whose detail shares the bg colour (see cut_cell sever>0)."""
+    mask = Image.new('L', (w, h), 0); mp = mask.load()
+    for y in range(h):
+        for x in range(w):
+            if is_bg(px, x, y, bg, thresh):
+                mp[x, y] = 255
+    for _ in range(sever):                       # shrink bg -> sever thin channels into the figure
+        mask = mask.filter(ImageFilter.MinFilter(3))
+    ep = mask.load()
+    reached = bytearray(w * h); dq = deque()
+    for x in range(w):
+        for yy in (0, h - 1):
+            if ep[x, yy] and not reached[yy * w + x]: reached[yy * w + x] = 1; dq.append((x, yy))
+    for y in range(h):
+        for xx in (0, w - 1):
+            if ep[xx, y] and not reached[y * w + xx]: reached[y * w + xx] = 1; dq.append((xx, y))
+    while dq:
+        x, y = dq.popleft()
+        for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if 0 <= nx < w and 0 <= ny < h:
+                i = ny * w + nx
+                if ep[nx, ny] and not reached[i]: reached[i] = 1; dq.append((nx, ny))
+    alpha = Image.new('L', (w, h), 0); ap = alpha.load()
+    for y in range(h):
+        for x in range(w):
+            if not reached[y * w + x]: ap[x, y] = 255
+    for _ in range(sever + 1):                   # undo the bg-erode bulge + 1px halo trim
+        alpha = alpha.filter(ImageFilter.MinFilter(3))
+    if feather > 0:
+        alpha = alpha.filter(ImageFilter.GaussianBlur(feather))
+    out = cell.convert('RGBA'); out.putalpha(alpha)
+    bb = alpha.getbbox()
+    return out.crop(bb) if bb else None
+
+
+def cut_cell(cell, bg, thresh, feather, glob=False, erode=0, sever=0):
     """Return RGBA image of the isolated figure, tight-cropped, or None.
 
     glob=True  -> cut EVERY background-coloured pixel, including enclosed pockets not reachable
@@ -46,10 +82,18 @@ def cut_cell(cell, bg, thresh, feather, glob=False, erode=0):
                   Use for shapes that enclose background; unsafe if interior detail shares the
                   bg colour. glob=False keeps the edge-seeded flood fill (interior detail survives).
     erode>0    -> tighten the alpha mask N px to kill the white/dark anti-aliased edge halo.
+    sever>0    -> HARD case: the figure's own detail is the SAME colour as the bg (dark steel armour
+                  on a near-black sheet), so no brightness/colour key can separate them. Erode the
+                  background mask `sever` px to cut the thin channels that connect interior recesses
+                  to the exterior, flood from the border through what's left (only the WIDE exterior
+                  + wide gaps like between legs survive), and keep everything else as figure. Detail
+                  recesses stay filled. Takes precedence over glob/erode.
     """
     cell = cell.convert('RGB')
     w, h = cell.size
     px = cell.load()
+    if sever > 0:
+        return _cut_severed(cell, px, w, h, bg, thresh, sever, feather)
     isbg = bytearray(w * h)            # 1 = background
 
     if glob:
@@ -151,6 +195,9 @@ def main():
                     help='cut ALL bg-coloured pixels incl. enclosed pockets (closed shapes: bows, pillars)')
     ap.add_argument('--erode', type=int, default=0,
                     help='tighten the alpha mask N px to kill the edge halo')
+    ap.add_argument('--sever', type=int, default=0,
+                    help='HARD case (figure detail same colour as bg, e.g. dark armour on a black '
+                         'sheet): erode the bg mask N px to sever channels so detail recesses stay filled')
     ap.add_argument('--out', default=None)
     args = ap.parse_args()
 
@@ -164,15 +211,16 @@ def main():
     worst_leak = 0
     for d, (r, c) in zip(DIRS, CELLS):
         cell = sheet.crop((c * cw, r * ch, (c + 1) * cw, (r + 1) * ch))
-        fig = cut_cell(cell, args.bg, args.thresh, args.feather, args.glob, args.erode)
+        fig = cut_cell(cell, args.bg, args.thresh, args.feather, args.glob, args.erode, args.sever)
         if fig is None:
             print(f"  WARN: {d} (r{r}c{c}) produced no figure")
             continue
         figs[d] = fig
-        # QA: flag bg-coloured opaque pixels (edge halo / enclosed pocket leak)
+        # QA: flag bg-coloured opaque pixels (edge halo / enclosed pocket leak). In --sever mode the
+        # figure's detail IS bg-coloured on purpose, so the metric over-reports — trust the contact.
         leak = bg_leak_px(fig, args.bg, args.thresh)
         worst_leak = max(worst_leak, leak)
-        flag = '  <-- WARN bg leak (try --erode / --global / --thresh)' if leak > max(60, fig.width * fig.height * 0.003) else ''
+        flag = '' if args.sever else ('  <-- WARN bg leak (try --erode / --global / --thresh / --sever)' if leak > max(60, fig.width * fig.height * 0.003) else '')
         print(f"  {d}: r{r}c{c} bbox {fig.size}  bg-leak {leak}px{flag}")
 
     # Uniform square so every direction renders at the same on-screen scale.
@@ -216,7 +264,10 @@ def main():
     print(f"\ncontact:  {contact_path}")
     print(f"snippet:  {snippet}")
     print(f"base64 total ~{total/1024:.0f} KB across {len(urls)} dirs")
-    verdict = 'CLEAN' if worst_leak <= 60 else f'CHECK (worst bg-leak {worst_leak}px - view the magenta contact)'
+    if args.sever:
+        verdict = 'sever mode - the bg-leak metric does not apply (detail is bg-coloured); judge by the magenta contact'
+    else:
+        verdict = 'CLEAN' if worst_leak <= 60 else f'CHECK (worst bg-leak {worst_leak}px - view the magenta contact)'
     print(f"QA: {verdict}")
 
 

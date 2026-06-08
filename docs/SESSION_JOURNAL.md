@@ -283,8 +283,13 @@ now has the levers and an automatic QA pass; use them every time:
    anything the figure encloses): the default edge-seeded flood fill can't reach it. Use **`--global`** to cut
    *all* background-coloured pixels. Only safe when interior detail isn't the same colour as the bg.
 4. **Chunks of the figure missing / fragmented** (dark armour on a black sheet, light stone on a white sheet —
-   interior detail shares the bg colour): **lower `--thresh`** toward the true bg brightness (e.g. the goblin
-   warrior idle needed `--thresh 24` on its near-black sheet) so the key stops eating the figure.
+   interior detail shares the bg colour): first try **lowering `--thresh`** toward the true bg brightness (e.g.
+   the goblin warrior idle needed `--thresh 24` on its near-black sheet). If the detail is *genuinely* the same
+   colour as the bg so no threshold separates them (the player **normal-attack** lunge — dark steel armour on a
+   ~25-brightness sheet), use **`--sever N`** instead: it erodes the background mask to cut the thin channels
+   that connect interior recesses to the exterior, then floods from the border, so the recesses stay filled.
+   In `--sever` mode the `bg-leak` metric over-reports (the kept detail *is* bg-coloured) — judge by the magenta
+   contact, not the number.
 
 Single one-off images (not 3×3 turnarounds, e.g. `world.shrine`) aren't run through the slicer, but apply the
 *same* global-key + erode + magenta-check by hand. The shrine needed both (`--global` for the pillar gaps, 1px
@@ -317,7 +322,7 @@ erode for the halo).
 | Map/field read throws on remote peers | Route single→map reads through one null-safe helper (`gIsImbued` guards `p && p.imbues`) |
 | White/dark halo around a cut-out sprite | Anti-aliased bg-blended edge pixels left opaque — `--erode 1` in the slicer (tighten the mask) |
 | Background showing through inside a sprite | Enclosed pocket the flood fill can't reach (bow gap, shrine pillars) — `--global` key |
-| Chunks of a sprite missing / fragmented | Interior detail shares the bg colour — lower `--thresh` toward true bg brightness |
+| Chunks of a sprite missing / fragmented | Interior detail shares the bg colour — lower `--thresh`; if detail truly matches the bg, `--sever N` (morphological channel cut) |
 
 ---
 
