@@ -4,7 +4,36 @@
 
 **Status legend:** `proposed` (PM idea, not yet seen by developer) · `approved` (developer greenlit — engineer may build) · `in-progress` · `shipped` (move to changelog, delete here) · `held` / `cut`.
 
-Keep the three horizons full. Re-rank after every release. This seed reflects game state at **v0.11.0**; everything below is `proposed` until the developer approves it.
+Keep the three horizons full. Re-rank after every release. State: **v0.11.0 + `[Unreleased]`** (Nightfall Sieges, Card-Draft Core, linear XP, auto-unlocks); items below are `proposed` until the developer approves.
+
+---
+
+## ⇄ Orchestration — how PM & engineering stay in sync
+
+**The repo is the shared brain.** Both agents reset context between sessions, so cross-role
+awareness lives *here*, not in memory. Topology = **one shared working tree** → the live state is
+the tree itself; commits/push matter for the pm-bot + Pages deploy. Three layers, one home each:
+
+- **Plan / queue → this file.** Every *Now* item carries a live status. **Flip it the moment you
+  act**, in the *same commit* as the work: PM sets `approved`; engineer sets `in-progress` **when
+  starting** (not just when done), then `shipped` on push. (Starting-on-flip is what stops the
+  "PM proposes a thing already built" drift.)
+- **Pulse / what just happened → git.** `git status` (uncommitted in-flight) + `git log --oneline`
+  (prefix commits `pm:` / `eng:` / `docs:`) + CHANGELOG `[Unreleased]` for detail.
+- **Handoff / waiting-on-whom → the ⇄ Handoffs queue below.** Either role appends a one-liner.
+
+**Session-open ritual (both roles, ~30s):** `git status` + `git log --oneline -15` → read *Now* +
+⇄ Handoffs → then act. **Enforcement:** `tools/doc-drift-check.ps1` (Stop hook) also watches this
+file, so an untracked board nudges on session close.
+
+### ⇄ Handoffs (append a line; delete when cleared)
+- **ENG → do:** commit + push the local Nightfall/card-draft work (`6080f2b`) and the uncommitted
+  odds-by-night roll (`M index.html`) so origin + the pm-bot see them.
+- **ENG → do (wire the system):** add `ROADMAP.md` to `doc-drift-check.ps1`'s watch list; add a
+  "tick *Now* status on start **and** push" line to root `CLAUDE.md`; add a one-line pointer to
+  this ⇄ Orchestration block in root `CLAUDE.md` **and** `product/CLAUDE.md`.
+- **PM ← ENG:** slice is build-complete → **playtest pending.** PM standing by to turn the
+  felt-wall signal into the next move (Boreas / deeper cards / roster variety).
 
 ---
 
@@ -31,7 +60,7 @@ Co-op synergy (pillar 4) falls out of the contrast — e.g. Boreas freezes → C
 1. **Vertical slice — the current kit vs. the difficulty curve** · `in-progress` · pillar: game feel (rhythm) + mastery
    - **The slice goal (Josh's call 2026-06-06):** prove the **current Cilia fire kit + warrior toolkit** scales fairly against rising difficulty. No new content (no Boreas, no new enemy) until it feels good. The slice has **two halves** — the difficulty *curve* (Nightfall, shipped) and the *progression* that scales the kit against it (card-draft, building now).
    - **Half A — Nightfall Sieges · `SHIPPED` 2026-06-06.** The day/night cycle is now the difficulty clock: `wildNight` counter, fixed 60s siege window, roster-table budget spawner (`_wildBuildSiegeQueue` / `_wildSiegeRoster`), gutted day spawns → lull, `NIGHT n · siege: X left` HUD. Replaced the 90s threat faucet. **Mechanics done — roster counts / night length / live cap remain live-tune levers for the playtest.**
-   - **Half B — Card-Draft Level-Up rework · `approved` (ACTIVE BUILD).** Full spec at *Now #2* ▼ — replaces STR/DEX/INT with a 3-card draft; this is the progression that makes the kit's scaling *tunable*.
+   - **Half B — Card-Draft Level-Up rework · `CORE SHIPPED` 2026-06-08.** Core complete incl. the odds-by-night rarity dial (*Now #2* ▼). **Both halves are now mechanically built → the slice is in PLAYTEST/TUNE, not build.** Remaining slice work = dialing the levers below and hunting the felt wall.
    - **Slice success criteria (the playtest target, spanning both halves):**
      - Each night reads as a discrete *siege* with a clear lull between (rhythm, not soup). ✓ *mechanics shipped — now tune.*
      - The kit can **out-scale the early curve** with skilled play, with a **felt wall** mid-curve where it stops keeping up — that wall tells us where the next power lever (Boreas / deeper card pool / a new enemy) is actually needed. Hunting for it, not patching around it.
@@ -39,14 +68,9 @@ Co-op synergy (pillar 4) falls out of the contrast — e.g. Boreas freezes → C
      - Each imbued skill (swing / whirlwind / leap / dash) has ≥1 night-situation where it's the *right* answer (kit feels deep, not one-button).
    - **Tuning levers (the playtest dials):** roster counts/night · night & day duration · live spawn cap · stat-scaling slope · **card rarity-odds + magnitudes (Half B)**. Hold the Cilia kit's *base* numbers fixed — tune the *curve and the card economy* around it, so the slice tells us how the existing power scales.
 
-2. **Card-Draft Level-Up rework — replaces STR/DEX/INT** · `approved` 2026-06-06 · pillar: mastery + build-craft depth + game feel
-   - **Full build spec: [`specs/card-draft.md`](specs/card-draft.md).** Summary below; engineer builds from the spec.
-   - One-liner: every level-up draws **3 random cards, pick 1** — improve a **passive stat**, the warrior's **passive skill (Grit)**, or an **active skill** — each rolled **Normal / Rare / Epic / Legendary** (×1.0 / ×1.7 / ×2.6 / ×4.0 magnitude). STR/DEX/INT removed entirely.
-   - Why now: the slice asks "does the kit scale fairly?" — *delivered by the progression system*. STR/DEX/INT is a pre-solvable allocation screen with no drama; a rarity draft is the genre-correct roguelite loop and **the other half of the slice** (Half B above).
-   - Balance spine: **randomize *which* card + *what tier*, never unbounded magnitude**; **rarity odds shift up by night/level** (the lever that keeps power tracking the siege curve); guaranteed-useful draws (≥1 active + ≥1 passive); reroll (anti-brick); per-skill caps + diminishing returns.
-   - **⚠️ Landmine:** active-skill upgrades mutate `WeaponRegistry.sword` **globally** (~11670) → leaks across runs + buffs all players in MP. Route all card effects through **per-run/per-player state**.
-   - **Open call resolved (Josh):** cards own skill *power upgrades*; unlocks stay level-gates; the MOBA `skillPoints` currency retires.
-   - Size: multi-session; spine ~1 session (overlay + data model already exist). New art: none for Core. Core = rarities + draft + three pools + per-run state + reroll + STR/DEX/INT removal; transformative cards + odds-by-night = stretch.
+2. **Card-Draft Level-Up rework — replaces STR/DEX/INT** · `CORE SHIPPED` 2026-06-08 · pillar: mastery + build-craft depth + game feel
+   - Spec: [`specs/card-draft.md`](specs/card-draft.md). **Core complete** — 3-card rarity draft (pick 1) over passive / active-skill / Grit pools; guaranteed mix; reroll; per-player `skillMods` (the global-`WeaponRegistry` landmine defused); STR/DEX/INT + the MOBA `skillPoints` currency retired; **odds-by-night rarity dial in** (the lever that tracks card power to the siege curve). Full detail in CHANGELOG `[Unreleased]`.
+   - **Stretch parked:** transformative (behavior-changing) cards · rarity-frame art. Pull only if the slice playtest asks for deeper card *content* rather than tuning.
 
 3. **Favor & the Imbue Economy** · `approved` 2026-06-06 · pillar: build-craft depth + mastery + game feel
    - **Full spec: [`specs/favor-imbue.md`](specs/favor-imbue.md).** Fast-follow to the card-draft (the transformation layer to the cards' magnitude layer). *(Favor mechanics provisional — may be revisited.)*
