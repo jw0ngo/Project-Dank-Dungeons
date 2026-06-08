@@ -26,7 +26,14 @@ assert) the engineer role. Everything below this section is the engineer's conte
 
 Other paths are historical/parallel and are NOT the live game:
 - `dungeon-forge-project/dungeon-forge/` — an April attempt to split the game into Vite ES modules (`src/engine/`, `src/hub/`, etc.). Stale. Only touch it if explicitly asked to work on the modular port.
-- `art/` — source PNGs embedded into the game as base64: the four patron gods, plus tile sheets (`tile stone.png`, `tile dirt.png`, `tile grass.png`) and FX/character sprites (fire wave, fire pillar, sword slash, player, goblins). Sliced/encoded into `index.html` (see Art pipeline below).
+- `art/` — source PNGs sliced/encoded into `index.html` as base64 (see Art pipeline below); the
+  game never loads these at runtime, so they're organized purely for humans, in kebab-case
+  subfolders: `art/player/` (warrior idle/attack/heavy turnarounds), `art/enemies/` (goblin family
+  — idle `goblin-*.png` and matching `*-attack.png`, incl. `goblin-king-white-bg.png`),
+  `art/gods/` (four patrons `bhumi/boreas/ikras/cilia`, some with a `-bg-removed` variant),
+  `art/tiles/` (`dirt/grass/stone.png` source sheets + `sliced/*_floor_*.png`), `art/fx/`
+  (`fire-*`, `burning-ground`, `jump-impact`, `sword-slash`, `heavy-stab`), `art/world/`
+  (`shrine-of-the-gods.png`).
 - `docs/` — the authoritative project docs (see below); `docs/archive/` holds older snapshots.
 
 ## Versioning

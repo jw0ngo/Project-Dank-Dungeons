@@ -21,7 +21,7 @@ Outputs: 8 PNG cutouts + a QA contact sheet + a data-URL text file, all into
 an output dir (default: <tempdir>/slice_<id>).
 
 Usage:
-  python tools/slice-turnaround.py "art/enemy goblin warrior.png" warrior --bg black
+  python tools/slice-turnaround.py "art/enemies/goblin-warrior.png" warrior --bg black
 """
 import sys, os, io, base64, argparse, tempfile
 from collections import deque
