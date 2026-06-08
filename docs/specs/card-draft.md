@@ -50,7 +50,7 @@ Core balance trick: **randomize *which* card and *what tier* — never unbounded
 - **3 cards, pick 1** per level-up (reuse the existing confirm overlay).
 - **Guaranteed-useful mix:** always ≥1 active-skill card and ≥1 passive/Grit card; 3rd wild — so neither axis starves.
 - **De-dupe within an offer;** never offer a maxed item.
-- **Reroll:** refreshes all 3; **priced in Favor** (escalating per reroll, resets each level) — see [`favor-imbue.md`](favor-imbue.md). Anti-brick tool — luck must not decide a run (mastery pillar).
+- **Reroll:** refreshes all 3; **priced in Favor** (escalating per reroll, resets each level) — see [`favor.md`](favor.md), which also adds a **rarity-upgrade** Favor sink on the card screen. Anti-brick tool — luck must not decide a run (mastery pillar).
 
 ## Guardrails — the "stays balanced" half
 

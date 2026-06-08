@@ -1,6 +1,12 @@
 # Spec — Favor & the Imbue Economy
 
-**Status:** `approved` 2026-06-06 (redesigned per Josh) · the build-craft economy layer over the [card-draft](card-draft.md) + the existing imbue system.
+> **⚠️ SUPERSEDED (2026-06-08) for the FAVOR mechanics — see [`favor.md`](favor.md).** Josh redirected
+> Favor to a **card-economy currency** (world gold: rare drops + chests → reroll + rarity-upgrade,
+> gated behind the level-5 patron pick). It no longer prices multi-god breadth. The **imbue-application**
+> notes below (level-up imbue affordance, attuned-gating, retiring `gImbueAllowance`) remain useful
+> reference for the imbue system, but the Favor model here is replaced by `favor.md` §7.
+
+**Status:** `superseded by favor.md` (was `approved` 2026-06-06) · the build-craft economy layer over the [card-draft](card-draft.md) + the existing imbue system.
 **Pillar:** build-craft depth (the wide-vs-deep gradient) · mastery (earned power) · game feel (a rare resource + a juicy spend).
 **Reads with:** [`card-draft.md`](card-draft.md) (cards = magnitude) · [`../WORLDBUILDING_CONCEPTS.md`](../WORLDBUILDING_CONCEPTS.md) (Favor-gradient philosophy, run loop).
 
