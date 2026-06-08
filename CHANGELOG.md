@@ -8,6 +8,18 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 ## [Unreleased]
 
 ### Changed
+- **Weightier heavy attack — doubled commitment window + true movement lock.** The smash's active
+  swing carries the player forward in a punchier lunge (`heavyDur` 18→26, lunge coeff 0.09→0.11),
+  then holds a **planted recovery** (`heavyRecover` 26) — so the full commitment window is **52
+  frames (~2×)**: lunge + strike in the first 26, exposed-and-rooted in the last 26. The player
+  **can't move for the entire window** — fixed the long-standing bug where the movement-lock gated
+  on `p.smashing` (a flag that was never set) instead of `p.heavySwinging`, so you could run at full
+  speed mid-smash. The hitbox is confined to the active swing (no lingering hits during recovery),
+  so whiffing a heavy genuinely roots you, exposed. First application of the **weighty-combat**
+  directive (committed actions cost mobility; `docs/PRODUCT_MANIFESTO.md` → Game-feel pillar).
+  Also fixed the heavy **pose rendering undersized** — its turnaround sheet is drawn smaller than
+  the idle sheet, so it's now drawn at `HEAVY_DRAW_MULT` (1.3×, the measured front-view helmet-width
+  ratio), feet-anchored, to match the idle body.
 - **Card Pool Expansion — Stage 1: per-player swing/heavy/dash stats (load-bearing migration).**
   Migrated the card-target swing (`swingArc`, `swingDur`), heavy (`heavyMaxWindup`, `heavyLen`,
   `heavyWidth`) and dash (`evasionRange`, `evasionCooldown`) reads from the global

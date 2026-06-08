@@ -271,8 +271,9 @@ Built: sword combat, dungeon editor, enemy AI (goblin/archer/warrior/bomber/king
 
 ## Sprite Import Checklist (run this for EVERY new sprite)
 
-Cutting a sprite out of its background keeps re-introducing the same three bugs. `tools/slice-turnaround.py`
-now has the levers and an automatic QA pass; use them every time:
+Cutting a sprite out of its background — and matching its size to the rest of the character's frames —
+keeps re-introducing the same handful of bugs. `tools/slice-turnaround.py` has the keying levers + an
+automatic QA pass; steps 1–4 are keying, step 5 is **size consistency**. Run all of it every time:
 
 1. **Slice it**, then **look at the magenta QA contact sheet** the tool prints (`contact.png`). White/dark
    halos and any background showing through pop instantly against magenta. The tool also prints a
@@ -290,6 +291,16 @@ now has the levers and an automatic QA pass; use them every time:
    that connect interior recesses to the exterior, then floods from the border, so the recesses stay filled.
    In `--sever` mode the `bg-leak` metric over-reports (the kept detail *is* bg-coloured) — judge by the magenta
    contact, not the number.
+5. **Size consistency — the new pose must render at the SAME on-screen body size as the character's idle/base
+   sprite.** Source sheets are often drawn at a *different zoom* (an attack/swing sheet zoomed out to fit the
+   motion → figure physically smaller in its cell). **Do not scale-match by the bounding box** — it's polluted
+   by extended weapons (a sword/bow flings the bbox wide) and crouched stances (shortens it). Match a
+   **pose-invariant body feature: helmet/shoulder width in a FRONT view** (`'s'`/`'n'`) — measure it in the new
+   frame vs the idle frame; the ratio is the correction. Fix by re-slicing at a corrected `side`, or (to keep an
+   extended weapon from clipping) a **feet-anchored draw multiplier** that grows the pose upward from the foot
+   line (see the player heavy `HEAVY_DRAW_MULT` = 1.3, the measured idle/heavy helmet ratio). **Measure, don't
+   eyeball** — coarse visual steps overshoot (1.5× looked right; the measured truth was 1.3×). Confirm by
+   rendering the new pose next to idle, bottom-aligned, heads matching. (Hit on the king, bomber, and player heavy.)
 
 Single one-off images (not 3×3 turnarounds, e.g. `world.shrine`) aren't run through the slicer, but apply the
 *same* global-key + erode + magenta-check by hand. The shrine needed both (`--global` for the pillar gaps, 1px
@@ -323,6 +334,7 @@ erode for the halo).
 | White/dark halo around a cut-out sprite | Anti-aliased bg-blended edge pixels left opaque — `--erode 1` in the slicer (tighten the mask) |
 | Background showing through inside a sprite | Enclosed pocket the flood fill can't reach (bow gap, shrine pillars) — `--global` key |
 | Chunks of a sprite missing / fragmented | Interior detail shares the bg colour — lower `--thresh`; if detail truly matches the bg, `--sever N` (morphological channel cut) |
+| New pose renders bigger/smaller than idle | Source sheet drawn at a different zoom — match by front-view helmet width (not the bbox); re-slice `side` or feet-anchored draw mult |
 
 ---
 
