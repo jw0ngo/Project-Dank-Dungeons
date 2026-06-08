@@ -30,6 +30,11 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
     night 1 → ~47% by night 12. Removed the old fixed-roster machinery (`_wildSiegeRoster`,
     `_wildBuildSiegeQueue`, `NIGHT_GRUNT_SCALE`, `_wildSpawnSiegePack`, the `siegeQueue`/`siegeTotal`
     queue state) and the day patrol-band code.
+- **Restored the fixed king milestones.** `_wildSpawnKings` + the 10/20/30-min triggers in
+  `gWildTick` are back (1 king @10min, 3 @20min, 10 @30min, with announcement + shake, reset
+  per run) — guaranteed Goblin-King boss waves on top of the day/night swarm. They were dropped
+  in the Session-12 Nightfall overhaul; the new `_wildSwarmType` only seasoned in rare kings from
+  night 6 (~28 min), so a normal run never saw one.
 - **Faster wilderness leveling** — XP-to-next is now linear (`50 × level`, arithmetic growth à la
   Vampire Survivors) instead of `floor(100 · level^1.4)`. With a base goblin worth 10 XP this
   benchmarks to L2 = 5 goblins, L3 = +10, +5 goblins per level after. Master tuning lever for the
