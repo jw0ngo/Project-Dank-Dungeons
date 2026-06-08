@@ -18,6 +18,19 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
   - **Goblin warrior** shows a swing pose (`char.warrioratk.*`) during `swing-windup`/`charging`.
   - **Goblin bomber & shaman** upgraded from procedural sprites to directional turnaround art
     (`char.bomber.*` / `char.shaman.*`) with movement-delta facing.
+  - **Goblin king** shows a lunge/attack pose (`char.kingatk.*`) during any attack phase
+    (swipe/jump/spin windups + spinning).
+  - **Goblin shaman** shows a staff-cast pose (`char.shamanatk.*`) while casting a fireball or
+    channelling the buff incantation.
+  - **Goblin bomber** now telegraphs its throw: a new `throwWindup` plants it in a throw pose
+    (`char.bomberatk.*`) facing the player, then releases the bomb when the windup elapses
+    (was an instant throw).
+
+### Fixed
+- **Archer attack sprite cleanup** — cut the enclosed white pocket between the drawn bow and its
+  string (the edge-seeded flood fill can't reach it, so it was keyed with a global white pass for
+  that sheet), and removed the old procedural bow-arm + arrow overlay now that the sprite carries
+  the drawn bow (the dashed shot-trajectory dodge telegraph stays).
 
 ### Changed
 - **Goblin melee is now a telegraphed cone attack + contact chip.** An aggro'd goblin plants,
