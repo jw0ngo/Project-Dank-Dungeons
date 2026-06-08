@@ -34,6 +34,8 @@ file, so an untracked board nudges on session close.
   this ⇄ Orchestration block in root `CLAUDE.md` **and** `product/CLAUDE.md`.
 - **PM ← ENG:** slice is build-complete → **playtest pending.** PM standing by to turn the
   felt-wall signal into the next move (Boreas / deeper cards / roster variety).
+- **PM → ENG:** **Card Pool Expansion approved** (*Now #2*, spec `specs/card-pool-expansion.md`) —
+  ready to build. Do the swing/heavy/dash → `pSkillStat` migration **first** (prerequisite landmine).
 
 ---
 
@@ -68,9 +70,16 @@ Co-op synergy (pillar 4) falls out of the contrast — e.g. Boreas freezes → C
      - Each imbued skill (swing / whirlwind / leap / dash) has ≥1 night-situation where it's the *right* answer (kit feels deep, not one-button).
    - **Tuning levers (the playtest dials):** roster counts/night · night & day duration · live spawn cap · stat-scaling slope · **card rarity-odds + magnitudes (Half B)**. Hold the Cilia kit's *base* numbers fixed — tune the *curve and the card economy* around it, so the slice tells us how the existing power scales.
 
-2. **Card-Draft Level-Up rework — replaces STR/DEX/INT** · `CORE SHIPPED` 2026-06-08 · pillar: mastery + build-craft depth + game feel
-   - Spec: [`specs/card-draft.md`](specs/card-draft.md). **Core complete** — 3-card rarity draft (pick 1) over passive / active-skill / Grit pools; guaranteed mix; reroll; per-player `skillMods` (the global-`WeaponRegistry` landmine defused); STR/DEX/INT + the MOBA `skillPoints` currency retired; **odds-by-night rarity dial in** (the lever that tracks card power to the siege curve). Full detail in CHANGELOG `[Unreleased]`.
-   - **Stretch parked:** transformative (behavior-changing) cards · rarity-frame art. Pull only if the slice playtest asks for deeper card *content* rather than tuning.
+2. **Card Pool Expansion — swing/heavy/dash scaling + Crit + sustain rebalance** · `approved` 2026-06-08 (ACTIVE BUILD) · pillar: build-craft depth + game feel + mastery
+   - **Full spec: [`specs/card-pool-expansion.md`](specs/card-pool-expansion.md).** Delivers the card-draft's parked "deeper card content" stretch — the slice signal arrived (Josh asked for it).
+   - One-liner: give **swing, heavy, dash** their own upgrade cards (today only whirlwind/leap have any — half the kit can't scale), add **crit chance / crit damage** as real stats + cards, and **nerf flat HP regen** (0.4→0.25 base, cap 8→5).
+   - Why now: closes the slice's own gap — the level-1 core kit currently never improves over a run. Crit adds a 2nd damage axis (chance×magnitude) + marquee juice (big gold numbers).
+   - **⚠️ Prerequisite (load-bearing):** swing/heavy/dash stats still read globally off `WeaponRegistry.sword` — must migrate to per-player `pSkillStat`/`skillMods` first (Stage-1 pattern) or the cross-run/MP leak landmine returns. Crit hooks the existing `gDealEnemyDamage` (~4976); direct hits only (no DoT-tick crit).
+   - **Scope changes (Josh 2026-06-08):** dash cards → Core; Vampirism/lifesteal cut; heavy-charge card displays **"+% charge speed,"** never "frames."
+   - Size: multi-session (crit ≈1 session; migration + swing/heavy/dash cards ≈1; regen nerf trivial). New art: none.
+
+3. **Card-Draft Level-Up rework — replaces STR/DEX/INT** · `CORE SHIPPED` 2026-06-08 · pillar: mastery + build-craft depth + game feel
+   - Spec: [`specs/card-draft.md`](specs/card-draft.md). **Core complete** — 3-card rarity draft (pick 1) over passive / active-skill / Grit pools; guaranteed mix; reroll; per-player `skillMods` (the global-`WeaponRegistry` landmine defused); STR/DEX/INT + the MOBA `skillPoints` currency retired; **odds-by-night rarity dial in**. Full detail in CHANGELOG `[Unreleased]`. *(Its "deeper card content" stretch is now being delivered by Now #2; rarity-frame art still parked.)*
 
 3. **Favor & the Imbue Economy** · `approved` 2026-06-06 · pillar: build-craft depth + mastery + game feel
    - **Full spec: [`specs/favor-imbue.md`](specs/favor-imbue.md).** Fast-follow to the card-draft (the transformation layer to the cards' magnitude layer). *(Favor mechanics provisional — may be revisited.)*
