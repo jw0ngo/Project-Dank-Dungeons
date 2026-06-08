@@ -229,6 +229,46 @@ Built: sword combat, dungeon editor, enemy AI (goblin/archer/warrior/bomber/king
 
 ---
 
+## Session 13 — Wilderness Spawn Overhaul: Day Farming Zone + VS Night
+*June 2026 | engineer*
+
+### Built
+- **Day = populated MMO farming zone.** `gWildPatrolTick` (was the patrol-band spawner) now
+  maintains a target density of **stationary goblin camps** + lone stragglers around the player
+  (`gWildAmbientTarget` ≈ `12 + threat·1.5`), spawned just beyond vision so you roam to find them.
+  New `e.isAmbient` flag drives a **camp-hold / pull / leash-home** branch in `_aiGoblin`: a camp
+  holds at its spawn anchor (`homeWx/Wy`) until you enter `AMBIENT_PULL_R` (~10 tiles), then
+  aggros and chases (so you can chain-pull several camps to mob/farm); taken off-screen
+  (`gAmbientDeaggroR` = vision+2 tiles) it de-aggros and walks back to camp. Camps behind you
+  cull via the existing 85-tile despawn; the maintainer respawns fresh ones ahead (living zone).
+  Dungeon goblins keep the original 300px gate untouched.
+- **Night = constant chasing horde (Vampire-Survivors-style).** Nightfall drops one **compact
+  opening horde from a single direction** (`_wildSpawnHorde`; `_wildHordeSize` = `20 + (n−1)·10`,
+  night 1 = 20, capped 60) that advances as a group, then a **constant stream**
+  (`_wildNightStreamRate` ≈ `1.5 + 0.4·n`/sec) refills from off-screen until dawn, throttled by
+  `wildCurrentCap`. Day camps all aggro at dusk and fold in.
+- **Threat-weighted swarm** (`_wildSwarmType`, used by both horde and stream): goblin flat-100
+  backbone; archer/bomber/warrior/shaman/king unlock and grow their share with threat (goblin
+  share 100% night 1 → ~47% night 12; kings rare, n≥6). Removed the old fixed-roster machinery
+  (`_wildSiegeRoster`/`_wildBuildSiegeQueue`/`NIGHT_GRUNT_SCALE`/`_wildSpawnSiegePack`, the
+  `siegeQueue`/`siegeTotal` state) and the day patrol-band code.
+
+### Lessons
+- **Iterated the spawn design live in three reversals — let the directive, not the prior answer,
+  win.** Day went stream → roaming packs → **stationary camps**; the user's clarification ("camps
+  must stay where they spawn") overrode an earlier multiple-choice pick. Cheap to re-cut because
+  the spawn logic is small, isolated, fully parameterized functions — the value of keeping spawn
+  tuning behind named knobs (`*Target`, `*Rate`, `*Size`, pull/leash radii) is exactly this.
+- **Reuse the existing aggro override instead of special-casing night.** `eAnyPlayerNear` already
+  returns `true` for all enemies during wilderness night, so a night swarm "never de-aggros" falls
+  out for free — the day camps simply stop leashing at dusk and chase. The ambient leash check is
+  written as `!eAnyPlayerNear(deaggroR)`, so it's automatically disabled at night with no flag.
+- **A wide pull radius + off-screen leash is the whole "mobbing" loop.** Aggro from ~10 tiles +
+  chase-while-activated + de-aggro-when-off-screen lets the player gather several camps into one
+  ball and AoE them — the classic MMO pull, expressed in three lines of the AI.
+
+---
+
 ## Debugging Heuristics Reference
 
 | Symptom | First thing to check |

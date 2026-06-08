@@ -8,6 +8,28 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 ## [Unreleased]
 
 ### Changed
+- **Wilderness spawn overhaul — day farming zone + Vampire-Survivors night.** Replaced the
+  day-patrol-bands / night-roster-budget-spawner with two distinct loops:
+  - **Day = a populated MMO-style farming zone.** A maintainer (`gWildPatrolTick`) keeps a
+    target density (`gWildAmbientTarget`, `~12 + threat·1.5`) of **stationary goblin camps**
+    (clusters of 2–5) and lone stragglers around the player, spawned just beyond vision so you
+    **roam to find them**. Camps hold at their spawn anchor (`homeWx/Wy`) until you walk within
+    `AMBIENT_PULL_R` (~10 tiles), then aggro and chase — so you can **chain-pull several camps at
+    once to mob/farm**; run them off-screen (`gAmbientDeaggroR`, vision+2 tiles) and they de-aggro
+    and **leash back to camp**. Packs behind you cull via the existing 85-tile despawn; the
+    maintainer respawns fresh camps around you as you move (living zone). New `e.isAmbient` flag
+    gates a camp-hold/leash branch in `_aiGoblin`; dungeon goblins keep the original 300px gate.
+  - **Night = a constant horde that chases (VS-style).** Nightfall drops one **compact opening
+    horde from a single direction** (`_wildSpawnHorde`, `_wildHordeSize` = `20 + (n−1)·10`,
+    night 1 = 20, capped 60) that advances as a group, then a **constant stream**
+    (`_wildNightStreamRate` ≈ `1.5 + 0.4·n`/sec) refills the field from off-screen until dawn,
+    throttled by `wildCurrentCap`. The day's camps all aggro at dusk and fold into the swarm.
+  - **Threat-weighted swarm composition** (`_wildSwarmType`) for both horde and stream: goblins
+    are the flat-100 backbone; archers (n≥2), bombers (n≥3), warriors (n≥5), shamans (n≥7) and
+    the rare king (n≥6) unlock and grow their share with threat — goblin share runs 100% on
+    night 1 → ~47% by night 12. Removed the old fixed-roster machinery (`_wildSiegeRoster`,
+    `_wildBuildSiegeQueue`, `NIGHT_GRUNT_SCALE`, `_wildSpawnSiegePack`, the `siegeQueue`/`siegeTotal`
+    queue state) and the day patrol-band code.
 - **Faster wilderness leveling** — XP-to-next is now linear (`50 × level`, arithmetic growth à la
   Vampire Survivors) instead of `floor(100 · level^1.4)`. With a base goblin worth 10 XP this
   benchmarks to L2 = 5 goblins, L3 = +10, +5 goblins per level after. Master tuning lever for the
