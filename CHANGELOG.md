@@ -7,6 +7,17 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+### Changed
+- **Card Pool Expansion — Stage 1: per-player swing/heavy/dash stats (load-bearing migration).**
+  Migrated the card-target swing (`swingArc`, `swingDur`), heavy (`heavyMaxWindup`, `heavyLen`,
+  `heavyWidth`) and dash (`evasionRange`, `evasionCooldown`) reads from the global
+  `WeaponRegistry.sword` (`W().stat`) to the per-player accessor `pSkillStat(player, key)` — the
+  same Stage-1 pattern whirlwind/leap already use. Behavior-identical today (mods empty →
+  `pSkillStat` returns the base), but it defuses the cross-run / co-op leak landmine so the coming
+  swing/heavy/dash upgrade cards can write to per-player `skillMods`. Added `SKILL_STAT_FLOOR`
+  entries (`swingDur`/`heavyMaxWindup`/`evasionCooldown`) so reduction/speed cards can't hit zero.
+  *(Prerequisite for `docs/specs/card-pool-expansion.md`; cards + crit are the next stages.)*
+
 ### Added
 - **Image-art attack/heavy/idle poses for the player and goblins.** New directional turnaround
   art is sliced (via `tools/slice-turnaround.py`) into the `ART_MANIFEST` and swapped in by state:
