@@ -7,7 +7,34 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+### Added
+- **Image-art attack/heavy/idle poses for the player and goblins.** New directional turnaround
+  art is sliced (via `tools/slice-turnaround.py`) into the `ART_MANIFEST` and swapped in by state:
+  - **Player** swaps body turnaround by action — normal swing → `char.playeratk.*`, heavy on RMB
+    release (`heavySwinging`) → `char.playerheavy.*`, else idle; all sliced to the idle scale +
+    foot baseline so only the pose changes, never the body size.
+  - **Goblin** shows `char.goblinatk.*` during its new telegraphed attack windup/strike (below).
+  - **Goblin archer** shows a bow-drawn pose (`char.archeratk.*`) while aiming (`shootWindup`).
+  - **Goblin warrior** shows a swing pose (`char.warrioratk.*`) during `swing-windup`/`charging`.
+  - **Goblin bomber & shaman** upgraded from procedural sprites to directional turnaround art
+    (`char.bomber.*` / `char.shaman.*`) with movement-delta facing.
+
 ### Changed
+- **Goblin melee is now a telegraphed cone attack + contact chip.** An aggro'd goblin plants,
+  fills a translucent red cone over `atkWindup` (~0.53s, fields on `EntityDefs.goblin`), then
+  strikes — damage only lands if the player is still inside the cone (reach + half-arc), so it's
+  dodgeable by sidestepping/backing out. Independent of that, body **contact** still chips
+  (`contactDamage` on its own cooldown) so a swarm can't be walked through untouched.
+- **Removed all post-hit invincibility frames.** `gDamagePlayer` no longer grants i-frames on
+  damage, so repeated hits / a swarm can't be cheesed by a mercy window. Deliberate evasion
+  i-frames (dash/leap/roll) are preserved; the fire-beam trap was converted to its own `_beamCd`
+  throttle (it was the only continuous hazard relying on the i-frame grant). A visual-only
+  `_hitFlash` keeps the red damage-flash (no invulnerability).
+- **Smaller player walk bob** — replaced the experimental 2-step bounce + rock with a gentle
+  goblin-sized up/down bob (`PLAYER_BOB`).
+- **Goblin warrior idle art gap fix** — the warrior sheet's near-black background matched its dark
+  armour, so the default slice threshold (40) flood-filled through the armour and fragmented the
+  sprite. Re-sliced at threshold 24 (just above the true background) — figure is whole again.
 - **Wilderness spawn overhaul — day farming zone + Vampire-Survivors night.** Replaced the
   day-patrol-bands / night-roster-budget-spawner with two distinct loops:
   - **Day = a populated MMO-style farming zone.** A maintainer (`gWildPatrolTick`) keeps a
