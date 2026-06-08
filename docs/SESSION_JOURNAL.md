@@ -269,6 +269,29 @@ Built: sword combat, dungeon editor, enemy AI (goblin/archer/warrior/bomber/king
 
 ---
 
+## Sprite Import Checklist (run this for EVERY new sprite)
+
+Cutting a sprite out of its background keeps re-introducing the same three bugs. `tools/slice-turnaround.py`
+now has the levers and an automatic QA pass; use them every time:
+
+1. **Slice it**, then **look at the magenta QA contact sheet** the tool prints (`contact.png`). White/dark
+   halos and any background showing through pop instantly against magenta. The tool also prints a
+   per-direction **`bg-leak Npx`** count and a final **`QA: CLEAN / CHECK`** verdict — a non-trivial leak is a bug.
+2. **Edge halo** (thin white/dark fringe at the silhouette = anti-aliased bg-blended pixels left opaque):
+   add **`--erode 1`** (tightens the alpha mask ~1px); raise to 2 if it persists. A small `--feather` then softens.
+3. **Background showing through an enclosed pocket** (gap inside a drawn bow/string, between shrine pillars —
+   anything the figure encloses): the default edge-seeded flood fill can't reach it. Use **`--global`** to cut
+   *all* background-coloured pixels. Only safe when interior detail isn't the same colour as the bg.
+4. **Chunks of the figure missing / fragmented** (dark armour on a black sheet, light stone on a white sheet —
+   interior detail shares the bg colour): **lower `--thresh`** toward the true bg brightness (e.g. the goblin
+   warrior idle needed `--thresh 24` on its near-black sheet) so the key stops eating the figure.
+
+Single one-off images (not 3×3 turnarounds, e.g. `world.shrine`) aren't run through the slicer, but apply the
+*same* global-key + erode + magenta-check by hand. The shrine needed both (`--global` for the pillar gaps, 1px
+erode for the halo).
+
+---
+
 ## Debugging Heuristics Reference
 
 | Symptom | First thing to check |
@@ -292,6 +315,9 @@ Built: sword combat, dungeon editor, enemy AI (goblin/archer/warrior/bomber/king
 | Deleting a stat used in 50+ places | Neuter the helper to its neutral return (1/0); don't edit every call-site (works when the stat's baseline is 0) |
 | MP: one player's upgrade buffs everyone | A shared registry (`WeaponRegistry`) was mutated for a per-player effect — use a per-player modifier map read at use-time |
 | Map/field read throws on remote peers | Route single→map reads through one null-safe helper (`gIsImbued` guards `p && p.imbues`) |
+| White/dark halo around a cut-out sprite | Anti-aliased bg-blended edge pixels left opaque — `--erode 1` in the slicer (tighten the mask) |
+| Background showing through inside a sprite | Enclosed pocket the flood fill can't reach (bow gap, shrine pillars) — `--global` key |
+| Chunks of a sprite missing / fragmented | Interior detail shares the bg colour — lower `--thresh` toward true bg brightness |
 
 ---
 
