@@ -18,6 +18,19 @@ lesson: **the principle → why → how to apply.** Quality over volume.
 
 ---
 
+### 2026-06-09 — Migrate the tool when you migrate the pipeline, or every use pays a hand-bridge tax
+
+- **Principle:** When the asset pipeline changes shape (here: inline base64 → external files under
+  `assets/`), the generator that feeds it has to move in the same step. A tool left a step behind doesn't
+  fail loudly — it silently makes every future use a manual fix-up.
+- **Why:** `slice-turnaround.py` kept emitting base64 manifest snippets long after art was externalized,
+  so each slice meant hand-dropping PNGs into `assets/char/` and rewriting the snippet to paths. The cost
+  was invisible until it accreted across many uses — a deferred-tooling debt, not a bug.
+- **How to apply:** when you change where art *lives* or how it's *referenced*, grep the tooling that
+  emits that reference (`tools/`) and update it in the same pass. Make the tool's output paste-ready for
+  the *current* pipeline (path snippet straight into `ART_MANIFEST`), and smoke-test it on a real sheet —
+  a tool that compiles but emits the old format is still broken.
+
 ### 2026-06-09 — A sprite's dwell time is a feel knob, separate from the action's hitbox timing
 
 - **Principle:** "Wired and rendering in all 8 facings" isn't "done" — an attack/pose sprite also has to
