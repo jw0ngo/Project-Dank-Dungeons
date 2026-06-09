@@ -66,6 +66,9 @@ The discipline, for every role:
    principle that prevents the *class* of mistake, or the technique that made the work better.
    - One learning = one dated, titled entry. Lead with the principle; then why; then how to apply.
    - Prefer 1–3 sharp entries over a dump. If nothing rose to that altitude, write nothing.
+   - **Also log a workflow-friction line:** what cost us a turn this session, and what doc/process
+     change prevents it next time? Workflow efficiency compounds the same way craft does — assess it
+     every session, don't wait for it to hurt.
 3. **At the start of the next session**, read your `LEARNINGS.md` first. It is the role's
    accumulated craft. A `SessionStart` hook (`tools/session-brief.ps1`, wired in
    `.claude/settings.local.json`) auto-surfaces the latest release notes + the newest learning per
