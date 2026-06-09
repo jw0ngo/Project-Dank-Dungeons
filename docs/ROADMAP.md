@@ -4,7 +4,7 @@
 
 **Status legend:** `proposed` (PM idea, not yet seen by developer) · `approved` (developer greenlit — engineer may build) · `in-progress` · `shipped` (move to changelog, delete here) · `held` / `cut`.
 
-Keep the three horizons full. Re-rank after every release. State: **v0.11.0 + `[Unreleased]`** (Nightfall Sieges, Card-Draft Core, linear XP, auto-unlocks); items below are `proposed` until the developer approves.
+Keep the three horizons full. Re-rank after every release. State: **v0.11.0 + `[Unreleased]`** — Nightfall Sieges, the **full card progression** (Card-Draft + Card Pool Expansion + Crit), weighty heavy attack, enemy/player attack sprites. **The vertical slice is now fully built → in playtest.**
 
 ---
 
@@ -27,15 +27,13 @@ the tree itself; commits/push matter for the pm-bot + Pages deploy. Three layers
 file, so an untracked board nudges on session close.
 
 ### ⇄ Handoffs (append a line; delete when cleared)
-- **ENG → do:** commit + push the local Nightfall/card-draft work (`6080f2b`) and the uncommitted
-  odds-by-night roll (`M index.html`) so origin + the pm-bot see them.
-- **ENG → do (wire the system):** add `ROADMAP.md` to `doc-drift-check.ps1`'s watch list; add a
-  "tick *Now* status on start **and** push" line to root `CLAUDE.md`; add a one-line pointer to
-  this ⇄ Orchestration block in root `CLAUDE.md` **and** `product/CLAUDE.md`.
-- **PM ← ENG:** slice is build-complete → **playtest pending.** PM standing by to turn the
-  felt-wall signal into the next move (Boreas / deeper cards / roster variety).
-- **PM → ENG:** **Card Pool Expansion approved** (*Now #2*, spec `specs/card-pool-expansion.md`) —
-  ready to build. Do the swing/heavy/dash → `pSkillStat` migration **first** (prerequisite landmine).
+- **PM ← ENG:** **Vertical slice is 100% built** — Nightfall + the full card progression incl. Crit
+  shipped (`b075870`, 2026-06-09); origin current. **Playtest pending.** PM standing by to turn the
+  felt-wall signal into the next lever (Boreas / Favor depth / roster variety).
+- **PM → ENG:** **Favor** (`specs/favor.md`) is the approved, ready **next build** — slice-compatible
+  economy lever on the shipped card/rarity code. Pick it up if continuing to build; else hold for the
+  slice playtest signal. (Do the spine first: currency var → XP-orb-clone drop → chest hook → HUD →
+  the two card-screen spends.)
 
 ---
 
@@ -62,7 +60,8 @@ Co-op synergy (pillar 4) falls out of the contrast — e.g. Boreas freezes → C
 1. **Vertical slice — the current kit vs. the difficulty curve** · `in-progress` · pillar: game feel (rhythm) + mastery
    - **The slice goal (Josh's call 2026-06-06):** prove the **current Cilia fire kit + warrior toolkit** scales fairly against rising difficulty. No new content (no Boreas, no new enemy) until it feels good. The slice has **two halves** — the difficulty *curve* (Nightfall, shipped) and the *progression* that scales the kit against it (card-draft, building now).
    - **Half A — Nightfall Sieges · `SHIPPED` 2026-06-06.** The day/night cycle is now the difficulty clock: `wildNight` counter, fixed 60s siege window, roster-table budget spawner (`_wildBuildSiegeQueue` / `_wildSiegeRoster`), gutted day spawns → lull, `NIGHT n · siege: X left` HUD. Replaced the 90s threat faucet. **Mechanics done — roster counts / night length / live cap remain live-tune levers for the playtest.**
-   - **Half B — Card-Draft Level-Up rework · `CORE SHIPPED` 2026-06-08.** Core complete incl. the odds-by-night rarity dial (*Now #2* ▼). **Both halves are now mechanically built → the slice is in PLAYTEST/TUNE, not build.** Remaining slice work = dialing the levers below and hunting the felt wall.
+   - **Half B — Card progression · `SHIPPED` 2026-06-09 (fully built).** Card-Draft rework (3-card rarity draft replacing STR/DEX/INT; passive / active-skill / Grit pools; per-player `skillMods`; reroll; odds-by-night) **+ Card Pool Expansion** (swing/heavy/dash upgrade cards so the whole kit scales; **Crit** chance/damage with gold crit numbers + char-screen rows; HP-regen nerf). The progression that scales the kit against the curve is now complete. *(Detail: CHANGELOG `[Unreleased]`; specs `card-draft.md` + `card-pool-expansion.md`.)*
+   - **→ The slice is now 100% built; the only remaining work is PLAYTEST/TUNE — this is the gate.** Nothing new (Boreas / Favor's deeper layers / roster variety) commits until the slice plays well and the **felt wall** is found.
    - **Slice success criteria (the playtest target, spanning both halves):**
      - Each night reads as a discrete *siege* with a clear lull between (rhythm, not soup). ✓ *mechanics shipped — now tune.*
      - The kit can **out-scale the early curve** with skilled play, with a **felt wall** mid-curve where it stops keeping up — that wall tells us where the next power lever (Boreas / deeper card pool / a new enemy) is actually needed. Hunting for it, not patching around it.
@@ -70,18 +69,7 @@ Co-op synergy (pillar 4) falls out of the contrast — e.g. Boreas freezes → C
      - Each imbued skill (swing / whirlwind / leap / dash) has ≥1 night-situation where it's the *right* answer (kit feels deep, not one-button).
    - **Tuning levers (the playtest dials):** roster counts/night · night & day duration · live spawn cap · stat-scaling slope · **card rarity-odds + magnitudes (Half B)**. Hold the Cilia kit's *base* numbers fixed — tune the *curve and the card economy* around it, so the slice tells us how the existing power scales.
 
-2. **Card Pool Expansion — swing/heavy/dash scaling + Crit + sustain rebalance** · `approved` 2026-06-08 (ACTIVE BUILD) · pillar: build-craft depth + game feel + mastery
-   - **Full spec: [`specs/card-pool-expansion.md`](specs/card-pool-expansion.md).** Delivers the card-draft's parked "deeper card content" stretch — the slice signal arrived (Josh asked for it).
-   - One-liner: give **swing, heavy, dash** their own upgrade cards (today only whirlwind/leap have any — half the kit can't scale), add **crit chance / crit damage** as real stats + cards, and **nerf flat HP regen** (0.4→0.25 base, cap 8→5).
-   - Why now: closes the slice's own gap — the level-1 core kit currently never improves over a run. Crit adds a 2nd damage axis (chance×magnitude) + marquee juice (big gold numbers).
-   - **⚠️ Prerequisite (load-bearing):** swing/heavy/dash stats still read globally off `WeaponRegistry.sword` — must migrate to per-player `pSkillStat`/`skillMods` first (Stage-1 pattern) or the cross-run/MP leak landmine returns. Crit hooks the existing `gDealEnemyDamage` (~4976); direct hits only (no DoT-tick crit).
-   - **Scope changes (Josh 2026-06-08):** dash cards → Core; Vampirism/lifesteal cut; heavy-charge card displays **"+% charge speed,"** never "frames."
-   - Size: multi-session (crit ≈1 session; migration + swing/heavy/dash cards ≈1; regen nerf trivial). New art: none.
-
-3. **Card-Draft Level-Up rework — replaces STR/DEX/INT** · `CORE SHIPPED` 2026-06-08 · pillar: mastery + build-craft depth + game feel
-   - Spec: [`specs/card-draft.md`](specs/card-draft.md). **Core complete** — 3-card rarity draft (pick 1) over passive / active-skill / Grit pools; guaranteed mix; reroll; per-player `skillMods` (the global-`WeaponRegistry` landmine defused); STR/DEX/INT + the MOBA `skillPoints` currency retired; **odds-by-night rarity dial in**. Full detail in CHANGELOG `[Unreleased]`. *(Its "deeper card content" stretch is now being delivered by Now #2; rarity-frame art still parked.)*
-
-4. **Favor — the world currency** · `approved` direction 2026-06-08 (REDESIGNED) · pillar: build-craft depth + game feel + mastery
+2. **Favor — the world currency** · `approved` direction 2026-06-08 (REDESIGNED) · **next build** · pillar: build-craft depth + game feel + mastery
    - **Full spec: [`specs/favor.md`](specs/favor.md).** **Supersedes `favor-imbue.md`** — Favor is no longer "the price of a new patron"; it's now the **card-economy currency.** Fast-follow to Card Pool Expansion (layers on the same rarity/card-screen code).
    - One-liner: **Favor = the gold-coin currency of the world** — rare drops from enemies (scaled by type) + from **chests** (existing village chests, `~12917`). After committing to a **patron at level 5**, spend Favor on the card screen to **reroll** the draw and **upgrade a card's rarity** (Common→…→Legendary).
    - Why this pivot (Josh): the old breadth-pricing only *matters* once Boreas ships, so it can't be felt in the slice. Tying Favor to reroll + rarity-upgrade makes it a real, **slice-testable lever now with only Cilia**, plugged straight into the shipped rarity system. Rarity-upgrade is the *active* twin of odds-by-night (the passive curve dial).
@@ -89,7 +77,7 @@ Co-op synergy (pillar 4) falls out of the contrast — e.g. Boreas freezes → C
    - **Open calls (in spec):** run-scoped vs persistent (recommend run-scoped, wallet built to extend) · how breadth is gated post-pivot (decouple from Favor, park) · future sink = the dormant `gEquipment` shop.
    - Size: multi-session; spine ~1 session (currency var + XP-orb-clone drop + chest hook + HUD + two card-screen spends — all on existing systems). New art: a Favor coin sprite + HUD glyph.
 
-5. **Boreas's Frost — control imbue kit (warrior)** · `held — behind slice` (was approved 2026-06-06) · pillar: build-craft depth + game feel
+3. **Boreas's Frost — control imbue kit (warrior)** · `held — behind slice` (was approved 2026-06-06) · pillar: build-craft depth + game feel
    - **HELD (Josh's call 2026-06-06):** not active work. Building a second god now contradicts the slice focus (scale the *current* kit first). Boreas is the prime candidate for the power lever the slice's "felt wall" will call for — unhold it once the slice playtests well and we know what the curve needs. Spec below is intact and ready.
    - One-liner: a four-skill Frost kit built on **defense / zoning / freeze**, mechanically
      distinct from fire (static fields, walls that block pathing, self-armor — not expanding DoT).
