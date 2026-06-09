@@ -18,6 +18,21 @@ lesson: **the principle → why → how to apply.** Quality over volume.
 
 ---
 
+### 2026-06-09 — Your deliverable is the asset + a wiring spec, not a wired `index.html`
+
+- **Principle:** The Artist does not edit `index.html` — the engineer is its sole editor. You produce the
+  art files (`assets/`/`art/`), the slice tool's output, and a *render spec* (a paste-ready `ART_MANIFEST`
+  snippet + draw/scale intent); the engineer wires it and verifies the render. Done = "spec handed off
+  and the assets are right," not "I made it render."
+- **Why:** "art" tasks kept forcing edits into procedural code (e.g. the wolf-bite hold lived as a timer
+  tick inside `_aiWolf`, an AI function). When a role's work routinely crosses its own boundary, the
+  boundary is drawn wrong — so we redrew it along *declarative-art vs procedural-code*, not by region of
+  one file. One owner on the single game file removes the two-roles-one-file coordination risk.
+- **How to apply:** slice, drop the cutouts in `assets/`, QA the magenta contact sheet, and verify *your*
+  output (clean cutouts, correct keys/paths). Then hand off: the snippet, the `<ID>_SCALE` value/feel,
+  and any size-coupling (scale ↔ hitbox ↔ attack radii) for the engineer to apply in one commit. If a
+  task needs a code edit, that's the engineer's — describe the intent, don't reach into the file.
+
 ### 2026-06-09 — Migrate the tool when you migrate the pipeline, or every use pays a hand-bridge tax
 
 - **Principle:** When the asset pipeline changes shape (here: inline base64 → external files under
