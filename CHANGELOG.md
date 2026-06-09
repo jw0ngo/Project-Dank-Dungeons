@@ -20,6 +20,17 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
   Also fixed the heavy **pose rendering undersized** — its turnaround sheet is drawn smaller than
   the idle sheet, so it's now drawn at `HEAVY_DRAW_MULT` (1.3×, the measured front-view helmet-width
   ratio), feet-anchored, to match the idle body.
+- **Card Pool Expansion — Stage 2: swing/heavy/dash cards + sustain nerf.** The level-up draft now
+  offers upgrade cards for the level-1 core kit (previously only whirlwind/leap could scale):
+  **Swing: Reach** (+reach, via the swing arc's outer radius `smearOuter`), **Swing: Tempo**
+  (+% attack speed), **Heavy: Quickdraw** (+% charge speed), **Heavy: Devastation** (+blast radius),
+  **Dash: Recovery** (−cooldown) and **Dash: Momentum** (+distance). Swing cards are always offered
+  (swing is always-on); heavy/dash gate on their unlock (`gIsSkillUnlocked`, now mapping
+  `heavy`/`dash`). Attack-speed and charge-speed are **percent multipliers** (`base/(1+Σ%/100)` via
+  a new `pSkillSpeed` helper, floored by `SKILL_STAT_FLOOR`) — never flat "frames" in card text —
+  while reach/radius/distance/cooldown are flat per-player `skillMods`. **HP-regen nerf:** the
+  Regeneration card drops `0.4→0.25` base, cap `8→5`. All behaviour-identical until a card is picked.
+  *(Stage 2 of `docs/specs/card-pool-expansion.md`; crit is Stage 3.)*
 - **Card Pool Expansion — Stage 1: per-player swing/heavy/dash stats (load-bearing migration).**
   Migrated the card-target swing (`swingArc`, `swingDur`), heavy (`heavyMaxWindup`, `heavyLen`,
   `heavyWidth`) and dash (`evasionRange`, `evasionCooldown`) reads from the global
