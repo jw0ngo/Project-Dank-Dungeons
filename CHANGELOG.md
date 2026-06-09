@@ -7,6 +7,8 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-09
+
 ### Added
 - **Favor — the world currency (spine).** A run-scoped gold-coin currency (`gFavor`) that drops
   rarely from enemies and from chests, and is spent on the level-up card screen. Full design:
