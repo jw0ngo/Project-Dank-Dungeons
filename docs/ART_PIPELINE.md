@@ -78,24 +78,32 @@ sheet? · transparent or dark bg? · runtime asset or concept? (Full checklist +
 
 Every drawable in the game resolves through one of two layers, in this order:
 
-1. **Base64 PNG art** — the real art. Lives in **`ART_MANIFEST`** (a big object literal in `index.html`),
-   keyed by type: `char.<id>.<dir>`, `tile.<name>.<n>`, `fx.<name>`. At boot `gInitArt` decodes each
-   entry into an `Image`/canvas in **`gArtReg`**. When a key is present, it **overrides** the procedural
-   draw for that thing.
+1. **Image art (files)** — the real art. **`ART_MANIFEST`** (a big object literal in `index.html`) maps
+   each key — `char.<id>.<dir>`, `tile.<name>.<n>`, `fx.<name>` — to a **file path under `assets/`**
+   (e.g. `'char.goblin.n':'assets/char/goblin-n.png'`). At boot `gInitArt` loads each path into an
+   `Image`/canvas in **`gArtReg`**. When a key is present, it **overrides** the procedural draw for that
+   thing. (Art used to be inlined as base64 in this manifest; it was externalized to files —
+   `index.html` dropped from ~14 MB to ~650 KB. `gInitArt` just does `im.src = value`, so a path and a
+   data-URL are interchangeable to the loader.)
 2. **Pixel-array sprites** — the blocky retro fallback, compiled by `bsc()` into `SpriteRegistry`.
-   Used only when no base64 art exists for that key. Don't delete these when you add art; they're the
+   Used only when no image art exists for that key. Don't delete these when you add art; they're the
    graceful-degradation layer.
 
-So: **adding art = adding an `ART_MANIFEST` entry** (plus, occasionally, a one-line wiring hint). You
-almost never touch the draw loop.
+So: **adding art = dropping the file in `assets/<kind>/` and adding an `ART_MANIFEST` entry that points
+at it** (plus, occasionally, a one-line wiring hint). You almost never touch the draw loop.
+
+> **Migration note (tooling lag):** `tools/slice-turnaround.py` still emits a *base64* manifest
+> snippet (the old inline form). Until it's updated, the manual step is: take the PNG cutouts it
+> writes, drop them into `assets/char/` (named `<id>-<dir>.png`), and add manifest entries pointing to
+> those paths rather than pasting the base64. Logged in `docs/CLEANUP_BACKLOG.md`.
 
 ---
 
 ## The pipeline, end to end
 
 ### 1. Source art lands in `art/`
-Save the PNG under the right `art/` subfolder (humans-only organization; the game never loads these
-at runtime — only the base64 baked into `index.html`):
+Save the master PNG under the right `art/` subfolder (humans-only organization — the **source masters**;
+the game loads the sliced/sized-down outputs from **`assets/`**, not these):
 - `art/player/` — warrior idle / attack / heavy turnarounds
 - `art/enemies/` — goblin family (idle `goblin-*.png` + matching `*-attack.png`, incl. `goblin-king-white-bg.png`)
 - `art/gods/` — four patrons `bhumi/boreas/ikras/cilia` (some with a `-bg-removed` variant)
@@ -145,8 +153,9 @@ CLEAN/CHECK verdict; in `--sever` mode that metric over-reports (detail is bg-co
 trust the contact sheet. The recurring sprite bugs are exactly two: an **edge halo** (try `--erode`) or
 an **enclosed bg pocket** (try `--global`).
 
-### 3. Encode + wire into `index.html`
-Paste the snippet into `ART_MANIFEST`. Wiring by type:
+### 3. Place the file + wire into `index.html`
+Drop the cutout PNG into `assets/<kind>/` and add an `ART_MANIFEST` entry pointing at its path
+(`'char.goblin.n':'assets/char/goblin-n.png'`). Wiring by type:
 
 - **Characters/enemies (`char.<id>.<dir>`)** — drawn upright (no rotation) via `gDirBody('<id>', oct, …)`,
   facing the target by 8-way octant (same pattern as goblin/archer/king). Draw size is its own constant
@@ -195,9 +204,10 @@ the **handoff to the engineer** — note it, don't silently rewrite systems.
 ## Habits (inherited from the engineering charter — they apply to art too)
 
 - **Verify every change.** `node --check` the extracted `<script>` (catches a busted `ART_MANIFEST`
-  literal — a stray quote in base64 breaks the whole file), **plus** a targeted grep proving the new
-  key is present (`node --check` passes on duplicate declarations and won't catch a missing wire).
-  Then load it: `python dev.py` → the thing actually renders.
+  literal — a stray quote in a path entry breaks the whole file), **plus** a targeted grep proving the
+  new key is present *and the file exists at the path it points to* (a typo'd path 404s and silently
+  falls back to the procedural sprite — `node --check` won't catch it). Then load it via `python dev.py`
+  → the thing actually renders.
 - **QA contact sheet, every sprite.** Eyeball the magenta sheet before pasting. A halo/pocket caught
   here is five minutes; caught in-game it's a debugging session.
 - **No half-measures.** All 8 directions, or none. Don't ship 6 clean cutouts and 2 with halos.
@@ -208,8 +218,9 @@ the **handoff to the engineer** — note it, don't silently rewrite systems.
   instead of dropping it in chat.
 - **Cut releases like the engineer.** Art is part of the build. Commit to `main`, then
   `.\tools\release.ps1 <X.Y.Z>`; pushing `main` deploys via GitHub Pages, so commit deliberately.
-- **Mind the file size.** Base64 art is heavy and inlined. Optimize PNGs (the script already passes
-  `optimize=True`); prefer the smallest source that holds up at display size. Note the KB added.
+- **Mind the file size.** Art files live under `assets/` (no longer inlined), but they still ship in
+  the repo and load over the wire. Optimize PNGs (the script already passes `optimize=True`); prefer
+  the smallest source that holds up at display size. Note the KB added.
 
 ---
 
@@ -218,7 +229,9 @@ the **handoff to the engineer** — note it, don't silently rewrite systems.
 1. Drop the white-bg turnaround PNG in the right `art/` subfolder.
 2. `python tools/slice-turnaround.py "art/.../sheet.png" <id> --bg white` (add `--erode`/`--global`/`--sever` as the contact sheet demands).
 3. Eyeball the magenta contact sheet → CLEAN.
-4. Paste the `char.<id>.<dir>` snippet into `ART_MANIFEST`.
+4. Drop the 8 cutout PNGs into `assets/char/` (`<id>-<dir>.png`) and add `char.<id>.<dir>` entries
+   pointing at those paths in `ART_MANIFEST` (see the migration note in §"two layers" — the slice tool
+   still emits base64; use the file path instead).
 5. Wire the draw: `gDirBody('<id>', …)` + a `<ID>_SCALE` constant; if it's a new enemy, hand the
    `EntityDefs`/registry/exclusion-list row to the engineer (see the "add a new enemy" recipe in `CLAUDE.md`).
 6. `node --check` + grep the key + `python dev.py` and watch it render in all 8 facings.

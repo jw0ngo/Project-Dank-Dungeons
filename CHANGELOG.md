@@ -7,6 +7,19 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+### Changed
+- **Art externalized — `index.html` slimmed from ~14 MB to ~650 KB.** All inline base64 image
+  art (179 blobs: 172 `ART_MANIFEST` entries, the 5 `F*_SPR` fire sprites, and the 2 figure
+  constants) plus the 4 shrine god-card `<img>`s now load as **files under `assets/`** instead of
+  being inlined. Behaviour-preserving — `gInitArt` already did `im.src = value`, so a path works
+  exactly like a data-URL; verified every reference resolves (183/183 reachable) and the town
+  renders. The game now loads its art at runtime (still no build step; serve with `python dev.py`
+  / GitHub Pages, or open `file://` with `assets/` alongside). Upside: the file greps/diffs/reads
+  normally again, art changes no longer produce multi-MB diffs, sprites are HTTP-cached, and
+  per-area lazy-loading is now *possible* (was impossible while inlined). Mislabeled god-card mimes
+  (JPEG-as-`image/png`) corrected in passing. Tooling: `tools/externalize-art.py` (one-shot
+  migration), `tools/census-base64.py` (audit for inline blobs creeping back).
+
 ### Added
 - **Neutral Wolf Camps — jungle creep camps (spine).** 40 fixed, well-spaced crescent rock dens
   scattered across the wilderness, each a **neutral wolf pack guarding a chest** — the pack ignores

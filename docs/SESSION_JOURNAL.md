@@ -418,11 +418,47 @@ erode for the halo).
 
 ---
 
+## Session 16 — Art externalized (index.html 14 MB → 650 KB)
+
+**Built:** Moved all inline base64 image art out of `index.html` into files under a new `assets/` tree.
+A census (`tools/census-base64.py`) found 179 inline blobs — 172 `ART_MANIFEST` entries, 5 `F*_SPR` fire
+sprites, 2 figure consts — plus the 4 shrine god-card `<img>`s (12 MB of base64). One scripted pass
+(`tools/externalize-art.py`) decoded each blob to a file (named from its manifest key / var), rewrote the
+reference to the path, and relocated the POC god cards into `assets/gods/`. `gInitArt` already did
+`im.src = ART_MANIFEST[key]`, so a path is interchangeable with a data-URL — the change is
+behaviour-preserving. Result: 183 asset files, `index.html` 14 MB → ~650 KB.
+
+**Lesson — externalizing inline art is a value-rewrite, not an engine change, *when* the loader is already
+src-generic.** The whole migration was "decode blob → write file → swap the string literal." Zero draw-code
+changes. The precondition that made it safe: the only consumer of a manifest value was `im.src = value`
+(grep-confirmed — no `atob`, no `startsWith('data:')`, no base64 slicing anywhere). Before externalizing
+any inlined data, **grep for code that introspects the value as a data-URI**; if nothing does, it's a
+mechanical swap.
+
+**Lesson — for art changes, "no 404s" is the real correctness check, not `node --check`.** A typo'd path
+passes syntax check, returns 404 at runtime, and **silently falls back to the procedural sprite** — looks
+plausible, art just quietly missing. Verified instead by HEAD-ing every `assets/` path referenced in the
+HTML over a local server (183/183 reachable) and headless-rendering the town (Chrome `--headless=new
+--screenshot` over `python -m http.server`). The screenshot caught that real sprites loaded; the reachability
+sweep caught that nothing was orphaned.
+
+**Lesson — `<img src>` relative paths load from `file://`, but a headless full-boot needs a server.** The
+POC confirmed the four god cards render from a bare `file://` double-click (image loads aren't CORS-blocked).
+But headless-booting the *whole game* from `file://` produced no screenshot (Firebase remote `<script>`s /
+virtual-time timing) — over `http://localhost` it rendered fine. So: `file://` is OK for the shipped game,
+but verify headless over HTTP.
+
+**Tooling friction:** `tools/slice-turnaround.py` still emits base64 manifest snippets — now a step behind
+the file-based pipeline (logged in `CLEANUP_BACKLOG.md`, flagged in `ART_PIPELINE.md`).
+
+---
+
 ## Architecture Decisions Log
 
 | Decision | Rationale | Session |
 |----------|-----------|---------|
 | Single HTML file | Portability, no build step, easy Claude.ai deployment | 1 |
+| Art externalized to `assets/` files (was inline base64) | `index.html` 14 MB → 650 KB; greppable/diffable again; HTTP-cached; lazy-load now possible. Loader was already `im.src=value`, so behaviour-preserving | 16 |
 | EnemyRegistry pattern | Decouples AI dispatch from entity creation, easy to add types | 7 |
 | `isHeld` universal hold-position | Replaces `isVillage` + `isShrineGuard` redundancy | 9 |
 | `gBombFireZones` separate array | Bombs and fire are separate lifecycles; don't mix | 9 |

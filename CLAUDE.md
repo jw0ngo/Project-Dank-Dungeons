@@ -43,16 +43,22 @@ start. See `studio/STUDIO.md` for the studio-wide habit.
 
 ## What this is
 
-**To Dust** — a browser action-RPG written in vanilla JS + Canvas API, with Firebase Realtime Database for multiplayer. The whole game is one self-contained HTML file with all CSS, JS, and base64 art inlined. No framework, no transpile.
+**To Dust** — a browser action-RPG written in vanilla JS + Canvas API, with Firebase Realtime Database for multiplayer. The game is one HTML file (`index.html`) with all CSS and JS inlined, plus a sibling **`assets/`** folder of image files it loads at runtime via relative paths (`assets/char/…`, `assets/tile/…`, `assets/fx/…`, `assets/gods/…`, `assets/portraits/…`). No framework, no transpile, no build step. It loads fine served (`python dev.py` / GitHub Pages, both rooted at the repo) and from a `file://` double-click; just keep `index.html` and `assets/` together.
 
 ### The active artifact
 
-`index.html` at the repo root (~12,600 lines) is the canonical, current game. **This is what you edit.** It is opened directly in a browser — there is no build step, no bundler, no install. Everything (CSS, JS, base64 art) is inlined in this one file.
+`index.html` at the repo root is the canonical, current game. **This is what you edit.** It is opened directly in a browser — there is no build step, no bundler, no install. CSS and JS are inlined; image art lives as files under `assets/` (see Art pipeline below) and loads at runtime. The file is ~650 KB now that art is externalized — the multi-MB base64 blobs are gone, so it greps/diffs/reads normally again.
 
 Other paths are historical/parallel and are NOT the live game:
 - `dungeon-forge-project/dungeon-forge/` — an April attempt to split the game into Vite ES modules (`src/engine/`, `src/hub/`, etc.). Stale. Only touch it if explicitly asked to work on the modular port.
-- `art/` — source PNGs sliced/encoded into `index.html` as base64 (see Art pipeline below); the
-  game never loads these at runtime, so they're organized purely for humans, in kebab-case
+- `assets/` — **the runtime art the game actually loads** (referenced by `ART_MANIFEST` values,
+  the `F*_SPR` fire sprites, the figure consts, and the shrine god-card `<img>`s). Mirrors the
+  manifest keys: `assets/char/` (characters, `<id>-<dir>.png`), `assets/tile/`, `assets/fx/`,
+  `assets/gods/` (shrine cards), `assets/portraits/`, `assets/world/`. The Artist drops a file here
+  and points the manifest at it — no base64 step. These files were externalized out of `index.html`
+  by `tools/externalize-art.py` (`tools/census-base64.py` audits for any inline blobs creeping back).
+- `art/` — **human-facing source PNGs** (full-res turnarounds, bg-removed variants, source sheets):
+  the masters the Artist slices/resizes down into `assets/`. Organized for humans, in kebab-case
   subfolders: `art/player/` (warrior idle/attack/heavy turnarounds), `art/enemies/` (goblin family
   — idle `goblin-*.png` and matching `*-attack.png`, incl. `goblin-king-white-bg.png`),
   `art/gods/` (four patrons `bhumi/boreas/ikras/cilia`, some with a `-bg-removed` variant),
@@ -131,7 +137,7 @@ Adding content means registering it, not editing the loop:
 `_wildScaleEnt` early-returns when `!inWilderness`, so its stat scaling applies only to wilderness enemies; dungeon enemies use raw `EntityDefs` values.
 
 ### Art pipeline (image-based art) — owned by the Artist role
-Two art layers coexist. **Pixel-array sprites** (`bsc()` / `SpriteRegistry`) are the blocky retro fallbacks. **Base64 PNG art** lives in `ART_MANIFEST` (keyed `char.<id>.<dir>`, `tile.<name>.<n>`, `fx.<name>`) → loaded into `gArtReg` and, when present, overrides the procedural draw. Tiles auto-wire (`gTileArt`, `gInitArt`→`gTileVarCount`); characters draw upright via `gDirBody`.
+Two art layers coexist. **Pixel-array sprites** (`bsc()` / `SpriteRegistry`) are the blocky retro fallbacks. **Image art** is referenced by `ART_MANIFEST` (keyed `char.<id>.<dir>`, `tile.<name>.<n>`, `fx.<name>`) — each value is now a **file path under `assets/`** (e.g. `'char.goblin.n':'assets/char/goblin-n.png'`), not an inline base64 blob. `gInitArt` loads each path into `gArtReg` (`im.src = ART_MANIFEST[key]` — it's path-agnostic, so swapping base64↔path is transparent) and, when present, overrides the procedural draw. Tiles auto-wire (`gTileArt`, `gInitArt`→`gTileVarCount`); characters draw upright via `gDirBody`. To add/replace art: drop the file in `assets/<kind>/` and set the manifest value to its path.
 
 **The slicing/encoding/wiring procedure, the house style, and the cutout edge cases now live with the Artist role** — see `docs/ART_PIPELINE.md` (and `tools/slice-turnaround.py`). As the engineer you mostly treat art as a black box that "just renders"; the one integration point to remember is that a sprite's **draw scale is independent of its hitbox** — e.g. `KING_SCALE` vs `EntityDefs.king.radius` vs attack-zone radii (`swipeRange`/`jumpRadius`/`spinRadius`) — so resize them together. Adding/replacing art is the Artist's job (`/artist`); hand it over rather than hand-editing `ART_MANIFEST`.
 
