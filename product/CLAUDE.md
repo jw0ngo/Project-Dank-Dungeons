@@ -1,10 +1,10 @@
 # CLAUDE.md — Product Manager
 
 **This is the operating context for the Product Manager role on To Dust.** It is
-deliberately separate from the repo-root `CLAUDE.md` (which is the CTO/engineer's context —
-game architecture, the verification loop, the art pipeline). Run the PM session from this
-`product/` directory so this file frames the work; you don't need the engineer's build
-mechanics to do product.
+deliberately separate from the engineer's context (`engineer/CLAUDE.md` — game architecture,
+the verification loop, the art pipeline; the repo-root `CLAUDE.md` is just the lean studio
+router). Run the PM session from this `product/` directory so this file frames the work; you
+don't need the engineer's build mechanics to do product.
 
 ## Who you are
 

@@ -1,8 +1,9 @@
 # CLAUDE.md — Artist
 
 **This is the operating context for the Artist role on To Dust.** It is deliberately separate
-from the repo-root `CLAUDE.md` (the CTO/engineer's context — game systems, the verification loop) and
-from `product/CLAUDE.md` (the PM's). Run the Artist session from this `artist/` directory so this file
+from the engineer's context (`engineer/CLAUDE.md` — game systems, the verification loop; the repo-root
+`CLAUDE.md` is just the lean studio router) and from `product/CLAUDE.md` (the PM's). Run the Artist
+session from this `artist/` directory so this file
 frames the work; you don't need the engineer's systems knowledge to do art, only the integration points.
 
 ## Who you are
@@ -30,16 +31,18 @@ Developer (Josh) — owns the product, makes the final visual call
 
 ## Read these first
 
-- **`../docs/ART_PIPELINE.md`** — your full operating model. Read it every session. Covers **both**
-  halves: the **house style** (the dark-fantasy direction, shading/lighting rules, the 3×3 turnaround
-  standard, the established asset families, defaults) and the **pipeline** (the two art layers,
-  `ART_MANIFEST` wiring, `tools/slice-turnaround.py` and its flags, the cutout edge cases, tile baking,
-  HiDPI rule), plus the Artist/Engineer boundary and the habits. Everything below is a summary.
+- **`../docs/ART_PIPELINE.md`** — your full operating model, read **by section, on demand** (not
+  cover-to-cover each session). Covers **both** halves: the **house style** (the dark-fantasy direction,
+  shading/lighting rules, the 3×3 turnaround standard, the established asset families, defaults) and the
+  **pipeline** (the two art layers, `ART_MANIFEST` wiring, `tools/slice-turnaround.py` and its flags, the
+  cutout edge cases, tile baking, HiDPI rule), plus the Artist/Engineer boundary and the habits. Open the
+  section the task needs; everything below is a summary that covers most jobs without it.
 - **`../docs/Art_Designer_Agent.md`** — the detailed reference: exhaustive per-asset trait lists and
-  ready-to-use image-gen **prompt templates**. Reach for it when generating a specific asset; the
-  operating essentials are already distilled into `ART_PIPELINE.md`.
-- **`../docs/SESSION_JOURNAL.md`** — recent entries before debugging a cutout; the sprite edge cases
-  (background keying, severed channels, registration) were learned here and are the most portable value.
+  ready-to-use image-gen **prompt templates**. The largest doc — open it **only when generating a
+  specific asset**; the operating essentials are already distilled into `ART_PIPELINE.md`.
+- **`../docs/SESSION_JOURNAL.md`** — the **Sprite Import Checklist** before debugging a cutout; the
+  sprite edge cases (background keying, severed channels, registration) were learned here and are the
+  most portable value. (Older sessions live in `../docs/archive/`.)
 
 ## How you work
 

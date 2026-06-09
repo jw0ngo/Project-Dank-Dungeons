@@ -17,6 +17,27 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 
 ---
 
+### 2026-06-10 — An auto-loaded context file pays its cost in *every* session — keep it a router, push depth behind it
+
+- **Principle:** Context that loads unconditionally (the root `CLAUDE.md`/`AGENTS.md`, an append-only
+  journal two roles skim) is a tax levied on every session, including the ones that never use it. Keep the
+  always-loaded layer a thin **router** (map + where-to-find-X), and put the deep, role-specific content in
+  files that load **only when that role/task is active**. Tier by load-frequency, not by topic.
+- **Why:** The engineer's role manual *was* the repo-root `CLAUDE.md`, which auto-loads into every PM and
+  Artist session too — so those roles silently paid for ~194 lines of engine architecture and gotchas they
+  never touch (the Artist's startup ran ~1,700 hot lines before doing anything). PM and Artist already had
+  their own role folders; the engineer's asymmetry was the whole leak. Splitting out `engineer/CLAUDE.md`
+  made the engineer symmetric and dropped the universal auto-load 194→60. The parallel `AGENTS.md` had also
+  rotted into a *contradicting* second source of truth (claimed "no Node," still described inlined base64
+  art) precisely because it was a full hand-maintained duplicate rather than a thin pointer.
+- **How to apply:** For any always-on context, ask "does every consumer need this, every time?" If not,
+  demote it to on-demand and leave a one-line pointer. Cap append-only logs (archive the tail, keep recent +
+  the distilled lookup tables hot). Make per-tool entrypoints (`CLAUDE.md`/`AGENTS.md`) thin routers over
+  **one** shared deep-doc set — never duplicate the depth, or the copies drift and contradict. Instruct
+  reads as "the relevant section of X," not "read X every session." Measure the win in hot-lines-at-startup.
+
+---
+
 ### 2026-06-09 — A deferred entry's "Fix:" is a hypothesis, not an instruction — re-verify its premise before acting
 
 - **Principle:** A backlog/spec item's stated premise rots between when it was written and when you act on

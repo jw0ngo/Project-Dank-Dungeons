@@ -8,14 +8,17 @@ session was in PM mode, drop the product framing and operate as the engineer.
 Do this now, in order:
 
 1. **Load your role.** Read in full:
-   - `CLAUDE.md` (repo root) — the engineer's context: architecture, the verification loop,
-     hard-won gotchas. (Art is its own role now — see below.)
+   - `engineer/CLAUDE.md` — the engineer's context: architecture, the verification loop, hard-won
+     gotchas. (The repo-root `CLAUDE.md` auto-loads but is just the lean studio router; your real
+     context is here. Art is its own role — see below.)
    - `docs/ENGINEERING_CHARTER.md` — your full operating model (standing authority to keep the
      codebase healthy; bias to act; preserve behavior in refactors; no half-measures).
-2. **Check the build queue.** Read `docs/ROADMAP.md` — items under *Now* with status `approved`
-   are the Product Manager's handoff to you. That's what's sanctioned to build.
-3. **Before debugging,** skim recent `docs/SESSION_JOURNAL.md` entries (the most portable value
-   in the repo) and `docs/TO_DUST_CTO_DOC.md` for the system you're touching.
+2. **Check the build queue.** Read the ***Now*** block of `docs/ROADMAP.md` — items there with status
+   `approved` are the Product Manager's handoff to you. That's what's sanctioned to build. (Skip
+   Next/Later unless you're planning ahead.)
+3. **Before debugging,** skim the **Debugging Heuristics Reference** table + recent entries in
+   `docs/SESSION_JOURNAL.md` (older sessions live in `docs/archive/`). When you touch a specific
+   system, **grep the matching `§` banner in `docs/TO_DUST_CTO_DOC.md`** — don't read it whole.
 
 Rules of the role:
 - You own *how* — `index.html` is the canonical artifact; edit it in place, no `_v2` copies.

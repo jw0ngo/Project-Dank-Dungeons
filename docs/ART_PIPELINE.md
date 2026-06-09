@@ -145,8 +145,19 @@ order you should reach for them:
 - **`--global`** — also cut **enclosed background pockets** (the gap inside a drawn bow, between
   pillars) that the border flood fill can't reach. Unsafe if interior detail shares the bg colour.
 - **`--sever N`** — the HARD case: the figure's own detail is the **same colour as the bg** (dark steel
-  armour on a near-black sheet). Erodes the bg mask N px to sever the thin channels connecting interior
-  recesses to the exterior, floods from the border through what's left, keeps everything else as figure.
+  armour on a near-black sheet, **or a white wolf on a white sheet**). Erodes the bg mask N px to sever
+  the thin channels connecting interior recesses to the exterior, floods from the border through what's
+  left, keeps everything else as figure. Also seals **white-on-white interior holes** (a thin white
+  channel through a gap in the dark outline lets the flood leak into the white fur and punch a hole).
+- **`--bleed N`** — the figure is drawn **larger than its 3×3 cell** (wide lunge / attack poses) and its
+  paws/tail/nose overflow into the empty centre, getting **sliced flat at the cell border**. Cut on a
+  window expanded N px past each cell, then keep only the connected component that *owns* the cell (the
+  one with the most pixels inside the cell rect) — neighbours pulled into the window are discarded.
+  Diagnose first: if a figure's true blob bbox overflows its cell but **not** the sheet edge, the pixels
+  exist and `--bleed` recovers them; set N a bit above the worst overflow. Combine with `--sever` (the
+  attack-pose case is usually both — overflowing *and* white-on-white). Figures must not touch (clean bg
+  gap between cells) for owner-selection to be unambiguous; the per-direction `comps=N` print and the
+  contact sheet are the QA.
 - **`--frame square|cell`** — `square` = uniform bbox-centred square (game sprites); `cell` = keep each
   pose on its native cell canvas for exact in-sheet registration (best for animation across sheets).
 - **`--size 0`** — native resolution, no resample (animation source).
@@ -244,6 +255,6 @@ hands over the assets/snippet; the engineer does the wiring and confirms the ren
    manifest snippet the tool emitted, the draw wiring intent (`gDirBody('<id>', …)` + a `<ID>_SCALE`
    value — give the number/feel), and any size-coupling (scale ↔ `EntityDefs.<id>.radius` ↔ attack
    radii). New enemy? Include the `EntityDefs`/registry/exclusion-list needs (the "add a new enemy"
-   recipe in the root `CLAUDE.md`).
+   recipe in `engineer/CLAUDE.md`).
 6. The engineer applies it to `index.html`, runs `node --check` + grep + `python dev.py`, and confirms
    all 8 facings render. Review the result; iterate on the art/spec if a facing reads wrong.

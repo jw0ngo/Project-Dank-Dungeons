@@ -1,0 +1,481 @@
+# To Dust — Session Journal (ARCHIVE: 2026 H1, Sessions 1–16)
+
+> **This is a frozen snapshot** taken at v0.3.2 (2026-06-10) when the live journal was trimmed to
+> keep agent context light. The **live, append-to journal is `docs/SESSION_JOURNAL.md`** (recent
+> sessions + the reference tables). Nothing here is lost — the distilled lessons live on in the
+> live journal's reference tables and in `docs/learnings/engineer.md`. Read this only when you need
+> the full narrative of an older session.
+
+**Append-only log of sessions, decisions, and hard-won debugging lessons**
+
+Each entry captures: what was built, what broke badly, and what the root cause taught us. The debugging lessons are the most portable value — they represent understanding that cannot be derived from the code alone.
+
+---
+
+## Sessions 1–8 (Pre-Journal)
+*Reconstructed from transcript index*
+
+Built: sword combat, dungeon editor, enemy AI (goblin/archer/warrior/bomber/king), multiplayer via Firebase, hub world (The Sanctum), bow weapon, mana system, whirlwind/leap/dash/heavy abilities, skill hotbar, delta-time refactor, wilderness mode foundation (map generation, fog of war, minimap, XP/levelling, day/night, threat scaling, horde/patrol spawning, obelisk POIs).
+
+**Lesson:** The EnemyRegistry dispatch uses `flagProp: null` for goblin with an exclusion list. Any new enemy type not added to that list will run both its own AI and goblin AI simultaneously. This has caused double-movement bugs on multiple new enemy types.
+
+**Lesson:** `_wildScaleEnt` returns early if `!inWilderness`. Enemy stats set by this function are only scaled in wilderness — dungeon enemies use raw EntityDefs values. If `hp` is missing from EntityDefs, `undefined <= 0` is `false` in JS, making the enemy unkillable.
+
+---
+
+## Session 9 — Wilderness Expansion
+*June 2026 | ~11,521 lines*
+
+### Built
+- Goblin Village system (3–4 per map, spike fences, huts, campfires, chests, aggro radius)
+- Goblin Shaman enemy (fireball w/ homing + burn DoT, buff incantation with channel animation)
+- TILE_SPIKE and TILE_HUT tile types with custom draw routines
+- Fog of war (Uint8Array, 30-tile day / 12-tile night), circular minimap (120px), TAB full-map overlay
+- Shrine system: diamond floor tiles with scatter fringe, patron god selection menu (4 gods w/ base64 portraits), god portrait on level-up screen
+- MOBA-style skill unlock system (skill points, click or CTRL+hotkey to unlock)
+- Bomb fire zones (lingering AoE after explosion, non-stacking DoT)
+- Performance pass: spatial grid separation, dead enemy purge every 10 frames, particle batching
+- Universal `isHeld` hold-position AI (replaces both `isVillage` and `isShrineGuard`)
+- Shrine guardian goblins (3 per shrine, hold position, aggro within 7 tiles)
+- Progress bar timeline with skull markers at 10/20/30 min
+
+### Bugs Fixed This Session
+
+**Goblin bomber unkillable (final root cause)**
+- *Symptom:* Bomber spawns with empty health bar, takes hits but never dies
+- *Red herrings:* Shaman buff rounding drift, hitFlash iFrames, MP.active state
+- *Root cause:* `hp` field missing from `EntityDefs.bomber`. `makeGoblinEnt` sets `hp: d.hp` → `undefined`. `undefined <= 0` is `false` in JS, so the death condition never triggers regardless of damage dealt.
+- *Lesson:* When an enemy is unkillable from spawn with an empty health bar, check EntityDefs before anything else.
+
+**Duplicate `gDoSwing` function declaration**
+- *Symptom:* Damage scaling (STR bonuses, obelisk buffs) never applied to sword damage
+- *Root cause:* Two `function gDoSwing()` declarations in the file. JS function declarations hoist and the second silently overwrites the first. The first (correct) version calculated `_chargeDmg` with all multipliers. The second stub just called `gDoSwingAt()` without setting `_chargeDmg`.
+- *Lesson:* When a scaling system appears wired but has no effect, check for duplicate function declarations. `node --check` passes with duplicates — they are not a syntax error.
+
+**Shaman buff making enemies unkillable**
+- *Symptom:* Buffed enemies could not be killed even after HP appeared at zero
+- *Root cause:* `Math.round(round(x * 1.5) / 1.5) ≠ x` for small integers. Bomber base HP 15 → `round(15 * 1.5) = 23` → `round(23 / 1.5) = 15`... usually fine. But the real bug: buff expiry ran on the same frame as a new buff application (timer hits 0, `_shamanBuff=false`, then `_shamanCastBuff` checks `if(ally._shamanBuff) continue` — false — and re-applies). `maxHp *= 1.5` twice.
+- *Fix:* Store `_shamanBaseMaxHp` at buff application, restore exactly on expiry. Kill enemy if `hp <= 0` after expiry.
+- *Lesson:* Buff systems that modify maxHp must store original values, not divide back. Division of rounded integers is lossy.
+
+**Village enemies despawning before player arrives**
+- *Symptom:* Villages always empty when discovered
+- *Root cause:* 85-tile despawn radius ran on all non-patrol enemies. Villages can spawn up to 200+ tiles from player spawn. All village enemies were silently deleted on the first frames of the run.
+- *Fix:* `isHeld=true` exempts enemies from despawn. Cleared on alert.
+- *Lesson:* The despawn system is invisible — always check it when enemies disappear unexpectedly.
+
+**Goblin AI double-running on shaman**
+- *Symptom:* Shaman moves toward player despite `_aiShaman` telling it to stand still
+- *Root cause:* `isShaman` missing from goblin AI exclusion list in EnemyRegistry dispatch. Both `_aiGoblin` and `_aiShaman` ran every frame. Goblin AI won.
+- *Lesson:* Every new enemy type must be added to the goblin exclusion list: `(e.isArcher||e.isWarrior||e.isBomber||e.isKing||e.isShaman||...)`.
+
+**Spike fence appearing as solid wall**
+- *Symptom:* Circular fence instead of broken groups
+- *Root cause:* The 360-degree loop generated 360 positions but only ~75 unique perimeter tiles. Each tile was visited 4–5 times. The run/gap counter advanced on duplicate visits, making the pattern incoherent.
+- *Fix:* Deduplicate perimeter tiles first using a `Set`, then apply run/gap pattern to unique list.
+- *Lesson:* When generating patterns on circular perimeters, always deduplicate tile positions before applying sequence logic.
+
+**Shrine not spawning (maxDist bug)**
+- *Symptom:* No shrine visible in full-map overlay after multiple runs
+- *Root cause:* `maxDist = min(470, min(spawnX, W-1-spawnX, spawnY, H-1-spawnY) - SHRINE_MARGIN - 10)`. With spawn at (300,150) on a 600×300 map, min edge distance is 149 tiles. After margins: `maxDist = min(470, 149-20) = 129`. Shrine was capped to 30–129 tiles from spawn, often landing inside village exclusion zones. After 400 attempts all failed silently.
+- *Fix:* Remove `maxDist` clamping entirely. Use cx/cy clamping after position calculation instead — any distance works since we clamp to map bounds anyway.
+- *Lesson:* When a generator uses both distance-based candidate selection AND post-generation clamping, the distance cap is redundant and often causes silent failure. Trust the clamp.
+
+**`pointer-events:none` blocking skill bar clicks**
+- *Symptom:* Clicking skill slots had no effect even with correct JS click handlers
+- *Root cause:* The `#skill-bar` container had `pointer-events:none` in its inline style, blocking all mouse events to children despite child slots having `pointer-events:all`.
+- *Lesson:* When click handlers are attached and verified but don't fire, check parent container `pointer-events` before debugging the handler.
+
+**`villageEntities` reference before initialization**
+- *Symptom:* `ReferenceError: villageEntities is not defined` on wilderness entry
+- *Root cause:* Row-building code (step 7 in map generator) iterated `villageEntities` before the `const villageEntities = []` declaration in step 8.5. `const` does not hoist.
+- *Lesson:* In large procedural generator functions, declaration order matters. When steps reference data from later steps, move the declaration to before the earliest reference.
+
+**`beforeunload` not triggering on CTRL+W**
+- *Symptom:* Browser closed immediately without confirmation dialog
+- *Root cause:* Conditional `if(inWilderness)` guard caused the browser to treat the handler as non-blocking. Browsers require `beforeunload` to **always** set `e.returnValue` to register it as a blocking handler.
+- *Fix:* Make `beforeunload` unconditional — always set `e.preventDefault()` and `e.returnValue`.
+- *Lesson:* `beforeunload` must be unconditional to be respected. A conditional guard that sometimes does nothing causes the browser to pre-classify the handler as non-blocking.
+
+**Scatter fringe not appearing on shrine**
+- *Symptom:* Sharp-edged diamond, no feathered fringe
+- *Root cause:* Hash used `seed*7` where seed is `Date.now()` (~1.78 trillion). Bitwise `& 0xffff` truncates to 32-bit integer, causing overflow and near-constant hash values.
+- *Fix:* `((tx*2999)^(ty*6571)) >>> 0` — XOR of large prime multiples of tile coords, no seed dependency.
+- *Lesson:* Never use `Date.now()` in bitwise operations. It overflows 32-bit integer precision. Use tile coordinate hashes instead.
+
+---
+
+## Session 10 — Art Pass: Tile & FX Sprites
+*June 2026*
+
+### Built
+- Image-based **tile art** wired through `ART_MANIFEST` → `gArtReg` → `gTileArt`: stone
+  dungeon floors (`tile.floor.*`) and dirt (`tile.dirt.*`), sliced from 2×2 source sheets
+  and baked to device tile size (`gRebakeTiles`).
+- **Fire-wave sprite** (`FW_SPR`) for Cilia's imbued normal attack — black-background flame
+  crescent blitted additively (`'lighter'`), convex edge leading the travel direction,
+  scaled to the arc's lateral spread.
+- Whirlwind now draws the `fx.slash` crescent; fire-pillar sprite 2×, ≥50%-charge gate with
+  a red armed-telegraph, pillars start at 50% of the heavy's range.
+- `tools/dev-window.ps1` + a personal PostToolUse hook: reopen the live-reload dev window if
+  it's closed when `index.html` is edited (detects via the livereload websocket on port 5500).
+
+### Bugs Fixed This Session
+
+**Art tiles spawned in a uniform diagonal pattern**
+- *Symptom:* 4-variant stone/dirt floors tiled in an obvious repeating diagonal
+  (`0 1 2 3 / 3 2 1 0 …`), while 9-variant grass looked random.
+- *Root cause:* `gTileArt` picked the variant with `((imul(tx,P1))^(imul(ty,P2)))>>>0 % n`.
+  A multiplicative hash's low bits stay linear in (tx,ty); `% n` for n=4 (a power of two)
+  reads only those low bits → a periodic pattern. Grass escaped it only because `% 9` mixes
+  high and low bits.
+- *Fix:* Select the variant from the shared `gWallVar` random table (the same source the
+  procedural tiles use): `gWallVar[(ty*120+tx)%len] % n`. Widened `gWallVar` from `*4` to
+  `*256` so it distributes for any variant count (256 is a multiple of 4 → the procedural
+  `% 4` consumer stays uniform).
+- *Lesson:* `hash % (power of two)` exposes the hash's low bits. For small variant counts use
+  a real random table (or an avalanche finalizer) — never the raw low bits of a
+  multiplicative hash.
+
+**Dungeon FPS tanked after adding floor art**
+- *Symptom:* Significant slowdown in dungeons once `tile.floor.*` art existed; wilderness fine.
+- *Root cause:* `gDrawTile` wrapped every art tile in `imageSmoothingEnabled=true; …=false;`
+  — two canvas state changes per tile. A dungeon viewport is ~100% `TILE_FLOOR`, so this ran
+  ~1000×/frame; those tiles were previously cheap `fillRect`s. Tiles bake to device size, so
+  the blit is already 1:1 and needs no smoothing at all.
+- *Fix:* Drop the per-tile toggle; set `imageSmoothingEnabled=false` once per frame before the
+  tile loop (the previous frame's sprite draws leave it `true`).
+- *Lesson:* Toggling canvas state per-primitive in the densest draw loop is a silent perf
+  killer. Hoist state out of hot loops; if tiles bake 1:1, don't smooth.
+
+**Cutting character sprites from a turnaround sheet (Goblin King)**
+- *Symptom 1:* Keying out a **black** background by brightness also punched holes in the
+  King's internal shadows (between arm and body) — they're the same near-black as the bg.
+- *Symptom 2:* A fixed equal-thirds crop of the 3×3 grid pulled neighbour figures (rows
+  above/below) into the left/right side cells.
+- *Symptom 3:* A thin white halo remained when keying a white-bg sheet (anti-aliased edge
+  pixels kept their white-blended colour).
+- *Fixes / lessons:*
+  - Background of the **same colour family** as interior detail can't be keyed by brightness
+    alone. Use an **edge-seeded flood fill** (remove only border-connected bg), or supply a
+    **white** background and key on `min(R,G,B)` (shadows are dark → opaque, white → cut).
+  - Don't assume an even grid — isolate each pose with **connected-component labeling** and
+    use that blob's own mask, so a neighbour inside the crop rectangle isn't included.
+  - Kill edge halos by defining the body mask a touch tighter (`min(R,G,B)<212`) so edges
+    are body-coloured, then feather with a small alpha blur — never leave white-blended pixels.
+- *Scaling note:* `KING_SCALE` (draw) is independent of `EntityDefs.king.radius` (body hitbox)
+  and the attack-zone radii (`swipeRange`/`jumpRadius`/`spinRadius`). Resize all together;
+  keep the body hitbox just inside the visible sprite for playability. Re-slice source frames
+  at higher resolution when drawing much larger, or they upscale blurry.
+
+---
+
+## Session 11 — Imbued Warrior Skills + Balance & Doc Health
+
+### Built
+- Completed **Cilia's Fire** imbues for all four sword skills: whirlwind → expanding **fire ring**, leap → **fire cross** (X), dash → **fire trail** of burning ground (swing → fire wave and heavy → fire pillars already existed). Each follows one shape: a `gFire*` array + spawn/update/draw, damage via `gDealEnemyDamage` (MP-safe), reset on map load, wired into the loop.
+- **Remote-peer visual sync** for all three: ring/cross use a per-player monotonic cast seq (`fr`/`fc`) on the player packet → `gSpawnRemote*` replays a `_visual` patch; trail uses a `df` dash-fire flag → peers drop `_visual` patches in `mpInterpolateRemotes`. `_visual` effects never damage, so no double-hit.
+- New reusable turnaround slicer `tools/slice-turnaround.py`; Goblin Warrior 8-dir art; enemy/HP-bar/player-hitbox sizing pass.
+- Adopted the **Engineering Charter** (`docs/ENGINEERING_CHARTER.md`) as the standing operating model; doc health pass fixed stale sandbox paths in the CTO doc and a contradicted single-file "constraint".
+
+### Lessons
+- **The on-hit flash drew a red BOX, not a tinted sprite.** `gDrawSprite` applied the tint with `globalCompositeOperation='source-atop'` directly on the main canvas — but the opaque tile background inside the sprite's bounding box is also "destination", so the whole box tinted. Fix: tint a sprite-shaped offscreen copy (transparent elsewhere) and blit that. The same bug produced the white dash box. **Rule: to recolour only a sprite, composite in an offscreen buffer — never `source-atop` on the shared canvas.**
+- **"Goblins render at 50% of the player" wasn't the art.** Both fill ~96% of their frame and draw in an equal box; the player has a separate `PLAYER_DRAW_SCALE = 2` multiplier. **Rule: when comparing on-screen sizes, look for per-entity draw multipliers, not just the sprite/box.**
+- **Overlapping ground hazards multi-hit.** Fire-trail patches drop every 18px with 26px reach (~3 deep); each had its own per-patch hit-cooldown, so an enemy on the trail took ~3× damage. **Rule: a field of overlapping same-source AoE patches needs ONE shared per-enemy cooldown (keyed off `gFrame`), not per-patch.**
+- **Burn refreshes, it doesn't stack.** `gApplyEnemyBurn` uses `Math.max` on duration and tick damage — re-applying every tick just tops it up. Effects can re-ignite freely without compounding DoT.
+- **Floor decal vs. over-entity FX:** draw ground hazards (fire cross/trail) on the `gDrawBombFireZones` layer *before* the entity pass so characters stand on them; pure flame bursts (ring/wave/pillars) draw after entities.
+- **Black-bg vs. charred sprites:** pure-flame sprites (ring/cross) blit additively (`lighter`, black drops out); the "burning ground" sprite has a dark charred base, so key its black to transparency and draw source-over — additive would erase the char and overlapping patches would blow out to white.
+
+---
+
+## Session 12 — Nightfall Sieges, Multi-Imbue, Auto-Unlocks & the Card-Draft Core
+*June 2026 | ~12,600 lines | engineer + PM (Telegram bot) handoff*
+
+### Built
+- **Nightfall Sieges** — replaced the hidden 90s threat faucet with the **day/night cycle as the
+  difficulty clock**. Each night builds a **fixed roster** from a tunable table (`_wildSiegeRoster(n)`:
+  goblins `10+5n`, archers/bombers/warriors/shaman unlocking by night, kings `min(5,⌊n/2⌋)`) and a
+  **budget spawner** (`gWildSpawnTick`) trickles it across the night window, throttled by the live
+  cap; leftover drops at dawn ("held the line"). `wildThreatLevel` now = night number (stat scaling
+  steps once per nightfall). Day = lull. Then a pacing tune: 3-min day / 2-min night, **aggro**
+  daytime patrol bands, `NIGHT_GRUNT_SCALE` so the longer night stays busier than the day.
+- **Multi-imbue + level-gated shrine** — imbues went from a single `imbuedSkill` to a `gPlayer.imbues`
+  map (skillId→patron); shrine re-arms every 5 levels (glows) to imbue another skill; town meditation
+  is ungated. All read-sites route through one null-safe `gIsImbued(p, skill[, patron])`.
+- **Automatic skill unlocks** — retired the `skillPoints` currency; skills unlock at fixed levels
+  (`gWildSyncUnlocks`: dash@2 / whirl@3 / leap@4 / Grit@5; swing+heavy from L1).
+- **Card-draft Core** (3 staged increments): (1) per-player `skillMods` + `pSkillStat`; (2) deleted
+  STR/DEX/INT, level-up is a rarity card draft → `wildBuffs`; (3) active-skill + Grit card pools,
+  guaranteed mix, per-run caps, reroll. Removed the dead `WILD_ABILITIES` (the global-mutation code).
+- XP retune: `wildXpToNext` → linear `50 × level` (VS-style; L2=5 goblins, L3=+10).
+
+### Lessons
+- **No Node here, and a pure-Python ES parser is the `node --check` substitute — but `esprima`-python
+  predates ES2019+.** A whole-file parse fails on perfectly valid code. To use it, neutralize newer
+  syntax in an in-memory copy before parsing: `catch {` → `catch (e) {` (optional catch binding),
+  `??` → `||`, `?.` → `.` **only before an identifier** (NOT before a digit — `x?.3:0` is a *ternary*,
+  not optional chaining), and strip BigInt suffixes (`0n`→`0`). Or just slice out the section you
+  edited and parse that, dodging unrelated quirks elsewhere. **And scale rigor to the edit: a numeric
+  or comment-only change in already-balanced code needs no parse at all — only structural edits
+  (moved braces/parens/strings, added/removed functions) can break the parse.**
+- **To delete a stat system woven through 50+ call-sites, neuter the helper functions to their
+  neutral return values — don't edit every site.** STR/DEX/INT all started at 0, so every scaling
+  helper (`weaponScalingMult`, `wildDexSpeedMult`, …) already returned 1/0 at baseline. Turning them
+  into `return 1`/`return 0` shims made the deletion **behavior-identical at baseline** with ~10 edits
+  instead of ~50 risky ones, and kept the one live term (`wildBuffs.cdPct` in `wildDexCdMult`).
+- **The MP/cross-run "shared registry" landmine: never mutate a global like `WeaponRegistry.sword`
+  for per-player upgrades** — in co-op one player's cards buff everyone, and it leaks across runs.
+  Fix: a per-player modifier map (`skillMods`/`gritMods`) read at use-time via an accessor
+  (`pSkillStat(p,key) = base + p.skillMods[key]`), with per-key floors so −cooldown/−MP can't hit 0.
+- **Single-value → map refactors: route every read through one null-safe helper.** `gIsImbued` guards
+  `p && p.imbues && p.imbues[id]`, so remote peers (who never get an `imbues` map) return false
+  instead of throwing. Same shape for the card mods.
+- **Design boundary that simplified a whole feature:** cards are **magnitude** (rarity = ×multiplier),
+  the god **imbues** are **transformation**. Cutting "transformative cards" removed the spec's biggest
+  design sink and made the card pools pure numbers.
+
+---
+
+## Session 13 — Wilderness Spawn Overhaul: Day Farming Zone + VS Night
+*June 2026 | engineer*
+
+### Built
+- **Day = populated MMO farming zone.** `gWildPatrolTick` (was the patrol-band spawner) now
+  maintains a target density of **stationary goblin camps** + lone stragglers around the player
+  (`gWildAmbientTarget` ≈ `12 + threat·1.5`), spawned just beyond vision so you roam to find them.
+  New `e.isAmbient` flag drives a **camp-hold / pull / leash-home** branch in `_aiGoblin`: a camp
+  holds at its spawn anchor (`homeWx/Wy`) until you enter `AMBIENT_PULL_R` (~10 tiles), then
+  aggros and chases (so you can chain-pull several camps to mob/farm); taken off-screen
+  (`gAmbientDeaggroR` = vision+2 tiles) it de-aggros and walks back to camp. Camps behind you
+  cull via the existing 85-tile despawn; the maintainer respawns fresh ones ahead (living zone).
+  Dungeon goblins keep the original 300px gate untouched.
+- **Night = constant chasing horde (Vampire-Survivors-style).** Nightfall drops one **compact
+  opening horde from a single direction** (`_wildSpawnHorde`; `_wildHordeSize` = `20 + (n−1)·10`,
+  night 1 = 20, capped 60) that advances as a group, then a **constant stream**
+  (`_wildNightStreamRate` ≈ `1.5 + 0.4·n`/sec) refills from off-screen until dawn, throttled by
+  `wildCurrentCap`. Day camps all aggro at dusk and fold in.
+- **Threat-weighted swarm** (`_wildSwarmType`, used by both horde and stream): goblin flat-100
+  backbone; archer/bomber/warrior/shaman/king unlock and grow their share with threat (goblin
+  share 100% night 1 → ~47% night 12; kings rare, n≥6). Removed the old fixed-roster machinery
+  (`_wildSiegeRoster`/`_wildBuildSiegeQueue`/`NIGHT_GRUNT_SCALE`/`_wildSpawnSiegePack`, the
+  `siegeQueue`/`siegeTotal` state) and the day patrol-band code.
+
+### Lessons
+- **Iterated the spawn design live in three reversals — let the directive, not the prior answer,
+  win.** Day went stream → roaming packs → **stationary camps**; the user's clarification ("camps
+  must stay where they spawn") overrode an earlier multiple-choice pick. Cheap to re-cut because
+  the spawn logic is small, isolated, fully parameterized functions — the value of keeping spawn
+  tuning behind named knobs (`*Target`, `*Rate`, `*Size`, pull/leash radii) is exactly this.
+- **Reuse the existing aggro override instead of special-casing night.** `eAnyPlayerNear` already
+  returns `true` for all enemies during wilderness night, so a night swarm "never de-aggros" falls
+  out for free — the day camps simply stop leashing at dusk and chase. The ambient leash check is
+  written as `!eAnyPlayerNear(deaggroR)`, so it's automatically disabled at night with no flag.
+- **A wide pull radius + off-screen leash is the whole "mobbing" loop.** Aggro from ~10 tiles +
+  chase-while-activated + de-aggro-when-off-screen lets the player gather several camps into one
+  ball and AoE them — the classic MMO pull, expressed in three lines of the AI.
+
+---
+
+## Session 14 — Image-Art Combat Pass, Card Pool Expansion, Weighty Heavy, Level-Up Redesign
+*June 2026 | engineer (+ a parallel playtest session sharing the tree)*
+
+### Built
+- **Image-art combat poses across the whole cast.** Player normal-attack + heavy-attack + a
+  procedural walk bob; every enemy got an attack pose wired to its real attack state (goblin
+  `goblinatk` on the new cone windup, archer `archeratk` on `shootWindup`, warrior `warrioratk` on
+  `swing-windup`/`charging`, bomber `bomberatk` on a new throw windup, shaman `shamanatk` on cast,
+  king `kingatk` on any attack phase); bomber/shaman upgraded from procedural to directional art.
+- **Goblin telegraphed melee** — plant → fill a red cone over `atkWindup` → strike only if still in
+  cone (dodgeable); plus body **contact chip** on its own cooldown so a swarm can't be walked through.
+- **Removed post-hit i-frames** (a swarm can't be cheesed by a mercy window); dash/leap/roll evasion
+  i-frames kept; fire-beam trap moved to its own `_beamCd`; visual-only `_hitFlash` keeps the red flash.
+- **Card Pool Expansion (Now #2, shipped):** Stage 1 per-player swing/heavy/dash stat migration to
+  `pSkillStat`; Stage 2 the swing/heavy/dash cards (+ `pSkillSpeed` % form) + HP-regen nerf; Stage 3
+  the **crit** system (chance/damage, host-side roll on `gDealEnemyDamage`, gold crit numbers).
+- **Weighty heavy attack** — doubled commitment window (active swing + planted recovery), true
+  movement lock (the `p.smashing`→`p.heavySwinging` bug), feet-anchored pose scale.
+- **Level-up "Choose a Blessing" redesign** — CSS chrome (frame/title/cards/buttons), themed by patron
+  (Cilia warm / Nameless-Knight cool), figures as image cutouts, semi-transparent backdrop.
+- **Sprite-keying tooling** hardened (`--erode` halo, `--global` pockets, `--sever` detail-equals-bg)
+  + a size-consistency step — see the Sprite Import Checklist below.
+
+### Lessons
+- **Parallel Claude sessions on ONE shared working tree → divergent history; reconcile by CONTENT,
+  not by panic or commit-message.** An eng session and a playtest session both committed to the same
+  tree and pushed; `main` diverged from origin (ahead 2 / behind 1) with two *same-named* "full-res
+  sprites" commits on each line. The safe reconcile that loses nothing:
+  1. **Commit your own uncommitted work FIRST** — a real commit can't be lost in a merge; a dirty
+     tree can.
+  2. **`git diff <localHEAD> origin/main --stat`** to see the *real* content delta. Here it was **only
+     `index.html`** — the 24 sprite PNGs + slicer were byte-identical on both lines (one line just had
+     an extra "combined index.html" checkpoint). Identical content on both sides ⇒ the merge is
+     conflict-free. **Don't trust commit-hash/message identity — diff the bytes.**
+  3. **`git merge` (NOT rebase).** Rebase would re-apply the duplicate file-adds onto origin and
+     conflict ("already exists"); merge with identical content just records the history join.
+  4. **Verify the merged file parses and carries markers from BOTH lines** before pushing.
+- **Speed cards are a different shape than flat cards.** Attack-speed / charge-speed must be a
+  *diminishing percent* (`base/(1+Σ%/100)`, via `pSkillSpeed`), not a flat `skillMods` add — flat
+  frames stack linearly to zero and violate the "no frames in card text" rule.
+- **A flag that's never set silently disables a guard.** The heavy movement-lock gated on `p.smashing`
+  (never assigned anywhere) instead of `p.heavySwinging`, so the player could run mid-smash for ages.
+  Grep that a guard's flag is actually *written* somewhere, not just read.
+
+---
+
+## Sprite Import Checklist (run this for EVERY new sprite)
+
+Cutting a sprite out of its background — and matching its size to the rest of the character's frames —
+keeps re-introducing the same handful of bugs. `tools/slice-turnaround.py` has the keying levers + an
+automatic QA pass; steps 1–4 are keying, step 5 is **size consistency**. Run all of it every time:
+
+1. **Slice it**, then **look at the magenta QA contact sheet** the tool prints (`contact.png`). White/dark
+   halos and any background showing through pop instantly against magenta. The tool also prints a
+   per-direction **`bg-leak Npx`** count and a final **`QA: CLEAN / CHECK`** verdict — a non-trivial leak is a bug.
+2. **Edge halo** (thin white/dark fringe at the silhouette = anti-aliased bg-blended pixels left opaque):
+   add **`--erode 1`** (tightens the alpha mask ~1px); raise to 2 if it persists. A small `--feather` then softens.
+3. **Background showing through an enclosed pocket** (gap inside a drawn bow/string, between shrine pillars —
+   anything the figure encloses): the default edge-seeded flood fill can't reach it. Use **`--global`** to cut
+   *all* background-coloured pixels. Only safe when interior detail isn't the same colour as the bg.
+4. **Chunks of the figure missing / fragmented** (dark armour on a black sheet, light stone on a white sheet —
+   interior detail shares the bg colour): first try **lowering `--thresh`** toward the true bg brightness (e.g.
+   the goblin warrior idle needed `--thresh 24` on its near-black sheet). If the detail is *genuinely* the same
+   colour as the bg so no threshold separates them (the player **normal-attack** lunge — dark steel armour on a
+   ~25-brightness sheet), use **`--sever N`** instead: it erodes the background mask to cut the thin channels
+   that connect interior recesses to the exterior, then floods from the border, so the recesses stay filled.
+   In `--sever` mode the `bg-leak` metric over-reports (the kept detail *is* bg-coloured) — judge by the magenta
+   contact, not the number.
+5. **Size consistency — the new pose must render at the SAME on-screen body size as the character's idle/base
+   sprite.** Source sheets are often drawn at a *different zoom* (an attack/swing sheet zoomed out to fit the
+   motion → figure physically smaller in its cell). **Do not scale-match by the bounding box** — it's polluted
+   by extended weapons (a sword/bow flings the bbox wide) and crouched stances (shortens it). Match a
+   **pose-invariant body feature: helmet/shoulder width in a FRONT view** (`'s'`/`'n'`) — measure it in the new
+   frame vs the idle frame; the ratio is the correction. Fix by re-slicing at a corrected `side`, or (to keep an
+   extended weapon from clipping) a **feet-anchored draw multiplier** that grows the pose upward from the foot
+   line (see the player heavy `HEAVY_DRAW_MULT` = 1.3, the measured idle/heavy helmet ratio). **Measure, don't
+   eyeball** — coarse visual steps overshoot (1.5× looked right; the measured truth was 1.3×). Confirm by
+   rendering the new pose next to idle, bottom-aligned, heads matching. (Hit on the king, bomber, and player heavy.)
+
+Single one-off images (not 3×3 turnarounds, e.g. `world.shrine`) aren't run through the slicer, but apply the
+*same* global-key + erode + magenta-check by hand. The shrine needed both (`--global` for the pillar gaps, 1px
+erode for the halo).
+
+---
+
+## Debugging Heuristics Reference
+
+| Symptom | First thing to check |
+|---------|---------------------|
+| Enemy unkillable from spawn | Missing `hp` in EntityDefs |
+| Enemy has wrong AI / double movement | `isXxx` missing from goblin exclusion list |
+| Scaling/buff has no effect | Duplicate function declaration |
+| Enemies missing when area discovered | Despawn radius + `isHeld` flag |
+| Click handler fires but nothing happens | Parent `pointer-events:none` |
+| Generator produces wrong pattern on circles | Duplicate tile positions before sequence logic |
+| `const` variable undefined at runtime | Declaration order — `const` does not hoist |
+| `beforeunload` not showing dialog | Handler must be unconditional |
+| Bitwise hash gives constant values | `Date.now()` overflows 32-bit |
+| Buff system makes enemies unkillable | maxHp division of rounded integers; store original |
+| Tiles/variants form a repeating pattern | `hash % 2^k` reads low bits — use the `gWallVar` table |
+| Sudden FPS drop after a draw change | Per-primitive canvas state toggle in a hot loop |
+| On-hit flash shows a square box | `source-atop` fill on the shared canvas tints the opaque bg too — tint an offscreen sprite copy |
+| Sprite looks wrong size vs. another | Per-entity draw multiplier (e.g. `PLAYER_DRAW_SCALE`), not the sprite/box |
+| Overlapping AoE patches over-damage | Per-patch hit-cooldowns multi-hit — use one shared per-enemy cooldown |
+| `node --check` unavailable / parser rejects valid code | No Node here; use esprima-python but neutralize ES2019+ first (`catch{}`, `??`, `?.`-before-ident, BigInt `0n`) — and skip the parse entirely for numeric/comment-only edits |
+| Deleting a stat used in 50+ places | Neuter the helper to its neutral return (1/0); don't edit every call-site (works when the stat's baseline is 0) |
+| MP: one player's upgrade buffs everyone | A shared registry (`WeaponRegistry`) was mutated for a per-player effect — use a per-player modifier map read at use-time |
+| Map/field read throws on remote peers | Route single→map reads through one null-safe helper (`gIsImbued` guards `p && p.imbues`) |
+| White/dark halo around a cut-out sprite | Anti-aliased bg-blended edge pixels left opaque — `--erode 1` in the slicer (tighten the mask) |
+| Background showing through inside a sprite | Enclosed pocket the flood fill can't reach (bow gap, shrine pillars) — `--global` key |
+| Chunks of a sprite missing / fragmented | Interior detail shares the bg colour — lower `--thresh`; if detail truly matches the bg, `--sever N` (morphological channel cut) |
+| New pose renders bigger/smaller than idle | Source sheet drawn at a different zoom — match by front-view helmet width (not the bbox); re-slice `side` or feet-anchored draw mult |
+
+---
+
+## Session 15 — Neutral Wolf Camps (spine)
+*June 2026 | engineer | ~12,800 lines*
+
+### Built
+- **Neutral Wolf Camps** — the final mechanical-slice feature (spec `docs/specs/neutral-camps.md`).
+  40 fixed crescent rock dens at world-gen, each a neutral pack (1 Alpha + 2–4 Direwolves) guarding a
+  chest. New `direwolf`/`alphawolf` EntityDefs + `makeWolfEnt` + one shared `_aiWolf` (neutral until
+  hit; circle-to-flank; telegraphed lunge-bite with an exposed recovery; `WOLF_LEASH_R` hard-leash →
+  disengage + full-heal). Camp-linked wake (`_wolfWakeCamp` from the `gDealEnemyDamage` chokepoint so a
+  one-shot still propagates). `gUpdateWolfCamps` inside `gSimUpdate` runs the 3-min respawn + chest-on-
+  clear (2–4 Favor via `gGrantFavor`) off the run clock. Crescents carved into the existing `rocks`
+  layer (no new tile art); minimap dots; editor palette. Sprites/draw-scales were pre-wired by the
+  Artist (`char.{direwolf,alphawolf}.*`, `ENEMY_DRAW_SCALE`).
+
+### Lessons
+- **Reuse the village template, but diverge on the *one* new axis.** Camps are villages-shaped (placed
+  at gen → `gWildCamps[]` of `data` objects → runtime `_wolves` populated in `goWilderness` → per-frame
+  update + chest-on-proximity + minimap dots). The *only* genuinely new code is the behavior that
+  differs — neutrality + leash-heal in `_aiWolf`. Copying the surrounding scaffold (despawn exemption,
+  reset sites, entity-load `forEach`, draw dispatch) is mechanical; spend the thought on the delta.
+- **Wake on the damage chokepoint, not the kill path.** Hooking pack-wake into `gDealEnemyDamage`
+  *before* the `hp<=0` branch (not in `gKillEnemy` or the non-fatal `_villageCheckDamageAlert` else)
+  means a one-shot killing blow on one wolf still wakes the rest — the obvious "wake on hit" spot misses
+  the lethal hit.
+- **`SpriteRegistry.get()` falls back to `player`, so the eager fallback arg in `gDrawEnemy` is
+  crash-safe** for a brand-new `defId` even before art loads — but the *real* art still renders because
+  `gDirBody` finds `char.<id>.<dir>`. New enemy types don't need a pixel-array sprite registered first.
+- **Verification reality (no node here):** confirmed syntax by a **differential bracket-balance** of the
+  extracted `<script>` vs `git show HEAD:index.html` (identical residual = no nesting broken), plus
+  targeted greps for every wiring site + a duplicate-declaration scan. The runtime `await Sim.batch(3)`
+  canary and visual playtest remain the browser-side loop (`python dev.py`).
+
+---
+
+## Session 16 — Art externalized (index.html 14 MB → 650 KB)
+
+**Built:** Moved all inline base64 image art out of `index.html` into files under a new `assets/` tree.
+A census (`tools/census-base64.py`) found 179 inline blobs — 172 `ART_MANIFEST` entries, 5 `F*_SPR` fire
+sprites, 2 figure consts — plus the 4 shrine god-card `<img>`s (12 MB of base64). One scripted pass
+(`tools/externalize-art.py`) decoded each blob to a file (named from its manifest key / var), rewrote the
+reference to the path, and relocated the POC god cards into `assets/gods/`. `gInitArt` already did
+`im.src = ART_MANIFEST[key]`, so a path is interchangeable with a data-URL — the change is
+behaviour-preserving. Result: 183 asset files, `index.html` 14 MB → ~650 KB.
+
+**Lesson — externalizing inline art is a value-rewrite, not an engine change, *when* the loader is already
+src-generic.** The whole migration was "decode blob → write file → swap the string literal." Zero draw-code
+changes. The precondition that made it safe: the only consumer of a manifest value was `im.src = value`
+(grep-confirmed — no `atob`, no `startsWith('data:')`, no base64 slicing anywhere). Before externalizing
+any inlined data, **grep for code that introspects the value as a data-URI**; if nothing does, it's a
+mechanical swap.
+
+**Lesson — for art changes, "no 404s" is the real correctness check, not `node --check`.** A typo'd path
+passes syntax check, returns 404 at runtime, and **silently falls back to the procedural sprite** — looks
+plausible, art just quietly missing. Verified instead by HEAD-ing every `assets/` path referenced in the
+HTML over a local server (183/183 reachable) and headless-rendering the town (Chrome `--headless=new
+--screenshot` over `python -m http.server`). The screenshot caught that real sprites loaded; the reachability
+sweep caught that nothing was orphaned.
+
+**Lesson — `<img src>` relative paths load from `file://`, but a headless full-boot needs a server.** The
+POC confirmed the four god cards render from a bare `file://` double-click (image loads aren't CORS-blocked).
+But headless-booting the *whole game* from `file://` produced no screenshot (Firebase remote `<script>`s /
+virtual-time timing) — over `http://localhost` it rendered fine. So: `file://` is OK for the shipped game,
+but verify headless over HTTP.
+
+**Tooling friction:** `tools/slice-turnaround.py` still emits base64 manifest snippets — now a step behind
+the file-based pipeline (logged in `CLEANUP_BACKLOG.md`, flagged in `ART_PIPELINE.md`).
+
+---
+
+## Architecture Decisions Log
+
+| Decision | Rationale | Session |
+|----------|-----------|---------|
+| Single HTML file | Portability, no build step, easy Claude.ai deployment | 1 |
+| Art externalized to `assets/` files (was inline base64) | `index.html` 14 MB → 650 KB; greppable/diffable again; HTTP-cached; lazy-load now possible. Loader was already `im.src=value`, so behaviour-preserving | 16 |
+| EnemyRegistry pattern | Decouples AI dispatch from entity creation, easy to add types | 7 |
+| `isHeld` universal hold-position | Replaces `isVillage` + `isShrineGuard` redundancy | 9 |
+| `gBombFireZones` separate array | Bombs and fire are separate lifecycles; don't mix | 9 |
+| Skill points on player object | Persists across level-up screen close, accessible anywhere | 9 |
+| `_shamanBaseMaxHp` stored on entity | Avoids rounding drift on buff expiry | 9 |
+| Shrine always visible on minimap | Player needs to locate it; fog-gating would make it unfindable | 9 |
+| `beforeunload` unconditional | Conditional guards are pre-classified as non-blocking by browsers | 9 |
+| Art-tile variants via `gWallVar` table | Coordinate hash `% 4` showed a diagonal pattern; the table is structure-free | 10 |
+| Tile art baked to device size, smoothing off | 1:1 blit; per-tile smoothing toggle killed dungeon FPS | 10 |
+| FX sprites (fire pillar/wave) additive on black | Black bg drops out, flames glow over the scene | 10 |
+| Imbued effects as `gFire*` arrays (ring/cross/trail) | One shape per effect: spawn/update/draw + `gDealEnemyDamage`; MP-synced via cast seq / dash flag | 11 |
+| Shared per-enemy trail cooldown (`gTrailHits`) | Overlapping patches would otherwise multi-hit; keep DPS predictable | 11 |
+| Engineering Charter as standing operating model | Codifies CTO authority, refactor cadence, and repo verification reality | 11 |

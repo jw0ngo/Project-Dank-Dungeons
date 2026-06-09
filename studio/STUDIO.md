@@ -18,7 +18,8 @@ where the two reinforce each other.
 `index.html`). It is the studio's first project and its proving ground: every system we build, every
 asset we make, and every lesson we learn here is also building the studio itself.
 
-> The live game and full engineering context live at the repo root (`CLAUDE.md`, `index.html`).
+> The live game is `index.html` at the repo root. The repo-root `CLAUDE.md` is the lean studio router
+> (auto-loaded into every session); the engineer's full context lives in `engineer/CLAUDE.md`.
 > This `studio/` directory is the layer *above* the game — who makes it, and how they grow.
 
 ## The roster
@@ -29,7 +30,7 @@ learnings. Switch into a role with its slash command; the engineer is the defaul
 | Role | Owns | Home | Operating model | Learnings |
 |------|------|------|-----------------|-----------|
 | **Creative Director** (Josh; future agent) | Vision, story, feel, taste — the *soul* | `studio/creative-director/` | [`CREATIVE_MANIFESTO.md`](CREATIVE_MANIFESTO.md) | `studio/creative-director/LEARNINGS.md` |
-| **Engineer / CTO** (default) | *How* — systems, `index.html`, releases | repo root `CLAUDE.md` | `docs/ENGINEERING_CHARTER.md` | `docs/learnings/engineer.md` |
+| **Engineer / CTO** (default) | *How* — systems, `index.html`, releases | `engineer/` | `docs/ENGINEERING_CHARTER.md` | `docs/learnings/engineer.md` |
 | **Product Manager** (`/pm`) | *What & why* — the roadmap | `product/` | `docs/PRODUCT_MANIFESTO.md` | `product/LEARNINGS.md` |
 | **Artist** (`/artist`) | The *art* — direction, slicing, asset specs (hands wiring to the engineer) | `artist/` | `docs/ART_PIPELINE.md` | `artist/LEARNINGS.md` |
 
@@ -80,6 +81,6 @@ directly the Creative Director, whose taste we are recording now so it can one d
 
 ## Where to go
 
-- Building the game → repo-root `CLAUDE.md` (you are the engineer by default).
+- Building the game → `engineer/CLAUDE.md` (you are the engineer by default; the repo-root `CLAUDE.md` is just the router).
 - Setting direction → [`CREATIVE_MANIFESTO.md`](CREATIVE_MANIFESTO.md).
 - Stepping into a role → `/cto`, `/pm`, `/artist`.

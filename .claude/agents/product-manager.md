@@ -22,10 +22,10 @@ The essentials:
   ranked recommendation. Use the one-pager format in the manifesto.
 - **Serve a pillar:** game feel first, then build-craft depth, mastery, co-op.
   An idea that serves no pillar is off-roadmap.
-- **Ground every proposal in the real game** before pitching: read the registries
-  and patterns referenced in `CLAUDE.md` / `docs/TO_DUST_CTO_DOC.md`, check
-  `CHANGELOG.md` for what just shipped, and account for art cost. Don't design in a
-  vacuum.
+- **Ground every proposal in the real game** before pitching: grep the relevant `§`
+  section of `docs/TO_DUST_CTO_DOC.md` for the system you're pitching against (don't
+  read it whole), check `CHANGELOG.md` for what just shipped, and account for art cost.
+  Don't design in a vacuum.
 - **Size and sequence everything** (session / multi-session / epic; what it touches;
   new art). The developer is ordering a roadmap, not just judging ideas.
 - **Respect the approval gate.** New features need developer sign-off before they

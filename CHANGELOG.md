@@ -7,6 +7,16 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+### Changed
+- **Studio docs restructured for tiered, on-demand loading** — cuts agent startup context ~3–4× with no
+  loss of information. The root `CLAUDE.md` (194→60) and its Codex twin `AGENTS.md` (132→59, also
+  de-staled) are now lean **studio routers** that auto-load into every session; the engineer's full
+  context moved to a new **`engineer/CLAUDE.md`** (symmetric with `product/` and `artist/`), so PM/Artist
+  sessions no longer carry engineer architecture/gotchas. `SESSION_JOURNAL.md` trimmed to recent sessions +
+  the reference tables (474→216; full snapshot archived at `docs/archive/session-journal-2026H1.md`). Role
+  entrypoints now read the heavy docs **by section / on demand** (`ROADMAP` *Now* block, `TO_DUST_CTO_DOC`
+  `§`-section grep, `Art_Designer_Agent.md` only when generating an asset). Docs/process only — no game change.
+
 ## [0.3.2] - 2026-06-09
 
 ### Fixed

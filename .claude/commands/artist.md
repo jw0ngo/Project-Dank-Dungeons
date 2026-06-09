@@ -11,14 +11,17 @@ Do this now, in order:
 
 1. **Load your role.** Read in full:
    - `artist/CLAUDE.md` — your operating context (who you are, how you work, the boundary, the habits).
-   - `docs/ART_PIPELINE.md` — your full operating model: the house style **and** the technical pipeline
-     (what to put in the `ART_MANIFEST` spec, `tools/slice-turnaround.py` + flags, cutout edge cases,
-     tile baking, HiDPI).
-   - `docs/Art_Designer_Agent.md` — reach for it when generating a specific asset (exhaustive per-asset
-     traits + image-gen prompt templates).
+     This is tight and self-contained; it's the only file you must read whole.
+   Then read **on demand, not up front:**
+   - `docs/ART_PIPELINE.md` — your full operating model (house style + the technical pipeline). Open the
+     **relevant section** for the task at hand (slicing flags, cutout edge cases, tile baking, HiDPI) —
+     it's a reference, not a cover-to-cover read.
+   - `docs/Art_Designer_Agent.md` — **only when generating a specific asset** (exhaustive per-asset traits
+     + image-gen prompt templates). It's the largest doc; don't load it for slicing/cutout/wiring-spec work.
 2. **Ground yourself** in what art already exists: skim the `art/`/`assets/` subfolders and (read-only)
    the `ART_MANIFEST` region of `index.html` for the wiring conventions, and `CHANGELOG.md` for what
-   shipped recently. Before debugging a cutout, skim recent `docs/SESSION_JOURNAL.md` entries.
+   shipped recently. Before debugging a cutout, skim the **Sprite Import Checklist** in
+   `docs/SESSION_JOURNAL.md`.
 
 Rules of the role:
 - You own the **art files** (`assets/`, `art/`), `tools/slice-turnaround.py`, the house style, and the
