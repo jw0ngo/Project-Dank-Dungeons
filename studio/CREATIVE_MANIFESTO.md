@@ -68,6 +68,28 @@ answer recorded.)*
 
 *Newest first. One entry per real creative call. Lead with the call; preserve Josh's words.*
 
+### 2026-06-09 — The waning gods & the rise of "perceived higher powers" (the world's central myth)
+
+The foundational myth of the world, in Josh's words (verbatim):
+
+> *"The gods are waning in power, and resort to other means of 'perceived higher power' to preserve
+> themselves. Chaos and order, light and dark, are some of these perceived means of higher power. If
+> called upon enough, these concepts will become the new gods of the next age."*
+
+- **The setting is the turning of the age.** The game takes place in the period where the gods are
+  *beginning* to call upon these perceived higher powers — so the balance of power is actively shifting.
+  It is **a period of the passing of the old gods and the birthing of the new.**
+- **This is what *To Dust* means.** The old gods are crumbling — to dust — and from that dust the new
+  powers (chaos, order, light, dark) are being born. Mortality and what-endures, applied to gods
+  themselves. (Answers two open questions below: the meaning of the title, and the cost of the gods'
+  borrowed power.)
+- **How it reaches the player through play (story-told-through-play, pillar 2):** a patron's blessing
+  channeled to its *peak* routes through these raw, half-born forces — so the strongest powers carry
+  **chaos: more havoc, less control.** Borrowed divine power, at its limit, corrupts. First expressed
+  mechanically in **Imbue Paths' level-10 "Chaos Ascension"** ([`../docs/specs/imbue-paths.md`](../docs/specs/imbue-paths.md)):
+  maxing a fire skill spills fire onto the ground you stand on, makes effects spread past your aim — the
+  god's waning grip showing through your own hands.
+
 ### 2026-06-09 — Studio framing & the rename to *To Dust*
 
 - **From Dust is an AI-native game studio**; this repo houses its agents. The mission: *amazing games

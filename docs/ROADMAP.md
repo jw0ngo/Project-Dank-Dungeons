@@ -1,150 +1,291 @@
 # To Dust — Product Roadmap
 
-**The PM↔engineering handoff medium.** The Product Manager maintains this doc per [`PRODUCT_MANIFESTO.md`](PRODUCT_MANIFESTO.md); the engineer pulls **approved** items from *Now* and builds them per [`ENGINEERING_CHARTER.md`](ENGINEERING_CHARTER.md).
-
-**Status legend:** `proposed` (PM idea, not yet seen by developer) · `approved` (developer greenlit — engineer may build) · `in-progress` · `shipped` (move to changelog, delete here) · `held` / `cut`.
-
-Keep the three horizons full. Re-rank after every release. State: **v0.2.0** shipped (Favor spine, live on Pages); Neutral Wolf Camps spine built (untagged). **The slice's first real playtest found the felt wall (Josh, 2026-06-09): the night curve is too flat and the card pool plateaus — NOT a missing god.** Four approved fixes now in *Now*: enemy-scaling overhaul + difficulty tell, imbue card paths, and two wolf fixes (traversal/tree-immunity bug + early-game lethality). Boreas stays held — the wall didn't call for it.
-
----
-
-## ⇄ Orchestration — how PM & engineering stay in sync
-
-**The repo is the shared brain.** Both agents reset context between sessions, so cross-role
-awareness lives *here*, not in memory. Topology = **one shared working tree** → the live state is
-the tree itself; commits/push matter for the pm-bot + Pages deploy. Three layers, one home each:
-
-- **Plan / queue → this file.** Every *Now* item carries a live status. **Flip it the moment you
-  act**, in the *same commit* as the work: PM sets `approved`; engineer sets `in-progress` **when
-  starting** (not just when done), then `shipped` on push. (Starting-on-flip is what stops the
-  "PM proposes a thing already built" drift.)
-- **Pulse / what just happened → git.** `git status` (uncommitted in-flight) + `git log --oneline`
-  (prefix commits `pm:` / `eng:` / `docs:`) + CHANGELOG `[Unreleased]` for detail.
-- **Handoff / waiting-on-whom → the ⇄ Handoffs queue below.** Either role appends a one-liner.
-
-**Session-open ritual (both roles, ~30s):** `git status` + `git log --oneline -15` → read *Now* +
-⇄ Handoffs → then act. **Enforcement:** `tools/doc-drift-check.ps1` (Stop hook) also watches this
-file, so an untracked board nudges on session close.
-
-### ⇄ Handoffs (append a line; delete when cleared)
-- **PM → ENG:** **Felt wall found → 4 approved fixes are now *Now* (ranked 1–4); build in that order.**
-  First real slice playtest (Josh 2026-06-09): the night curve is too flat and the card pool plateaus —
-  *not* a missing god. **(1) enemy-scaling overhaul + difficulty tell** and **(2) imbue card paths** are
-  the two systemic wall-fixes (needed explicit approval — got it). **(3) wolf traversal/tree-immunity**
-  (the stuck-on-rocks bug) and **(4) wolf early-game lethality** are pre-greenlit and OK'd to ride *ahead*
-  of the big two to unblock wolf playtesting. Per-item grounding (touch points + current slopes) is in
-  each *Now* entry.
-- **PM → ARTIST:** **eye-glow difficulty tell** (part of item 1) — enemies' eyes glow **yellow at the mid
-  threat tier → red at the top tier**, as an additive draw-layer overlay (no new sprites; a tint pass on
-  the enemy render). Engineer sets the per-enemy threat-tier flag; Artist owns the exact glow look. Hand
-  off once the scaling spine exposes the tier flag.
-- **PM → ENG (release housekeeping):** Favor shipped as **v0.2.0**; Wolf Camps spine is still untagged in
-  CHANGELOG `[Unreleased]`. Fold items 1–4 into that section and cut **v0.3.0** when they land (or tag
-  wolf-camps alone first if it ships sooner). The Favor-coin art handoff (`fx.favor-coin` + HUD glyph for
-  the placeholder `✦`, drawn procedurally in `gDrawFavorOrbs`) is still open with the Artist.
+*The single source of truth for **what we're building next and why.** Plain-English at the top of each
+item for a quick read; a collapsible **🔧 Build notes** block on each carries the technical detail
+engineering needs. The Product Manager owns this doc ([`PRODUCT_MANIFESTO.md`](PRODUCT_MANIFESTO.md));
+engineering builds **approved** items from *Now*, top-down ([`ENGINEERING_CHARTER.md`](ENGINEERING_CHARTER.md)).*
 
 ---
 
-## God design identities (north star)
+## 📍 Where we are (June 9, 2026)
 
-Each patron owns a **distinct combat identity**. An imbued skill kit must express that identity
-through genuinely different mechanics — different feel, effect, and **hitbox** — never a recolor
-of another god's kit. (Cilia's current kit is *a* fire kit, not the structural template for the
-others; it's itself open to rework.)
+**v0.2.0 is live** (the Favor currency). The "vertical slice" — our test of whether the core combat
+scales fairly against a rising difficulty curve — is **fully built**, and we just ran its first real
+playtest. It told us exactly what we hoped a playtest would:
 
-| God | Element | Identity |
-|-----|---------|----------|
-| **Cilia** | Fire | Offense, AOE damage. |
-| **Boreas** | Ice | Defense, area control, freezing, slowing. |
-| **Ikras** | Wind | Mobility, chaining attacks and skills. |
-| **Bhumi** | Earth | Tanking, reflecting damage (thorns), healing. |
+> **The two weak points are (1) the difficulty curve is too flat — late game isn't dangerous enough, and
+> (2) leveling up gets boring because the upgrades are repetitive.** Notably, the game did *not* need a
+> whole new god to fix this — both problems are fixable inside the systems we already have.
 
-Co-op synergy (pillar 4) falls out of the contrast — e.g. Boreas freezes → Cilia shatters.
+The five items below are the plan. The first four are approved and ranked in build order; the fifth (a
+second god) stays parked because the playtest proved we don't need it yet.
 
----
+## ⚡ At a glance
 
-## Now — approved or next in line (1–3 items)
-
-> **The slice is mechanically 100% built (curve + card progression + Favor + Wolf-Camp spine — see CHANGELOG).** Its first real playtest (Josh, 2026-06-09) **found the felt wall: the night curve is too flat and the card pool plateaus.** The four items below are the approved fixes — they tune/deepen the slice rather than add a new pillar. Boreas stayed held: the wall didn't call for a new god. **Build order = this ranking.** Hold the Cilia kit's *base* numbers fixed; tune the *curve and the card economy* around it.
-
-1. **Enemy scaling overhaul + difficulty tell** · `approved` 2026-06-09 · pillar: game feel (readable threat) + mastery
-   - One-liner: make the night curve actually *bite* — VS-style ramps on HP, damage, count, and composition as threat climbs, with enemies' **eyes glowing yellow (mid tier) → red (top tier)** as a free at-a-glance danger read.
-   - Why now: **the felt wall.** Current slopes are too gentle — HP/dmg `×(1 + threat·0.25)`, speed `×0.08` (`wildThreatMult`/`wildSpeedMult` `~11977`), ambient `20 + threat·1.5` (`gWildAmbientTarget` `~12746`), horde `20 + 10/night` capped 60 (`_wildHordeSize` `~12656`). Late game is slightly tankier, not *more dangerous*. VS's lesson: pressure = **density + mix-shift + breakpoints**, not a smooth multiplier.
-   - Player experience: Night 1 a readable trickle; mid-nights visibly denser, mixed (warriors/shamans/bombers weighted in), hitting harder, with **glowing eyes** telegraphing a hard night and juiced elites — the rising difficulty *reads* as fair instead of surprising.
-   - Scope — **Core:** steeper, breakpointed scaling (HP/dmg/count slopes + a composition table shifting the spawn mix toward tougher types at `wildThreatLevel` thresholds) + the two-tier eye-glow overlay keyed to threat tier. **Stretch:** per-night modifier flavor (all-bomber night, etc.); a screen/audio cue when eyes go red.
-   - Touches: `wildThreatMult`/`wildSpeedMult` (`~11977`), `_wildHordeSize` (`~12656`), `gWildAmbientTarget` (`~12746`), swarm-composition unlocks (`~12664`), `_wildScaleEnt` (`~2689`). Eye-glow = additive draw-layer overlay on the enemy render, **no new sprites** (a tint pass) — **Artist hand-off once a per-enemy threat-tier flag exists.**
-   - Size: multi-session; scaling-curve spine ~1 session (numbers/table + a tier flag), eye-glow a follow-on.
-   - Balance: **tune the slope, not the base** — push the curve until the felt wall moves later and reads fair. Levers: HP/dmg/count slopes · per-archetype threshold nights · glow-tier cutoffs. Watch density vs the live spawn cap (counts ramp *within* the cap; mix-shift carries the rest).
-
-2. **Imbue card paths** · `approved` 2026-06-09 · pillar: build-craft depth
-   - One-liner: give each imbued skill its **own card upgrade track** — cards that deepen the *imbue* (fire-trail duration on dash, fire-pillar count on heavy, fire-ring reach on whirlwind), so leveling expresses your build instead of repeating generic stat bumps.
-   - Why now: **"leveling is boring"** = the pool tops out at flat stat cards, and the imbue system — the build-craft spine — is currently **binary** (imbued or not, no growth). Turning each imbue into a *path* multiplies meaningful choices and makes "forge a style" actually progress. This is the deeper-card-pool lever the slice predicted.
-   - Player experience: after imbuing, the draft starts offering imbue-specific cards — *"Lingering Embers: +40% dash trail duration," "Eruption: +2 heavy fire-pillars," "Wildfire: whirlwind rings travel farther"* — you build toward an identity (trail-stacking zoner vs pillar-burst bruiser); level-ups sharpen the weapon.
-   - Scope — **Core:** a new imbue-card category (gated on owning that imbue), 2–3 upgradeable params per imbued skill, written to a per-player imbue-mods map and threaded into the FX spawn sites. **Stretch:** a capstone card per skill — a qualitative change, not a number (the "step-level" moment).
-   - Touches: card-draft pool + `_cardValue` (`~11828`), `skillMods`/`pSkillStat` plumbing (`~2425`) extended to imbue params; the four Cilia FX systems (`gFireTrails` `~3619`, `gFirePillars` `~5708`, `gFireRings`, `gFireCrosses`). Reuses the shipped rarity/Favor-upgrade economy.
-   - Size: multi-session; spine ~1 session for 2 skills' paths, then fan out.
-   - Balance: imbue cards enter the pool **only when that imbue is owned** (no early-draft dilution); magnitudes ride existing rarity tiers. **Cap each path** (like `SKILL_STAT_FLOOR`) so stacking can't tank FPS or trivialize.
-
-3. **Wolf traversal + tree-immunity** · `approved` 2026-06-09 (pre-greenlit bug fix) · pillar: game feel
-   - One-liner: wolves get **stuck on their own crescent rock dens** — give them a traversal exception (hop/jump over rock & tree obstacles to reach the player) **and** make them **immune to tree-slow** ("native species, unhindered by the land"), which also makes them feel fast and inevitable like a flanker should.
-   - Touches: `_aiWolf` collision + the `gTreeSlow` call (`~4766`); a wolf-specific obstacle exception (vs `gRC`/`gRCDestructibles`). Bug + feel in one. Size: session. No new art.
-
-4. **Wolf early-game lethality** · `approved` 2026-06-09 (pre-greenlit balance) · pillar: mastery
-   - One-liner: wolves are too soft turn-one — bump Direwolf/Alpha base HP + bite damage so an early camp is a genuine **risk/reward gamble**, not free Favor. Pairs with item 1's eye-glow (an elite Alpha reads as red).
-   - Touches: `EntityDefs.direwolf`/`.alphawolf` (`~2658`/`~2678`). Pure number tune. Size: session. No new art.
-
-5. **Boreas's Frost — control imbue kit (warrior)** · `held — behind slice` (was approved 2026-06-06) · pillar: build-craft depth + game feel
-   - **HELD (Josh's call 2026-06-06; reaffirmed 2026-06-09):** not active work. The slice's first playtest located the felt wall as **flat scaling + plateauing cards, not a missing god** — so the wall is being fixed in-system (items 1–4), *not* with Boreas. Boreas is now a **build-variety / co-op** play (second god ~doubles the build matrix; seeds freeze→shatter), to unhold once the curve + card depth feel right and we want breadth. Spec below is intact and ready.
-   - One-liner: a four-skill Frost kit built on **defense / zoning / freeze**, mechanically
-     distinct from fire (static fields, walls that block pathing, self-armor — not expanding DoT).
-   - Why now: second god ~doubles build variety on warm registries; Frost plays the *most
-     differently* from Fire (control vs DoT) and pre-pays the co-op synergy item (freeze→shatter).
-   - The kit (each verb is control/defense, not damage-over-area):
-     - **Swing — Rimebite:** hits apply **Chill** (slow) and each hit forms an orbiting ice shard
-       → a stacking **frost shield** on the player. Offense feeds defense. *Hitbox:* normal arc,
-       but the effect is inward (builds shield), not an outward crescent.
-     - **Whirlwind — Frost Bulwark:** a **stationary** slowing field centered on the player that
-       chills everything inside while channeling, and grants the player damage reduction.
-       *Hitbox:* fixed-radius persistent zone that does NOT travel (vs fire's expanding rings).
-     - **Leap — Permafrost:** impact raises a **ring of ice pillars** that *blocks enemy pathing*
-       (a real barrier / zoning wall) and freezes enemies caught in the slam. *Hitbox:* closed
-       collision ring (vs fire's two diagonal damage arms).
-     - **Dash — Frost Step:** a defensive disengage — grants a brief **absorb shield**, freezes the
-       first enemy passed through (get-off-me), and leaves a **slick of ice** that slows pursuers
-       (slow, not damage). *Feel:* peel/escape, vs fire-dash's aggressive scorch.
-     - **Heavy — Glacial Spike (frost pillars analog):** charged burst that **freezes solid** all
-       enemies in the zone — the hard-CC lockdown.
-   - **Shatter (the damage payoff):** Frozen enemies take bonus damage and **shatter** when struck
-     (esp. by Heavy) — Boreas earns burst through setup (control → freeze → shatter), staying
-     defensive in identity. Also the co-op hook: any ally's hit shatters your freeze.
-   - Size: multi-session (one imbue per skill). New art: frost FX — ice shards/shield, slow field,
-     ice-pillar wall, ice slick, shatter burst (new *shapes*, not recolors — that's the point).
-   - Balance: Chill ~35–40% slow; freeze threshold ~3 stacks, ~0.75s solid; shatter ~1.5× a hit.
-     Lower raw DPS than Fire — trades damage for control + survivability. Cap freeze duration +
-     diminishing returns so lockdown never feels unfair.
+| # | What we're building | Status | Size | Why it matters |
+|---|---|---|---|---|
+| **1** | **Make late-game dangerous** — enemies scale harder + glow yellow→red as they get deadly | ✅ Approved | Multi-session | Fixes the flat difficulty curve (playtest weak point #1) |
+| **2** | **Imbue Paths** — turn each fire skill into a 10-level mastery tree with branching upgrades | ✅ Approved — cleared for build | Large, phased | Fixes boring level-ups; the heart of "build your own playstyle" (#2) |
+| **3** | **Wolves stop getting stuck** on their dens + ignore forest slow | ✅ Approved | Quick | Bug fix — unblocks wolf playtesting |
+| **4** | **Wolves hit harder early** | ✅ Approved | Quick | Makes a wolf camp a real risk, not free loot |
+| **5** | **Boreas** — a second god (ice/control) | ⏸️ Held | Multi-session | Parked — the playtest showed we don't need it yet |
 
 ---
 
-## Next — proposed, sized, sequenced
+## Now — what engineering builds next (in this order)
 
-> Everything here is **gated behind the vertical slice.** With Nightfall shipped and the card-draft progression now in *Now*, the slice's "felt wall" will tell us whether the next move is a new power lever (Boreas), deeper card content, or roster variety. Don't pull from *Next* until the slice plays well.
+### 1. Make late-game dangerous — enemy scaling + a visible danger tell
 
-1. **Co-op build synergy pass** · `proposed` · pillar: co-op that amplifies
-   - One-liner: make two different gods' imbues *combine* on shared targets (e.g. one ignites, one detonates) so co-op is more than parallel play.
-   - Why now: multiplayer exists and is delta-synced; the payoff is currently "two players, same game" rather than "two builds, one combo." **Boreas's Frost already seeds the marquee combo — freeze → ally shatter** — so this gets cheaper once it ships.
-   - Size: multi-session. Depends on ≥2 gods having imbues (Cilia shipped + Boreas approved → unblocked once Boreas lands).
+`✅ approved` (2026-06-09) · **Size:** multi-session · **Pillars:** game feel, mastery · **Art:** glowing eyes (no new sprites)
+
+**What:** Enemies barely get tougher as the nights pass right now. We'll make the difficulty genuinely
+ramp the way *Vampire Survivors* does — more enemies, deadlier mixes, and more damage as the run goes on —
+and let players *see* danger coming: **enemy eyes glow yellow at medium difficulty and red at the
+hardest.**
+
+**Why:** This is the #1 playtest finding. A flat curve means the late game feels the same as the early
+game instead of escalating into a real threat — so the whole "can the player out-scale the curve?" test is
+unfalsifiable until the curve actually climbs.
+
+**Player experience:** Night 1 is a readable trickle of goblins. Later nights are visibly denser and
+mixed (tougher enemy types weighted in), hit harder, and the glowing eyes telegraph a dangerous night and
+juiced-up elites — hard, but fair and readable.
+
+<details>
+<summary>🔧 Build notes (engineering)</summary>
+
+- **The current slopes are too gentle:** HP/dmg `×(1 + threat·0.25)`, speed `×0.08`
+  (`wildThreatMult`/`wildSpeedMult`, `~11977`); ambient count `20 + threat·1.5` (`gWildAmbientTarget`,
+  `~12746`); horde `20 + 10/night` capped 60 (`_wildHordeSize`, `~12656`).
+- **Core:** steeper, *breakpointed* scaling — HP/dmg/count slopes **plus a composition table** that shifts
+  the spawn mix toward tougher types (warrior/shaman/bomber) at `wildThreatLevel` thresholds (the VS
+  lesson: pressure comes from density + mix-shift + breakpoints, not a smooth multiplier). Add a per-enemy
+  **threat-tier flag** driving a two-tier additive **eye-glow overlay** on the enemy render.
+- **Touches:** `wildThreatMult`/`wildSpeedMult` (`~11977`), `_wildHordeSize` (`~12656`),
+  `gWildAmbientTarget` (`~12746`), swarm-composition unlocks (`~12664`), `_wildScaleEnt` (`~2689`).
+- **Stretch:** per-night modifier flavor (e.g. an all-bomber night); a screen/audio cue when eyes go red.
+- **Art hand-off:** eye-glow is a tint pass, **no new sprites** — Artist owns the look once the
+  threat-tier flag exists.
+- **Balance — tune the slope, not the base:** hold the Cilia kit's numbers fixed; push the curve until the
+  "felt wall" moves later and reads as fair. Levers: HP/dmg/count slopes · per-archetype threshold nights ·
+  glow-tier cutoffs. Counts must ramp *within* the live spawn cap (perf) — mix-shift carries the rest.
+</details>
+
+---
+
+### 2. Imbue Paths — turn each fire skill into a mastery tree
+
+`✅ approved` (2026-06-09) — **all design calls resolved; cleared for Phase 1 build** · **Size:** large, phased · **Pillars:** build-craft depth, game feel, mastery
+**Full design:** [`specs/imbue-paths.md`](specs/imbue-paths.md)
+
+**What:** Today, a fire-imbued skill is either on or off — there's nowhere to grow it, so level-ups become
+repetitive stat bumps. We'll turn **each imbued skill into a named ability you level up 10 times**, with
+two branch points where you choose how it evolves:
+
+- **Level 5 — pick 1 of 2 "Forms"** that change *how the skill plays* (e.g. a long-range version vs. a
+  close-quarters version).
+- **Level 10 — pick 1 of 2 "Chaos" upgrades** — the peak of the skill, where it grows more powerful but
+  also more wild and harder to fully control.
+
+**Example — "Dance of Fire" (the normal attack):** at level 5 you choose **Emberlance** (fires a spread of
+fireballs at long range — for spacing and kiting) *or* **Cinder Ring** (erupts a ring of flame around you —
+for wading into a crowd). At level 10 each Form forks again into two dread "Chaos" endpoints — e.g.
+Emberlance → **Wake of Ruin** (fireballs leave trails of fire across the battlefield) or **Cinderplague**
+(they burst into spreading embers); Cinder Ring → **Halo of Damnation** (a ring of burning ground that
+follows you) or **Unending Maelstrom** (the ring keeps re-erupting on its own). Four endpoints per skill.
+
+**Why:** This is the #2 playtest finding and the core of our "build your own playstyle" promise. It turns
+every level-up into a meaningful choice and makes two players' builds genuinely different.
+
+**The story hook (now canon — logged in the Creative Manifesto, 2026-06-09):** *the gods are waning and
+resort to "perceived higher powers" — chaos and order, light and dark — to preserve themselves; called
+upon enough, those forces become the gods of the next age.* The game is set in **the turning of the age**.
+The level-10 "Chaos Ascension" is that made playable — channeling a blessing to its peak routes it through
+these raw forces, so it corrupts (fire spills onto the ground you stand on, effects spread past your aim).
+This is what *"To Dust"* means: **the old gods crumble to dust, and new powers are born from it.**
+
+<details>
+<summary>🔧 Build notes (engineering)</summary>
+
+- **The 10-rank tree per skill:** ranks 1–4 numeric upgrades → **rank 5 Form fork (1 of 2)** → ranks 6–9
+  numeric → **rank 10 Chaos fork (1 of 2)**. Binary tree → 4 endpoints per skill; any run walks one path.
+- **State:** a new per-player imbue-path map (rank + chosen Form + chosen Chaos per skill), parallel to
+  `skillMods`/`gritMods` (`~2425`). Numeric ranks write magnitudes the FX spawn sites read.
+- **Draft integration:** ranks 1–4 / 6–9 are ordinary draft cards (reuse `_cardValue` rarity/Favor
+  economy, `~11828`); **ranks 5 & 10 are special 2-option "evolution" events** — model on the existing
+  imbue overlay (`#g-imbue-overlay`) or a flagged draft pair. Gated on owning that imbue.
+- **FX touched:** `gFireWaves`, `gFireTrails` (`~3619`), `gFirePillars` (`~5708`), `gFireRings`,
+  `gFireCrosses`. The Chaos tier leans hard on the existing `burning-ground`/`gFireTrails` hazard.
+- **AI-native:** the two evolution events pause the game → each needs a `gSim*` hook (mirror
+  `gSimDraft.pick`) + new `Sim.observe()` fields (per-skill rank, pending evolution), or headless runs stall.
+- **Phasing (so a large feature ships in slices):** **Phase 1 = the tree system + "Dance of Fire" fully
+  built** (one skill, both Forms, all Chaos leaves — de-risks the whole system) → **Phases 2–5 = fan out**
+  one skill per slot (Pyre Waltz · Sunfall · Trail of Embers · Eruption) on the proven framework.
+- **Balance:** Forms are **sidegrades** (playstyle, not strictly stronger); Chaos is **power + cost** (the
+  uncontrolled element is the balancing lever — if a Chaos leaf is strictly better than its Form, it's
+  under-chaosed). Cap every numeric rank; forks are irreversible per run (builds are commitment).
+- **✅ All design calls resolved (Josh, 2026-06-09):** binary tree (4 endpoints/skill); names approved with
+  the standing rule that **all level-10 Chaos names evoke dread/chaos/sinisterness**; lore logged as canon.
+  **Cleared for Phase 1 hand-off.**
+</details>
+
+---
+
+### 3. Wolves stop getting stuck
+
+`✅ approved` (2026-06-09, pre-greenlit bug fix) · **Size:** quick · **Pillar:** game feel · **Art:** none
+
+**What:** Wolves are currently getting trapped on the rocky dens they spawn in. We'll let them climb over
+obstacles to reach the player, and make them **unhindered by the forest** (no slowdown in trees) — they're
+native to the land, so it should feel like nothing stops them.
+
+**Why:** It's a visible bug, and the fix doubles as good feel — wolves that flow over terrain feel fast and
+inevitable, exactly like the pack-flanker they're meant to be. Fixing this unblocks proper wolf playtesting.
+
+<details>
+<summary>🔧 Build notes (engineering)</summary>
+
+- `_aiWolf` collision + the `gTreeSlow` call (`~4766`); add a wolf-specific obstacle exception (a hop/jump
+  over rock & tree vs. `gRC`/`gRCDestructibles`) and skip tree-slow entirely for wolves.
+</details>
+
+---
+
+### 4. Wolves hit harder early
+
+`✅ approved` (2026-06-09, pre-greenlit balance) · **Size:** quick · **Pillar:** mastery · **Art:** none
+
+**What:** Wolves are too soft at the start of a run, so a wolf camp is free loot instead of a real fight.
+Bump their early-game health and bite damage so clearing a camp is a genuine **risk-vs-reward gamble.**
+
+**Why:** Wolf camps are meant to be a meaningful choice — "do I risk this pack for the Favor?" That choice
+doesn't exist if the wolves can't threaten you. Pairs naturally with item 1's glowing eyes (a tough Alpha
+reads as red).
+
+<details>
+<summary>🔧 Build notes (engineering)</summary>
+
+- Pure number tune: `EntityDefs.direwolf` / `.alphawolf` base HP + bite damage (`~2658` / `~2678`).
+</details>
+
+---
+
+### 5. Boreas — a second god (held)
+
+`⏸️ held` (Josh's call 2026-06-06, reaffirmed 2026-06-09) · **Size:** multi-session · **Pillars:** build-craft depth, game feel
+
+**What (parked):** A second patron god — Boreas, ice/control — with a full four-skill kit built around
+defense, freezing, and zoning, playing completely differently from Cilia's fire.
+
+**Why it's parked:** The playtest proved the current problems are flat scaling + shallow leveling, **not a
+missing god** — so we're fixing those in-system (items 1–4) instead. Boreas becomes a *build-variety and
+co-op* play (a second god roughly doubles the build matrix and seeds the marquee co-op combo: one player
+freezes, another shatters) to unhold once the curve and leveling feel right and we want more breadth. The
+full design below is intact and ready to pick up.
+
+<details>
+<summary>🔧 Design notes (full Frost kit — ready when unheld)</summary>
+
+A four-skill Frost kit built on **defense / zoning / freeze**, mechanically distinct from fire (static
+fields, walls that block pathing, self-armor — not expanding damage-over-time):
+
+- **Swing — Rimebite:** hits apply **Chill** (slow); each hit forms an orbiting ice shard → a stacking
+  **frost shield** on the player. Offense feeds defense.
+- **Whirlwind — Frost Bulwark:** a **stationary** slowing field centered on the player that chills
+  everything inside while channeling, and grants the player damage reduction.
+- **Leap — Permafrost:** impact raises a **ring of ice pillars** that *blocks enemy pathing* and freezes
+  enemies caught in the slam.
+- **Dash — Frost Step:** a defensive disengage — a brief **absorb shield**, freezes the first enemy passed
+  through, and leaves a **slick of ice** that slows pursuers.
+- **Heavy — Glacial Spike:** charged burst that **freezes solid** all enemies in the zone (hard CC).
+- **Shatter (the payoff):** frozen enemies take bonus damage and **shatter** when struck (esp. by Heavy) —
+  Boreas earns burst through setup, not raw DPS. Also the co-op hook: any ally's hit shatters your freeze.
+
+**Size:** multi-session (one imbue per skill). **New art:** frost FX — ice shards/shield, slow field,
+ice-pillar wall, ice slick, shatter burst (new *shapes*, not recolors). **Balance:** Chill ~35–40% slow;
+freeze ~3 stacks → ~0.75s solid; shatter ~1.5× a hit; lower raw DPS than Fire (trades damage for control +
+survivability); cap freeze duration + diminishing returns so lockdown never feels unfair.
+</details>
+
+---
+
+## Next — likely, once the slice plays well
+
+### Co-op build synergy pass
+
+`proposed` · **Size:** multi-session · **Pillar:** co-op that amplifies
+
+**What:** Make two different gods' powers *combine* on the same enemy — e.g. one player ignites, another
+detonates — so co-op is more than two people playing the same game side by side.
+
+**Why:** Multiplayer already works and stays in sync, but the payoff today is "two players, same game"
+rather than "two builds, one combo." Boreas's freeze→shatter already seeds the marquee combo, so this gets
+cheaper once Boreas ships. **Needs ≥2 gods with imbues** — unblocked once Boreas lands.
 
 ---
 
 ## Later — the idea pool (one big rock always visible)
 
-- **🪨 BIG ROCK: the "Reclaim-the-Shrine" run loop** — the horizon structure the game is building toward (full design in [`WORLDBUILDING_CONCEPTS.md`](WORLDBUILDING_CONCEPTS.md)). A run = an incursion into a procedural **area** (first: the Goblin Forest) with **one usurped shrine**: fight to it and **reactivate it** (opening conquest; Goblin King as the usurper), then it's your **hearth** — return by day to imbue/deepen via **banked imbue charges** (pull, not a forced gate), survive sieges by night, with **random map events** keeping each return-trip fresh. Ties together Nightfall (shipped), the card-draft, and the Favor economy ([`specs/favor.md`](specs/favor.md)). **Depends on:** card-draft landing + ≥2 imbued gods (Boreas) + Favor — so it's post-slice. *(Note: Favor pivoted away from pricing multi-god breadth → the run-loop's "banked imbue charges" / how breadth is gated is now an open call, decoupled from Favor.)* Open forks live in the worldbuilding doc (one-vs-many areas; siege-threatens-shrine fusion).
-- **A fifth god, or a new mode** — still a horizon expander (a fifth patron grows the build matrix; an endless/horde mode opens a fresh loop), but secondary to the run loop above as the anchor.
-- **Meta-progression between runs** — a reason to come back: unlocks, account-light persistence that fits the single-file vanilla-JS constraint. (The "journey through areas / wider world" could live here.)
-- **Day-lull content (slice-adjacent slice of the big rock)** — repopulating goblin camps + a few random events so Nightfall's day-lull isn't dead air. The smallest first taste of the run loop; could come sooner than the rest.
-- **Audio/juice pass** — a dedicated game-feel sweep once a content arc lands (screen shake curve, hit-stop, layered SFX).
-- **New enemy + boss variant (parked)** — the parked fast-flanker archetype is now being **realised as the wolves** in Neutral Wolf Camps (*Now* item 3). What remains parked here is a *boss variant* (e.g. a dire-alpha world boss / a goblin elite) — revisit if the slice's felt-wall wants roster *variety* beyond the wolves. Recipe documented (def → registry → exclusion list → sprite → palette).
+- **🪨 BIG ROCK — the "Reclaim-the-Shrine" run loop.** The horizon the whole game is building toward (full
+  design in [`WORLDBUILDING_CONCEPTS.md`](WORLDBUILDING_CONCEPTS.md)): a run is an incursion into a
+  procedural area (first, the Goblin Forest) with one shrine the enemy has taken. Fight to it, reactivate
+  it, and it becomes your home base — return by day to deepen your powers, survive sieges by night, with
+  random map events keeping each trip fresh. Ties together the difficulty curve, the card draft, and the
+  Favor economy. **Depends on:** the slice landing + a second god + Favor — so it's post-slice.
+- **A fifth god, or a new mode** — a fifth patron grows the build matrix; an endless/horde mode opens a
+  fresh loop. Secondary to the run loop as the anchor.
+- **Meta-progression between runs** — a reason to come back: unlocks / light persistence that fits the
+  single-file, no-backend constraint.
+- **Day-lull content** — repopulating camps + a few random events so the daytime lull isn't dead air. The
+  smallest first taste of the run loop; could come sooner than the rest.
+- **Audio/juice pass** — a dedicated game-feel sweep once a content arc lands (screen shake, hit-stop,
+  layered SFX).
+- **A boss variant (parked)** — the fast-flanker idea is now realized as the wolves; what remains parked is
+  a *boss-tier* variant (a dire-alpha world boss / a goblin elite). Revisit if the difficulty work wants
+  more roster variety.
 
 ---
 
-_PM: keep this terse and current. Every `proposed` item carries pillar + one-liner + why-now + size + art cost. On developer approval, move to **Now** and flip to `approved`. On ship, delete and let the changelog carry the record._
+## The four gods (design north star)
+
+Each patron is a **distinct combat identity** — expressed through genuinely different mechanics, never a
+recolor. Co-op synergy falls out of the contrast (Boreas freezes → Cilia shatters).
+
+| God | Element | Identity |
+|-----|---------|----------|
+| **Cilia** *(live)* | Fire | Offense, area damage |
+| **Boreas** *(held)* | Ice | Defense, control, freezing, slowing |
+| **Ikras** *(future)* | Wind | Mobility, chaining attacks & skills |
+| **Bhumi** *(future)* | Earth | Tanking, reflecting damage (thorns), healing |
+
+---
+
+<details>
+<summary>📎 Appendix — how PM &amp; engineering stay in sync (process)</summary>
+
+**Status legend:** `proposed` (PM idea, not yet seen by Josh) · `approved` (greenlit — engineer may build)
+· `in-progress` · `shipped` (move to changelog, delete here) · `held` / `cut`.
+
+**The repo is the shared brain.** Both agents reset context between sessions, so cross-role awareness lives
+*here*, not in memory. Every *Now* item carries a live status — **flip it the moment you act, in the same
+commit:** PM sets `approved`; engineer sets `in-progress` **when starting** (not just when done), then
+`shipped` on push. Pulse of what just happened → git (`git status` + `git log --oneline`, commit prefixes
+`pm:` / `eng:` / `docs:`). **Session-open ritual (~30s):** `git status` + `git log --oneline -15` → read
+*Now* + Handoffs → act. `tools/doc-drift-check.ps1` (Stop hook) nudges if this board goes stale.
+
+**⇄ Handoffs (append a line; delete when cleared):**
+- **PM → ENG:** Build *Now* top-down (1→4). Items 1 & 2 are the two systemic wall-fixes — **item 2's 3
+  design calls are now resolved (binary tree, names, lore canon), so it's cleared for Phase 1** (the tree
+  system + Dance of Fire's full 4-endpoint tree; see [`specs/imbue-paths.md`](specs/imbue-paths.md)). Items
+  3 & 4 are pre-greenlit and OK'd to ship *ahead* of the big two to unblock wolf playtesting.
+- **PM → ARTIST:** **eye-glow difficulty tell** (item 1) — enemy eyes glow **yellow (mid tier) → red (top
+  tier)**, an additive draw-layer tint (no new sprites). Engineer sets the per-enemy threat-tier flag;
+  Artist owns the look. Hand off once that flag exists.
+- **PM → ENG (release housekeeping):** Favor shipped as **v0.2.0**; the Wolf Camps spine is still untagged
+  in CHANGELOG `[Unreleased]`. Fold items 1–4 in and cut **v0.3.0** when they land (or tag wolf-camps alone
+  first if it ships sooner). The Favor-coin art handoff (`fx.favor-coin` + HUD glyph for the placeholder
+  `✦`, drawn procedurally in `gDrawFavorOrbs`) is still open with the Artist.
+
+_PM upkeep: keep this current. Every item carries pillar + plain-English what/why + size. On approval, move
+to **Now** and flip to `approved`; on ship, delete and let the changelog carry the record._
+</details>
