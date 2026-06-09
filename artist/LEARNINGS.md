@@ -18,6 +18,27 @@ lesson: **the principle → why → how to apply.** Quality over volume.
 
 ---
 
+### 2026-06-10 — Measure the cutout's geometry before reaching for a flag; teach the tool the edge case
+
+- **Principle:** When a sliced sprite reads wrong (holes, a paw cut flat), *diagnose the geometry first* —
+  compare each figure's true connected-blob bbox against its **cell** and against the **sheet edge** —
+  before guessing slicer flags. That measurement tells you which problem you have, and whether it's even
+  recoverable: overflow past the *cell* but not the *sheet* means the pixels exist (the rigid per-cell
+  crop just discarded them → recoverable); overflow past the *sheet* means they were never drawn (needs
+  new art, no flag helps).
+- **Why:** the wolf-mother attack lunges were sliced flat at the cell border and the white fur had holes.
+  Eyeballing would've sent me to `--erode`/`--thresh` guesses. A 20-line blob-bbox check proved the
+  figures overflowed their 418px cells into the empty centre but never touched the sheet edge — so the fix
+  was to *recover* pixels, not regenerate art. That justified a new `--bleed` mode (cut an expanded
+  window, keep the component that owns the cell) rather than a one-off hand-fix; combined with `--sever`
+  it also sealed the white-on-white holes. All 16 verified 0-clip / 0-hole.
+- **How to apply:** for any cutout defect, run the bbox-vs-cell-vs-sheet measurement before flags, and let
+  the verdict pick the tool. When the cause is a *recurring class* (figures drawn larger than their cell,
+  white-on-white leaks), encode it in `tools/slice-turnaround.py` as a documented flag — the slicer is the
+  accumulated solution to every cutout edge case; a new edge case belongs *in* it, not in a manual
+  workaround. Verify the output programmatically (hole/edge px counts), not just by eye, and keep
+  `--bleed`'s owner-selection assumption honest (figures must not touch — watch the `comps=N` print).
+
 ### 2026-06-09 — Your deliverable is the asset + a wiring spec, not a wired `index.html`
 
 - **Principle:** The Artist does not edit `index.html` — the engineer is its sole editor. You produce the
