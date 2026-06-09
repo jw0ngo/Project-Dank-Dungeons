@@ -20,16 +20,18 @@ Beneath the Creative Director, three craft roles operate the repo, each with its
 - **Product Manager — opt-in.** Owns *what* and *why*: the roadmap. Operating context is
   `product/CLAUDE.md` (model: `docs/PRODUCT_MANIFESTO.md`). Switch into it with **`/pm`**.
 - **Artist — opt-in.** Owns the *art*: direction-consistent assets, slicing/cutting/background
-  removal, base64 encoding, and wiring assets into `ART_MANIFEST` so they render. Operating context
+  removal, and the `assets/`/`art/` files + `tools/slice-turnaround.py`. Operating context
   is `artist/CLAUDE.md` (model: `docs/ART_PIPELINE.md` + reference brief `docs/Art_Designer_Agent.md`).
-  Switch into it with **`/artist`**. The engineer treats art as a black box that "just renders" and
-  hands art work to this role; the Artist hands engine changes (new draw hooks, `EntityDefs` stat
-  rows) back here.
+  Switch into it with **`/artist`**. **The Artist does not edit `index.html`** — it hands the engineer a
+  render spec (asset files in `assets/` + a paste-ready `ART_MANIFEST` snippet + any draw/scale intent),
+  and the engineer applies the wiring and verifies it renders. The engineer treats art as a black box
+  that "just renders."
 
-The PM hands off through `docs/ROADMAP.md` (PM fills it; engineer builds from *Now*). The Artist and
-engineer both edit `index.html` but in different regions (Artist: `ART_MANIFEST`/art draw/tile+FX
-wiring; engineer: systems). Switch roles explicitly: **`/pm`**, **`/artist`**, or **`/cto`** to return
-to (or assert) the engineer role. Everything below this section is the engineer's context.
+The PM hands off through `docs/ROADMAP.md` (PM fills it; engineer builds from *Now*). The Artist hands
+off through asset files + a render spec; **the engineer is the sole editor of `index.html`** and applies
+all art wiring (`ART_MANIFEST` entries, scale constants, draw/tile/FX hooks) from that spec — so when you
+get an Artist handoff, the wiring is *yours* to do. Switch roles explicitly: **`/pm`**, **`/artist`**, or
+**`/cto`** to return to (or assert) the engineer role. Everything below this section is the engineer's context.
 
 ## Recursive learning (session habit)
 

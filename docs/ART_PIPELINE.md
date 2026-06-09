@@ -8,8 +8,9 @@ per-asset trait lists and ready-to-use image-gen prompt templates, see the refer
 **`Art_Designer_Agent.md`** — but the operating essentials are here.
 
 You are the **Artist**: you own art assets end-to-end, from direction-consistent source art through
-slicing/cutting/encoding to a wired, in-game result. The engineer owns game systems; you own what
-the player sees. You both edit `index.html`, but in different regions (see *The boundary* below).
+slicing/cutting/background-removal to a render spec the engineer wires into the game. The engineer owns
+game systems *and* is the sole editor of `index.html`; you own what the player sees and hand over the
+assets + the wiring spec (see *The boundary* below). You do **not** edit `index.html`.
 
 ---
 
@@ -89,8 +90,9 @@ Every drawable in the game resolves through one of two layers, in this order:
    Used only when no image art exists for that key. Don't delete these when you add art; they're the
    graceful-degradation layer.
 
-So: **adding art = dropping the file in `assets/<kind>/` and adding an `ART_MANIFEST` entry that points
-at it** (plus, occasionally, a one-line wiring hint). You almost never touch the draw loop.
+So: **adding art = dropping the file in `assets/<kind>/` and handing the engineer an `ART_MANIFEST` entry
+that points at it** (plus, occasionally, a one-line wiring hint). The engineer applies it to `index.html`;
+the draw loop is rarely touched.
 
 > **`slice-turnaround.py` is path-native now.** It writes its 8 cutouts straight into `assets/char/`
 > as `<id>-<dir>.png` and emits a **path-based** manifest snippet
@@ -155,9 +157,11 @@ CLEAN/CHECK verdict; in `--sever` mode that metric over-reports (detail is bg-co
 trust the contact sheet. The recurring sprite bugs are exactly two: an **edge halo** (try `--erode`) or
 an **enclosed bg pocket** (try `--global`).
 
-### 3. Place the file + wire into `index.html`
-Drop the cutout PNG into `assets/<kind>/` and add an `ART_MANIFEST` entry pointing at its path
-(`'char.goblin.n':'assets/char/goblin-n.png'`). Wiring by type:
+### 3. Place the file + spec the wiring for the engineer
+Drop the cutout PNG into `assets/<kind>/`. Then hand the engineer a paste-ready `ART_MANIFEST` entry
+pointing at its path (`'char.goblin.n':'assets/char/goblin-n.png'`) — **you don't edit `index.html`; the
+engineer applies it.** Know how each type wires so your spec is complete (and so you can sanity-check the
+result):
 
 - **Characters/enemies (`char.<id>.<dir>`)** — drawn upright (no rotation) via `gDirBody('<id>', oct, …)`,
   facing the target by 8-way octant (same pattern as goblin/archer/king). Draw size is its own constant
@@ -186,20 +190,24 @@ Drop the cutout PNG into `assets/<kind>/` and add an `ART_MANIFEST` entry pointi
 
 ---
 
-## The boundary (Artist vs Engineer in one file)
+## The boundary (Artist specs, Engineer wires)
 
-Both roles edit `index.html`. To avoid stepping on each other:
+**The engineer is the sole editor of `index.html`.** The Artist never touches it — you produce the art
+and a *render spec*, and the engineer applies it. This keeps one owner on the single game file.
 
-- **Artist owns:** `ART_MANIFEST` and its entries · `gArtReg`/`gInitArt` art loading · `gDirBody` art
-  draw + per-sprite scale constants · `gTileArt`/`gTileVarCount`/tile baking · FX compositing · the
-  `art/` folder · `tools/slice-turnaround.py`. Plus the *visual* tuning of how art reads in-game.
-- **Engineer owns:** game systems, combat, AI, registries' *stats* (`EntityDefs` hp/damage/radius),
-  multiplayer, the loop. The engineer treats art as a black box that "just renders."
-- **Shared, coordinate explicitly:** anything where art size and a hitbox/zone must move together
-  (`KING_SCALE` ↔ `EntityDefs.king.radius` ↔ attack radii). Resize both in the same commit.
+- **Artist owns:** the `assets/`/`art/` files · `tools/slice-turnaround.py` · the house style · and the
+  *visual specification* — what art exists, its draw scale, how it reads in motion. The deliverable to
+  the engineer is: the asset files (in `assets/`) + a paste-ready `ART_MANIFEST` snippet + the draw/scale
+  intent (`gDirBody` wiring, the `<ID>_SCALE` value, FX compositing notes, tile variant counts).
+- **Engineer owns:** all of `index.html` — `ART_MANIFEST` entries · `gArtReg`/`gInitArt` · `gDirBody`
+  draw + scale constants · `gTileArt`/`gTileVarCount`/tile baking · FX compositing — *plus* game systems,
+  combat, AI, `EntityDefs`, multiplayer, the loop. They apply the Artist's spec and verify it renders.
+- **Coordinate explicitly:** where art size and a hitbox/zone must move together
+  (`KING_SCALE` ↔ `EntityDefs.king.radius` ↔ attack radii), the Artist names the coupling in the spec and
+  the engineer moves them in the same commit.
 
-When the Artist's work needs an engine change (a new draw hook, a new enemy's `EntityDefs` row), that's
-the **handoff to the engineer** — note it, don't silently rewrite systems.
+So every art change that lands in `index.html` is a **handoff**: the Artist describes the intent and
+hands over the assets/snippet; the engineer does the wiring and confirms the render.
 
 ---
 
@@ -231,9 +239,11 @@ the **handoff to the engineer** — note it, don't silently rewrite systems.
 1. Drop the white-bg turnaround PNG in the right `art/` subfolder.
 2. `python tools/slice-turnaround.py "art/.../sheet.png" <id> --bg white` (add `--erode`/`--global`/`--sever` as the contact sheet demands).
 3. Eyeball the magenta contact sheet → CLEAN.
-4. The slice tool already wrote the 8 cutouts into `assets/char/` (`<id>-<dir>.png`); paste its
-   path-based `char.<id>.<dir>` snippet straight into `ART_MANIFEST`.
-5. Wire the draw: `gDirBody('<id>', …)` + a `<ID>_SCALE` constant; if it's a new enemy, hand the
-   `EntityDefs`/registry/exclusion-list row to the engineer (see the "add a new enemy" recipe in `CLAUDE.md`).
-6. `node --check` + grep the key + `python dev.py` and watch it render in all 8 facings.
-7. Commit; note the KB added.
+4. Commit the `art/` source + the 8 `assets/char/<id>-<dir>.png` cutouts the slice tool wrote.
+5. **Hand the engineer the render spec** (you don't edit `index.html`): the path-based `char.<id>.<dir>`
+   manifest snippet the tool emitted, the draw wiring intent (`gDirBody('<id>', …)` + a `<ID>_SCALE`
+   value — give the number/feel), and any size-coupling (scale ↔ `EntityDefs.<id>.radius` ↔ attack
+   radii). New enemy? Include the `EntityDefs`/registry/exclusion-list needs (the "add a new enemy"
+   recipe in the root `CLAUDE.md`).
+6. The engineer applies it to `index.html`, runs `node --check` + grep + `python dev.py`, and confirms
+   all 8 facings render. Review the result; iterate on the art/spec if a facing reads wrong.

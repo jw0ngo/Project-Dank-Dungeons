@@ -31,7 +31,7 @@ learnings. Switch into a role with its slash command; the engineer is the defaul
 | **Creative Director** (Josh; future agent) | Vision, story, feel, taste — the *soul* | `studio/creative-director/` | [`CREATIVE_MANIFESTO.md`](CREATIVE_MANIFESTO.md) | `studio/creative-director/LEARNINGS.md` |
 | **Engineer / CTO** (default) | *How* — systems, `index.html`, releases | repo root `CLAUDE.md` | `docs/ENGINEERING_CHARTER.md` | `docs/learnings/engineer.md` |
 | **Product Manager** (`/pm`) | *What & why* — the roadmap | `product/` | `docs/PRODUCT_MANIFESTO.md` | `product/LEARNINGS.md` |
-| **Artist** (`/artist`) | The *art* — direction, slicing, wiring | `artist/` | `docs/ART_PIPELINE.md` | `artist/LEARNINGS.md` |
+| **Artist** (`/artist`) | The *art* — direction, slicing, asset specs (hands wiring to the engineer) | `artist/` | `docs/ART_PIPELINE.md` | `artist/LEARNINGS.md` |
 
 How they relate:
 
@@ -46,9 +46,10 @@ How they relate:
               how
 ```
 
-The PM hands off through `docs/ROADMAP.md`. The Artist and Engineer both edit `index.html` in
-different regions. The Creative Director's direction is recorded in `CREATIVE_MANIFESTO.md` and
-flows into all three roles' work.
+The PM hands off through `docs/ROADMAP.md`. The Artist hands off through asset files (in `assets/`) plus
+a render spec — a paste-ready `ART_MANIFEST` snippet and any draw/scale intent; **the Engineer is the
+sole editor of `index.html`** and applies the wiring. The Creative Director's direction is recorded in
+`CREATIVE_MANIFESTO.md` and flows into all three roles' work.
 
 ## Recursive learning — the studio's core habit
 
