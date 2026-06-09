@@ -174,6 +174,54 @@ def cut_cell(cell, bg, thresh, feather, glob=False, erode=0, sever=0, crop=True)
     return out.crop(bb) if crop else out          # crop=False keeps the native cell frame (registration)
 
 
+def keep_owner(rgba, cell_box):
+    """For --bleed: the cut ran on a window expanded past the cell, so neighbouring
+    figures that overflow INTO this window (or whose own overflow we reached) can be
+    present. Keep only the opaque connected component that 'owns' this cell — the one
+    with the most pixels inside cell_box=(x0,y0,x1,y1) (the cell's true rect in window
+    coords) — and zero the rest. Figures never touch (clean bg gaps between cells), so
+    the owner is unambiguous. Returns (tight-cropped RGBA or None, n_components)."""
+    w, h = rgba.size
+    a = rgba.split()[3].load()
+    comp = [0] * (w * h)
+    incell = {}
+    cx0, cy0, cx1, cy1 = cell_box
+    label = 0
+    for sy in range(h):
+        base = sy * w
+        for sx in range(w):
+            i = base + sx
+            if a[sx, sy] <= 40 or comp[i]:
+                continue
+            label += 1
+            cnt_in = 0
+            st = [(sx, sy)]
+            comp[i] = label
+            while st:
+                x, y = st.pop()
+                if cx0 <= x < cx1 and cy0 <= y < cy1:
+                    cnt_in += 1
+                for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                    if 0 <= nx < w and 0 <= ny < h:
+                        j = ny * w + nx
+                        if a[nx, ny] > 40 and not comp[j]:
+                            comp[j] = label
+                            st.append((nx, ny))
+            incell[label] = cnt_in
+    if label == 0:
+        return None, 0
+    owner = max(incell, key=lambda l: (incell[l], l))
+    px = rgba.load()
+    for y in range(h):
+        base = y * w
+        for x in range(w):
+            if comp[base + x] != owner:
+                r, g, b, _ = px[x, y]
+                px[x, y] = (r, g, b, 0)
+    bb = rgba.split()[3].getbbox()
+    return (rgba.crop(bb) if bb else None), label
+
+
 def bg_leak_px(fig, bg, thresh):
     """QA metric: count OPAQUE pixels in the cutout whose colour is still background-coloured.
     These are exactly the recurring sprite bugs — an edge halo (bg-blended boundary pixels left
@@ -208,6 +256,11 @@ def main():
     ap.add_argument('--sever', type=int, default=0,
                     help='HARD case (figure detail same colour as bg, e.g. dark armour on a black '
                          'sheet): erode the bg mask N px to sever channels so detail recesses stay filled')
+    ap.add_argument('--bleed', type=int, default=0,
+                    help='figures drawn LARGER than their 3x3 cell (wide lunge/attack poses) overflow '
+                         'into the empty centre and get sliced flat at the cell border. Cut on a window '
+                         'expanded N px past each cell, then keep only the component that owns the cell '
+                         '(neighbours pulled in are discarded). Set N a bit above the worst overflow.')
     ap.add_argument('--assets-dir', default=os.path.join('assets', 'char'),
                     help='where the final cutout PNGs are written (default assets/char). '
                          'The manifest snippet points here. The dir is git-tracked, so a bad '
@@ -225,9 +278,21 @@ def main():
     figs = {}
     worst_leak = 0
     for d, (r, c) in zip(DIRS, CELLS):
-        cell = sheet.crop((c * cw, r * ch, (c + 1) * cw, (r + 1) * ch))
-        fig = cut_cell(cell, args.bg, args.thresh, args.feather, args.glob, args.erode, args.sever,
-                       crop=(args.frame == 'square'))
+        if args.bleed > 0:
+            # Cut on a window expanded past the cell so an overflowing figure stays whole,
+            # then keep only the component owning this cell (drops neighbours pulled in).
+            x0, y0 = max(0, c * cw - args.bleed), max(0, r * ch - args.bleed)
+            x1, y1 = min(W, (c + 1) * cw + args.bleed), min(H, (r + 1) * ch + args.bleed)
+            cell = sheet.crop((x0, y0, x1, y1))
+            win = cut_cell(cell, args.bg, args.thresh, args.feather, args.glob, args.erode, args.sever,
+                           crop=False)
+            fig, ncomp = (None, 0) if win is None else keep_owner(
+                win, (c * cw - x0, r * ch - y0, (c + 1) * cw - x0, (r + 1) * ch - y0))
+        else:
+            cell = sheet.crop((c * cw, r * ch, (c + 1) * cw, (r + 1) * ch))
+            fig = cut_cell(cell, args.bg, args.thresh, args.feather, args.glob, args.erode, args.sever,
+                           crop=(args.frame == 'square'))
+            ncomp = 1
         if fig is None:
             print(f"  WARN: {d} (r{r}c{c}) produced no figure")
             continue
@@ -237,7 +302,8 @@ def main():
         leak = bg_leak_px(fig, args.bg, args.thresh)
         worst_leak = max(worst_leak, leak)
         flag = '' if args.sever else ('  <-- WARN bg leak (try --erode / --global / --thresh / --sever)' if leak > max(60, fig.width * fig.height * 0.003) else '')
-        print(f"  {d}: r{r}c{c} bbox {fig.size}  bg-leak {leak}px{flag}")
+        comp_note = f'  comps={ncomp}' if args.bleed > 0 else ''
+        print(f"  {d}: r{r}c{c} bbox {fig.size}  bg-leak {leak}px{comp_note}{flag}")
 
     # Frame each figure. 'cell' keeps the native cell canvas (figs are already cw x ch, registered);
     # 'square' centers each tight-cropped figure in a uniform square. --size 0 => native res (no resample).
