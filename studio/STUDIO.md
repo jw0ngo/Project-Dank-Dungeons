@@ -67,7 +67,9 @@ The discipline, for every role:
    - One learning = one dated, titled entry. Lead with the principle; then why; then how to apply.
    - Prefer 1–3 sharp entries over a dump. If nothing rose to that altitude, write nothing.
 3. **At the start of the next session**, read your `LEARNINGS.md` first. It is the role's
-   accumulated craft.
+   accumulated craft. A `SessionStart` hook (`tools/session-brief.ps1`, wired in
+   `.claude/settings.local.json`) auto-surfaces the latest release notes + the newest learning per
+   role and asks the agent to open with a brief executive summary — so each session starts informed.
 
 These per-role `LEARNINGS.md` files are the seed corpus for **future specialized agents** — most
 directly the Creative Director, whose taste we are recording now so it can one day be trained.
