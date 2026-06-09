@@ -14206,7 +14206,8 @@ const Sim = (function(){
   Sim.startRun = function(opts){
     opts = opts||{};
     window._SIM = window._SIM || {};
-    window._SIM.muted = (opts.muted !== false);   // muted by default in sim
+    // Audio is muted/restored by runFast around its stepping (see below), so a headless
+    // run no longer leaves sound globally muted for normal play once it finishes.
     installHooks();
     goWilderness();                               // fresh run (gWildReset resets level/xp/timer)
     stopRafLoop();                                // runFast drives stepping itself
@@ -14241,6 +14242,9 @@ const Sim = (function(){
     opts = opts||{};
     const maxSteps = opts.maxSteps || 60*60*30;   // 30 game-minutes hard cap
     const batchN   = opts.batch || 4000;
+    window._SIM = window._SIM || {};
+    const _wasMuted = !!window._SIM.muted;        // remember caller's audio state
+    window._SIM.muted = (opts.muted !== false);   // silence headless stepping (opts.muted:false to hear it)
     installClock();
     stopRafLoop();
     let steps=0, alive=true;
@@ -14259,7 +14263,7 @@ const Sim = (function(){
         }
         await new Promise(r=>setTimeout(r,0));
       }
-    } finally { restoreClock(); }
+    } finally { restoreClock(); window._SIM.muted = _wasMuted; }   // restore audio so normal play isn't left muted
     return finishRun(steps, alive);
   };
 

@@ -7,6 +7,15 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+### Fixed
+- **Sound stayed dead after any sim/playtest run.** `gpfx` (every SFX) early-returns on
+  `window._SIM.muted`, and `Sim.startRun` set it `true` for silent headless stepping but **nothing ever
+  cleared it** — so after a `Sim.runFast`/`Sim.batch` (incl. the `await Sim.batch(3)` canary), all game
+  audio was silenced until a page reload. `runFast` now owns the mute lifecycle: it remembers the
+  caller's audio state, mutes only for the duration of its stepping, and restores it in a `finally`
+  (mirroring `installClock`/`restoreClock`); `startRun` no longer leaves a sticky flag. Headless runs
+  stay silent; normal play after one is audible again.
+
 ## [0.3.0] - 2026-06-09
 
 ### Changed
