@@ -99,7 +99,9 @@ There is no test suite and no lint config. The verification loop is:
 1. Make the change in `index.html`.
 2. Extract the `<script>` JS and run `node --check` on it to confirm no syntax error.
 3. Run a **targeted** check (grep or a small node snippet) proving the change is present and correct — `node --check` alone is not sufficient.
-4. For behavior, run `python dev.py` — serves `index.html` at `http://localhost:5500` and auto-reloads the browser on every save (the game boots straight into the town hub via `goTown()`). Testing is local; `git push` is only for publishing to GitHub Pages. No Node toolchain is installed — Python 3 is the only runtime here, so the nested `dungeon-forge-project/` Vite project cannot be run as-is.
+4. For behavior, run `python dev.py` — serves `index.html` at `http://localhost:5500` and auto-reloads the browser on every save (the game boots straight into the town hub via `goTown()`). Testing is local; `git push` is only for publishing to GitHub Pages.
+
+> **Node:** a portable Node LTS (v24) lives **outside the repo** at `..\tools\node-v24.16.0-win-x64\` (sibling of the repo root) and is on the user PATH, so `node --check` works directly in a fresh shell (extract the inline `<script>` first — see step 2). It's deliberately outside the repo so its 35 MB never gets committed. Node is used only as a syntax checker — the game still runs in-browser via `python dev.py`, there is no build step, and the nested `dungeon-forge-project/` Vite port is still stale/unused.
 
 **Caveat:** `node --check` passes even with **duplicate function declarations**. A later duplicate silently shadows an earlier one, so a system can look wired yet have no effect. When a feature seems connected but does nothing, grep for duplicate `function name(` first.
 
