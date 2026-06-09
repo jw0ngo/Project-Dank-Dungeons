@@ -118,6 +118,36 @@ Sanctioned product work lands in **`docs/ROADMAP.md`** under *Now* with status `
 ### Multiplayer
 Firebase Realtime DB. Config is embedded near the top of the file (`§1` region) and exposed as `window._FB`. Streams run at ~8 Hz, delta-compressed. All net code is gated on `window._FB && window._FB.db`, so single-player works if Firebase never initializes.
 
+## AI-native — keep the game agent-playable
+
+**Standing project goal: Dungeon Forge must stay playable by AI agents and scripted bots**,
+for automated playtesting and balance simulation. Treat agent-playability as a first-class
+constraint, like not breaking the build — every new mechanic should remain *observable* and
+*drivable* by a non-human player.
+
+The harness is **`window.Sim`** (`§8` in `index.html`) plus **`tools/ai-playtest/`** (a local
+Claude key-proxy for LLM-driven play; the API key lives server-side, never in `index.html`).
+All run paths — real play, `Sim.demo`, `Sim.aiConnect`, and headless `Sim.runFast`/`Sim.batch`
+— funnel through one extracted `gSimUpdate(dt)` step. The scripted bot (`Sim.batch`) needs **no
+API credits** and is the tool for balance simulation at scale; the LLM path is optional,
+model-configurable, and can run on a local model (e.g. Ollama) for $0 or on Claude for the
+sharpest play.
+
+Maintenance invariants (so the harness doesn't rot as features land):
+- **New per-frame systems go inside `gSimUpdate(dt)`**, not loose in `loop()` — otherwise
+  headless runs silently skip them.
+- **A new game-pausing modal/choice (like the level-up draft) MUST add a programmatic hook**
+  (mirror the `gSimDraft` pattern in `_renderDraft`), or headless runs stall forever.
+- **New player state the agent should react to → add it to `Sim.observe()`.**
+- **New ability/weapon/input → add a `Sim.act` primitive** (+ `execIntent`/`bot` handling and,
+  for the Claude path, an `Intent` schema field in `tools/ai-playtest/server.py`).
+- **Canary after notable changes: `await Sim.batch(3)`.** A stall (hits the step cap without
+  dying) or a throw means a coupling broke.
+
+(The product framing — "AI-native" as a player/positioning pillar — is the PM role's call;
+record it via `/pm` in `docs/PRODUCT_MANIFESTO.md` / `docs/ROADMAP.md`. This section is the
+engineering commitment.)
+
 ## Hard-won gotchas (from the journal)
 
 - **Enemies vanishing unexpectedly?** Check the invisible 85-tile despawn radius first. `isPatrol` and `isHeld` enemies are exempt; village/shrine guardians rely on `isHeld`.
