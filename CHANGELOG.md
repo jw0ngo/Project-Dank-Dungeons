@@ -7,6 +7,21 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+### Fixed
+- **Bow kills now drop an XP orb** like every melee path (was the lone weapon passing `{xpOrb:false}`).
+
+### Changed
+- **Skill tooltips show live (buffed) damage.** The character-screen skill details now apply the same
+  `%damage` buff (obelisk + level-up cards) that combat uses, so the numbers match what you actually hit
+  for. Crit is left out (probabilistic — these are the guaranteed-hit values).
+
+### Removed
+- **Retired the dead STR/DEX/INT scaling shims.** The neutral stubs left over from the old stat system
+  (`W_scalingMult`/`skillScalingMult`/`wildStr*`/`wildInt*`/`wildDex{Speed,Atk}Mult`) and the inert
+  `wildDmgMult` (`_wdm`) hook are gone, along with their no-op `*1`/`+0` factors at every call-site. No
+  behavior change — all character power already flowed through the per-run card buffs (`wildBuffs`). The
+  live cooldown helper `wildDexCdMult()` (driven by `wildBuffs.cdPct`) is unaffected.
+
 ## [0.3.1] - 2026-06-09
 
 ### Fixed

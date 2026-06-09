@@ -2994,7 +2994,7 @@ function gUpdatePlayerArrows(dt=1){
           addGDmg(en.wx,en.wy-16,dmg,'#ffe066');
           gPlayHit();
           if(en.hp<=0){
-            gKillEnemy(en, {xpOrb:false});
+            gKillEnemy(en);   // bow now drops XP like every melee path (was {xpOrb:false})
           }
           if(a.pierce>0 && Math.random()<a.pierce){
             a._hitEnemies.add(en);
@@ -3190,7 +3190,6 @@ function makePlayerState(wx, wy) {
     wildBuffs: { hpBonus:0, mpBonus:0, hpRegenAdd:0, mpRegenAdd:0,
                  speedPct:0, damagePct:0, cdPct:0, spawnPct:0,
                  xpPct:0, pickupRange:0 },
-    wildDmgMult: 1,
     // Look
     angle: 0,
     // Sword swing
@@ -3394,9 +3393,8 @@ function gDoSwing(){
 // Fire a normal swing at a specific aim angle (used by input buffer to preserve click direction)
 function gDoSwingAt(aimAngle){
   if(!gPlayer||gPlayer.swinging||gPlayer.swingCooldown>0||gPlayer.wwActive||gPlayer.dead)return;
-  const _wdm  = (gPlayer.wildDmgMult)||1;
   const _dbuf = (gPlayer.wildBuffs && (1+(gPlayer.wildBuffs.damagePct||0)/100))||1;
-  const dmg   = Math.round(W().baseDamage * _wdm * W_scalingMult() * _dbuf);
+  const dmg   = Math.round(W().baseDamage * _dbuf);
   gPlayer._chargeDmg=dmg;
   gPlayer.swinging=true;gPlayer.swingTimer=0;gPlayer.swingDir*=-1;
   gPlayer.swingAimAngle=aimAngle;
@@ -3517,7 +3515,7 @@ function gUpdateWhirlwind(p, dt){
     ww.fireTimer = (ww.fireTimer||0) - dt;
     if(ww.fireTimer <= 0){
       ww.fireTimer = FR_INTERVAL;
-      const ringDmg = Math.round(pSkillStat(p,'wwDamage') * skillScalingMult('whirlwind') * ((p.wildBuffs&&(1+(p.wildBuffs.damagePct||0)/100))||1) * FR_DMG_MULT);
+      const ringDmg = Math.round(pSkillStat(p,'wwDamage') * ((p.wildBuffs&&(1+(p.wildBuffs.damagePct||0)/100))||1) * FR_DMG_MULT);
       gSpawnFireRing(p.wx, p.wy, ringDmg);
       gShake && gShake(3, 5);
     }
@@ -3539,7 +3537,7 @@ function gUpdateWhirlwind(p, dt){
     if(timer > 0){ ww.hitTimers.set(t, timer - dt); continue; }
     // Hit!
     ww.hitTimers.set(t, hitCd);
-    const _cr = gCritRoll(Math.round(pSkillStat(p,'wwDamage') * skillScalingMult('whirlwind') * ((p.wildBuffs&&(1+(p.wildBuffs.damagePct||0)/100))||1)));
+    const _cr = gCritRoll(Math.round(pSkillStat(p,'wwDamage') * ((p.wildBuffs&&(1+(p.wildBuffs.damagePct||0)/100))||1)));
     const wwDmg = _cr.dmg;
     const tIdx = gEnemies.indexOf(t);
     gDealEnemyDamage(t, wwDmg, { hitFlash: 14, deathParticles: 8 });
@@ -3760,7 +3758,7 @@ function gUpdateLeap(p, dt){
     if(typeof gPlayLand === 'function') gPlayLand();
 
     // Damage + knockback enemies in radius
-    const dmg = Math.round(pSkillStat(p,'leapDamage') * skillScalingMult('leap') * ((gPlayer.wildBuffs&&(1+(gPlayer.wildBuffs.damagePct||0)/100))||1)), kb = W().leapKnockback;
+    const dmg = Math.round(pSkillStat(p,'leapDamage') * ((gPlayer.wildBuffs&&(1+(gPlayer.wildBuffs.damagePct||0)/100))||1)), kb = W().leapKnockback;
     const pendingHits = [];
     for(const e of gEnemies){
       if(e.dead || lp.hitSet.has(e)) continue;
@@ -3828,7 +3826,7 @@ function _fireHeavyAtk(p){
   const r = p.heavyChargeRatio;
   const chargedLen = pSkillStat(p,'heavyLen') * (1 + r);
   const _dbuf = (p.wildBuffs && (1+(p.wildBuffs.damagePct||0)/100))||1;   // obelisk + level-up %damage
-  const chargedDmg = Math.round((W().heavyDamage + (W().heavyDamageMax - W().heavyDamage) * r) * W_scalingMult() * _dbuf);
+  const chargedDmg = Math.round((W().heavyDamage + (W().heavyDamageMax - W().heavyDamage) * r) * _dbuf);
   p._heavyChargedLen = chargedLen;
   p._heavyChargedDmg = chargedDmg;
   p.heavyRect = {
@@ -3988,11 +3986,11 @@ function gUpdatePlayer(dt=1){
     if(p.mp <= 0) gToggleWhirlwind();
   } else {
     const _mpAdd = (p.wildBuffs&&p.wildBuffs.mpRegenAdd||0) / 60; // HP/s → per frame
-    p.mp = Math.min(p.maxMp, p.mp + (W().mpRegen + wildIntMpRegen() + _mpAdd) * dt);
+    p.mp = Math.min(p.maxMp, p.mp + (W().mpRegen + _mpAdd) * dt);
   }
-  // STR + obelisk hp regen (flat addition)
+  // obelisk + card hp regen (flat addition)
   const _hpAdd = (p.wildBuffs&&p.wildBuffs.hpRegenAdd||0) / 60;
-  const _hpReg = wildStrHpRegen() + _hpAdd;
+  const _hpReg = _hpAdd;
   if(p.hp < p.maxHp && _hpReg > 0)
     p.hp = Math.min(p.maxHp, p.hp + _hpReg * dt);
   // Update MP bar
@@ -4036,11 +4034,11 @@ function gUpdatePlayer(dt=1){
             : isBowCooldown ? 0.70
             : 1.0;
   const tsm = gTreeSlow(p.wx, p.wy);                  // 0.75 inside tree tiles
-  const dsm = wildDexSpeedMult() * ((p.wildBuffs&&(1+(p.wildBuffs.speedPct||0)/100))||1);  // DEX + obelisk speed
+  const dsm = ((p.wildBuffs&&(1+(p.wildBuffs.speedPct||0)/100))||1);  // obelisk + card speed
   p.wx+=dx*p.speed*csm*tsm*dsm*dt;p.wy+=dy*p.speed*csm*tsm*dsm*dt;
   let[rx,ry]=gRC(p.wx,p.wy,p.r);[rx,ry]=gRCDestructibles(rx,ry,p.r);[rx,ry]=gRCTraps(rx,ry,p.r);[rx,ry]=gRCEnemies(rx,ry,p.r);p.wx=rx;p.wy=ry;
   if(p.moving){p.walkTimer+=dt;if(p.walkTimer>=8){p.walkTimer=0;p.walkFrame=(p.walkFrame+1)%4;if(p.walkFrame===1||p.walkFrame===3)gPlayStep();}p.stepTimer+=dt;}else{p.walkFrame=0;p.walkTimer=0;}
-  if(p.swinging){p.swingTimer+=dt;if(p.smear){p.smear.cx=p.wx;p.smear.cy=p.wy;p.smear.sweepEnd=p.swingStartAngle+(p.swingEndAngle-p.swingStartAngle)*easeSwing(p.swingTimer/(pSkillSpeed(p,'swingDur','swingSpdPct')*wildDexAtkMult()));}gCheckHits(p);if(p.swingTimer>=pSkillSpeed(p,'swingDur','swingSpdPct')*wildDexAtkMult()){p.swinging=false;p.swingCooldown=Math.round(W().swingCd*wildDexCdMult());if(p.smear)p.smear.fading=true;p._chargeDmg=null;}}
+  if(p.swinging){p.swingTimer+=dt;if(p.smear){p.smear.cx=p.wx;p.smear.cy=p.wy;p.smear.sweepEnd=p.swingStartAngle+(p.swingEndAngle-p.swingStartAngle)*easeSwing(p.swingTimer/pSkillSpeed(p,'swingDur','swingSpdPct'));}gCheckHits(p);if(p.swingTimer>=pSkillSpeed(p,'swingDur','swingSpdPct')){p.swinging=false;p.swingCooldown=Math.round(W().swingCd*wildDexCdMult());if(p.smear)p.smear.fading=true;p._chargeDmg=null;}}
   if(p.smear&&p.smear.fading){p.smear.life-=0.1*dt;if(p.smear.life<=0)p.smear=null;}
   // Per-player freeze (hit-stop) — only pauses THIS player's frame, not the whole loop
   if(p.freezeUntil>0&&performance.now()<p.freezeUntil){}
@@ -5222,8 +5220,8 @@ function gWithin(dx, dy, r){ return dx*dx + dy*dy < r*r; }
 //   credit   — award the local player a kill (default true)
 //   xpOrb    — drop an XP orb (default true)
 //   particles/speed — death burst (default 18 @ 5)
-// Environmental kills pass {credit:false,xpOrb:false}; the bow currently
-// passes {xpOrb:false} (it awards a kill but no orb — a known divergence).
+// Environmental kills pass {credit:false,xpOrb:false}; every weapon (melee + bow)
+// uses the defaults, so a player kill always drops an XP orb.
 function gKillEnemy(e, opts){
   opts = opts || {};
   e.dead = true;
@@ -10779,25 +10777,28 @@ function _charSkillDetail(skill){
   const p = gPlayer;
   if(!p) return '';
   const W = WeaponRegistry[gActiveWeapon] || WeaponRegistry.sword;
+  // Show LIVE numbers: apply the same %damage buff (obelisk + level-up cards) combat uses.
+  // (Crit is probabilistic and left out — these are the guaranteed-hit values.)
+  const _dbuf = (p.wildBuffs && (1+(p.wildBuffs.damagePct||0)/100))||1;
   let dmgLine = '';
 
   if(skill.id === 'swing'){
-    dmgLine = `Damage: ${Math.round(W.baseDamage * W_scalingMult())}`;
+    dmgLine = `Damage: ${Math.round(W.baseDamage * _dbuf)}`;
   } else if(skill.id === 'heavy'){
-    const base = Math.round(W.heavyDamage    * W_scalingMult());
-    const max  = Math.round(W.heavyDamageMax * W_scalingMult());
+    const base = Math.round(W.heavyDamage    * _dbuf);
+    const max  = Math.round(W.heavyDamageMax * _dbuf);
     dmgLine = `Damage: ${base} – ${max}`;
   } else if(skill.id === 'ww'){
-    const d = Math.round(pSkillStat(gPlayer,'wwDamage') * skillScalingMult('whirlwind'));
+    const d = Math.round(pSkillStat(gPlayer,'wwDamage') * _dbuf);
     dmgLine = `Damage: ${d} per hit`;
   } else if(skill.id === 'leap'){
-    const d = Math.round(pSkillStat(gPlayer,'leapDamage') * skillScalingMult('leap'));
+    const d = Math.round(pSkillStat(gPlayer,'leapDamage') * _dbuf);
     dmgLine = `Damage: ${d} on landing`;
   } else if(skill.id === 'evasion'){
     dmgLine = `No damage — invulnerable during dash`;
   } else if(skill.id === 'bow-shoot'){
-    const base = Math.round(W.arrowDamage    * W_scalingMult());
-    const max  = Math.round(W.arrowDamageMax * W_scalingMult());
+    const base = Math.round(W.arrowDamage    * _dbuf);
+    const max  = Math.round(W.arrowDamageMax * _dbuf);
     dmgLine = `Damage: ${base} (spread) – ${max} (charged)`;
   } else if(skill.id === 'roll'){
     dmgLine = `No damage — invulnerable during roll`;
@@ -12137,21 +12138,12 @@ function gWildGrantXP(xp, wx, wy){
 
 // ── Stat multiplier helpers — read by engine each frame ───────
 // ── STR/DEX/INT removed — replaced by the level-up CARD draft (below). ──
-// The helpers below are kept as NEUTRAL shims so the ~50 combat/skill call-sites that
-// multiply by them keep working unchanged. All character power now flows through per-run
-// card modifiers instead: passive cards → gPlayer.wildBuffs, active-skill/Grit cards →
-// gPlayer.skillMods / wildBuffs.
-function weaponScalingMult(weapon){ return 1; }   // weapon stat-scaling retired with STR/DEX/INT
-function W_scalingMult(){ return 1; }
-function skillScalingMult(skillId){ return 1; }    // skill stat-scaling retired with STR/DEX/INT
-function wildStrMaxHp()    { return 0; }
-function wildStrHpRegen()  { return 0; }
-function wildIntMagicMult(){ return 1; }
-function wildIntMaxMp()     { return 0; }
-function wildIntMpRegen()   { return 0; }
-function wildDexSpeedMult() { return 1; }
-function wildDexAtkMult()   { return 1; }
-// Cooldown reduction now comes from the wildBuffs.cdPct passive card (was: DEX + cdPct).
+// STR/DEX/INT stat-scaling is fully retired — its neutral shims (W_scalingMult,
+// skillScalingMult, wildStr*/wildInt*/wildDex{Speed,Atk}Mult) have been removed and
+// their no-op factors deleted from every call-site. All character power now flows
+// through per-run card modifiers: passive cards → gPlayer.wildBuffs, active-skill/Grit
+// cards → gPlayer.skillMods / wildBuffs.
+// Cooldown reduction still has a live helper, driven by the wildBuffs.cdPct passive card.
 function wildDexCdMult(){
   return (gPlayer && gPlayer.wildBuffs && (1 - (Math.min(99, gPlayer.wildBuffs.cdPct||0))/100)) || 1;
 }
@@ -12161,8 +12153,8 @@ function _wildApplyStats(){
   const p = gPlayer;
   if(!p) return;
   const buf = p.wildBuffs || {};
-  const newMaxHp = 100 + wildStrMaxHp() + (buf.hpBonus||0);
-  const newMaxMp = 100 + wildIntMaxMp() + (buf.mpBonus||0);
+  const newMaxHp = 100 + (buf.hpBonus||0);
+  const newMaxMp = 100 + (buf.mpBonus||0);
   if(newMaxHp > p.maxHp){ p.hp += newMaxHp - p.maxHp; }
   if(newMaxMp > p.maxMp){ p.mp += newMaxMp - p.maxMp; }
   p.maxHp = newMaxHp; p.maxMp = newMaxMp;
@@ -12933,7 +12925,6 @@ function gWildReset(){
   _ambientTimer = 0;
   // Reset player wilderness bonuses
   if(gPlayer){
-    gPlayer.wildDmgMult = 1;
     gPlayer.wwLevel = 0; gPlayer.leapLevel = 0;
     gPlayer.heavyLevel = 0; gPlayer.dashLevel = 0;
     gPlayer.skillMods = {}; gPlayer.gritMods = {}; gPlayer.cardPicks = {};  // per-run card state
