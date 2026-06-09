@@ -92,10 +92,11 @@ Every drawable in the game resolves through one of two layers, in this order:
 So: **adding art = dropping the file in `assets/<kind>/` and adding an `ART_MANIFEST` entry that points
 at it** (plus, occasionally, a one-line wiring hint). You almost never touch the draw loop.
 
-> **Migration note (tooling lag):** `tools/slice-turnaround.py` still emits a *base64* manifest
-> snippet (the old inline form). Until it's updated, the manual step is: take the PNG cutouts it
-> writes, drop them into `assets/char/` (named `<id>-<dir>.png`), and add manifest entries pointing to
-> those paths rather than pasting the base64. Logged in `docs/CLEANUP_BACKLOG.md`.
+> **`slice-turnaround.py` is path-native now.** It writes its 8 cutouts straight into `assets/char/`
+> as `<id>-<dir>.png` and emits a **path-based** manifest snippet
+> (`'char.<id>.<dir>':'assets/char/<id>-<dir>.png',`) — no base64 step. Paste the snippet into
+> `ART_MANIFEST` as-is. (`--assets-dir` overrides the destination; the cutouts land in git-tracked
+> `assets/`, so a bad slice is recoverable via `git checkout`.)
 
 ---
 
@@ -126,8 +127,9 @@ r2c0=sw  r2c1=s   r2c2=se
 python tools/slice-turnaround.py "art/enemies/goblin-warrior.png" warrior --bg black
 ```
 
-It outputs 8 PNG cutouts, a **magenta QA contact sheet**, and a ready-to-paste
-`'char.<id>.<dir>':'data:image/png;base64,…',` manifest snippet into a temp dir.
+It writes 8 PNG cutouts straight into `assets/char/` (`<id>-<dir>.png`), plus a **magenta QA contact
+sheet** and a ready-to-paste path-based `'char.<id>.<dir>':'assets/char/<id>-<dir>.png',` manifest
+snippet into a QA temp dir.
 
 **Background removal is edge-seeded flood fill** — only background-coloured pixels *connected to the
 cell border* are cut, so the figure's internal shadows survive. Pixel is background if
@@ -229,9 +231,8 @@ the **handoff to the engineer** — note it, don't silently rewrite systems.
 1. Drop the white-bg turnaround PNG in the right `art/` subfolder.
 2. `python tools/slice-turnaround.py "art/.../sheet.png" <id> --bg white` (add `--erode`/`--global`/`--sever` as the contact sheet demands).
 3. Eyeball the magenta contact sheet → CLEAN.
-4. Drop the 8 cutout PNGs into `assets/char/` (`<id>-<dir>.png`) and add `char.<id>.<dir>` entries
-   pointing at those paths in `ART_MANIFEST` (see the migration note in §"two layers" — the slice tool
-   still emits base64; use the file path instead).
+4. The slice tool already wrote the 8 cutouts into `assets/char/` (`<id>-<dir>.png`); paste its
+   path-based `char.<id>.<dir>` snippet straight into `ART_MANIFEST`.
 5. Wire the draw: `gDirBody('<id>', …)` + a `<ID>_SCALE` constant; if it's a new enemy, hand the
    `EntityDefs`/registry/exclusion-list row to the engineer (see the "add a new enemy" recipe in `CLAUDE.md`).
 6. `node --check` + grep the key + `python dev.py` and watch it render in all 8 facings.

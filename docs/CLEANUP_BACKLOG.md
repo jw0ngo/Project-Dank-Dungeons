@@ -45,40 +45,18 @@ a CD/PM call, not an engineer drive-by.
 
 ---
 
-## Art / animation
-
-### 🟡 `tools/slice-turnaround.py` still emits a base64 manifest snippet (post-externalization)
-Art was externalized from inline base64 into files under `assets/` (`ART_MANIFEST` values are now paths
-like `'char.goblin.n':'assets/char/goblin-n.png'`). The slice tool, though, still outputs a
-`'char.<id>.<dir>':'data:image/png;base64,…'` snippet — the old inline form — so its output is a step
-behind the pipeline. Until updated, the Artist hand-bridges it (drop the cutout PNGs in `assets/char/`,
-write path entries instead of pasting base64). See the migration note in `docs/ART_PIPELINE.md`.
-
-**Why deferred:** out of scope of the externalization itself (engine + existing manifest), and it's
-Artist-domain tooling with its own QA (contact sheet, naming). Wants a focused pass.
-**Fix (artist-ownable):** have the tool write its 8 cutouts straight into `assets/char/` as
-`<id>-<dir>.png` and emit a path-based manifest snippet (`'char.<id>.<dir>':'assets/char/<id>-<dir>.png'`).
-Drop the base64 encode step. Keep the magenta QA contact sheet.
-
-### 🟢 Wolf lunge-bite attack frame displays too briefly (playtest feedback)
-The wolf attack sprite (`char.{direwolf,alphawolf}atk.*`) is swapped in by `_wolfBiting` in `gDrawEnemy`
-while `e.biteWindup>0 || e.biteStrike>0`. After the pounce resolves, `_aiWolf` sets `e.biteStrike=12`
-(~0.2s @60fps), so the **lunge/pounce pose only holds ~12 frames** before reverting to the idle
-turnaround — playtest read it as flashing past too fast to register the bite.
-
-**Why deferred:** the obvious lever (`biteStrike`) is also the **combat follow-through window** (engineer-
-owned timing in `_aiWolf`), so bumping it changes feel/recovery, not just the art. Wants a small, isolated
-pass.
-**Fix (artist-ownable, draw-only):** add a display-only hold — set an `e._biteHold` (~22–28 frames) when
-the lunge fires and add `|| e._biteHold>0` to `_wolfBiting`, ticking it down in `gSimUpdate`/draw. The
-pose lingers without touching `biteStrike`/`lungeTimer` (the actual hit + exposed-recovery math stays
-put). Tune the hold against the lunge so the bite *reads* at gameplay speed.
-
----
-
 ## Resolved
 *(Move items here with a date when fixed, or just delete them — git history is the real record.)*
 
+- **2026-06-09 — `slice-turnaround.py` is path-native.** The slice tool now writes its 8 cutouts
+  straight into `assets/char/` as `<id>-<dir>.png` (hyphen = manifest convention) and emits a path-based
+  `'char.<id>.<dir>':'assets/char/<id>-<dir>.png',` snippet — base64 encode step removed, `import io`/
+  `base64` gone. New `--assets-dir` overrides the destination; contact sheet now built from in-memory
+  cutouts (no temp-file re-open). Smoke-tested on `goblin-warrior.png`; `docs/ART_PIPELINE.md` updated.
+- **2026-06-09 — Wolf lunge-bite pose now reads (draw-only hold).** Added `e._biteHold` (24f), set
+  alongside `biteStrike=12` when the lunge fires, ticked in `_aiWolf`, OR'd into `_wolfBiting` in
+  `gDrawEnemy`. The pounce pose lingers ~0.4s instead of flashing past in ~0.2s. `biteStrike`/`lungeTimer`
+  (the actual hit + exposed-recovery timing) untouched — pure display dwell, runs through `gSimUpdate`.
 - **2026-06-09 — Inert STR/DEX/INT scaling shims removed.** Deleted `W_scalingMult` /
   `weaponScalingMult` / `skillScalingMult` / `wildStrMaxHp` / `wildStrHpRegen` / `wildIntMagicMult` /
   `wildIntMaxMp` / `wildIntMpRegen` / `wildDexSpeedMult` / `wildDexAtkMult` and stripped their no-op

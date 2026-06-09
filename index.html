@@ -2864,7 +2864,7 @@ function makeWolfEnt(tx,ty,type){
     speed:d.speedMin+Math.random()*d.speedRange,
     attackCooldown:0,
     activated:false, isNeutral:true,
-    biteWindup:0,biteStrike:0,_bitePending:false,biteAngle:0,biteMax:0,lungeTimer:0,
+    biteWindup:0,biteStrike:0,_bitePending:false,biteAngle:0,biteMax:0,lungeTimer:0,_biteHold:0,
     flankSign: Math.random()<0.5?1:-1, flankPhase: Math.floor(Math.random()*150),
     contactCd:0,
     defId:type,_tgt:null,_tgtTimer:0,
@@ -4727,6 +4727,7 @@ function _aiWolf(e, dt){
   e.attackCooldown=Math.max(0,e.attackCooldown-dt);
   e.biteWindup=Math.max(0,(e.biteWindup||0)-dt);
   e.biteStrike=Math.max(0,(e.biteStrike||0)-dt);
+  e._biteHold=Math.max(0,(e._biteHold||0)-dt);   // draw-only: lets the lunge pose linger past biteStrike (see gDrawEnemy _wolfBiting)
   e.lungeTimer=Math.max(0,(e.lungeTimer||0)-dt);
   e.contactCd=Math.max(0,(e.contactCd||0)-dt);
   e.vx*=Math.pow(.80,dt); e.vy*=Math.pow(.80,dt);
@@ -4765,7 +4766,7 @@ function _aiWolf(e, dt){
 
   // Resolve a pending bite when the windup empties → pounce-dash along the locked angle.
   if(e._bitePending && e.biteWindup<=0){
-    e._bitePending=false; e.biteStrike=12;
+    e._bitePending=false; e.biteStrike=12; e._biteHold=24;   // biteStrike = combat follow-through (12f); _biteHold = pure display dwell so the pounce reads (~0.4s)
     e.vx += Math.cos(e.biteAngle)*d.lungeSpeed;
     e.vy += Math.sin(e.biteAngle)*d.lungeSpeed;
     const a2t=Math.atan2(tgt.wy-e.wy,tgt.wx-e.wx);
@@ -7644,7 +7645,7 @@ function gDrawBombs(){
     gctx.restore();
   }
 }
-function gDrawEnemy(e){if(e.dead)return;const sx=e.wx-camX,sy=e.wy-camY;if(e._dpx===undefined){e._dpx=e.wx;e._dpy=e.wy;e._faceOct=2;}const _ddx=e.wx-e._dpx,_ddy=e.wy-e._dpy;if(_ddx*_ddx+_ddy*_ddy>0.04)e._faceOct=gOctant8(_ddx,_ddy);e._dpx=e.wx;e._dpy=e.wy;if(sx<-30||sx>VW+30||sy<-30||sy>VH+30)return;const by=bobY(e.walkFrame,Math.hypot(e.vx,e.vy)>.2);const flash=e.hitFlash>0?Math.min(1,e.hitFlash/8):0;const gs=(e.defId&&ENEMY_DRAW_SCALE[e.defId])||((e.defId&&e.defId!=='goblin')?PSCALE:PSCALE*1.333);gctx.save();gctx.globalAlpha=.2;gctx.fillStyle='#000';gctx.beginPath();gctx.ellipse(sx,sy+gs*.44,gs*.3,gs*.1,0,0,Math.PI*2);gctx.fill();gctx.restore();if(e.defId==='goblin'&&e.atkWindup>0){const _cr=EntityDefs.goblin.atkReach+12,_ca=EntityDefs.goblin.atkArc,_cf=1-e.atkWindup/(e.atkMax||1);gctx.save();gctx.translate(sx,sy);gctx.rotate(e.atkAngle||0);gctx.fillStyle='rgba(255,45,45,0.12)';gctx.beginPath();gctx.moveTo(0,0);gctx.arc(0,0,_cr,-_ca,_ca);gctx.closePath();gctx.fill();gctx.fillStyle='rgba(255,30,30,0.45)';gctx.beginPath();gctx.moveTo(0,0);gctx.arc(0,0,_cr*_cf,-_ca,_ca);gctx.closePath();gctx.fill();gctx.restore();}const _wolfBiting=(e.isDirewolf||e.isAlphawolf)&&(e.biteWindup>0||e.biteStrike>0);const _bid=(e.defId==='goblin'&&(e.atkWindup>0||e.atkStrike>0))?'goblinatk':_wolfBiting?(e.defId+'atk'):(e.defId||'goblin');gDrawSprite(gDirBody(_bid,e._faceOct,SpriteRegistry.get(e.defId||'goblin').canvas||goblinSpr),e.wx,e.wy,gs,flash,by);const bw=PSCALE;gctx.fillStyle='#2a1010';gctx.fillRect(sx-bw/2,sy-PSCALE*.6,bw,1.5);gctx.fillStyle='#e05555';gctx.fillRect(sx-bw/2,sy-PSCALE*.6,bw*(e.hp/e.maxHp),1.5);}
+function gDrawEnemy(e){if(e.dead)return;const sx=e.wx-camX,sy=e.wy-camY;if(e._dpx===undefined){e._dpx=e.wx;e._dpy=e.wy;e._faceOct=2;}const _ddx=e.wx-e._dpx,_ddy=e.wy-e._dpy;if(_ddx*_ddx+_ddy*_ddy>0.04)e._faceOct=gOctant8(_ddx,_ddy);e._dpx=e.wx;e._dpy=e.wy;if(sx<-30||sx>VW+30||sy<-30||sy>VH+30)return;const by=bobY(e.walkFrame,Math.hypot(e.vx,e.vy)>.2);const flash=e.hitFlash>0?Math.min(1,e.hitFlash/8):0;const gs=(e.defId&&ENEMY_DRAW_SCALE[e.defId])||((e.defId&&e.defId!=='goblin')?PSCALE:PSCALE*1.333);gctx.save();gctx.globalAlpha=.2;gctx.fillStyle='#000';gctx.beginPath();gctx.ellipse(sx,sy+gs*.44,gs*.3,gs*.1,0,0,Math.PI*2);gctx.fill();gctx.restore();if(e.defId==='goblin'&&e.atkWindup>0){const _cr=EntityDefs.goblin.atkReach+12,_ca=EntityDefs.goblin.atkArc,_cf=1-e.atkWindup/(e.atkMax||1);gctx.save();gctx.translate(sx,sy);gctx.rotate(e.atkAngle||0);gctx.fillStyle='rgba(255,45,45,0.12)';gctx.beginPath();gctx.moveTo(0,0);gctx.arc(0,0,_cr,-_ca,_ca);gctx.closePath();gctx.fill();gctx.fillStyle='rgba(255,30,30,0.45)';gctx.beginPath();gctx.moveTo(0,0);gctx.arc(0,0,_cr*_cf,-_ca,_ca);gctx.closePath();gctx.fill();gctx.restore();}const _wolfBiting=(e.isDirewolf||e.isAlphawolf)&&(e.biteWindup>0||e.biteStrike>0||e._biteHold>0);const _bid=(e.defId==='goblin'&&(e.atkWindup>0||e.atkStrike>0))?'goblinatk':_wolfBiting?(e.defId+'atk'):(e.defId||'goblin');gDrawSprite(gDirBody(_bid,e._faceOct,SpriteRegistry.get(e.defId||'goblin').canvas||goblinSpr),e.wx,e.wy,gs,flash,by);const bw=PSCALE;gctx.fillStyle='#2a1010';gctx.fillRect(sx-bw/2,sy-PSCALE*.6,bw,1.5);gctx.fillStyle='#e05555';gctx.fillRect(sx-bw/2,sy-PSCALE*.6,bw*(e.hp/e.maxHp),1.5);}
 
 function gDrawArcher(e){
   if(e.dead)return;

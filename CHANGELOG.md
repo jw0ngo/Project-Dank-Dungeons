@@ -11,9 +11,15 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 - **Bow kills now drop an XP orb** like every melee path (was the lone weapon passing `{xpOrb:false}`).
 
 ### Changed
+- **Wolf lunge-bite now reads.** The direwolf/alphawolf pounce pose lingered only ~0.2s and flashed past;
+  it now holds ~0.4s via a display-only `_biteHold` timer, so the bite registers visually. The actual hit
+  window and exposed-recovery timing are unchanged.
 - **Skill tooltips show live (buffed) damage.** The character-screen skill details now apply the same
   `%damage` buff (obelisk + level-up cards) that combat uses, so the numbers match what you actually hit
   for. Crit is left out (probabilistic — these are the guaranteed-hit values).
+- **Tooling:** `tools/slice-turnaround.py` is now path-native — it writes cutouts straight into
+  `assets/char/` and emits a path-based `ART_MANIFEST` snippet instead of base64 (matches the
+  externalized art pipeline).
 
 ### Removed
 - **Removed the vestigial sword-charge state** (`charging`/`chargeTick` + the dead `_pendingCharge` input

@@ -17,13 +17,16 @@ survive (see SESSION_JOURNAL "Cutting character sprites from a turnaround
 sheet"). For a black sheet a pixel is background if max(R,G,B) <= --thresh;
 for a white sheet if min(R,G,B) >= 255 - --thresh.
 
-Outputs: 8 PNG cutouts + a QA contact sheet + a data-URL text file, all into
-an output dir (default: <tempdir>/slice_<id>).
+Outputs (post-externalization pipeline — paths, not base64): 8 PNG cutouts
+written straight into assets/char/ as <id>-<dir>.png, plus a magenta QA
+contact sheet and a path-based ART_MANIFEST snippet into a QA dir
+(default: <tempdir>/slice_<id>). Paste the snippet into ART_MANIFEST as-is —
+the values are 'assets/char/<id>-<dir>.png' paths the loader reads directly.
 
 Usage:
   python tools/slice-turnaround.py "art/enemies/goblin-warrior.png" warrior --bg black
 """
-import sys, os, io, base64, argparse, tempfile
+import os, argparse, tempfile
 from collections import deque
 from PIL import Image, ImageFilter
 
@@ -205,7 +208,12 @@ def main():
     ap.add_argument('--sever', type=int, default=0,
                     help='HARD case (figure detail same colour as bg, e.g. dark armour on a black '
                          'sheet): erode the bg mask N px to sever channels so detail recesses stay filled')
-    ap.add_argument('--out', default=None)
+    ap.add_argument('--assets-dir', default=os.path.join('assets', 'char'),
+                    help='where the final cutout PNGs are written (default assets/char). '
+                         'The manifest snippet points here. The dir is git-tracked, so a bad '
+                         'slice is recoverable via git checkout.')
+    ap.add_argument('--out', default=None,
+                    help='QA dir for the contact sheet + manifest snippet (default <tempdir>/slice_<id>)')
     args = ap.parse_args()
 
     sheet = Image.open(args.sheet).convert('RGB')
@@ -238,7 +246,12 @@ def main():
     else:
         side = int(max(max(f.size) for f in figs.values()) * 1.04)
     S = side if args.size == 0 else args.size
-    urls = {}
+    assets_dir = args.assets_dir
+    os.makedirs(assets_dir, exist_ok=True)
+    rel = assets_dir.replace('\\', '/').rstrip('/')    # forward-slash path for the JS manifest (web/relative)
+    framed = {}                                        # in-memory cutouts → contact sheet (no re-open)
+    paths = {}                                         # manifest value per direction
+    sizes_kb = {}
     for d, fig in figs.items():
         if args.frame == 'cell':
             sq = fig                                   # already cell-sized + registered
@@ -247,10 +260,11 @@ def main():
             sq.alpha_composite(fig, ((side - fig.width) // 2, (side - fig.height) // 2))
         if sq.size != (S, S):
             sq = sq.resize((S, S), Image.LANCZOS)
-        png = os.path.join(outdir, f'{args.id}_{d}.png')
-        sq.save(png)
-        buf = io.BytesIO(); sq.save(buf, 'PNG', optimize=True)
-        urls[d] = 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode()
+        framed[d] = sq
+        png = os.path.join(assets_dir, f'{args.id}-{d}.png')   # hyphen name = ART_MANIFEST convention (goblin-n.png)
+        sq.save(png, optimize=True)
+        sizes_kb[d] = os.path.getsize(png) / 1024
+        paths[d] = f'{rel}/{args.id}-{d}.png'
 
     # QA contact sheet over MAGENTA — any leftover white/dark halo or enclosed bg pocket shows
     # up instantly against magenta. Eyeball this every time a new sprite is added.
@@ -263,23 +277,23 @@ def main():
             continue
         col, row = i % 4, i // 4
         x, y = col * cs, row * (cs + pad)
-        thumb = Image.open(os.path.join(outdir, f'{args.id}_{d}.png')).resize((cs, cs))
+        thumb = framed[d].resize((cs, cs))
         contact.paste(thumb, (x, y), thumb)
         dr.text((x + 6, y + cs + 4), d, fill=(255, 255, 0))
     contact_path = os.path.join(outdir, 'contact.png')
     contact.save(contact_path)
 
-    # Data URLs as a JS-manifest snippet, ready to paste.
+    # Path-based ART_MANIFEST snippet, ready to paste (values point at the assets/char files above).
     snippet = os.path.join(outdir, 'manifest_snippet.txt')
     with open(snippet, 'w', encoding='utf-8') as f:
         for d in DIRS:
-            if d in urls:
-                f.write(f"'char.{args.id}.{d}':'{urls[d]}',\n")
+            if d in paths:
+                f.write(f"'char.{args.id}.{d}':'{paths[d]}',\n")
 
-    total = sum(len(u) for u in urls.values())
-    print(f"\ncontact:  {contact_path}")
-    print(f"snippet:  {snippet}")
-    print(f"base64 total ~{total/1024:.0f} KB across {len(urls)} dirs")
+    total = sum(sizes_kb.values())
+    print(f"\nassets:   {os.path.join(assets_dir, args.id + '-<dir>.png')}  ({len(paths)} files, ~{total:.0f} KB total)")
+    print(f"contact:  {contact_path}")
+    print(f"snippet:  {snippet}  (path-based ART_MANIFEST entries - paste as-is)")
     if args.sever:
         verdict = 'sever mode - the bg-leak metric does not apply (detail is bg-coloured); judge by the magenta contact'
     else:
