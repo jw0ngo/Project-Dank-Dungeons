@@ -7,6 +7,8 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-09
+
 ### Changed
 - **Art externalized — `index.html` slimmed from ~14 MB to ~650 KB.** All inline base64 image
   art (179 blobs: 172 `ART_MANIFEST` entries, the 5 `F*_SPR` fire sprites, and the 2 figure
