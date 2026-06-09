@@ -8,6 +8,15 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 ## [Unreleased]
 
 ### Changed
+- **Level-up "Choose a Blessing" screen redesign.** Rebuilt the wilderness level-up overlay to the
+  reference layout, **themed by patron**: Cilia = warm fire, no-patron (warrior) = cool *Nameless
+  Knight*. Left = a full-bleed portrait figure filling the panel inside a **CSS** ornate frame
+  (metallic gradient border, inner hairline, corner studs, glow) + a CSS name plate — the figures
+  are clean image cutouts, the frame/name/title/cards/buttons are all CSS. Right = the live skinned
+  cards (rarity label → icon ring → name → effect), the **LEVEL UP / CHOOSE A BLESSING** header with
+  flourishes, and **REROLL / CONFIRM** with subtitles. One `theme-cilia` class drives the whole
+  recolor via CSS vars (`--lvl-accent / --lvl-glow / --lvl-frame`). Backdrop scrim `0.92 → 0.6` so
+  the game stays vaguely visible behind. Card-draft logic (pick / reroll / confirm / caps) untouched.
 - **Weightier heavy attack — doubled commitment window + true movement lock.** The smash's active
   swing carries the player forward in a punchier lunge (`heavyDur` 18→26, lunge coeff 0.09→0.11),
   then holds a **planted recovery** (`heavyRecover` 26) — so the full commitment window is **52

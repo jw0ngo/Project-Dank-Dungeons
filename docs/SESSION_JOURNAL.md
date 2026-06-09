@@ -269,6 +269,52 @@ Built: sword combat, dungeon editor, enemy AI (goblin/archer/warrior/bomber/king
 
 ---
 
+## Session 14 — Image-Art Combat Pass, Card Pool Expansion, Weighty Heavy, Level-Up Redesign
+*June 2026 | engineer (+ a parallel playtest session sharing the tree)*
+
+### Built
+- **Image-art combat poses across the whole cast.** Player normal-attack + heavy-attack + a
+  procedural walk bob; every enemy got an attack pose wired to its real attack state (goblin
+  `goblinatk` on the new cone windup, archer `archeratk` on `shootWindup`, warrior `warrioratk` on
+  `swing-windup`/`charging`, bomber `bomberatk` on a new throw windup, shaman `shamanatk` on cast,
+  king `kingatk` on any attack phase); bomber/shaman upgraded from procedural to directional art.
+- **Goblin telegraphed melee** — plant → fill a red cone over `atkWindup` → strike only if still in
+  cone (dodgeable); plus body **contact chip** on its own cooldown so a swarm can't be walked through.
+- **Removed post-hit i-frames** (a swarm can't be cheesed by a mercy window); dash/leap/roll evasion
+  i-frames kept; fire-beam trap moved to its own `_beamCd`; visual-only `_hitFlash` keeps the red flash.
+- **Card Pool Expansion (Now #2, shipped):** Stage 1 per-player swing/heavy/dash stat migration to
+  `pSkillStat`; Stage 2 the swing/heavy/dash cards (+ `pSkillSpeed` % form) + HP-regen nerf; Stage 3
+  the **crit** system (chance/damage, host-side roll on `gDealEnemyDamage`, gold crit numbers).
+- **Weighty heavy attack** — doubled commitment window (active swing + planted recovery), true
+  movement lock (the `p.smashing`→`p.heavySwinging` bug), feet-anchored pose scale.
+- **Level-up "Choose a Blessing" redesign** — CSS chrome (frame/title/cards/buttons), themed by patron
+  (Cilia warm / Nameless-Knight cool), figures as image cutouts, semi-transparent backdrop.
+- **Sprite-keying tooling** hardened (`--erode` halo, `--global` pockets, `--sever` detail-equals-bg)
+  + a size-consistency step — see the Sprite Import Checklist below.
+
+### Lessons
+- **Parallel Claude sessions on ONE shared working tree → divergent history; reconcile by CONTENT,
+  not by panic or commit-message.** An eng session and a playtest session both committed to the same
+  tree and pushed; `main` diverged from origin (ahead 2 / behind 1) with two *same-named* "full-res
+  sprites" commits on each line. The safe reconcile that loses nothing:
+  1. **Commit your own uncommitted work FIRST** — a real commit can't be lost in a merge; a dirty
+     tree can.
+  2. **`git diff <localHEAD> origin/main --stat`** to see the *real* content delta. Here it was **only
+     `index.html`** — the 24 sprite PNGs + slicer were byte-identical on both lines (one line just had
+     an extra "combined index.html" checkpoint). Identical content on both sides ⇒ the merge is
+     conflict-free. **Don't trust commit-hash/message identity — diff the bytes.**
+  3. **`git merge` (NOT rebase).** Rebase would re-apply the duplicate file-adds onto origin and
+     conflict ("already exists"); merge with identical content just records the history join.
+  4. **Verify the merged file parses and carries markers from BOTH lines** before pushing.
+- **Speed cards are a different shape than flat cards.** Attack-speed / charge-speed must be a
+  *diminishing percent* (`base/(1+Σ%/100)`, via `pSkillSpeed`), not a flat `skillMods` add — flat
+  frames stack linearly to zero and violate the "no frames in card text" rule.
+- **A flag that's never set silently disables a guard.** The heavy movement-lock gated on `p.smashing`
+  (never assigned anywhere) instead of `p.heavySwinging`, so the player could run mid-smash for ages.
+  Grep that a guard's flag is actually *written* somewhere, not just read.
+
+---
+
 ## Sprite Import Checklist (run this for EVERY new sprite)
 
 Cutting a sprite out of its background — and matching its size to the rest of the character's frames —
