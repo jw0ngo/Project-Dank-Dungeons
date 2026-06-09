@@ -2,9 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## The studio
+
+This repo is **From Dust**, an AI-native game studio; *To Dust* (formerly *Dungeon Forge*) is its
+first title. The studio layer lives in **`studio/`** — read **`studio/STUDIO.md`** for the manifest,
+the agent roster, and the studio's core habit (recursive learning, below). Creative direction — the
+game's vision, story, and feel — is set by the **Creative Director** (Josh) and recorded in
+**`studio/CREATIVE_MANIFESTO.md`**; it sits above product and engineering, and your work serves it.
+
 ## Roles & context routing
 
-This repo is operated by three roles, each with its own context:
+Beneath the Creative Director, three craft roles operate the repo, each with its own context:
 
 - **Engineer / CTO — the default (this file).** Owns *how*: builds and refactors `index.html`,
   the systems, releases. This file auto-loads into every session, so unless you switch, **you are
@@ -23,9 +31,19 @@ engineer both edit `index.html` but in different regions (Artist: `ART_MANIFEST`
 wiring; engineer: systems). Switch roles explicitly: **`/pm`**, **`/artist`**, or **`/cto`** to return
 to (or assert) the engineer role. Everything below this section is the engineer's context.
 
+## Recursive learning (session habit)
+
+From Dust compounds through documentation — a lesson not written down is re-paid-for next session.
+As the engineer: keep tactical debugging lessons in `docs/SESSION_JOURNAL.md`, deferred findings in
+`docs/CLEANUP_BACKLOG.md`, and architecture changes in `docs/DUNGEON_FORGE_CTO_DOC.md` as you go.
+Then, **at the end of a substantive session, crystallize**: step up an altitude and add the
+highest-level, most transferable engineering lessons to **`docs/learnings/engineer.md`** (one dated,
+titled entry each: principle → why → how to apply; quality over volume). Read that file first when you
+start. See `studio/STUDIO.md` for the studio-wide habit.
+
 ## What this is
 
-**Dungeon Forge** — a browser action-RPG written in vanilla JS + Canvas API, with Firebase Realtime Database for multiplayer. The whole game is one self-contained HTML file with all CSS, JS, and base64 art inlined. No framework, no transpile.
+**To Dust** — a browser action-RPG written in vanilla JS + Canvas API, with Firebase Realtime Database for multiplayer. The whole game is one self-contained HTML file with all CSS, JS, and base64 art inlined. No framework, no transpile.
 
 ### The active artifact
 
@@ -126,7 +144,7 @@ Firebase Realtime DB. Config is embedded near the top of the file (`§1` region)
 
 ## AI-native — keep the game agent-playable
 
-**Standing project goal: Dungeon Forge must stay playable by AI agents and scripted bots**,
+**Standing project goal: To Dust must stay playable by AI agents and scripted bots**,
 for automated playtesting and balance simulation. Treat agent-playability as a first-class
 constraint, like not breaking the build — every new mechanic should remain *observable* and
 *drivable* by a non-human player.

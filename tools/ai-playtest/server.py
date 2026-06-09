@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Local Claude key-proxy for AI playtesting of Dungeon Forge.
+Local Claude key-proxy for AI playtesting of To Dust.
 
 The game's §8 Sim harness (Sim.aiConnect) POSTs an observe() snapshot here a few
 times per second; this server calls Claude with a structured-output action schema
@@ -60,7 +60,7 @@ class Intent(BaseModel):
     note: str = Field(description="One short clause of rationale (for the human watching).")
 
 
-SYSTEM_PROMPT = """You are playing Dungeon Forge, a real-time survival action-RPG, as the hero. \
+SYSTEM_PROMPT = """You are playing To Dust, a real-time survival action-RPG, as the hero. \
 You decide STRATEGY a few times per second; a low-level controller executes your intent each frame, \
 so give a high-level plan, not twitch inputs.
 

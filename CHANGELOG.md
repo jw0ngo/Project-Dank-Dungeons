@@ -1,11 +1,22 @@
 # Changelog
 
-All notable changes to Dungeon Forge are recorded here. Versions follow
+All notable changes to To Dust are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/) (pre-1.0: minor = features, patch = fixes).
 
 Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
+
+### Studio / Project
+- **Renamed *Dungeon Forge* → *To Dust*** across the repo (display name only; the `DF1` seed prefix and
+  `dungeon-forge:map:` save key are kept frozen for compatibility, so existing seeds/saved maps still
+  load).
+- **Established the From Dust studio layer** (`studio/`): `STUDIO.md` (studio manifest + agent roster +
+  recursive-learning doctrine), `CREATIVE_MANIFESTO.md` (the Creative Director's living vision/feel
+  doc), and the `creative-director/` role home.
+- **Per-agent learnings stores + a session crystallization habit** — each role now records its
+  highest-level lessons (`docs/learnings/engineer.md`, `product/LEARNINGS.md`, `artist/LEARNINGS.md`,
+  `studio/creative-director/LEARNINGS.md`); the habit is wired into each role's operating context.
 
 ### Changed
 - **Level-up "Choose a Blessing" screen redesign.** Rebuilt the wilderness level-up overlay to the

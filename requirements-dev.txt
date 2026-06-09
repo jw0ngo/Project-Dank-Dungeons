@@ -1,4 +1,4 @@
-# Development dependencies for Dungeon Forge.
+# Development dependencies for To Dust.
 # Install with:  python -m pip install --user -r requirements-dev.txt
 #
 # livereload powers `python dev.py` (local server + auto-refresh on save).

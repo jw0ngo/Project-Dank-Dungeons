@@ -1,4 +1,4 @@
-# Dungeon Forge — Clean-Up Backlog
+# To Dust — Clean-Up Backlog
 
 **A running list of known-but-deferred issues: dead code, legacy vestiges, inconsistencies, and low-priority bugs.**
 
@@ -55,6 +55,22 @@ The previews (`charDrawPreview`, `invRenderCharPreview`) no longer read `df_play
 
 **Why deferred:** needs verification of whether the creator is still linked anywhere before deleting anything.
 **Fix:** audit reachability of the character creator. If it's gone, remove the screen + `cc*` helpers + the localStorage key. If it's meant to stay, decide how a custom sprite should surface now that previews show the portrait.
+
+---
+
+## Docs / naming
+
+### 🟡 `DUNGEON_FORGE_CTO_DOC.md` filename still carries the old game name
+The *Dungeon Forge → To Dust* rename updated display text everywhere but **left filenames/paths frozen
+on purpose** (lower risk). The CTO architecture doc is still `docs/DUNGEON_FORGE_CTO_DOC.md`.
+
+**Why deferred:** the filename is referenced from `CLAUDE.md`, `AGENTS.md`, `product/CLAUDE.md`,
+`.claude/commands/*`, `.claude/agents/*`, `.codex/agents/product-manager.toml`, `tools/pm-bot/pm_bot.py`,
+`tools/doc-drift-check.ps1`, and `docs/PRODUCT_MANIFESTO.md` — a `git mv` needs all of them updated in
+one pass (and `doc-drift-check.ps1` has the name in a regex).
+**Fix:** `git mv docs/DUNGEON_FORGE_CTO_DOC.md docs/TO_DUST_CTO_DOC.md` and update every reference above
+in the same commit. (The `DF1` seed prefix and `dungeon-forge:map:` localStorage key are **not** in
+scope — those are frozen for save/seed compatibility.)
 
 ---
 

@@ -1,4 +1,4 @@
-# Dungeon Forge — CTO Technical Document
+# To Dust — CTO Technical Document
 **Session 9 | June 2026**
 **Active file:** `index.html` at repo root (single self-contained HTML file)
 **Companion docs:** `ENGINEERING_CHARTER.md` (read first) · `SESSION_JOURNAL.md` · `WORKING_AGREEMENT.md`

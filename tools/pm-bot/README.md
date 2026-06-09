@@ -1,6 +1,6 @@
 # Product Manager Telegram bot
 
-Chat with the Dungeon Forge **Product Manager** agent from your phone, on the go, to
+Chat with the To Dust **Product Manager** agent from your phone, on the go, to
 work the product roadmap. The PM operates per [`docs/PRODUCT_MANIFESTO.md`](../../docs/PRODUCT_MANIFESTO.md):
 it brings decision-ready proposals, runs them by you for approval, and — once you say
 yes — updates [`docs/ROADMAP.md`](../../docs/ROADMAP.md) and pushes it to `main` so your

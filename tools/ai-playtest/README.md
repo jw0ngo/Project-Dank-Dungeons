@@ -1,4 +1,4 @@
-# AI Playtest — Claude plays Dungeon Forge
+# AI Playtest — Claude plays To Dust
 
 Lets **Claude** play a live wilderness run through the `§8` `Sim` harness, so you can
 watch how a reasoning agent handles combat, kiting, ability use, and the card draft —

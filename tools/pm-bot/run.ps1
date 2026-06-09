@@ -1,4 +1,4 @@
-# Launch the Dungeon Forge Product Manager Telegram bot.
+# Launch the To Dust Product Manager Telegram bot.
 # First run: `pip install -r tools/pm-bot/requirements.txt` and create tools/pm-bot/.env
 # (copy from .env.example). Then: .\tools\pm-bot\run.ps1
 $ErrorActionPreference = "Stop"

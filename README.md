@@ -1,4 +1,4 @@
-# Dungeon Forge
+# To Dust
 
 A browser action-RPG — vanilla JS + Canvas, with Firebase Realtime Database
 multiplayer. The entire game is one self-contained file: **`index.html`**

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Dungeon Forge — Product Manager Telegram bot.
+To Dust — Product Manager Telegram bot.
 
 A long-polling Telegram bot that lets the developer chat with the Product Manager
 agent (operating per docs/PRODUCT_MANIFESTO.md) from a phone, to work the product
@@ -251,7 +251,7 @@ def build_system() -> str:
     manifesto = manifesto_path.read_text(encoding="utf-8") if manifesto_path.exists() else "(manifesto missing)"
     roadmap = roadmap_path.read_text(encoding="utf-8") if roadmap_path.exists() else "(roadmap missing)"
     return (
-        "You are the Product Manager for Dungeon Forge, a browser action-RPG, talking to the "
+        "You are the Product Manager for To Dust, a browser action-RPG, talking to the "
         "developer (Josh) over Telegram on his phone. Operate exactly per the manifesto below.\n\n"
         "TELEGRAM STYLE: This is a chat on a phone. Keep replies SHORT and scannable — a few "
         "lines, not a wall of text. Plain text only (no markdown tables, no code fences). When "
@@ -308,7 +308,7 @@ def handle_command(chat_id, text: str) -> bool:
     cmd = text.split()[0].lower().lstrip("/").split("@")[0]
     if cmd == "start":
         send_message(chat_id,
-            "Dungeon Forge PM here. Tell me what you're thinking and I'll bring proposals, "
+            "To Dust PM here. Tell me what you're thinking and I'll bring proposals, "
             "or say 'what's next?' for the top of the roadmap. I run ideas by you before "
             "anything reaches engineering.\n\nCommands: /roadmap  /reset")
         return True

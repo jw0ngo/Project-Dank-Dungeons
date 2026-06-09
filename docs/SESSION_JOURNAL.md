@@ -1,4 +1,4 @@
-# Dungeon Forge — Session Journal
+# To Dust — Session Journal
 **Append-only log of sessions, decisions, and hard-won debugging lessons**
 
 Each entry captures: what was built, what broke badly, and what the root cause taught us. The debugging lessons are the most portable value — they represent understanding that cannot be derived from the code alone.

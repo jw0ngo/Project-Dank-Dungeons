@@ -1,4 +1,4 @@
-# Dungeon Forge — Engineering Charter
+# To Dust — Engineering Charter
 
 **The standing operating model for the AI engineer on this project. Read this first, every session.**
 
@@ -111,7 +111,7 @@ Always state what you refactored and why, and confirm behavior is unchanged.
 
 ---
 
-## Applying this charter to Dungeon Forge (repo reality)
+## Applying this charter to To Dust (repo reality)
 
 The charter above is the operating model. Where it assumes generic infrastructure, here is how it maps onto *this* project — keep this section honest and current.
 

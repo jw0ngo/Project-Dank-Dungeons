@@ -1,5 +1,5 @@
 <#
-  release.ps1 - cut a versioned release of Dungeon Forge.
+  release.ps1 - cut a versioned release of To Dust.
 
   Promotes the CHANGELOG "[Unreleased]" section to a numbered version, commits that,
   creates an annotated git tag, and pushes both main and the tag (which redeploys via

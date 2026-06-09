@@ -1,6 +1,6 @@
-# Dungeon Forge — Art Pipeline (the Artist's operating model)
+# To Dust — Art Pipeline (the Artist's operating model)
 
-**The standing operating model for the Artist role** — both halves of art on Dungeon Forge: the
+**The standing operating model for the Artist role** — both halves of art on To Dust: the
 **house style** (what assets must look like) and the **pipeline** (how a source PNG becomes a sliced,
 background-removed, base64-encoded asset wired into the live game). This is to the Artist what
 `ENGINEERING_CHARTER.md` is to the engineer and `PRODUCT_MANIFESTO.md` is to the PM. For exhaustive

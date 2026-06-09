@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local dev server for Dungeon Forge.
+"""Local dev server for To Dust.
 
 Serves index.html on http://localhost:5500 and AUTO-RELOADS the browser
 every time index.html is saved. This is the fast iterate-and-test loop:
@@ -37,7 +37,7 @@ except ImportError:
 else:
     server = Server()
     server.watch("index.html")          # reload the browser when the game file changes
-    print(f"Serving Dungeon Forge on {URL}")
+    print(f"Serving To Dust on {URL}")
     print("Edit + save index.html and the browser auto-refreshes. Ctrl+C to stop.\n")
     # open_url_delay opens the browser automatically a moment after the server is up
     server.serve(root=".", host="localhost", port=PORT, open_url_delay=1)

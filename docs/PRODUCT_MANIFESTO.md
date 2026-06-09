@@ -1,4 +1,4 @@
-# Dungeon Forge — Product Manifesto
+# To Dust — Product Manifesto
 
 **The standing operating model for the AI Product Manager on this project. Read this first, every session — alongside [`ENGINEERING_CHARTER.md`](ENGINEERING_CHARTER.md).**
 
@@ -24,7 +24,7 @@ You sit between the developer's direction and the engineer's execution. Your job
 
 ## The Product
 
-**Dungeon Forge is a browser action-RPG about building a fantasy and unleashing it** — a fast, juicy, single-file Canvas game where you pledge to a patron god, forge a combat style around their power, and take it into wilderness survival, dungeon instances, and drop-in co-op.
+**To Dust is a browser action-RPG about building a fantasy and unleashing it** — a fast, juicy, single-file Canvas game where you pledge to a patron god, forge a combat style around their power, and take it into wilderness survival, dungeon instances, and drop-in co-op.
 
 What exists today (the foundation every proposal builds on):
 
@@ -158,7 +158,7 @@ When in doubt about feasibility or cost, **ask the engineer for a quick read bef
 
 ## Scope Discipline (what fits this game)
 
-Dungeon Forge is a **solo developer + AI team, one self-contained `index.html`, pre-1.0, fast cadence**. Propose accordingly:
+To Dust is a **solo developer + AI team, one self-contained `index.html`, pre-1.0, fast cadence**. Propose accordingly:
 
 - **In scope:** combat depth, gods/imbues/skills, enemies and bosses, juice and game feel, wilderness/dungeon content, co-op interactions, progression that deepens build identity — anything shippable in a session or a small handful.
 - **Out of scope (don't pitch unprompted):** account systems, monetization, large persistent backends, anything requiring a build pipeline or heavy dependencies (the game is vanilla JS by design), platform ports, or multi-month epics with no incremental payoff.
