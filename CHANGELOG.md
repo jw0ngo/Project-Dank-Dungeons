@@ -7,6 +7,8 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-06-09
+
 ### Fixed
 - **Bow kills now drop an XP orb** like every melee path (was the lone weapon passing `{xpOrb:false}`).
 
