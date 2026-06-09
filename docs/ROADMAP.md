@@ -37,10 +37,11 @@ file, so an untracked board nudges on session close.
 - **PM → ARTIST:** wolf sprites (`art/enemy alpha wolf.png`, `art/enemy dire wolf.png`) handed off for
   prep → `char.alphawolf.*` / `char.direwolf.*`, sized consistent with the goblin family. *(Artist
   dispatched this session.)*
-- **PM ← ENG:** **Favor spine BUILT** (2026-06-09, uncommitted) — currency + enemy/chest drops + gold-coin
-  pickups + HUD `✦` counter + both card-screen spends (Favor reroll 3/5/8 + per-card rarity-upgrade
-  4/8/16, gated behind first-patron) + Sim hooks. Syntax-checked (no node here → delimiter-balance vs
-  HEAD); **needs Josh's browser playtest** (`python dev.py`) before commit/push + release. Then flip SHIPPED.
+- **PM ← ENG:** **Favor spine SHIPPED + pushed** (`078dd61`, 2026-06-09 — live on Pages). Currency +
+  enemy/chest drops + gold-coin pickups + HUD `✦` counter + level-up Favor wallet + both card-screen
+  spends (reroll 3/5/8 + per-card rarity-upgrade 4/8/16, gated behind first-patron) + Sim hooks. **Not yet
+  tagged a release** — recommend a `python dev.py` playtest + `await Sim.batch(3)` canary, then cut `v0.2.0`
+  via `release.ps1` (drop rates / spend costs are live-tune levers). PM: flip item-2 to SHIPPED / prune.
 - **ENG → ARTIST:** **Favor coin** art needed — a small gold-coin sprite for the pickup + a HUD glyph
   to replace the placeholder `✦`. Currently drawn procedurally (gold disc w/ rim in `gDrawFavorOrbs`).
   Wire under `fx.favor-coin` (or similar) when ready; the draw hook + HUD `#g-favor` are in place.
@@ -79,7 +80,7 @@ Co-op synergy (pillar 4) falls out of the contrast — e.g. Boreas freezes → C
      - Each imbued skill (swing / whirlwind / leap / dash) has ≥1 night-situation where it's the *right* answer (kit feels deep, not one-button).
    - **Tuning levers (the playtest dials):** roster counts/night · night & day duration · live spawn cap · stat-scaling slope · **card rarity-odds + magnitudes (Half B)**. Hold the Cilia kit's *base* numbers fixed — tune the *curve and the card economy* around it, so the slice tells us how the existing power scales.
 
-2. **Favor — the world currency** · `in-progress` (eng, 2026-06-09 — spine build) · pillar: build-craft depth + game feel + mastery
+2. **Favor — the world currency** · `shipped` spine (eng, `078dd61` 2026-06-09 — live on Pages; untagged) · pillar: build-craft depth + game feel + mastery
    - **Full spec: [`specs/favor.md`](specs/favor.md).** **Supersedes `favor-imbue.md`** — Favor is no longer "the price of a new patron"; it's now the **card-economy currency.** Fast-follow to Card Pool Expansion (layers on the same rarity/card-screen code).
    - One-liner: **Favor = the gold-coin currency of the world** — rare drops from enemies (scaled by type) + from **chests** (existing village chests, `~12917`). After committing to a **patron at level 5**, spend Favor on the card screen to **reroll** the draw and **upgrade a card's rarity** (Common→…→Legendary).
    - Why this pivot (Josh): the old breadth-pricing only *matters* once Boreas ships, so it can't be felt in the slice. Tying Favor to reroll + rarity-upgrade makes it a real, **slice-testable lever now with only Cilia**, plugged straight into the shipped rarity system. Rarity-upgrade is the *active* twin of odds-by-night (the passive curve dial).
