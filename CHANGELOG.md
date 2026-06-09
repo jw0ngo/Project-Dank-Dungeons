@@ -7,6 +7,31 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+### Added
+- **Favor — the world currency (spine).** A run-scoped gold-coin currency (`gFavor`) that drops
+  rarely from enemies and from chests, and is spent on the level-up card screen. Full design:
+  `docs/specs/favor.md`.
+  - **Earning.** Per-`EntityDef` `favor:{chance,min,max}` drop table — grunts ~4% (Goblin) up to
+    tougher types (Warrior 12%, Shaman 15% / 1–2), the Goblin King a guaranteed 8–12 windfall. Drops
+    surface as a gold **coin pickup** (`gFavorOrbs`, a clone of the XP-orb system) auto-collected
+    within pickup range (so the pickup-range card synergises), host-authoritative like XP. Village
+    **chests** now pay **3–6 Favor** on open (replacing the `CHEST!` flavor pop) via a reusable
+    `gGrantFavor()` chokepoint (ready for the upcoming Wolf-Camp chests to reuse). HUD gains a gold
+    `✦` Favor counter beside the level/XP readout.
+  - **Spending (two sinks, both on the card screen, gated behind committing to a patron at the Lv-5
+    shrine).** **Reroll** is now Favor-priced — escalating **3 / 5 / 8** within a single level-up
+    (resets each level); the old free `+1-charge-per-5-levels` economy is retired (the `rerolls`
+    field is gone). **Rarity upgrade** is the new marquee spend: a per-card **▲ ✦cost** affordance
+    bumps a shown card up one tier (→Rare **4** · →Epic **8** · →Legendary **16**), recomputing its
+    magnitude via the existing `_cardValue` path; upgrades chain and are cleared by a reroll. Both
+    controls lock with a hint until a patron is chosen. A **styled gold Favor plaque** (`✦ N Favor`)
+    sits on the level-up screen itself — the HUD counter is hidden behind that overlay — and updates
+    live after every spend, with a 🔒 hint while spending is still locked.
+  - **AI-native.** `Sim.observe()` now reports `favor`, `favorOrbCount`, `rerollCost`, and per-option
+    `upgradeCost`; new `Sim.reroll()` / `Sim.upgradeCard(i)` primitives (+ `reroll` / `upgradeCard`
+    intents in `Sim.act`) and `gSimDraft.reroll/upgrade/rerollCost/upgradeCost` harness hooks. The
+    draft's `gSimDraft.pick()` stall-guard is unchanged, so headless runs resolve as before.
+
 ## [0.1.0] - 2026-06-09
 
 ### Studio / Project
