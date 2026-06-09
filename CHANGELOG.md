@@ -7,6 +7,8 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-06-09
+
 ### Studio / Project
 - **Renamed *Dungeon Forge* → *To Dust*** across the repo (display name only; the `DF1` seed prefix and
   `dungeon-forge:map:` save key are kept frozen for compatibility, so existing seeds/saved maps still
