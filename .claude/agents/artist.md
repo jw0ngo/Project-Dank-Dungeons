@@ -30,8 +30,9 @@ The essentials:
   fallback layer), no baked-in UI/text, full helm on the knight.
 - **Slice with the tool, QA the contact sheet.** Use `tools/slice-turnaround.py` (it writes cutouts to
   `assets/char/` + emits a path-based `ART_MANIFEST` snippet); reach for its flags in order
-  (`--bg white` → `--erode` → `--global` → `--sever`) and eyeball the magenta contact sheet before
-  handing off. The recurring bugs are an edge halo (`--erode`) or an enclosed bg pocket (`--global`).
+  (`--bg white` → `--erode` → `--global` → `--sever`, plus `--bleed N` for poses drawn larger than
+  their cell) and eyeball the magenta contact sheet before handing off. The recurring bugs are an edge
+  halo (`--erode`), an enclosed bg pocket (`--global`), or a clipped oversized lunge (`--bleed`).
 - **Verify your output; the engineer verifies the wire.** Confirm the contact sheet is clean and your
   snippet/paths are correct. The `node --check` + grep + `python dev.py` render check happens on the
   engineer's side after they wire it. No half-measures — all 8 directions clean, or none.

@@ -61,7 +61,8 @@ Each entry captures: what was built, what broke badly, and what the root cause t
 
 Cutting a sprite out of its background — and matching its size to the rest of the character's frames —
 keeps re-introducing the same handful of bugs. `tools/slice-turnaround.py` has the keying levers + an
-automatic QA pass; steps 1–4 are keying, step 5 is **size consistency**. Run all of it every time:
+automatic QA pass; steps 1–4 are keying, step 5 is **size consistency**, step 6 is **geometry recovery**
+(figures drawn larger than their cell). Run all of it every time:
 
 1. **Slice it**, then **look at the magenta QA contact sheet** the tool prints (`contact.png`). White/dark
    halos and any background showing through pop instantly against magenta. The tool also prints a
@@ -89,6 +90,17 @@ automatic QA pass; steps 1–4 are keying, step 5 is **size consistency**. Run a
    line (see the player heavy `HEAVY_DRAW_MULT` = 1.3, the measured idle/heavy helmet ratio). **Measure, don't
    eyeball** — coarse visual steps overshoot (1.5× looked right; the measured truth was 1.3×). Confirm by
    rendering the new pose next to idle, bottom-aligned, heads matching. (Hit on the king, bomber, and player heavy.)
+6. **Figure sliced flat at an edge / paws-tail-nose cut off** (wide **lunge / attack** poses drawn *larger than
+   their 3×3 cell* — they overflow into the empty centre, and the rigid per-cell crop throws those pixels away):
+   use **`--bleed N`**. First **diagnose**: get each figure's true connected-blob bbox and compare it to its cell
+   *and* to the sheet edge. If the blob overflows the **cell** but not the **sheet edge**, the pixels exist on the
+   sheet (just in the empty centre) and `--bleed` recovers them — it cuts on a window expanded N px past each cell,
+   then keeps only the component that *owns* the cell (neighbours pulled into the window are dropped). Set N a bit
+   above the worst overflow (the wolf-mother attack lunge spilled ~145px → `--bleed 170`). If a blob overflows the
+   **sheet edge**, those pixels are genuinely gone — re-generate the source smaller in-cell; no flag recovers them.
+   The attack-pose case is usually **both** problems at once — overflowing *and* white-on-white — so the wolf-mother
+   attack sheet wanted `--bleed 170 --sever 2`. Owner-selection assumes figures don't touch (clean bg gap between
+   cells); watch the per-direction `comps=N` print and the magenta contact for a dropped real part.
 
 Single one-off images (not 3×3 turnarounds, e.g. `world.shrine`) aren't run through the slicer, but apply the
 *same* global-key + erode + magenta-check by hand. The shrine needed both (`--global` for the pillar gaps, 1px
@@ -123,6 +135,7 @@ erode for the halo).
 | Background showing through inside a sprite | Enclosed pocket the flood fill can't reach (bow gap, shrine pillars) — `--global` key |
 | Chunks of a sprite missing / fragmented | Interior detail shares the bg colour — lower `--thresh`; if detail truly matches the bg, `--sever N` (morphological channel cut) |
 | New pose renders bigger/smaller than idle | Source sheet drawn at a different zoom — match by front-view helmet width (not the bbox); re-slice `side` or feet-anchored draw mult |
+| Sprite clipped flat at a cell edge / limbs cut off | Figure drawn larger than its 3×3 cell, overflowing into the empty centre — `--bleed N` (cut on an expanded window, keep the cell's owner blob). Confirm overflow is past the cell, not the sheet edge, first |
 
 ---
 

@@ -51,7 +51,8 @@ Developer (Josh) — owns the product, makes the final visual call
    sprites), no UI/text baked in. Consistency with the existing sheets beats novelty.
 2. **Slice with the script, not by hand.** `tools/slice-turnaround.py` encodes every cutout edge case
    we've hit, and writes the cutouts straight into `assets/char/` + emits a path-based `ART_MANIFEST`
-   snippet. Reach for its flags in order (`--bg white` → `--erode` → `--global` → `--sever`) and
+   snippet. Reach for its flags in order (`--bg white` → `--erode` → `--global` → `--sever`, plus
+   `--bleed N` when a lunge/attack pose is drawn larger than its 3×3 cell and gets clipped) and
    **QA the magenta contact sheet every time** before handing off.
 3. **Spec it for the engineer — don't wire it yourself.** Adding art = dropping the file in
    `assets/<kind>/` and handing the engineer a render spec: the paste-ready `ART_MANIFEST` snippet

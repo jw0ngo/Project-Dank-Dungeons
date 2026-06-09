@@ -248,7 +248,7 @@ hands over the assets/snippet; the engineer does the wiring and confirms the ren
 ## Quick reference — add a character/enemy sprite
 
 1. Drop the white-bg turnaround PNG in the right `art/` subfolder.
-2. `python tools/slice-turnaround.py "art/.../sheet.png" <id> --bg white` (add `--erode`/`--global`/`--sever` as the contact sheet demands).
+2. `python tools/slice-turnaround.py "art/.../sheet.png" <id> --bg white` (add `--erode`/`--global`/`--sever` as the contact sheet demands, and `--bleed N` if a pose is drawn larger than its cell and gets clipped).
 3. Eyeball the magenta contact sheet → CLEAN.
 4. Commit the `art/` source + the 8 `assets/char/<id>-<dir>.png` cutouts the slice tool wrote.
 5. **Hand the engineer the render spec** (you don't edit `index.html`): the path-based `char.<id>.<dir>`
