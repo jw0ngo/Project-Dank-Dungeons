@@ -78,55 +78,33 @@ juiced-up elites — hard, but fair and readable.
 `✅ approved` (2026-06-09) — **all design calls resolved; cleared for Phase 1 build** · **Size:** large, phased · **Pillars:** build-craft depth, game feel, mastery
 **Full design:** [`specs/imbue-paths.md`](specs/imbue-paths.md)
 
-**What:** Today, a fire-imbued skill is either on or off — there's nowhere to grow it, so level-ups become
-repetitive stat bumps. We'll turn **each imbued skill into a named ability you level up 10 times**, with
-two branch points where you choose how it evolves:
+**What:** Today a fire-imbued skill is just on or off — nowhere to grow, so level-ups become repetitive
+stat bumps. We'll turn **each imbued skill into a named ability you level up 10 times**, with two branch
+points: **level 5 picks 1 of 2 "Forms"** (how it plays — e.g. long-range vs. close-quarters) and **level 10
+picks 1 of 2 "Chaos" upgrades** (the peak — more powerful, more wild, harder to control). Binary tree →
+**4 endpoints per skill.** *Example:* "Dance of Fire" → *Emberlance* (ranged) or *Cinder Ring* (close) at 5,
+each forking into two dread Chaos endpoints at 10.
 
-- **Level 5 — pick 1 of 2 "Forms"** that change *how the skill plays* (e.g. a long-range version vs. a
-  close-quarters version).
-- **Level 10 — pick 1 of 2 "Chaos" upgrades** — the peak of the skill, where it grows more powerful but
-  also more wild and harder to fully control.
+**Why:** the #2 playtest finding and the core of our "build your own playstyle" promise — every level-up
+becomes a meaningful choice, and two players' builds genuinely diverge.
 
-**Example — "Dance of Fire" (the normal attack):** at level 5 you choose **Emberlance** (fires a spread of
-fireballs at long range — for spacing and kiting) *or* **Cinder Ring** (erupts a ring of flame around you —
-for wading into a crowd). At level 10 each Form forks again into two dread "Chaos" endpoints — e.g.
-Emberlance → **Wake of Ruin** (fireballs leave trails of fire across the battlefield) or **Cinderplague**
-(they burst into spreading embers); Cinder Ring → **Halo of Damnation** (a ring of burning ground that
-follows you) or **Unending Maelstrom** (the ring keeps re-erupting on its own). Four endpoints per skill.
-
-**Why:** This is the #2 playtest finding and the core of our "build your own playstyle" promise. It turns
-every level-up into a meaningful choice and makes two players' builds genuinely different.
-
-**The story hook (now canon — logged in the Creative Manifesto, 2026-06-09):** *the gods are waning and
-resort to "perceived higher powers" — chaos and order, light and dark — to preserve themselves; called
-upon enough, those forces become the gods of the next age.* The game is set in **the turning of the age**.
-The level-10 "Chaos Ascension" is that made playable — channeling a blessing to its peak routes it through
-these raw forces, so it corrupts (fire spills onto the ground you stand on, effects spread past your aim).
-This is what *"To Dust"* means: **the old gods crumble to dust, and new powers are born from it.**
+**Story hook (now canon — Creative Manifesto, 2026-06-09):** the gods are waning and channel "perceived
+higher powers" (chaos/order, light/dark) to survive — *the turning of the age*. A blessing pushed to its
+peak routes through those raw forces, so it corrupts: the level-10 Chaos tier is power **and** loss of
+control. It's what *"To Dust"* means — old gods to dust, new powers born from it.
 
 <details>
 <summary>🔧 Build notes (engineering)</summary>
 
-- **The 10-rank tree per skill:** ranks 1–4 numeric upgrades → **rank 5 Form fork (1 of 2)** → ranks 6–9
-  numeric → **rank 10 Chaos fork (1 of 2)**. Binary tree → 4 endpoints per skill; any run walks one path.
-- **State:** a new per-player imbue-path map (rank + chosen Form + chosen Chaos per skill), parallel to
-  `skillMods`/`gritMods` (`~2425`). Numeric ranks write magnitudes the FX spawn sites read.
-- **Draft integration:** ranks 1–4 / 6–9 are ordinary draft cards (reuse `_cardValue` rarity/Favor
-  economy, `~11828`); **ranks 5 & 10 are special 2-option "evolution" events** — model on the existing
-  imbue overlay (`#g-imbue-overlay`) or a flagged draft pair. Gated on owning that imbue.
-- **FX touched:** `gFireWaves`, `gFireTrails` (`~3619`), `gFirePillars` (`~5708`), `gFireRings`,
-  `gFireCrosses`. The Chaos tier leans hard on the existing `burning-ground`/`gFireTrails` hazard.
-- **AI-native:** the two evolution events pause the game → each needs a `gSim*` hook (mirror
-  `gSimDraft.pick`) + new `Sim.observe()` fields (per-skill rank, pending evolution), or headless runs stall.
-- **Phasing (so a large feature ships in slices):** **Phase 1 = the tree system + "Dance of Fire" fully
-  built** (one skill, both Forms, all Chaos leaves — de-risks the whole system) → **Phases 2–5 = fan out**
-  one skill per slot (Pyre Waltz · Sunfall · Trail of Embers · Eruption) on the proven framework.
-- **Balance:** Forms are **sidegrades** (playstyle, not strictly stronger); Chaos is **power + cost** (the
-  uncontrolled element is the balancing lever — if a Chaos leaf is strictly better than its Form, it's
-  under-chaosed). Cap every numeric rank; forks are irreversible per run (builds are commitment).
-- **✅ All design calls resolved (Josh, 2026-06-09):** binary tree (4 endpoints/skill); names approved with
-  the standing rule that **all level-10 Chaos names evoke dread/chaos/sinisterness**; lore logged as canon.
-  **Cleared for Phase 1 hand-off.**
+- **Shape:** ranks 1–4 numeric → rank-5 Form fork → ranks 6–9 numeric → rank-10 Chaos fork (binary,
+  4 endpoints/skill; any run walks one path).
+- **Phasing:** **Phase 1 = the tree system + "Dance of Fire" fully built** (de-risks the whole system) →
+  **Phases 2–5 = fan out** one skill per slot (Pyre Waltz · Sunfall · Trail of Embers · Eruption).
+- **The full build spec is the source of truth — [`specs/imbue-paths.md`](specs/imbue-paths.md)** — and
+  carries the per-player state model, draft/evolution-overlay integration, every FX touch-point + line-ref,
+  balance rules, and the AI-native `gSim*` hooks. *Don't duplicate it here; update the spec.*
+- **✅ All design calls resolved (Josh, 2026-06-09):** binary tree · dread-Chaos naming rule · lore canon →
+  **cleared for Phase 1.**
 </details>
 
 ---
@@ -272,6 +250,16 @@ commit:** PM sets `approved`; engineer sets `in-progress` **when starting** (not
 `shipped` on push. Pulse of what just happened → git (`git status` + `git log --oneline`, commit prefixes
 `pm:` / `eng:` / `docs:`). **Session-open ritual (~30s):** `git status` + `git log --oneline -15` → read
 *Now* + Handoffs → act. `tools/doc-drift-check.ps1` (Stop hook) nudges if this board goes stale.
+
+**Commit your own lane — never `git add -A`.** The working tree carries long-lived cross-role WIP (untracked
+art PNGs, other roles' in-flight edits), so a blind `git add -A` will sweep another role's work into your
+commit under the wrong prefix. **Always stage explicit paths** (`git add docs/ROADMAP.md docs/specs/…`) so
+a `pm:` commit contains only PM docs, an `art:` commit only assets, etc.
+
+**Source-of-truth rule (avoid drift):** for any item backed by a spec (`docs/specs/*.md`), the **spec is the
+source of truth** and the roadmap item is a thin **summary + pointer** — plain-English what/why + a link.
+Keep build detail (line-refs, balance, phasing internals) in the spec; don't mirror it into the board, or
+the two drift. Items with no spec (small fixes) keep their detail inline in the 🔧 Build notes.
 
 **⇄ Handoffs (append a line; delete when cleared):**
 - **PM → ENG:** Build *Now* top-down (1→4). Items 1 & 2 are the two systemic wall-fixes — **item 2's 3
