@@ -17,6 +17,34 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 
 ---
 
+### 2026-06-09 — When the verification tool is missing, verify differentially against a known-good baseline
+
+- **Principle:** If the canonical check can't run (here: no Node, so `node --check` was impossible),
+  don't skip verification — build a cheap proxy and run it against *both* your change and the last
+  committed build, then compare. Equal output ⇒ your edit introduced no net regression in whatever the
+  proxy measures, even if the proxy itself is imperfect.
+- **Why:** I wrote a string/comment/template-aware delimiter-balance scanner for the inlined `<script>`.
+  It reported a spurious "unclosed" (a regex blind spot early in the file) — but `HEAD` reported the
+  *identical* residual, so the comparison proved my inserts were balanced. The baseline cancels the
+  tool's own blind spots; the signal is the *diff*, not the absolute result.
+- **How to apply:** For any verification you can't run natively, reach for `git show HEAD:file` as the
+  reference and diff your proxy's output against it. Be explicit in the writeup that this is a
+  differential syntax proxy, not behavior — flag the real behavior gate (here: a browser `Sim.batch`)
+  as still owed.
+
+### 2026-06-09 — The shared board is a live input, not just a handoff log — re-read it mid-build
+
+- **Principle:** In this studio the roadmap/handoff board is edited by other roles *while you build*.
+  Treat a mid-build board change as a design input that can change an implementation decision, not just
+  status noise.
+- **Why:** Mid-Favor-build the PM's board gained "Wolf Camps — the chest is the marquee Favor source,
+  coordinate the chest payout." That turned an inline chest-grant into a reusable `gGrantFavor(amount,
+  wx, wy)` chokepoint so the upcoming camp chests reuse one wallet + one juice path — a better design I'd
+  have missed by treating the board as read-once.
+- **How to apply:** When a system you're touching is named in another role's queued work, build the seam
+  they'll plug into (a shared helper / hook), not just the path in front of you. The repo is the shared
+  brain — cheap to re-read, expensive to re-architect.
+
 ### 2026-06-09 — A repo-wide rename is two categories, not one
 
 - **Principle:** When renaming a thing across the repo, split occurrences into **display text** (rename
