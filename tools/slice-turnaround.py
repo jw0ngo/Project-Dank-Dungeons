@@ -38,7 +38,7 @@ def is_bg(px, x, y, bg, thresh):
     return min(r, g, b) >= 255 - thresh
 
 
-def _cut_severed(cell, px, w, h, bg, thresh, sever, feather):
+def _cut_severed(cell, px, w, h, bg, thresh, sever, feather, crop=True):
     """Morphological cut for figures whose detail shares the bg colour (see cut_cell sever>0)."""
     mask = Image.new('L', (w, h), 0); mp = mask.load()
     for y in range(h):
@@ -71,10 +71,11 @@ def _cut_severed(cell, px, w, h, bg, thresh, sever, feather):
         alpha = alpha.filter(ImageFilter.GaussianBlur(feather))
     out = cell.convert('RGBA'); out.putalpha(alpha)
     bb = alpha.getbbox()
-    return out.crop(bb) if bb else None
+    if not bb: return None
+    return out.crop(bb) if crop else out          # crop=False keeps the native cell frame (registration)
 
 
-def cut_cell(cell, bg, thresh, feather, glob=False, erode=0, sever=0):
+def cut_cell(cell, bg, thresh, feather, glob=False, erode=0, sever=0, crop=True):
     """Return RGBA image of the isolated figure, tight-cropped, or None.
 
     glob=True  -> cut EVERY background-coloured pixel, including enclosed pockets not reachable
@@ -93,7 +94,7 @@ def cut_cell(cell, bg, thresh, feather, glob=False, erode=0, sever=0):
     w, h = cell.size
     px = cell.load()
     if sever > 0:
-        return _cut_severed(cell, px, w, h, bg, thresh, sever, feather)
+        return _cut_severed(cell, px, w, h, bg, thresh, sever, feather, crop)
     isbg = bytearray(w * h)            # 1 = background
 
     if glob:
@@ -166,7 +167,8 @@ def cut_cell(cell, bg, thresh, feather, glob=False, erode=0, sever=0):
     out = cell.convert('RGBA')
     out.putalpha(alpha)
     bb = alpha.getbbox()
-    return out.crop(bb) if bb else None
+    if not bb: return None
+    return out.crop(bb) if crop else out          # crop=False keeps the native cell frame (registration)
 
 
 def bg_leak_px(fig, bg, thresh):
@@ -190,7 +192,12 @@ def main():
     ap.add_argument('--bg', choices=['black', 'white'], default='black')
     ap.add_argument('--thresh', type=int, default=40)
     ap.add_argument('--feather', type=float, default=0.6)
-    ap.add_argument('--size', type=int, default=256)
+    ap.add_argument('--size', type=int, default=256,
+                    help='output square px; 0 = native resolution (no resample) for animation source')
+    ap.add_argument('--frame', choices=['square', 'cell'], default='square',
+                    help="'square' = uniform bbox-centered square (game sprites). "
+                         "'cell' = keep each pose on its native cell canvas → exact in-sheet "
+                         "registration, one shared canvas across sheets (best for animation).")
     ap.add_argument('--global', dest='glob', action='store_true',
                     help='cut ALL bg-coloured pixels incl. enclosed pockets (closed shapes: bows, pillars)')
     ap.add_argument('--erode', type=int, default=0,
@@ -211,7 +218,8 @@ def main():
     worst_leak = 0
     for d, (r, c) in zip(DIRS, CELLS):
         cell = sheet.crop((c * cw, r * ch, (c + 1) * cw, (r + 1) * ch))
-        fig = cut_cell(cell, args.bg, args.thresh, args.feather, args.glob, args.erode, args.sever)
+        fig = cut_cell(cell, args.bg, args.thresh, args.feather, args.glob, args.erode, args.sever,
+                       crop=(args.frame == 'square'))
         if fig is None:
             print(f"  WARN: {d} (r{r}c{c}) produced no figure")
             continue
@@ -223,14 +231,22 @@ def main():
         flag = '' if args.sever else ('  <-- WARN bg leak (try --erode / --global / --thresh / --sever)' if leak > max(60, fig.width * fig.height * 0.003) else '')
         print(f"  {d}: r{r}c{c} bbox {fig.size}  bg-leak {leak}px{flag}")
 
-    # Uniform square so every direction renders at the same on-screen scale.
-    side = int(max(max(f.size) for f in figs.values()) * 1.04)
-    S = args.size
+    # Frame each figure. 'cell' keeps the native cell canvas (figs are already cw x ch, registered);
+    # 'square' centers each tight-cropped figure in a uniform square. --size 0 => native res (no resample).
+    if args.frame == 'cell':
+        side = cw
+    else:
+        side = int(max(max(f.size) for f in figs.values()) * 1.04)
+    S = side if args.size == 0 else args.size
     urls = {}
     for d, fig in figs.items():
-        sq = Image.new('RGBA', (side, side), (0, 0, 0, 0))
-        sq.alpha_composite(fig, ((side - fig.width) // 2, (side - fig.height) // 2))
-        sq = sq.resize((S, S), Image.LANCZOS)
+        if args.frame == 'cell':
+            sq = fig                                   # already cell-sized + registered
+        else:
+            sq = Image.new('RGBA', (side, side), (0, 0, 0, 0))
+            sq.alpha_composite(fig, ((side - fig.width) // 2, (side - fig.height) // 2))
+        if sq.size != (S, S):
+            sq = sq.resize((S, S), Image.LANCZOS)
         png = os.path.join(outdir, f'{args.id}_{d}.png')
         sq.save(png)
         buf = io.BytesIO(); sq.save(buf, 'PNG', optimize=True)
