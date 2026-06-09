@@ -48,6 +48,16 @@ The character-screen skill tooltips (`_charSkillDetail`) display base weapon/ski
 
 ---
 
+## Wilderness / spawning
+
+### 🟡 All 40 wolf camps spawn their packs up front (~160 always-live enemies)
+`goWilderness` calls `_wolfSpawnPack` for **every** camp at run start, and camp wolves are despawn-exempt (`campId` set), so ~160 wolves sit in `gEnemies` for the whole run — running AI + separation every frame even when far off-screen. This already bit the **night stream** (the siege live-cap census counted them and starved the stream — fixed by excluding `campId`/`isHeld` in `gWildSpawnTick`), but the perf cost (and the conceptual oddity of every den being "loaded" at once) remains.
+
+**Why deferred:** the stream bug is fixed without it; lazy spawning changes the wolf system's lifecycle and wants its own focused pass + playtest.
+**Fix:** spawn a camp's pack lazily when the player nears (mirror the village/ambient pattern), despawn when far, and persist `cleared`/`respawnAt` on the camp so the 3-min cycle survives unload. Keeps the "fixed, revisitable den" model while bounding live-enemy count.
+
+---
+
 ## Character / inventory screen
 
 ### 🟢 Custom-sprite character creator may now be orphaned

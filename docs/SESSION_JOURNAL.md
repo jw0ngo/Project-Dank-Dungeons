@@ -384,6 +384,40 @@ erode for the halo).
 
 ---
 
+## Session 15 — Neutral Wolf Camps (spine)
+*June 2026 | engineer | ~12,800 lines*
+
+### Built
+- **Neutral Wolf Camps** — the final mechanical-slice feature (spec `docs/specs/neutral-camps.md`).
+  40 fixed crescent rock dens at world-gen, each a neutral pack (1 Alpha + 2–4 Direwolves) guarding a
+  chest. New `direwolf`/`alphawolf` EntityDefs + `makeWolfEnt` + one shared `_aiWolf` (neutral until
+  hit; circle-to-flank; telegraphed lunge-bite with an exposed recovery; `WOLF_LEASH_R` hard-leash →
+  disengage + full-heal). Camp-linked wake (`_wolfWakeCamp` from the `gDealEnemyDamage` chokepoint so a
+  one-shot still propagates). `gUpdateWolfCamps` inside `gSimUpdate` runs the 3-min respawn + chest-on-
+  clear (2–4 Favor via `gGrantFavor`) off the run clock. Crescents carved into the existing `rocks`
+  layer (no new tile art); minimap dots; editor palette. Sprites/draw-scales were pre-wired by the
+  Artist (`char.{direwolf,alphawolf}.*`, `ENEMY_DRAW_SCALE`).
+
+### Lessons
+- **Reuse the village template, but diverge on the *one* new axis.** Camps are villages-shaped (placed
+  at gen → `gWildCamps[]` of `data` objects → runtime `_wolves` populated in `goWilderness` → per-frame
+  update + chest-on-proximity + minimap dots). The *only* genuinely new code is the behavior that
+  differs — neutrality + leash-heal in `_aiWolf`. Copying the surrounding scaffold (despawn exemption,
+  reset sites, entity-load `forEach`, draw dispatch) is mechanical; spend the thought on the delta.
+- **Wake on the damage chokepoint, not the kill path.** Hooking pack-wake into `gDealEnemyDamage`
+  *before* the `hp<=0` branch (not in `gKillEnemy` or the non-fatal `_villageCheckDamageAlert` else)
+  means a one-shot killing blow on one wolf still wakes the rest — the obvious "wake on hit" spot misses
+  the lethal hit.
+- **`SpriteRegistry.get()` falls back to `player`, so the eager fallback arg in `gDrawEnemy` is
+  crash-safe** for a brand-new `defId` even before art loads — but the *real* art still renders because
+  `gDirBody` finds `char.<id>.<dir>`. New enemy types don't need a pixel-array sprite registered first.
+- **Verification reality (no node here):** confirmed syntax by a **differential bracket-balance** of the
+  extracted `<script>` vs `git show HEAD:index.html` (identical residual = no nesting broken), plus
+  targeted greps for every wiring site + a duplicate-declaration scan. The runtime `await Sim.batch(3)`
+  canary and visual playtest remain the browser-side loop (`python dev.py`).
+
+---
+
 ## Architecture Decisions Log
 
 | Decision | Rationale | Session |

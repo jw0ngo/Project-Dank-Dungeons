@@ -4,7 +4,7 @@
 
 **Status legend:** `proposed` (PM idea, not yet seen by developer) · `approved` (developer greenlit — engineer may build) · `in-progress` · `shipped` (move to changelog, delete here) · `held` / `cut`.
 
-Keep the three horizons full. Re-rank after every release. State: **v0.1.0** (To Dust rename + studio layer) — the **full card progression** (Card-Draft + Card Pool Expansion + Crit), weighty heavy attack, enemy/player attack sprites, and the **day-farm-zone + VS-night-horde spawn overhaul** (replaced Nightfall Sieges). **Engineer is building Favor now; Neutral Wolf Camps is the approved *final* mechanical-slice feature, queued right after it.**
+Keep the three horizons full. Re-rank after every release. State: **v0.2.0** shipped (Favor spine, live on Pages); Neutral Wolf Camps spine built (untagged). **The slice's first real playtest found the felt wall (Josh, 2026-06-09): the night curve is too flat and the card pool plateaus — NOT a missing god.** Four approved fixes now in *Now*: enemy-scaling overhaul + difficulty tell, imbue card paths, and two wolf fixes (traversal/tree-immunity bug + early-game lethality). Boreas stays held — the wall didn't call for it.
 
 ---
 
@@ -27,24 +27,21 @@ the tree itself; commits/push matter for the pm-bot + Pages deploy. Three layers
 file, so an untracked board nudges on session close.
 
 ### ⇄ Handoffs (append a line; delete when cleared)
-- **PM → ENG:** **Neutral Wolf Camps** (`specs/neutral-camps.md`) is **approved** (Josh 2026-06-09) and
-  queued as the **final mechanical-slice feature — build right after Favor.** 40 fixed, spaced crescent
-  rock outcrops, each a neutral wolf pack (1 Alpha + 2–4 Direwolves) guarding a chest; pack ignores you
-  until hit, hard-leashes to camp, **respawns every 3 min** → farm route. Reuses the obelisk placement
-  pattern, the `homeWx/Wy` leash, the chest entity; new `isNeutral` flag + `_aiWolf`. Chest is the
-  marquee **Favor** source — coordinate the chest payout with the Favor build. Spine first:
-  place camps + carve crescents → wolves spawn/killable → chest-on-clear → 3-min respawn.
-- **PM → ARTIST:** wolf sprites (`art/enemy alpha wolf.png`, `art/enemy dire wolf.png`) handed off for
-  prep → `char.alphawolf.*` / `char.direwolf.*`, sized consistent with the goblin family. *(Artist
-  dispatched this session.)*
-- **PM ← ENG:** **Favor spine SHIPPED + pushed** (`078dd61`, 2026-06-09 — live on Pages). Currency +
-  enemy/chest drops + gold-coin pickups + HUD `✦` counter + level-up Favor wallet + both card-screen
-  spends (reroll 3/5/8 + per-card rarity-upgrade 4/8/16, gated behind first-patron) + Sim hooks. **Not yet
-  tagged a release** — recommend a `python dev.py` playtest + `await Sim.batch(3)` canary, then cut `v0.2.0`
-  via `release.ps1` (drop rates / spend costs are live-tune levers). PM: flip item-2 to SHIPPED / prune.
-- **ENG → ARTIST:** **Favor coin** art needed — a small gold-coin sprite for the pickup + a HUD glyph
-  to replace the placeholder `✦`. Currently drawn procedurally (gold disc w/ rim in `gDrawFavorOrbs`).
-  Wire under `fx.favor-coin` (or similar) when ready; the draw hook + HUD `#g-favor` are in place.
+- **PM → ENG:** **Felt wall found → 4 approved fixes are now *Now* (ranked 1–4); build in that order.**
+  First real slice playtest (Josh 2026-06-09): the night curve is too flat and the card pool plateaus —
+  *not* a missing god. **(1) enemy-scaling overhaul + difficulty tell** and **(2) imbue card paths** are
+  the two systemic wall-fixes (needed explicit approval — got it). **(3) wolf traversal/tree-immunity**
+  (the stuck-on-rocks bug) and **(4) wolf early-game lethality** are pre-greenlit and OK'd to ride *ahead*
+  of the big two to unblock wolf playtesting. Per-item grounding (touch points + current slopes) is in
+  each *Now* entry.
+- **PM → ARTIST:** **eye-glow difficulty tell** (part of item 1) — enemies' eyes glow **yellow at the mid
+  threat tier → red at the top tier**, as an additive draw-layer overlay (no new sprites; a tint pass on
+  the enemy render). Engineer sets the per-enemy threat-tier flag; Artist owns the exact glow look. Hand
+  off once the scaling spine exposes the tier flag.
+- **PM → ENG (release housekeeping):** Favor shipped as **v0.2.0**; Wolf Camps spine is still untagged in
+  CHANGELOG `[Unreleased]`. Fold items 1–4 into that section and cut **v0.3.0** when they land (or tag
+  wolf-camps alone first if it ships sooner). The Favor-coin art handoff (`fx.favor-coin` + HUD glyph for
+  the placeholder `✦`, drawn procedurally in `gDrawFavorOrbs`) is still open with the Artist.
 
 ---
 
@@ -68,36 +65,36 @@ Co-op synergy (pillar 4) falls out of the contrast — e.g. Boreas freezes → C
 
 ## Now — approved or next in line (1–3 items)
 
-1. **Vertical slice — the current kit vs. the difficulty curve** · `in-progress` · pillar: game feel (rhythm) + mastery
-   - **The slice goal (Josh's call 2026-06-06):** prove the **current Cilia fire kit + warrior toolkit** scales fairly against rising difficulty. No new content (no Boreas, no new enemy) until it feels good. The slice has **two halves** — the difficulty *curve* (Nightfall, shipped) and the *progression* that scales the kit against it (card-draft, building now).
-   - **Half A — the difficulty curve · `SHIPPED` (overhauled 2026-06-09).** The day/night cycle is the difficulty clock. *Originally* Nightfall Sieges (fixed roster budget spawner); **since replaced by the day-farm-zone + VS-night-horde model:** **day** = a populated MMO-style farming zone (`gWildPatrolTick` maintains a density of stationary goblin camps you roam to find + chain-pull); **night** = a Vampire-Survivors horde + constant threat-weighted stream that chases until dawn, plus restored fixed Goblin-King milestones (10/20/30 min). Per-night `wildThreatLevel` step + swarm-composition unlocks. **Mechanics done — densities / horde size / stream rate / live cap remain live-tune levers. (Neutral Wolf Camps, item 3, completes Half A's *day* content.)**
-   - **Half B — Card progression · `SHIPPED` 2026-06-09 (fully built).** Card-Draft rework (3-card rarity draft replacing STR/DEX/INT; passive / active-skill / Grit pools; per-player `skillMods`; reroll; odds-by-night) **+ Card Pool Expansion** (swing/heavy/dash upgrade cards so the whole kit scales; **Crit** chance/damage with gold crit numbers + char-screen rows; HP-regen nerf). The progression that scales the kit against the curve is now complete. *(Detail: CHANGELOG `[Unreleased]`; specs `card-draft.md` + `card-pool-expansion.md`.)*
-   - **→ The slice is now 100% built; the only remaining work is PLAYTEST/TUNE — this is the gate.** Nothing new (Boreas / Favor's deeper layers / roster variety) commits until the slice plays well and the **felt wall** is found.
-   - **Slice success criteria (the playtest target, spanning both halves):**
-     - Each night reads as a discrete *siege* with a clear lull between (rhythm, not soup). ✓ *mechanics shipped — now tune.*
-     - The kit can **out-scale the early curve** with skilled play, with a **felt wall** mid-curve where it stops keeping up — that wall tells us where the next power lever (Boreas / deeper card pool / a new enemy) is actually needed. Hunting for it, not patching around it.
-     - Spawn cadence never spikes into an unreadable wall; the live-cap keeps the screen fair.
-     - Each imbued skill (swing / whirlwind / leap / dash) has ≥1 night-situation where it's the *right* answer (kit feels deep, not one-button).
-   - **Tuning levers (the playtest dials):** roster counts/night · night & day duration · live spawn cap · stat-scaling slope · **card rarity-odds + magnitudes (Half B)**. Hold the Cilia kit's *base* numbers fixed — tune the *curve and the card economy* around it, so the slice tells us how the existing power scales.
+> **The slice is mechanically 100% built (curve + card progression + Favor + Wolf-Camp spine — see CHANGELOG).** Its first real playtest (Josh, 2026-06-09) **found the felt wall: the night curve is too flat and the card pool plateaus.** The four items below are the approved fixes — they tune/deepen the slice rather than add a new pillar. Boreas stayed held: the wall didn't call for a new god. **Build order = this ranking.** Hold the Cilia kit's *base* numbers fixed; tune the *curve and the card economy* around it.
 
-2. **Favor — the world currency** · `shipped` spine (eng, `078dd61` 2026-06-09 — live on Pages; untagged) · pillar: build-craft depth + game feel + mastery
-   - **Full spec: [`specs/favor.md`](specs/favor.md).** **Supersedes `favor-imbue.md`** — Favor is no longer "the price of a new patron"; it's now the **card-economy currency.** Fast-follow to Card Pool Expansion (layers on the same rarity/card-screen code).
-   - One-liner: **Favor = the gold-coin currency of the world** — rare drops from enemies (scaled by type) + from **chests** (existing village chests, `~12917`). After committing to a **patron at level 5**, spend Favor on the card screen to **reroll** the draw and **upgrade a card's rarity** (Common→…→Legendary).
-   - Why this pivot (Josh): the old breadth-pricing only *matters* once Boreas ships, so it can't be felt in the slice. Tying Favor to reroll + rarity-upgrade makes it a real, **slice-testable lever now with only Cilia**, plugged straight into the shipped rarity system. Rarity-upgrade is the *active* twin of odds-by-night (the passive curve dial).
-   - Grounds on existing systems: `gXPOrbs` (drop pattern) · village chests (`~11328`/`~12917`) · the free-charge reroll (`gWildReroll` `~11962`, now Favor-priced — retires the `p.rerolls` grant) · `_cardValue` (`~11828`, for the rarity bump).
-   - **Open calls (in spec):** run-scoped vs persistent (recommend run-scoped, wallet built to extend) · how breadth is gated post-pivot (decouple from Favor, park) · future sink = the dormant `gEquipment` shop.
-   - Size: multi-session; spine ~1 session (currency var + XP-orb-clone drop + chest hook + HUD + two card-screen spends — all on existing systems). New art: a Favor coin sprite + HUD glyph.
+1. **Enemy scaling overhaul + difficulty tell** · `approved` 2026-06-09 · pillar: game feel (readable threat) + mastery
+   - One-liner: make the night curve actually *bite* — VS-style ramps on HP, damage, count, and composition as threat climbs, with enemies' **eyes glowing yellow (mid tier) → red (top tier)** as a free at-a-glance danger read.
+   - Why now: **the felt wall.** Current slopes are too gentle — HP/dmg `×(1 + threat·0.25)`, speed `×0.08` (`wildThreatMult`/`wildSpeedMult` `~11977`), ambient `20 + threat·1.5` (`gWildAmbientTarget` `~12746`), horde `20 + 10/night` capped 60 (`_wildHordeSize` `~12656`). Late game is slightly tankier, not *more dangerous*. VS's lesson: pressure = **density + mix-shift + breakpoints**, not a smooth multiplier.
+   - Player experience: Night 1 a readable trickle; mid-nights visibly denser, mixed (warriors/shamans/bombers weighted in), hitting harder, with **glowing eyes** telegraphing a hard night and juiced elites — the rising difficulty *reads* as fair instead of surprising.
+   - Scope — **Core:** steeper, breakpointed scaling (HP/dmg/count slopes + a composition table shifting the spawn mix toward tougher types at `wildThreatLevel` thresholds) + the two-tier eye-glow overlay keyed to threat tier. **Stretch:** per-night modifier flavor (all-bomber night, etc.); a screen/audio cue when eyes go red.
+   - Touches: `wildThreatMult`/`wildSpeedMult` (`~11977`), `_wildHordeSize` (`~12656`), `gWildAmbientTarget` (`~12746`), swarm-composition unlocks (`~12664`), `_wildScaleEnt` (`~2689`). Eye-glow = additive draw-layer overlay on the enemy render, **no new sprites** (a tint pass) — **Artist hand-off once a per-enemy threat-tier flag exists.**
+   - Size: multi-session; scaling-curve spine ~1 session (numbers/table + a tier flag), eye-glow a follow-on.
+   - Balance: **tune the slope, not the base** — push the curve until the felt wall moves later and reads fair. Levers: HP/dmg/count slopes · per-archetype threshold nights · glow-tier cutoffs. Watch density vs the live spawn cap (counts ramp *within* the cap; mix-shift carries the rest).
 
-3. **Neutral Wolf Camps — jungle creep camps** · `approved` 2026-06-09 (Josh) · **build after Favor — the final mechanical-slice feature** · pillar: game feel + mastery + (economy feeds build-craft)
-   - **Full spec: [`specs/neutral-camps.md`](specs/neutral-camps.md).** One-liner: **40 fixed, well-spaced crescent rock outcrops**, each a **neutral wolf pack guarding a chest** — the pack ignores you until attacked, hard-leashes to its camp, and **respawns every 3 minutes**, so clearing camps becomes a **farm route** across the map between sieges.
-   - **Why it's the last slice feature (Josh):** gives the *day* loop a map of fixed, repeatable objectives (route, don't just kite) and the **reliable Favor income** the economy needs; the wolves also deliver a **second enemy *feel*** — fast, lunging pack-flankers vs. the goblins' slow telegraphed grind (realises the parked fast-flanker idea). With this in, **the slice is mechanically complete → pure playtest/tune.**
-   - The pack: **1 Alpha Wolf** (elite leader, guards the chest) + **2–4 Direwolves** (fast flank-and-lunge grunts). Both from the sprites Josh added (`art/enemy alpha wolf.png` / `art/enemy dire wolf.png` → Artist prepping). Weighty-combat: the lunge-bite is the wolf's committed, telegraphed, punishable move.
-   - **The one new behavior — neutrality:** unlike goblin *ambient* camps (aggro on proximity), wolf camps are **neutral** (aggro only when hit; whole pack wakes together; hard leash + full-heal on disengage). Engaging is a *choice* — that choice is the feature.
-   - Grounds on existing systems: obelisk placement pattern (`~11463`, rejection-sample w/ min-sep) · the `homeWx/Wy` leash branch (`~4613`) · the chest entity + proximity loot (`~11377`/`~12994`) · the rock tile layer for the crescent (no new tile art). New: `gWildCamps[]`, an `isNeutral` flag, `_aiWolf`, a per-camp 3-min respawn tick **inside `gSimUpdate`**, and the **full new-enemy recipe ×2** (def w/ `hp` → registry → **goblin-AI exclusion list** → sprite → palette).
-   - Size: **multi-session**; spine ~1 session (place camps + carve crescents → wolves spawn/killable → chest-on-clear → 3-min respawn). New art: the two wolf sprites (source PNGs added; Artist prep). Open calls (recommendations inline in spec): chest gated-on-clear · Alpha-as-elite (art may override) · flat vs threat-scaled pack · crescent opening dir.
+2. **Imbue card paths** · `approved` 2026-06-09 · pillar: build-craft depth
+   - One-liner: give each imbued skill its **own card upgrade track** — cards that deepen the *imbue* (fire-trail duration on dash, fire-pillar count on heavy, fire-ring reach on whirlwind), so leveling expresses your build instead of repeating generic stat bumps.
+   - Why now: **"leveling is boring"** = the pool tops out at flat stat cards, and the imbue system — the build-craft spine — is currently **binary** (imbued or not, no growth). Turning each imbue into a *path* multiplies meaningful choices and makes "forge a style" actually progress. This is the deeper-card-pool lever the slice predicted.
+   - Player experience: after imbuing, the draft starts offering imbue-specific cards — *"Lingering Embers: +40% dash trail duration," "Eruption: +2 heavy fire-pillars," "Wildfire: whirlwind rings travel farther"* — you build toward an identity (trail-stacking zoner vs pillar-burst bruiser); level-ups sharpen the weapon.
+   - Scope — **Core:** a new imbue-card category (gated on owning that imbue), 2–3 upgradeable params per imbued skill, written to a per-player imbue-mods map and threaded into the FX spawn sites. **Stretch:** a capstone card per skill — a qualitative change, not a number (the "step-level" moment).
+   - Touches: card-draft pool + `_cardValue` (`~11828`), `skillMods`/`pSkillStat` plumbing (`~2425`) extended to imbue params; the four Cilia FX systems (`gFireTrails` `~3619`, `gFirePillars` `~5708`, `gFireRings`, `gFireCrosses`). Reuses the shipped rarity/Favor-upgrade economy.
+   - Size: multi-session; spine ~1 session for 2 skills' paths, then fan out.
+   - Balance: imbue cards enter the pool **only when that imbue is owned** (no early-draft dilution); magnitudes ride existing rarity tiers. **Cap each path** (like `SKILL_STAT_FLOOR`) so stacking can't tank FPS or trivialize.
 
-4. **Boreas's Frost — control imbue kit (warrior)** · `held — behind slice` (was approved 2026-06-06) · pillar: build-craft depth + game feel
-   - **HELD (Josh's call 2026-06-06):** not active work. Building a second god now contradicts the slice focus (scale the *current* kit first). Boreas is the prime candidate for the power lever the slice's "felt wall" will call for — unhold it once the slice playtests well and we know what the curve needs. Spec below is intact and ready.
+3. **Wolf traversal + tree-immunity** · `approved` 2026-06-09 (pre-greenlit bug fix) · pillar: game feel
+   - One-liner: wolves get **stuck on their own crescent rock dens** — give them a traversal exception (hop/jump over rock & tree obstacles to reach the player) **and** make them **immune to tree-slow** ("native species, unhindered by the land"), which also makes them feel fast and inevitable like a flanker should.
+   - Touches: `_aiWolf` collision + the `gTreeSlow` call (`~4766`); a wolf-specific obstacle exception (vs `gRC`/`gRCDestructibles`). Bug + feel in one. Size: session. No new art.
+
+4. **Wolf early-game lethality** · `approved` 2026-06-09 (pre-greenlit balance) · pillar: mastery
+   - One-liner: wolves are too soft turn-one — bump Direwolf/Alpha base HP + bite damage so an early camp is a genuine **risk/reward gamble**, not free Favor. Pairs with item 1's eye-glow (an elite Alpha reads as red).
+   - Touches: `EntityDefs.direwolf`/`.alphawolf` (`~2658`/`~2678`). Pure number tune. Size: session. No new art.
+
+5. **Boreas's Frost — control imbue kit (warrior)** · `held — behind slice` (was approved 2026-06-06) · pillar: build-craft depth + game feel
+   - **HELD (Josh's call 2026-06-06; reaffirmed 2026-06-09):** not active work. The slice's first playtest located the felt wall as **flat scaling + plateauing cards, not a missing god** — so the wall is being fixed in-system (items 1–4), *not* with Boreas. Boreas is now a **build-variety / co-op** play (second god ~doubles the build matrix; seeds freeze→shatter), to unhold once the curve + card depth feel right and we want breadth. Spec below is intact and ready.
    - One-liner: a four-skill Frost kit built on **defense / zoning / freeze**, mechanically
      distinct from fire (static fields, walls that block pathing, self-armor — not expanding DoT).
    - Why now: second god ~doubles build variety on warm registries; Frost plays the *most

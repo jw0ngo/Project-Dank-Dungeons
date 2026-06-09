@@ -7,6 +7,52 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+### Added
+- **Neutral Wolf Camps — jungle creep camps (spine).** 40 fixed, well-spaced crescent rock dens
+  scattered across the wilderness, each a **neutral wolf pack guarding a chest** — the pack ignores
+  you until attacked, hard-leashes to its den, and **respawns every 3 minutes**, turning camp-clearing
+  into a farm route between sieges. The day-loop's "map of fixed objectives" and the marquee **Favor**
+  income. Full design: `docs/specs/neutral-camps.md`.
+  - **The pack — a fast-flanker identity (opposite the goblins).** Two new enemy types: **Direwolf**
+    (`hp 26`, fast 0.34 base — the circling grunt, 2–4 per camp) and **Alpha Wolf** (`hp 72`, larger,
+    harder bite — 1 per camp, guards the chest). Both run one new **`_aiWolf`**: circle-to-flank
+    movement + a committed, telegraphed **lunge-bite** (crouch tell → pounce-dash → exposed recovery
+    you can punish), per the weighty-combat pillar. Sprites + draw scales were pre-wired by the Artist
+    (`char.direwolf.*` / `char.alphawolf.*`, `ENEMY_DRAW_SCALE`).
+  - **Neutrality — the one genuinely new behavior.** Unlike goblin *ambient* camps (aggro on
+    proximity), wolves are **`isNeutral`**: you can walk through a camp untouched. Hitting any member
+    **wakes the whole pack** (`_wolfWakeCamp`, fired from the damage chokepoint so even a one-shot kill
+    propagates). A **hard leash** (`WOLF_LEASH_R`, 17 tiles from the den) makes a strayed-too-far pack
+    **disengage, full-heal, and walk home** — you fight a camp at its camp, or you leave it. That
+    choice *is* the feature.
+  - **World-gen + respawn.** A camp-placement pass beside the obelisks (rejection-sampling, min-sep 35,
+    excluded from villages/shrine/spawn/obelisks) carves a C-shaped rock arc into the existing `rocks`
+    layer (no new tile art) with a random open mouth and a cleared interior, then seeds the pack + a
+    chest → `gWildCamps[]`. The 3-min respawn + chest-on-clear tick lives **inside `gSimUpdate`**
+    (`gUpdateWolfCamps`, off the run clock — AI-native invariant, headless-safe), camps are exempt from
+    the far-despawn, and camp dots show on the minimap (pale-blue up / dim cleared).
+  - **The chest (Favor income).** Gated on clear: it unlocks only once the pack is dead, then auto-loots
+    on proximity for **2–4 Favor** + an XP burst via the shared `gGrantFavor` chokepoint. It's a
+    **one-time reward** — opening it fades the chest out + despawns it (`_chestDrawAlpha`, 2.2 s), and a
+    pack respawn never re-arms it (an un-looted chest just re-locks behind the new pack). Direwolf drops
+    goblin-tier Favor, Alpha warrior-tier.
+  - Both types added to the map-editor palette and the goblin-AI exclusion list (no double-movement).
+
+### Changed
+- **Day-1 goblin density lifted.** The day ambient maintainer's standing-population floor rose from
+  **12 → 20** goblins (`gWildAmbientTarget` base; slope unchanged, so Day 1 / threat-0 gains the most).
+  The early day-farm zone no longer reads as sparse.
+- **Village chests now fade out + despawn on open** too (same one-time `_chestDrawAlpha` path as the
+  wolf-camp chests), instead of vanishing instantly.
+
+### Fixed
+- **Night siege stream was completely starved after the opening horde.** The stream's live-cap census
+  (`gWildSpawnTick`) counted *every* living entity, so the ~160 persistent neutral wolves (40 camps)
+  pinned `live ≥ cap` and left no room — horde dropped, then nothing followed. The census now counts
+  only siege-relevant enemies (excludes `isHeld` guardians + `campId` wolf packs). Also narrowed
+  nightfall's "activate everything" to **ambient day goblins only**, so distant villages stay held and
+  wolf packs stay neutral instead of all waking and flooding the field.
+
 ## [0.2.0] - 2026-06-09
 
 ### Added
