@@ -18,6 +18,19 @@ lesson: **the principle → why → how to apply.** Quality over volume.
 
 ---
 
+### 2026-06-09 — A sprite's dwell time is a feel knob, separate from the action's hitbox timing
+
+- **Principle:** "Wired and rendering in all 8 facings" isn't "done" — an attack/pose sprite also has to
+  *read* at gameplay speed, and how long it stays on screen is its own tunable parameter, not a free
+  by-product of the combat window that triggers it.
+- **Why:** the wolf lunge art was sliced clean, registered, and `node --check`-verified, yet playtest
+  said it "flashed past" — because the swap condition (`biteStrike`, ~12 frames) is the *combat* follow-
+  through, which is too short to register the bite and is engineer-owned timing, not an art lever.
+- **How to apply:** when wiring a pose-swap, give the *display* its own hold timer (e.g. a draw-only
+  `_biteHold`) decoupled from the hitbox/recovery math, so you can tune readability without touching
+  combat feel — and treat a real playtest, not just the render, as the acceptance test. Coordinate with
+  the engineer when the only available lever is a combat-timing field.
+
 ### 2026-06-09 — On-style and fully-wired, or it didn't ship
 
 - **Principle:** An asset only counts when it matches the established direction *and* renders in the

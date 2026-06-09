@@ -68,6 +68,24 @@ The previews (`charDrawPreview`, `invRenderCharPreview`) no longer read `df_play
 
 ---
 
+## Art / animation
+
+### 🟢 Wolf lunge-bite attack frame displays too briefly (playtest feedback)
+The wolf attack sprite (`char.{direwolf,alphawolf}atk.*`) is swapped in by `_wolfBiting` in `gDrawEnemy`
+while `e.biteWindup>0 || e.biteStrike>0`. After the pounce resolves, `_aiWolf` sets `e.biteStrike=12`
+(~0.2s @60fps), so the **lunge/pounce pose only holds ~12 frames** before reverting to the idle
+turnaround — playtest read it as flashing past too fast to register the bite.
+
+**Why deferred:** the obvious lever (`biteStrike`) is also the **combat follow-through window** (engineer-
+owned timing in `_aiWolf`), so bumping it changes feel/recovery, not just the art. Wants a small, isolated
+pass.
+**Fix (artist-ownable, draw-only):** add a display-only hold — set an `e._biteHold` (~22–28 frames) when
+the lunge fires and add `|| e._biteHold>0` to `_wolfBiting`, ticking it down in `gSimUpdate`/draw. The
+pose lingers without touching `biteStrike`/`lungeTimer` (the actual hit + exposed-recovery math stays
+put). Tune the hold against the lunge so the bite *reads* at gameplay speed.
+
+---
+
 ## Docs / naming
 
 ### 🟡 `DUNGEON_FORGE_CTO_DOC.md` filename still carries the old game name
