@@ -16,6 +16,9 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
   for. Crit is left out (probabilistic — these are the guaranteed-hit values).
 
 ### Removed
+- **Removed the vestigial sword-charge state** (`charging`/`chargeTick` + the dead `_pendingCharge` input
+  branch) left over from the retired hold-to-charge normal attack, including its two multiplayer wire keys.
+  Forward/backward MP-compatible (read sites already defaulted), no behavior change.
 - **Retired the dead STR/DEX/INT scaling shims.** The neutral stubs left over from the old stat system
   (`W_scalingMult`/`skillScalingMult`/`wildStr*`/`wildInt*`/`wildDex{Speed,Atk}Mult`) and the inert
   `wildDmgMult` (`_wdm`) hook are gone, along with their no-op `*1`/`+0` factors at every call-site. No

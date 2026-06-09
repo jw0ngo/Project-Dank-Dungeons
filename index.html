@@ -2335,8 +2335,6 @@ function gPlayWoodHit(){gpfx(ac=>{const t=ac.currentTime,dur=.22;const b=ac.crea
 function gPlayFireTick(){gpfx(ac=>{const t=ac.currentTime,dur=.12;const b=ac.createBuffer(1,ac.sampleRate*dur,ac.sampleRate);const d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2.2);const s=ac.createBufferSource();s.buffer=b;const f=ac.createBiquadFilter();f.type='bandpass';f.frequency.setValueAtTime(3600,t);f.frequency.exponentialRampToValueAtTime(1800,t+dur);f.Q.value=0.8;const g=ac.createGain();g.gain.setValueAtTime(.027,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);s.connect(f);f.connect(g);g.connect(ac.destination);s.start(t);s.stop(t+dur);});}
 
 const PATH_INT=50;
-// gCharging/gChargeTick are now gPlayer.charging / gPlayer.chargeTick
-// These shim functions keep any remaining call sites working:
 
 // ── Weapon registry ─────────────────────────────────────────────
 // Each weapon defines its own combat geometry, damage, and feel.
@@ -3095,7 +3093,7 @@ function gameLoad(mapData) {
 function _doRespawn() {
   if (!currentMapData) return;
   gameLoad(currentMapData);
-  if (gPlayer) { gPlayer.charging=false; gPlayer.chargeTick=0; gPlayer.lmbHeld=false; }
+  if (gPlayer) { gPlayer.lmbHeld=false; }
   if (gLoopId) cancelAnimationFrame(gLoopId);
   initSkillBar();
   startGameLoop();
@@ -3197,11 +3195,8 @@ function makePlayerState(wx, wy) {
     swingStartAngle: 0, swingEndAngle: 0,
     swingDir: 1, swingAimAngle: 0,
     _chargeDmg: null, hitRegistry: null,
-    // Charge attack — per-player, not global
-    charging: false, chargeTick: 0,
     // Input buffer — queued actions during swing/cooldown
     _pendingSwing:  false,  // quick click queued: fire normal swing when cooldown clears
-    _pendingCharge: false,  // LMB held during cooldown: start charge when cooldown clears
     _pendingAngle:  0,      // aim angle captured at time of queued click
     // Per-player level-up card state (additive deltas; per-player so MP cards don't cross-buff;
     // all reset per run in gWildReset). skillMods → pSkillStat, gritMods → Grit accessors.
@@ -4005,12 +4000,8 @@ function gUpdatePlayer(dt=1){
   if(!p.swinging&&p.swingCooldown<=0&&!p.wwActive&&gActiveWeapon!=='bow'){
     if(p._pendingSwing){
       // Queued normal swing — fire immediately with the angle captured at click time
-      p._pendingSwing=false;p._pendingCharge=false;
+      p._pendingSwing=false;
       gDoSwingAt(p._pendingAngle);
-    } else if(p._pendingCharge){
-      // LMB still held from before — start charging now
-      p._pendingCharge=false;
-      p.charging=true;p.chargeTick=0;
     }
   }
   // Whirlwind spin — update every frame while active, but DON'T skip movement
@@ -8824,8 +8815,6 @@ if (!room || room.started !== true) return;
       swingStartAngle: +(p.swingStartAngle||0).toFixed(3),
       swingEndAngle:   +(p.swingEndAngle||0).toFixed(3),
       swingAimAngle:   +(p.swingAimAngle||0).toFixed(3),
-      charging:   !!p.charging,
-      chargeTick: p.chargeTick||0,
       walkFrame:  p.walkFrame||0,
       moving:     !!p.moving,
       wwActive:   !!p.wwActive,
@@ -9021,8 +9010,6 @@ if (!room || room.started !== true) return;
     p.swingStartAngle = data.swingStartAngle || 0;
     p.swingEndAngle   = data.swingEndAngle   || 0;
     p.swingAimAngle   = data.swingAimAngle   || 0;
-    p.charging      = !!data.charging;
-    p.chargeTick    = data.chargeTick || 0;
     p.walkFrame     = data.walkFrame  || 0;
     p.moving        = !!data.moving;
     p.wwActive      = !!data.wwActive;
@@ -11156,7 +11143,7 @@ function townDrawHubPlayers() {
       r: 11, iFrames: 0, dead: false,
       swinging: false, swingTimer: 0, swingDir: 1,
       swingStartAngle: 0, swingEndAngle: 0, swingAimAngle: 0,
-      charging: false, chargeTick: 0, wwActive: false, smear: null,
+      wwActive: false, smear: null,
       _spriteCanvas: p._spriteCanvas || null,
       _activeWeapon: p._activeWeapon || 'sword',
     };

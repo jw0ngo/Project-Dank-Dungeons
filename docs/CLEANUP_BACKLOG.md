@@ -12,18 +12,6 @@ This is the parking lot for findings we spot while doing other work but delibera
 
 ---
 
-## Combat / damage
-
-### 🟡 Vestigial sword-charge state still exists and is multiplayer-synced
-The hold-to-charge mechanic for the **normal sword attack** was removed, but the player state that drove it is still alive:
-- `gPlayer.charging` / `gPlayer.chargeTick` are still initialized, set in the input buffer (`p.charging=true;p.chargeTick=0`), and **serialized over the network** in `sendState` / `_onPlayerChanged`.
-- `WeaponRegistry.sword` no longer carries `chargeMax` (removed), and the swing damage is flat — so this state feeds nothing.
-
-**Why deferred:** removing the fields touches the MP wire format (`charging` / `chargeTick` keys in the player delta), so it needs a deliberate pass with an MP smoke-test, not a drive-by edit.
-**Fix:** drop `charging`/`chargeTick` from the player object, the input-buffer write, and both MP serialize/deserialize sites. Confirm an older client/host can't choke on the missing keys (they're already optional-with-default on read).
-
----
-
 ## Wilderness / spawning
 
 ### 🟡 All 40 wolf camps spawn their packs up front (~160 always-live enemies)
@@ -104,6 +92,13 @@ put). Tune the hold against the lunge so the bite *reads* at gameplay speed.
   probabilistic, so these are the guaranteed-hit numbers).
 - **2026-06-09 — Bow kill now drops an XP orb.** Bow death path calls `gKillEnemy(en)` with defaults
   instead of `{xpOrb:false}`, matching every melee path.
+- **2026-06-09 — Removed the vestigial sword-charge player state.** The old hold-to-charge normal-attack
+  mechanic was gone but its state lingered: `charging`/`chargeTick` (player init, `_doRespawn` reset, the
+  unreachable `_pendingCharge` input-buffer branch, the remote-player draw stub) and the two MP
+  serialize/deserialize keys. All removed. Wire-compat holds both directions — read sites already use
+  `!!`/`||0` defaults, so an old client sending the keys is ignored and a new client omitting them reads
+  `false`. The live `_chargeDmg` swing-damage carrier and the bow's `chargeMax`/`bowChargeTick` and enemy
+  `phase==='charging'` are unrelated and untouched.
 - **2026-06-09 — Renamed `DUNGEON_FORGE_CTO_DOC.md` → `TO_DUST_CTO_DOC.md`.** `git mv` + updated all 14
   referencing files (CLAUDE/AGENTS/README, `product/CLAUDE.md`, `.claude/commands/*`, `.claude/agents/*`,
   `.codex/agents/*.toml`, `tools/pm-bot/pm_bot.py`, `tools/doc-drift-check.ps1` regex, ENGINEERING_CHARTER,
