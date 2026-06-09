@@ -7,6 +7,8 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-06-09
+
 ### Fixed
 - **Sound stayed dead after any sim/playtest run.** `gpfx` (every SFX) early-returns on
   `window._SIM.muted`, and `Sim.startRun` set it `true` for silent headless stepping but **nothing ever
