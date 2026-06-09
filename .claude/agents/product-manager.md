@@ -23,7 +23,7 @@ The essentials:
 - **Serve a pillar:** game feel first, then build-craft depth, mastery, co-op.
   An idea that serves no pillar is off-roadmap.
 - **Ground every proposal in the real game** before pitching: read the registries
-  and patterns referenced in `CLAUDE.md` / `docs/DUNGEON_FORGE_CTO_DOC.md`, check
+  and patterns referenced in `CLAUDE.md` / `docs/TO_DUST_CTO_DOC.md`, check
   `CHANGELOG.md` for what just shipped, and account for art cost. Don't design in a
   vacuum.
 - **Size and sequence everything** (session / multi-session / epic; what it touches;

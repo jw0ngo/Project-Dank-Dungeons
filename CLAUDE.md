@@ -35,7 +35,7 @@ to (or assert) the engineer role. Everything below this section is the engineer'
 
 From Dust compounds through documentation — a lesson not written down is re-paid-for next session.
 As the engineer: keep tactical debugging lessons in `docs/SESSION_JOURNAL.md`, deferred findings in
-`docs/CLEANUP_BACKLOG.md`, and architecture changes in `docs/DUNGEON_FORGE_CTO_DOC.md` as you go.
+`docs/CLEANUP_BACKLOG.md`, and architecture changes in `docs/TO_DUST_CTO_DOC.md` as you go.
 Then, **at the end of a substantive session, crystallize**: step up an altitude and add the
 highest-level, most transferable engineering lessons to **`docs/learnings/engineer.md`** (one dated,
 titled entry each: principle → why → how to apply; quality over volume). Read that file first when you
@@ -93,7 +93,7 @@ Living documentation lives in `docs/`:
 - `ENGINEERING_CHARTER.md` — **read first.** The standing operating model: you are CTO & lead engineer with standing authority to keep the codebase healthy. Bias to act on in-codebase changes; check in only when the cost of being wrong is high; preserve behavior in refactors; refactor on a cadence; no half-measures. Includes how the charter's generic assumptions (tests, build, deps) map onto this repo's reality.
 - `PRODUCT_MANIFESTO.md` — the operating model for the **Product Manager** role (parallel to the engineering charter, on the product side): the pillars (game feel, build-craft depth, mastery, co-op), the developer's taste, the decision-ready proposal format, the approval gate, and roadmap cadence. Read this when generating product direction or running the PM agent.
 - `ART_PIPELINE.md` — the operating model for the **Artist** role (parallel to the charter, on the art side): the house style **and** the technical pipeline (`ART_MANIFEST` wiring, `tools/slice-turnaround.py`, cutout edge cases, tile baking, HiDPI). Read this when touching art; usually you'd just `/artist` instead. `Art_Designer_Agent.md` is its reference appendix (per-asset traits + image-gen prompt templates).
-- `DUNGEON_FORGE_CTO_DOC.md` — system-by-system architecture reference (enemy registry, wilderness gen, shrines, skills, audio map). Keep current as systems change.
+- `TO_DUST_CTO_DOC.md` — system-by-system architecture reference (enemy registry, wilderness gen, shrines, skills, audio map). Keep current as systems change.
 - `SESSION_JOURNAL.md` — append-only log of debugging lessons. The most portable value in the repo; read the recent entries before debugging.
 - `WORKING_AGREEMENT.md` — collaboration mechanics (terse requests, screenshots are bug reports, "assess" = diagnose before fixing).
 - `CLEANUP_BACKLOG.md` — parking lot for known-but-deferred findings (dead code, legacy vestiges, low-priority bugs). When you spot something out of scope, log it here instead of dropping it; pull from it when there's no higher-priority *Now* work.

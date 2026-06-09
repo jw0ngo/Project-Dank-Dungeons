@@ -332,7 +332,7 @@ All paths are relative to the repo root (`Project-Dank-Dungeons/`).
 |------|-------------|
 | `index.html` | Active game — one self-contained HTML file (CSS + JS + base64 art inlined) |
 | `docs/ENGINEERING_CHARTER.md` | Engineering operating model & standing authority (read first) |
-| `docs/DUNGEON_FORGE_CTO_DOC.md` | This document — system-by-system architecture |
+| `docs/TO_DUST_CTO_DOC.md` | This document — system-by-system architecture |
 | `docs/SESSION_JOURNAL.md` | Debugging lessons + session log |
 | `docs/WORKING_AGREEMENT.md` | Collaboration mechanics |
 | `docs/archive/` | Frozen historical CTO-doc snapshots |

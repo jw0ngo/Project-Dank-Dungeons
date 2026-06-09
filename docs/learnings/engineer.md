@@ -5,7 +5,7 @@ session; add to it at session end (studio doctrine — see `../../studio/STUDIO.
 dated, titled lesson: **the principle → why → how to apply.** Quality over volume.
 
 > **Division of homes:** tactical debugging lessons stay in `../SESSION_JOURNAL.md`; deferred findings
-> in `../CLEANUP_BACKLOG.md`; architecture in `../DUNGEON_FORGE_CTO_DOC.md`. *This* file is the step up
+> in `../CLEANUP_BACKLOG.md`; architecture in `../TO_DUST_CTO_DOC.md`. *This* file is the step up
 > from all of them — the transferable principles about *how to engineer well in this codebase*.
 
 > Entry template:

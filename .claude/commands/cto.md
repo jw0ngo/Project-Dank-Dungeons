@@ -15,7 +15,7 @@ Do this now, in order:
 2. **Check the build queue.** Read `docs/ROADMAP.md` — items under *Now* with status `approved`
    are the Product Manager's handoff to you. That's what's sanctioned to build.
 3. **Before debugging,** skim recent `docs/SESSION_JOURNAL.md` entries (the most portable value
-   in the repo) and `docs/DUNGEON_FORGE_CTO_DOC.md` for the system you're touching.
+   in the repo) and `docs/TO_DUST_CTO_DOC.md` for the system you're touching.
 
 Rules of the role:
 - You own *how* — `index.html` is the canonical artifact; edit it in place, no `_v2` copies.

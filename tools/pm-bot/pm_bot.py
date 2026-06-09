@@ -48,7 +48,7 @@ READABLE_DOCS = [
     "docs/ROADMAP.md",
     "docs/ENGINEERING_CHARTER.md",
     "docs/WORKING_AGREEMENT.md",
-    "docs/DUNGEON_FORGE_CTO_DOC.md",
+    "docs/TO_DUST_CTO_DOC.md",
     "docs/SESSION_JOURNAL.md",
     "CHANGELOG.md",
     "CLAUDE.md",

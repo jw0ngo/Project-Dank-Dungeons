@@ -36,11 +36,24 @@ The hold-to-charge mechanic for the **normal sword attack** was removed, but the
 
 ## Character / inventory screen
 
-### 🟢 Custom-sprite character creator may now be orphaned
-The previews (`charDrawPreview`, `invRenderCharPreview`) no longer read `df_player_sprite` / call `ccPixelsToCanvas` — they render the knight portrait instead. If the in-game character creator that writes `df_player_sprite` is no longer reachable from the UI, its code (creator screen, `cc*` helpers, the `df_player_sprite` localStorage contract) is dead weight.
+### 🟢 Your own custom sprite is invisible to you (only other players see it)
+**Audited 2026-06-09 — NOT dead code.** The character creator is reachable (hub "🎨 CHARACTER"
+button → `showScreen('cc-screen');ccInit()`), and the `df_player_sprite` localStorage contract +
+`ccPixelsToCanvas` are **live in multiplayer**: your sprite is broadcast to the room on launch
+(`_mpSanctumLaunch`/`_mpLaunch`) and `ccPixelsToCanvas` renders *other* players' sprites. So the
+original "orphaned, delete it" framing was wrong — removing any of it would break MP custom sprites.
+(The `charDrawPreview`/`invRenderCharPreview` functions the old note named no longer exist.)
 
-**Why deferred:** needs verification of whether the creator is still linked anywhere before deleting anything.
-**Fix:** audit reachability of the character creator. If it's gone, remove the screen + `cc*` helpers + the localStorage key. If it's meant to stay, decide how a custom sprite should surface now that previews show the portrait.
+The real residue is a **cosmetic inconsistency**: your custom sprite shows to everyone *else*, but your
+own local player render + character/inventory previews still draw the knight portrait. So you can't see
+your own creation in singleplayer.
+
+**Why deferred:** it's a design call (should the local hero reflect the custom sprite, or is the knight
+the canonical protagonist now?), not a correctness bug — and it's harmless today.
+**Fix (design-gated):** if custom sprites should be self-visible, route the local player draw + previews
+through `ccPixelsToCanvas(JSON.parse(df_player_sprite))` with the knight as fallback. If the knight is
+now canonical, consider demoting the creator to an MP-cosmetic-only feature (or cutting it) — but that's
+a CD/PM call, not an engineer drive-by.
 
 ---
 
@@ -75,22 +88,6 @@ put). Tune the hold against the lunge so the bite *reads* at gameplay speed.
 
 ---
 
-## Docs / naming
-
-### 🟡 `DUNGEON_FORGE_CTO_DOC.md` filename still carries the old game name
-The *Dungeon Forge → To Dust* rename updated display text everywhere but **left filenames/paths frozen
-on purpose** (lower risk). The CTO architecture doc is still `docs/DUNGEON_FORGE_CTO_DOC.md`.
-
-**Why deferred:** the filename is referenced from `CLAUDE.md`, `AGENTS.md`, `product/CLAUDE.md`,
-`.claude/commands/*`, `.claude/agents/*`, `.codex/agents/product-manager.toml`, `tools/pm-bot/pm_bot.py`,
-`tools/doc-drift-check.ps1`, and `docs/PRODUCT_MANIFESTO.md` — a `git mv` needs all of them updated in
-one pass (and `doc-drift-check.ps1` has the name in a regex).
-**Fix:** `git mv docs/DUNGEON_FORGE_CTO_DOC.md docs/TO_DUST_CTO_DOC.md` and update every reference above
-in the same commit. (The `DF1` seed prefix and `dungeon-forge:map:` localStorage key are **not** in
-scope — those are frozen for save/seed compatibility.)
-
----
-
 ## Resolved
 *(Move items here with a date when fixed, or just delete them — git history is the real record.)*
 
@@ -107,3 +104,8 @@ scope — those are frozen for save/seed compatibility.)
   probabilistic, so these are the guaranteed-hit numbers).
 - **2026-06-09 — Bow kill now drops an XP orb.** Bow death path calls `gKillEnemy(en)` with defaults
   instead of `{xpOrb:false}`, matching every melee path.
+- **2026-06-09 — Renamed `DUNGEON_FORGE_CTO_DOC.md` → `TO_DUST_CTO_DOC.md`.** `git mv` + updated all 14
+  referencing files (CLAUDE/AGENTS/README, `product/CLAUDE.md`, `.claude/commands/*`, `.claude/agents/*`,
+  `.codex/agents/*.toml`, `tools/pm-bot/pm_bot.py`, `tools/doc-drift-check.ps1` regex, ENGINEERING_CHARTER,
+  PRODUCT_MANIFESTO, learnings/engineer, and the doc's own self-ref) in one pass. The `DF1` seed prefix
+  and `dungeon-forge:map:` localStorage key stay frozen (save/seed compat).

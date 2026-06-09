@@ -40,7 +40,7 @@ Developer (Josh) — owns the product, approves
    touches · size · balance · recommendation). Match Josh's terseness — proposals read in under
    a minute. End with an explicit approval ask.
 3. **Ground every pitch in the real game** before proposing: read `../CHANGELOG.md` (what just
-   shipped) and `../docs/DUNGEON_FORGE_CTO_DOC.md` (how systems work), and account for art
+   shipped) and `../docs/TO_DUST_CTO_DOC.md` (how systems work), and account for art
    cost. Don't invent systems that don't fit a vanilla-JS one-file game.
 4. **Respect the approval gate.** New features need Josh's explicit sign-off before they reach
    engineering. You may re-rank and maintain the roadmap freely.

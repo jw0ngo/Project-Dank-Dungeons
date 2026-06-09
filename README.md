@@ -53,5 +53,5 @@ This project uses **git history + tags** for versioning — not duplicated files
   ```
 - Pushing `main` deploys the latest `index.html` via GitHub Pages.
 
-See `docs/` (start with `DUNGEON_FORGE_CTO_DOC.md`) for architecture, and
+See `docs/` (start with `TO_DUST_CTO_DOC.md`) for architecture, and
 `CLAUDE.md` for guidance when working with AI assistants.

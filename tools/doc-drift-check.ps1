@@ -22,7 +22,7 @@ if ($null -eq $Porcelain) {
 $changed = $Porcelain -split "`n" | Where-Object { $_ -ne '' } | ForEach-Object { $_.Substring([Math]::Min(3, $_.Length)) }
 
 $codeDirty = @($changed | Where-Object { $_ -match 'index\.html$' }).Count -gt 0
-$docsDirty = @($changed | Where-Object { $_ -match '(CHANGELOG\.md|CLAUDE\.md|SESSION_JOURNAL\.md|DUNGEON_FORGE_CTO_DOC\.md)$' }).Count -gt 0
+$docsDirty = @($changed | Where-Object { $_ -match '(CHANGELOG\.md|CLAUDE\.md|SESSION_JOURNAL\.md|TO_DUST_CTO_DOC\.md)$' }).Count -gt 0
 
 if (-not ($codeDirty -and -not $docsDirty)) { exit 0 }   # nothing to nag about
 

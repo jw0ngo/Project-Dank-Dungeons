@@ -125,4 +125,4 @@ The charter above is the operating model. Where it assumes generic infrastructur
 - **Multi-site edits** (3+ locations) are scripted with per-site OK/SKIP/FAIL reporting, never serial single-line replaces that can half-patch the file.
 - **Session rhythm.** Sessions end with a `CHANGELOG.md` entry, a [`SESSION_JOURNAL.md`](SESSION_JOURNAL.md) note for any hard-won lesson, and CTO-doc updates for changed systems. Named releases are cut via `tools/release.ps1` (see `CLAUDE.md`).
 
-See also: [`WORKING_AGREEMENT.md`](WORKING_AGREEMENT.md) (collaboration mechanics), [`DUNGEON_FORGE_CTO_DOC.md`](DUNGEON_FORGE_CTO_DOC.md) (system architecture), [`SESSION_JOURNAL.md`](SESSION_JOURNAL.md) (debugging lessons).
+See also: [`WORKING_AGREEMENT.md`](WORKING_AGREEMENT.md) (collaboration mechanics), [`TO_DUST_CTO_DOC.md`](TO_DUST_CTO_DOC.md) (system architecture), [`SESSION_JOURNAL.md`](SESSION_JOURNAL.md) (debugging lessons).
