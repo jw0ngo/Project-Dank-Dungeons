@@ -17,6 +17,28 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 
 ---
 
+### 2026-06-10 — When docs route content by altitude, each altitude is a separate write — or tactics fall through the seam
+
+- **Principle:** A tiered doc system (high-altitude principle → `LEARNINGS.md`; tactical specifics →
+  `SESSION_JOURNAL.md` + its lookup tables) only works if *both* halves are written deliberately.
+  Crystallizing the principle does **not** capture the tactic, and vice-versa — they live in different
+  files for different readers. The handoff between a working session and the framework is exactly where
+  a tactic silently vanishes.
+- **Why:** The parallel wolf-mother session crystallized the right *principle* ("measure the geometry
+  before reaching for flags") into `artist/LEARNINGS.md`, but the *tactical* `--bleed` step it discovered
+  never landed in the Sprite Import Checklist — the working-copy edit was dropped, and because the
+  principle survived, the gap was invisible until audited. The next artist would have the wisdom but not
+  the recipe. The same seam cuts the other way: a checklist step with no crystallized principle teaches
+  the fix but not the class of mistake it prevents.
+- **How to apply:** When you (or a parallel session) finish a piece of work, log it at *both* altitudes
+  as two explicit acts: the recipe/flag/symptom-row in the tactical home, the transferable principle in
+  `LEARNINGS.md`. When reconciling another session's output, don't assume "logged" means complete —
+  check both homes. And the lean home for a tactical one-liner is the existing **lookup table**, not a
+  new session narrative — that keeps the journal from re-bloating while still capturing the recipe.
+  *(Workflow-friction this session: a PowerShell `Get-Content`/`Out-File` rewrite mangled em-dashes/`§`
+  because it used the Win-1252 default — logged the .NET-UTF8 fix in the journal's heuristics table so
+  it costs zero turns next time.)*
+
 ### 2026-06-10 — An auto-loaded context file pays its cost in *every* session — keep it a router, push depth behind it
 
 - **Principle:** Context that loads unconditionally (the root `CLAUDE.md`/`AGENTS.md`, an append-only
