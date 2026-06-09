@@ -20,6 +20,15 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
   Also fixed the heavy **pose rendering undersized** — its turnaround sheet is drawn smaller than
   the idle sheet, so it's now drawn at `HEAVY_DRAW_MULT` (1.3×, the measured front-view helmet-width
   ratio), feet-anchored, to match the idle body.
+- **Card Pool Expansion — Stage 3: crit system (completes the feature).** New second damage axis:
+  **`wildBuffs.critChance`** (0–0.75 hard cap) and **`wildBuffs.critDamage`** (added to a base crit
+  multiplier of ×1.5), both per-run. Two new passive cards — **Precision** (+4% crit chance) and
+  **Savagery** (+20% crit damage). The roll (`gCritRoll`) happens once in the attacking caller on
+  the four direct-hit sources (swing, whirlwind, leap impact, heavy) and the crit-multiplied damage
+  flows through `gDealEnemyDamage`'s existing report, so MP stays single-roll (no host/client
+  desync). **Direct hits only** — DoT/aura ticks (Cilia's fire burn/ring/cross/trail/pillar) never
+  crit. Juice: crit damage numbers render **bigger + gold**. Character screen shows **CRIT** (chance)
+  and **CRIT×** (multiplier) rows. *(Stage 3 of `docs/specs/card-pool-expansion.md` — feature complete.)*
 - **Card Pool Expansion — Stage 2: swing/heavy/dash cards + sustain nerf.** The level-up draft now
   offers upgrade cards for the level-1 core kit (previously only whirlwind/leap could scale):
   **Swing: Reach** (+reach, via the swing arc's outer radius `smearOuter`), **Swing: Tempo**
