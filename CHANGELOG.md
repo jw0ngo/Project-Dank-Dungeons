@@ -8,6 +8,17 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 ## [Unreleased]
 
 ### Added
+- **Imbue Paths — Dance of Fire becomes a mastery tree (roadmap item 2, Phase 1 · Slice A).** The first
+  slice of the imbued-skill mastery system that fixes "leveling is repetitive." Imbuing the swing with
+  Cilia now creates a *named Art*, **Dance of Fire**, that you rank up through the level-up draft: a new
+  rank-aware **"Dance of Fire"** card (in the existing `actives` pool, RNG-governed and rarity-scaled
+  like any card) fattens the fire wave's damage, arc width, travel, and burn duration per rank.
+  - Built on a **reusable, data-driven tree model** (`IMBUE_PATHS` registry + per-player `imbuePaths`
+    state, parallel to `skillMods`; local-only, reset per run) so the remaining skills + the Form/Chaos
+    forks layer on without rework. Effective wave params flow through one clamped accessor
+    (`gFireWaveParams`); **rank 0 is identical to the pre-item-2 wave**, so no regression.
+  - **Slice A caps the tree at rank 4.** The Form fork @5 (Emberlance vs. Cinder Ring) and the Chaos
+    fork @10 land in the next slices. Per-skill rank is exposed to the AI harness via `Sim.observe`.
 - **Patron Cards — your god choice reshapes your draft (roadmap item 0c).** A new, reusable card
   category (`PATRON_CARDS`) that only appears when you've pledged to a patron, buffing *that god's
   signature mechanic*. Every future god drops its set into the same pool keyed by `patron`; **Cilia

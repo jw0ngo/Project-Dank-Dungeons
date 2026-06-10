@@ -3209,6 +3209,10 @@ function makePlayerState(wx, wy) {
     // Per-player level-up card state (additive deltas; per-player so MP cards don't cross-buff;
     // all reset per run in gWildReset). skillMods → pSkillStat, gritMods → Grit accessors.
     skillMods: {}, gritMods: {}, cardPicks: {},
+    // Imbue Paths (item 2): per-imbued-skill mastery tree state. Keyed by skillId →
+    // { rank, form, chaos, mods }. Seeded on imbue (gImbueSelectSkill), reset per run. Read via
+    // gImbuePath/gImbueRank + the gFireWaveParams accessor. Local-only like skillMods.
+    imbuePaths: {},
     // Whirlwind — per-player, not global
     wwActive: null, wwCooldown: 0,
     wwLevel: 0,   // whirlwind ability upgrade level
@@ -5275,18 +5279,21 @@ const FW_BURN_RATIO  = 0.6;    // burn total damage = this × impact damage
 const FW_BURN_MIN    = 5;      // ...but never less than this
 
 function gSpawnFireWave(x, y, angle, atkDmg){
-  // Cilia's Fire strikes for FW_DMG_MULT× the normal attack. atkDmg already carries
+  // Cilia's Fire strikes for fp.dmgMult× the normal attack. atkDmg already carries
   // the swing's STR/DEX scaling, so the wave scales identically — just amplified.
-  const dmg = Math.round((atkDmg || 0) * FW_DMG_MULT);
+  // fp folds in the local player's Imbue-Path ranks (item 2); rank 0 ⇒ the FW_* base values.
+  const fp  = gFireWaveParams(gPlayer);
+  const dmg = Math.round((atkDmg || 0) * fp.dmgMult);
   gFireWaves.push({
     x, y, angle,
     traveled: 4, prevTraveled: 0,
-    range: FW_RANGE_TILES * T,
+    range: fp.rangeTiles * T,
     speed: FW_SPEED,
-    half:  FW_HALF_ANGLE,
+    half:  fp.half,
     dmg,
-    burnTotal: Math.max(FW_BURN_MIN, Math.round(dmg * FW_BURN_RATIO)),
+    burnTotal: Math.max(FW_BURN_MIN, Math.round(dmg * fp.burnRatio)),
     _hit: new Set(),
+    _burnFrames: fp.burnFrames,
   });
   // MP: bump a monotonic signal so other peers replay the arc (see sendState/_onPlayerChanged)
   if(gPlayer){ gPlayer._fwSeq = (gPlayer._fwSeq||0) + 1; gPlayer._fwAng = angle; }
@@ -5329,7 +5336,7 @@ function gUpdateFireWaves(dt){
         // ── Hit (each enemy only once — the wave pierces through) ──
         w._hit.add(en);
         gDealEnemyDamage(en, w.dmg, {
-          burn: w.burnTotal, burnDur: FW_BURN_FRAMES,
+          burn: w.burnTotal, burnDur: w._burnFrames || FW_BURN_FRAMES,
           kbAngle: Math.atan2(dy, dx), kbMag: 8,
         });
         spawnGP(en.wx, en.wy, '#ff6622', 9, 3.5);
@@ -10904,6 +10911,33 @@ function gIsImbued(p, skillId, patron){
   if(!g) return false;
   return patron ? g === patron : true;
 }
+// ── Imbue Paths (item 2) — per-imbued-skill mastery tree accessors ──
+// State: p.imbuePaths[skillId] = { rank:0, form:null, chaos:null, mods:{} }. rank 0 = base imbue
+// (identical to pre-item-2 behaviour); rank-up cards (IMBUE_CARDS) grow it; Form@5 / Chaos@10 forks
+// land in later slices. Local-only like skillMods — each client applies its own picks.
+function gImbuePath(p, skill){
+  if(!p) return null;
+  p.imbuePaths = p.imbuePaths || {};
+  let e = p.imbuePaths[skill];
+  if(!e){ e = p.imbuePaths[skill] = { rank:0, form:null, chaos:null, mods:{} }; }
+  if(!e.mods) e.mods = {};
+  return e;
+}
+function gImbueRank(p, skill){ const e = p && p.imbuePaths && p.imbuePaths[skill]; return (e && e.rank) || 0; }
+function gImbueForm(p, skill){ const e = p && p.imbuePaths && p.imbuePaths[skill]; return (e && e.form) || null; }
+function _addImbuePathMod(p, skill, key, v){ const e = gImbuePath(p, skill); e.mods[key] = (e.mods[key]||0) + v; }
+// Effective Dance-of-Fire wave params = FW_* base const + this player's imbuePaths.swing.mods, clamped
+// (mirrors SKILL_STAT_FLOOR's defensive intent; spec balance §: cap every numeric rank). rank 0 ⇒ base.
+function gFireWaveParams(p){
+  const m = (p && p.imbuePaths && p.imbuePaths.swing && p.imbuePaths.swing.mods) || {};
+  return {
+    dmgMult:    FW_DMG_MULT   + (m.dmgMult||0),
+    half:       Math.min(1.2, FW_HALF_ANGLE  + (m.half||0)),
+    rangeTiles: Math.min(12,  FW_RANGE_TILES + (m.rangeTiles||0)),
+    burnRatio:  FW_BURN_RATIO + (m.burnRatio||0),
+    burnFrames: FW_BURN_FRAMES + (m.burnFrames||0),
+  };
+}
 // Which god (if any) has imbued a given skill on the local player.
 function gSkillImbuePatron(skillId){
   return (gPlayer && gPlayer.imbues && gPlayer.imbues[skillId]) || null;
@@ -12459,6 +12493,41 @@ const PATRON_CARDS = [
     apply(p,v){ p.wildBuffs.burnTickMult = (p.wildBuffs.burnTickMult||1) + v/100; } },
 ];
 
+// ── Imbue Paths registry (item 2) — pure DATA: per-imbued-skill mastery tree shape ────────────
+// Keyed by patron → skillId. Magnitudes + fork/leaf names live here; the FX behaviour stays in
+// functions keyed off these ids (each skill's effect is bespoke). Phases 2–5 add a data entry +
+// that skill's FX. Slice A ships Cilia's swing ("Dance of Fire") numeric ranks 1–4 only — the
+// `forms` map is a Slice-B stub (Form fork @5), `chaos` a Slice-C stub (Chaos fork @10).
+// `waveStep` = per-rank delta added (×rarity value) to imbuePaths.swing.mods, read by gFireWaveParams.
+const IMBUE_PATHS = {
+  cilia: {
+    swing: {
+      art: 'Dance of Fire', maxRank: 10, formRank: 5, chaosRank: 10,
+      waveStep: { dmgMult: 0.25, half: 0.06, rangeTiles: 0.6, burnFrames: 24 },
+      forms: {},   // Slice B: emberlance / cinderRing
+    },
+  },
+};
+
+// ── Imbue rank-up cards (item 2) — one rank-aware card per imbued ranked skill ──────────────────
+// A single static card whose apply() is rank-aware: it advances the skill's tree rank and pours the
+// rarity-scaled step into imbuePaths mods. Concatenated into gDrawCards' actives pool so it inherits
+// the gate/cap/rarity/value/dedup machinery and the two apply sites (DOM + gSimDraft.pick) unchanged.
+// Slice A: caps at rank 4 (Form fork @5 lands in Slice B). req() both gates (imbued + Cilia) and caps.
+const IMBUE_CARDS = [
+  { id:'cil-dof', cat:'skill', icon:'🔥', name:'Dance of Fire', base:1, frac:false,
+    req:()=> gIsImbued(gPlayer,'swing','cilia') && gImbueRank(gPlayer,'swing') < IMBUE_PATHS.cilia.swing.formRank - 1,
+    fmt:()=>`Dance of Fire — Rank ${gImbueRank(gPlayer,'swing')+1}: fiercer fire wave`,
+    apply(p,v){
+      const step = IMBUE_PATHS.cilia.swing.waveStep, cap = IMBUE_PATHS.cilia.swing.formRank - 1;
+      _addImbuePathMod(p,'swing','dmgMult',    step.dmgMult    * v);
+      _addImbuePathMod(p,'swing','half',       step.half       * v);
+      _addImbuePathMod(p,'swing','rangeTiles', step.rangeTiles * v);
+      _addImbuePathMod(p,'swing','burnFrames', step.burnFrames * v);
+      const e = gImbuePath(p,'swing'); e.rank = Math.min(cap, e.rank + 1);
+    } },
+];
+
 // A skill is "unlocked" for card purposes once its level ≥1 (auto-unlock) or in town.
 function gIsSkillUnlocked(id){
   const prop = { ww:'wwLevel', leap:'leapLevel', heavy:'heavyLevel', dash:'dashLevel' }[id];
@@ -12483,7 +12552,7 @@ function gCardAvailable(c){
 // by id, each with an independently-rolled rarity. Falls back gracefully when a pool is empty.
 function gDrawCards(n){
   const passives = PASSIVE_CARDS.filter(gCardAvailable);
-  const actives  = SKILL_CARDS.concat(GRIT_CARDS).filter(gCardAvailable);
+  const actives  = SKILL_CARDS.concat(GRIT_CARDS).concat(IMBUE_CARDS).filter(gCardAvailable);
   const out = [], used = new Set();
   const take = (pool) => {
     const pick = pool.filter(c => !used.has(c.id));
@@ -13146,6 +13215,7 @@ function gWildReset(){
     gPlayer.wwLevel = 0; gPlayer.leapLevel = 0;
     gPlayer.heavyLevel = 0; gPlayer.dashLevel = 0;
     gPlayer.skillMods = {}; gPlayer.gritMods = {}; gPlayer.cardPicks = {};  // per-run card state
+    gPlayer.imbuePaths = {};  // per-run imbue-path mastery state (item 2) — forks re-chosen each run
     gPlayer.wildBuffs = { hpBonus:0, mpBonus:0, hpRegenAdd:0, mpRegenAdd:0,
                           speedPct:0, damagePct:0, cdPct:0, spawnPct:0,
                           xpPct:0, pickupRange:0, critChance:0, critDamage:0,
@@ -14091,6 +14161,7 @@ function gImbueSelectSkill(id){
   const patron = (gShrine && gShrine.patron) || 'cilia';
   if(!gPlayer.imbues) gPlayer.imbues = {};
   gPlayer.imbues[id] = patron;
+  gImbuePath(gPlayer, id);                              // seed the rank-0 mastery-tree entry (item 2)
   if(!inWilderness) gImbuedSkills[id] = patron;         // Sanctum imbues persist into dungeons
   const def   = SKILL_DEFS.find(s=>s.id===id);
   const label = def ? def.name : 'SKILL';
@@ -14315,6 +14386,8 @@ const Sim = (function(){
         cd:{ swing:+(p.swingCooldown||0).toFixed(1), dash:+(p.evasionCooldown||0).toFixed(1),
              leap:+(p.leapCooldown||0).toFixed(1), heavy:+(p.heavyCooldown||0).toFixed(1),
              ww:+(p.wwCooldown||0).toFixed(1) },
+        // Imbue Paths (item 2): per-imbued-skill mastery rank + chosen Form (null until Slice B).
+        imbue:{ swing:{ rank:gImbueRank(p,'swing'), form:gImbueForm(p,'swing') } },
       };
       const list=[];
       for(const e of gEnemies){
