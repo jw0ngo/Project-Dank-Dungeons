@@ -7,6 +7,20 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+### Changed
+- **Playtest balance & enemy AI.**
+  - **Fire waves fall off with distance** — near-full power point-blank, fading to ~35% damage / ~15%
+    knockback at max range (knockback drops faster), so a maxed wave no longer launches everything at
+    arm's length. Tunable: `FW_FAR_DMG` / `FW_FAR_KB`.
+  - **The Goblin King barely flinches** — a data-driven per-enemy `kbMult` (king ≈ immovable) read by
+    `_enemyKbMult` at every knockback source (melee + all `gDealEnemyDamage` callers).
+  - **Wolf packs pace themselves** — they circle at flank distance and **attack one at a time** (a
+    per-pack lunge token) with a slower approach, fixing the early-game charge-and-instakill; and they
+    **chase 33% further** from their camp before leashing back (`WOLF_LEASH_R`).
+  - **Village & shrine guardians hold their post at night** — the wilderness night infinite-aggro no
+    longer drags held goblins out of their camp; a guardian now wakes only on real proximity or when
+    attacked (`eAnyPlayerNear` gained an `ignoreNight` option used by the hold-position release).
+
 ### Added
 - **Imbue Paths — Dance of Fire, a full 1→10 mastery tree (roadmap item 2, Phase 1).** The
   imbued-skill mastery system that fixes "leveling is repetitive." Imbuing the swing with Cilia now

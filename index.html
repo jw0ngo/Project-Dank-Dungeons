@@ -2651,6 +2651,7 @@ const EntityDefs = {
   king: {
     hp:             500,
     radius:         44,       // body hitbox — just inside the sprite's visible body (33% smaller)
+    kbMult:         0.05,     // near-immovable — a boss isn't shoved around by hits (see _enemyKbMult)
     speedMin:       0.13,   // slow and deliberate — Dark Souls boss feel
     speedRange:     0.03,
     activationRange:380,
@@ -3084,6 +3085,7 @@ function gameLoad(mapData) {
   gEmberShots=[];
   gFireJets=[];
   gFireFields=[];
+  gWolfPackTokens={};
   gBombFireZones=[];
   exitReached=false; gPaused=false;
   const _bbl=document.getElementById('boss-bar');if(_bbl)_bbl.style.display='none';
@@ -3511,7 +3513,8 @@ function gCheckHits(p){
     // Damage routing centralised — host applies, client reports (see gDealEnemyDamage)
     gDealEnemyDamage(e, hitDmg, { report: pendingHits });
     const kbA=Math.atan2(e.wy-p.wy,e.wx-p.wx);
-    e.vx=Math.cos(kbA)*18;e.vy=Math.sin(kbA)*18;
+    const _km=_enemyKbMult(e);
+    e.vx=Math.cos(kbA)*18*_km;e.vy=Math.sin(kbA)*18*_km;
     spawnGP(e.wx,e.wy,'#ff4444',8,3.5);addGDmg(e.wx,e.wy-16,hitDmg,_cr.crit?'#ffd23b':'#fff',_cr.crit);
     gShake(5,7);gPlayHit();
   }
@@ -4462,9 +4465,10 @@ function eNearestTarget(e){
 // Returns true if any player (local or remote) is within `range` px of (ex,ey).
 // Used for activation checks — bypasses the target cache so joining players
 // activate enemies independently of who the enemy is currently chasing.
-function eAnyPlayerNear(ex, ey, range) {
-  // During wilderness night all enemies are infinitely aggroed
-  if(inWilderness && wildIsNight) return true;
+function eAnyPlayerNear(ex, ey, range, ignoreNight) {
+  // During wilderness night all enemies are infinitely aggroed — UNLESS ignoreNight is set (used by
+  // hold-position guardians so a village/shrine camp doesn't abandon its post just because night fell).
+  if(!ignoreNight && inWilderness && wildIsNight) return true;
   if (gPlayer && !gPlayer.dead && gWithin(ex-gPlayer.wx, ey-gPlayer.wy, range)) return true;
   if (MP.active) {
     for (const p of Object.values(MP.players)) {
@@ -4706,8 +4710,9 @@ function _aiGoblin(e, dt){
   // Universal hold-position: enemies with isHeld stay at anchor until activated
   if(e.isHeld){
     if(!e.activated){
-      // Activate if player comes within 7 tiles (224px)
-      if(eAnyPlayerNear(e.wx, e.wy, 7*T)){
+      // Activate only on REAL proximity (7 tiles) — ignoreNight=true so a held guardian holds its
+      // post through the night and wakes only when the player closes in (or attacks → _villageCheckDamageAlert).
+      if(eAnyPlayerNear(e.wx, e.wy, 7*T, true)){
         e.activated=true;
         e.isHeld=false;
       } else {
@@ -4807,7 +4812,12 @@ function _aiGoblin(e, dt){
 // share this AI (EnemyRegistry maps both to _aiWolf); per-type numbers come from EntityDefs.
 // NATIVE TO THE LAND: wolves climb over rocks (gIsWalkWolf — incl. their own den arcs, the
 // old stuck-on-the-den bug) and destructibles, and take no forest tree-slow. Nothing stops them.
-const WOLF_LEASH_R = 17*T;   // px from the camp centre before the pack gives up and heals
+const WOLF_LEASH_R = 22.6*T;   // px from the camp centre before the pack gives up and heals (+33% chase range)
+// Pack attack token — only ONE wolf per pack commits a lunge at a time, so a pack pressures in turns
+// instead of all charging at once (the early-game "instant death" cause). Keyed by camp/home; the
+// value is the frame the slot frees (set on commit; auto-expires so a dead/leashed wolf can't hold it).
+let gWolfPackTokens = {};
+function _wolfPackKey(e){ return (e.campCx!==undefined?e.campCx:(e.homeWx||0))+','+(e.campCy!==undefined?e.campCy:(e.homeWy||0)); }
 function _aiWolf(e, dt){
   const d = EntityDefs[e.defId] || EntityDefs.direwolf;
   e.hitFlash=Math.max(0,e.hitFlash-dt);
@@ -4864,10 +4874,15 @@ function _aiWolf(e, dt){
     e.lungeTimer=18;                       // committed/exposed recovery — the punish window
   }
 
-  // Commit a bite when in lunge range, off cooldown, and not mid-recovery.
+  // Commit a bite when in lunge range, off cooldown, not mid-recovery — AND the pack's attack slot
+  // is free (one wolf lunges at a time; the rest keep circling). Claiming the slot holds it through
+  // the windup + lunge so packmates wait their turn.
+  const _pk = _wolfPackKey(e);
+  const _slotFree = !(gWolfPackTokens[_pk] > gFrame);
   if(!e._bitePending && e.biteWindup<=0 && e.lungeTimer<=0 && e.attackCooldown<=0
-     && dist<=d.lungeRange && !gPlayer.dead){
+     && dist<=d.lungeRange && _slotFree && !gPlayer.dead){
     e.biteWindup=d.biteWindup; e.biteMax=d.biteWindup; e.biteAngle=e.angle; e._bitePending=true;
+    gWolfPackTokens[_pk] = gFrame + d.biteWindup + 20;   // hold the slot through windup + lunge recovery
   }
 
   if(e._bitePending){
@@ -4876,19 +4891,17 @@ function _aiWolf(e, dt){
   } else if(e.lungeTimer>0){
     // mid-lunge / recovery — coast along the dash, exposed (no steering)
   } else {
-    // circle-to-flank: bias movement tangentially so the pack surrounds rather than queues
-    const tang = e.angle + e.flankSign*0.9;     // ~50° off the bearing
-    let mx, my;
-    if(dist > d.flankDist*1.1){
-      mx = Math.cos(e.angle)*0.8 + Math.cos(tang)*0.5;   // close in, with a circling bias
-      my = Math.sin(e.angle)*0.8 + Math.sin(tang)*0.5;
-    } else {
-      mx = Math.cos(tang); my = Math.sin(tang);          // orbit at flank distance
-      if((gFrame+e.flankPhase)%150===0) e.flankSign=-e.flankSign;  // occasionally reverse the circle
-    }
+    // Circle the player at flank distance — tangential-dominant so the pack orbits and surrounds
+    // rather than charging straight in. A gentle radial term holds the orbit radius (close if too far,
+    // back off if too close). The lone token-holder still reaches lunge range from this orbit.
+    const tang = e.angle + e.flankSign*(Math.PI/2);       // pure tangent (90°) → strong circling
+    const radial = Math.max(-1, Math.min(1, (dist - d.flankDist)/60));  // +closer / −back off, eased
+    let mx = Math.cos(e.angle)*radial*0.55 + Math.cos(tang)*1.0;
+    let my = Math.sin(e.angle)*radial*0.55 + Math.sin(tang)*1.0;
+    if((gFrame+e.flankPhase)%140===0) e.flankSign=-e.flankSign;        // occasionally reverse the circle
     const ml=Math.hypot(mx,my)||1;
-    e.vx += (mx/ml)*e.speed*1.3;
-    e.vy += (my/ml)*e.speed*1.3;
+    e.vx += (mx/ml)*e.speed*0.95;                          // slower approach than the old straight charge
+    e.vy += (my/ml)*e.speed*0.95;
   }
 
   if(Math.hypot(e.vx,e.vy)>.2){e.walkTimer++;if(e.walkTimer%7===0)e.walkFrame=(e.walkFrame+1)%4;}else{e.walkFrame=0;e.walkTimer=0;}
@@ -5310,6 +5323,8 @@ function gKillEnemy(e, opts){
   spawnGP(e.wx, e.wy, '#cc2222', opts.particles || 18, opts.speed || 5);
 }
 
+// Per-enemy knockback multiplier (data-driven via EntityDefs.kbMult; 1 = normal, ~0 = immovable boss).
+function _enemyKbMult(e){ const d = e && EntityDefs[e.defId]; return (d && d.kbMult != null) ? d.kbMult : 1; }
 function gDealEnemyDamage(e, dmg, opts){
   opts = opts || {};
   if(!e || e.dead) return;
@@ -5328,8 +5343,9 @@ function gDealEnemyDamage(e, dmg, opts){
   e.hp -= dmg; e.hitFlash = flash;
   if(opts.burn) gApplyEnemyBurn(e, opts.burnDur || 180, opts.burn);
   if(opts.kbMag){
-    e.vx = (e.vx||0) + Math.cos(opts.kbAngle||0)*opts.kbMag;
-    e.vy = (e.vy||0) + Math.sin(opts.kbAngle||0)*opts.kbMag;
+    const km = _enemyKbMult(e);
+    e.vx = (e.vx||0) + Math.cos(opts.kbAngle||0)*opts.kbMag*km;
+    e.vy = (e.vy||0) + Math.sin(opts.kbAngle||0)*opts.kbMag*km;
   }
   if((e.isDirewolf||e.isAlphawolf) && typeof _wolfWakeCamp === 'function') _wolfWakeCamp(e); // hit any wolf → wake the pack
   if(e.hp <= 0){
@@ -5353,6 +5369,9 @@ const FW_BURN_MIN    = 5;      // ...but never less than this
 // (gUpdateFireWaves: within ±half, out to the travelling front), so what you see is what you hit.
 const FW_DRAW_FUDGE  = 1.15;   // cosmetic flame overspill beyond the true arc chord
 const FW_MIN_LAT     = 16;     // floor on the crescent's lateral size near the player (px)
+// Distance falloff — the wave weakens as it travels (fraction of full dmg/kb at max range).
+const FW_FAR_DMG     = 0.35;   // damage retained at full range (65% lost)
+const FW_FAR_KB      = 0.15;   // knockback retained at full range (85% lost)
 
 function gSpawnFireWave(x, y, angle, atkDmg){
   // Cilia's Fire strikes for fp.dmgMult× the normal attack. atkDmg already carries
@@ -5722,13 +5741,17 @@ function gUpdateFireWaves(dt){
         while(ad < -Math.PI) ad += Math.PI*2;
         if(Math.abs(ad) > w.half) continue;             // outside the arc spread
         // ── Hit (each enemy only once — the wave pierces through) ──
+        // Falloff: the wave loses bite the further it has travelled — strong up close, a glancing
+        // ember at max reach. t=0 at the player → 1 at full range.
         w._hit.add(en);
-        gDealEnemyDamage(en, w.dmg, {
+        const t    = Math.min(1, dist / w.range);
+        const hitD = Math.max(1, Math.round(w.dmg * (1 - t*(1 - FW_FAR_DMG))));
+        gDealEnemyDamage(en, hitD, {
           burn: w.burnTotal, burnDur: w._burnFrames || FW_BURN_FRAMES,
-          kbAngle: Math.atan2(dy, dx), kbMag: 8,
+          kbAngle: Math.atan2(dy, dx), kbMag: 8 * (1 - t*(1 - FW_FAR_KB)),
         });
         spawnGP(en.wx, en.wy, '#ff6622', 9, 3.5);
-        addGDmg(en.wx, en.wy-16, w.dmg, '#ff9a3a');
+        addGDmg(en.wx, en.wy-16, hitD, '#ff9a3a');
         gPlayHit && gPlayHit();
       }
     }
