@@ -41,6 +41,15 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
   sprites). The flag is the contract; the rendered look is an engineer placeholder for the Artist to
   restyle (PM→Artist handoff now unblocked).
 
+### Fixed
+- **Player walk-cycle halo + missing E/W shoe (art).** The 8-direction walk sprites showed a grey edge
+  halo in motion and the east/west frames were missing part of the front shoe. Three stacked cutout
+  defects: a grey colour fringe, a bright near-opaque rim a soft-band metric never measured, and a baked
+  cast-floor-shadow. Fixed by `defringe-sprite.py` v2 (clamps + measures the full `α<245` edge ring) plus
+  a boot-protected `--shadow-bg` re-cut of all six clip-derived directions (new `--shadow-lum`/
+  `--shadow-band` knobs spare the dark boots the shadow seed was eating). All 8 facings clean, boots
+  intact, registration unchanged — same filenames, no `index.html`/manifest change.
+
 ## [0.5.0] - 2026-06-10
 
 ### Added
