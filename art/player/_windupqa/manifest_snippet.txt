@@ -1,0 +1,8 @@
+'char.playerheavywindup.nw':'assets/char/playerheavywindup-nw.png',
+'char.playerheavywindup.n':'assets/char/playerheavywindup-n.png',
+'char.playerheavywindup.ne':'assets/char/playerheavywindup-ne.png',
+'char.playerheavywindup.w':'assets/char/playerheavywindup-w.png',
+'char.playerheavywindup.e':'assets/char/playerheavywindup-e.png',
+'char.playerheavywindup.sw':'assets/char/playerheavywindup-sw.png',
+'char.playerheavywindup.s':'assets/char/playerheavywindup-s.png',
+'char.playerheavywindup.se':'assets/char/playerheavywindup-se.png',

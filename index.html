@@ -6375,11 +6375,20 @@ function bobY(wf,mv){if(!mv)return 0;return[0,-2,0,2][wf];}
 // Player walk bob: the same gentle up/down shape the goblins use (bobY), kept small. The player
 // rig draws at PLAYER_DRAW_SCALE (2×), so ±1 here reads ~±2px on screen — about a goblin's bounce.
 const PLAYER_BOB = [0,-1,0,1];
-// The heavy-attack turnaround sheet draws the knight smaller (zoomed out to fit the wide swing)
-// than the idle/normal sheets, so its pose renders undersized. Scale the heavy pose up on draw to
-// match the idle body; feet stay planted (we shift up by half the growth). Tune to match idle.
-// 1.3 = the idle/heavy front-view helmet-width ratio (measured); 1.5 overshot (rendered too big).
-const HEAVY_DRAW_MULT = 1.3;
+// Heavy-attack SWING pose (sheet draws the knight zoomed out, on a 208px canvas after the rear-foot
+// re-cut). Scaled up on draw to match the idle body; feet stay planted (shift up by half the growth).
+// 1.31 = the canvas-correct idle match from tools/check-pose-scale.py playerheavy (normalised by cell, so
+// the 208 canvas vs idle's 192 is accounted for). gDrawSprite scales the WHOLE canvas to PSCALE*mult, so
+// when the sheet grew 192->208 the mult had to grow with it (~*208/192) to keep the same on-screen body.
+// History/gotcha: was 1.3 on the old 192 sheet; the foot re-cut made it 208; I briefly set 1.16 (under-
+// scaled — rendered the swing ~18% small). At 1.31 the swing matches idle AND the idle-sized wind-up
+// (1.07), so charge->swing has no size pop. If a sheet's canvas size changes, RE-RUN check-pose-scale.py.
+const HEAVY_DRAW_MULT = 1.31;
+// Heavy WIND-UP (charge) pose. Measured idle-sized in-cell (shoulder 90 vs idle 92, head 63 vs 65 — see
+// tools/check-pose-scale.py), so ~1.0; 1.3 (reused from the swing by mistake) made it grow ~30% = the pop.
+// WINDUP_PLANT drops the feet to ground: its cut leaves empty space below the feet (feetY 0.855 vs idle 1.0).
+const WINDUP_DRAW_MULT = 1.07;   // tools/check-pose-scale.py playerheavywindup  (head/shoulder-mean)
+const WINDUP_PLANT     = 0.14;   // × PSCALE, downward — measured idle-vs-pose feetY gap
 
 // Tile colour palettes — hoisted to module scope (were allocated per gDrawTile call).
 const _TC_GRASS=['#2d4a1e','#2a4420','#31501f','#294018'];
@@ -6842,6 +6851,22 @@ const ART_MANIFEST = {
   'char.playerheavy.sw':'assets/char/playerheavy-sw.png',
   'char.playerheavy.s':'assets/char/playerheavy-s.png',
   'char.playerheavy.se':'assets/char/playerheavy-se.png',
+  'char.playerdash.n':'assets/char/playerdash-n.png',
+  'char.playerdash.ne':'assets/char/playerdash-ne.png',
+  'char.playerdash.e':'assets/char/playerdash-e.png',
+  'char.playerdash.se':'assets/char/playerdash-se.png',
+  'char.playerdash.s':'assets/char/playerdash-s.png',
+  'char.playerdash.sw':'assets/char/playerdash-sw.png',
+  'char.playerdash.w':'assets/char/playerdash-w.png',
+  'char.playerdash.nw':'assets/char/playerdash-nw.png',
+  'char.playerheavywindup.n':'assets/char/playerheavywindup-n.png',
+  'char.playerheavywindup.ne':'assets/char/playerheavywindup-ne.png',
+  'char.playerheavywindup.e':'assets/char/playerheavywindup-e.png',
+  'char.playerheavywindup.se':'assets/char/playerheavywindup-se.png',
+  'char.playerheavywindup.s':'assets/char/playerheavywindup-s.png',
+  'char.playerheavywindup.sw':'assets/char/playerheavywindup-sw.png',
+  'char.playerheavywindup.w':'assets/char/playerheavywindup-w.png',
+  'char.playerheavywindup.nw':'assets/char/playerheavywindup-nw.png',
   'char.archeratk.nw':'assets/char/archeratk-nw.png',
   'char.archeratk.n':'assets/char/archeratk-n.png',
   'char.archeratk.ne':'assets/char/archeratk-ne.png',
@@ -7169,8 +7194,10 @@ function drawAnyPlayer(p, tint){
   // lunge (char.playeratk.*) during a normal swing. All sliced to the idle scale + foot baseline
   // so the body doesn't pop, only the pose changes.
   const _bodyId = _isBow ? 'player'
-                : p.heavySwinging ? 'playerheavy'
-                : p.swinging      ? 'playeratk'
+                : p.evasionActive  ? 'playerdash'         // crouched dash pose during the dodge
+                : p.heavyWindingUp ? 'playerheavywindup'  // coiled charge pose during the wind-up
+                : p.heavySwinging  ? 'playerheavy'
+                : p.swinging       ? 'playeratk'
                 : 'player';
   const _fallbackSpr = SpriteRegistry.get('player').canvas || playerSpr;
   let _spr = tint ? (p._spriteCanvas || gDirBody(_bodyId, _poct, _fallbackSpr))
@@ -7193,14 +7220,22 @@ function drawAnyPlayer(p, tint){
     gctx.save();gctx.globalAlpha=0.2*shadowS;gctx.fillStyle='#000';
     gctx.beginPath();gctx.ellipse(sx,sy+PSCALE*0.44,PSCALE*0.3*shadowS,PSCALE*0.1*shadowS,0,0,Math.PI*2);gctx.fill();gctx.restore();
   }
-  // Heavy pose draws larger to match the idle body (its sheet is drawn smaller); feet stay planted.
-  const _hvMul   = (_bodyId==='playerheavy') ? HEAVY_DRAW_MULT : 1;
+  // Per-pose draw multiplier so the BODY matches idle apparent size (NOT bbox height — a coiled pose has a
+  // short bbox but a normal-sized body; sizing by bbox over-scales it. Match by helmet/shoulder width via
+  // tools/check-pose-scale.py, which reports these numbers). Heavy SWING is drawn small in-cell so it needs
+  // 1.3; the wind-up is already idle-sized in-cell (shoulder 90 vs idle 92) so it needs ~1.0.
+  const _hvMul   = (_bodyId==='playerheavy')        ? HEAVY_DRAW_MULT
+                 : (_bodyId==='playerheavywindup')  ? WINDUP_DRAW_MULT
+                 : 1;
   const _hvScale = PSCALE * _hvMul;
   const _hvYoff  = -PSCALE * (_hvMul - 1) * 0.5;   // grow upward so the bottom-aligned feet stay on the ground
-  gDrawSprite(_spr, p.wx, p.wy - leapH + _hvYoff, _hvScale, _flashAmt, _walkCycle?0:by, _flashCol);
+  // The wind-up cut has empty space below the feet (feetY≈0.855 of the cell vs idle's 1.0), so after the
+  // centred draw its feet float; nudge it down by the measured gap to plant them. From check-pose-scale.py.
+  const _wuPlant = (_bodyId==='playerheavywindup') ? PSCALE * WINDUP_PLANT : 0;
+  gDrawSprite(_spr, p.wx, p.wy - leapH + _hvYoff + _wuPlant, _hvScale, _flashAmt, _walkCycle?0:by, _flashCol);
   // Colour tint overlay for remote players (drawn on top of their custom sprite)
   if(tint){
-    gctx.save();gctx.translate(sx,sy + _hvYoff);
+    gctx.save();gctx.translate(sx,sy + _hvYoff + _wuPlant);
     const hw=_hvScale/2;
     gctx.drawImage(_spr,-hw,-hw,_hvScale,_hvScale);
     gctx.globalCompositeOperation='source-atop';
