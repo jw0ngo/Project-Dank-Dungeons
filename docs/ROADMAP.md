@@ -440,6 +440,13 @@ the two drift. Items with no spec (small fixes) keep their detail inline in the 
   exists — `e.threatTier` (0/1/2, stamped in `_wildScaleEnt`; tiers at nights 4/8 via `WILD_TIER1_THREAT`/
   `WILD_TIER2_THREAT`) — and a placeholder two-dot+halo render is live in `gDrawThreatGlow` (contract
   comment inline). Restyle via a spec handed back to the engineer (sole `index.html` editor).
+- **ENG → ARTIST (NEW, 2026-06-10):** **player WALK cutouts have a loose gray halo** (dark fringe in-game,
+  most visible while moving). Diagnosed: a background-removal quality issue in the walk PNGs — **not** an
+  engine bug (eng session diff touches zero player-render code; assets are the cause). Re-cut the haloed
+  frames tighter via `tools/slice-walk-cycle.py` (`--tol`↑ from 24, `--erode`→2, QA `--compare` vs the
+  idle). Priority `-n`/`-s` (all 4 frames), then the `-3` frames of the diagonals. **Full data table +
+  per-facing fringe measurements + target in `docs/CLEANUP_BACKLOG.md` → "Art / sprites".** Engineer
+  re-verifies the alpha edge on redelivery.
 - **PM → ENG (release housekeeping):** Favor shipped as **v0.2.0**; the Wolf Camps spine is still untagged
   in CHANGELOG `[Unreleased]`. Fold items 1–4 in and cut **v0.3.0** when they land (or tag wolf-camps alone
   first if it ships sooner). The Favor-coin art handoff (`fx.favor-coin` + HUD glyph for the placeholder

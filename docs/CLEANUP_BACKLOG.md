@@ -12,6 +12,55 @@ This is the parking lot for findings we spot while doing other work but delibera
 
 ---
 
+## Art / sprites
+
+### 🔴 Player WALK cutouts have a loose gray halo — re-key tighter to match the idle (ENG → ARTIST, 2026-06-10)
+
+**Symptom (reported in-game):** while moving, the knight shows a **dark halo** around the figure and the
+**gap between the legs reads wrong**. (The leg gap itself is correct cutout transparency — it only looks
+buggy by contrast with the haloed edge.) Idle sprite is clean; only the walk frames are affected.
+
+**This is NOT a render regression — it's baked into the walk PNGs.** Verified: (1) the full eng session
+diff touches **zero** lines of the player-sprite path (`drawAnyPlayer`/`gDrawSprite`/`gDirBody`/
+`PLAYER_WALK_OCT`/`_smooth`/`PSCALE` all untouched; the only render line added all session is a
+`save()/restore()`-wrapped, player-exempt composite op in the enemy threat-glow); (2) the runtime art in
+`assets/char/` has no working-tree changes. The artifact is a **background-removal quality** issue from
+`tools/slice-walk-cycle.py`: the bad frames carry a **wide band of ~mid-gray semi-transparent edge
+pixels** (vs the idle's tight, dark fringe). Blitted upscaled with `imageSmoothingEnabled` over the dark
+forest ground, that gray band spreads into the visible halo.
+
+**Evidence — alpha-fringe measurement (avg brightness of the 8<α<200 edge band; lower+fewer = cleaner):**
+
+| Facing | Frames | avg fringe brightness | status |
+|---|---|---|---|
+| **idle (all 8 dirs)** | — | **13–16** (≈650–830 px) | ✅ the target |
+| **`-s` (south)** | 1,2,3,4 | **59–64** (1074–1607 px) | 🔴 worst — all 4 frames |
+| **`-n` (north)** | 1,2,3,4 | **53–58** (1032–1513 px) | 🔴 worst — all 4 frames |
+| `-se` / `-sw` | **1 & 3** | **79 / 133** | 🔴 frame 3 especially |
+| `-ne` / `-nw` | **3** | **108** | 🔴 frame 3 |
+| `-se`/`-sw`/`-ne`/`-nw` | 2 & 4 | 23–31 | 🟡 borderline |
+| `-e` / `-w` | 1 & 4 | 21–24 | ✅ closest (re-cut last) |
+| `-e` / `-w` | 2 & 3 | 34–37 | 🟡 borderline |
+
+**Proof it's fixable in-pipeline:** the `-e`/`-w` frames were *re-cut from the clip* (commit `6b5208e`) and
+came out clean (21–24) — same slicer, tighter result. The `-n`/`-s` frames (cut first, 09:50) and the
+mirror-derived `-3` frames never got that pass.
+
+**Fix (Artist-owned — slicing/keying is yours; engineer only wires):** re-cut the haloed frames with
+`tools/slice-walk-cycle.py`, tightening the key so the fringe goes dark-and-thin like the idle:
+- **`--tol`** (bg color-distance tolerance, default **24**) — too low here, so the gray bg-adjacent band
+  survives as semi-transparent fringe. Raise it until the gray band is cut.
+- **`--erode`** (figure-edge erode px, default **1**, "halo kill") — bump to 2 to shave the residual fringe.
+- QA each re-cut with **`--compare assets/char/player-<dir>.png`** against the idle.
+- **Priority:** `-n` and `-s` (all 4 frames) first, then the `-3` frames of `-ne/-nw/-se/-sw`, then the
+  borderline rest. Same filenames → no re-wiring; the manifest already points at them.
+
+**Target:** avg fringe brightness **≲ 20** and fringe-pixel count near the idle's (~650–830). **Engineer
+will re-run the alpha-edge measurement on redelivery to confirm** (the script above lives in this session's
+diagnosis; ask the engineer to re-verify or fold it into the slicer's `--compare` QA output).
+
+---
+
 ## Wilderness / spawning
 
 ### 🟡 All 40 wolf camps spawn their packs up front (~160 always-live enemies)
