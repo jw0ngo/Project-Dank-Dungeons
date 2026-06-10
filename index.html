@@ -12309,13 +12309,15 @@ const SKILL_CARDS = [
     apply(p,v){ _addSkillMod(p,'smearOuter', v); } },
   { id:'sw-spd',   cat:'skill', cap:6, icon:'⚔', name:'Swing: Tempo',     base:6, frac:false, fmt:v=>`Swing +${v}% attack speed`,
     apply(p,v){ _addSkillMod(p,'swingSpdPct', v); } },
-  { id:'sw-dmg',   cat:'skill', cap:6, icon:'⚔', name:'Swing: Bite',      base:8, frac:false, fmt:v=>`Swing +${v}% damage`,
+  // Uncapped %dmg cards (Josh, 2026-06-10): balanced by draft RNG, not a pick cap — stacking one
+  // is the rare lucky-run payoff. Safe: no SKILL_STAT_FLOOR stat involved.
+  { id:'sw-dmg',   cat:'skill', icon:'⚔', name:'Swing: Bite',      base:8, frac:false, fmt:v=>`Swing +${v}% damage`,
     apply(p,v){ _addSkillMod(p,'swingDmgPct', v); } },
   { id:'hv-chg',   cat:'skill', cap:5, req:()=>gIsSkillUnlocked('heavy'), icon:'🔨', name:'Heavy: Quickdraw',  base:8, frac:false, fmt:v=>`Heavy +${v}% charge speed`,
     apply(p,v){ _addSkillMod(p,'heavyChgPct', v); } },
-  { id:'hv-rad',   cat:'skill', cap:6, req:()=>gIsSkillUnlocked('heavy'), icon:'🔨', name:'Heavy: Reach', base:8, frac:false, fmt:v=>`Heavy +${v} reach`,
+  { id:'hv-rad',   cat:'skill', req:()=>gIsSkillUnlocked('heavy'), icon:'🔨', name:'Heavy: Reach', base:8, frac:false, fmt:v=>`Heavy +${v} reach`,
     apply(p,v){ _addSkillMod(p,'heavyLen', v); } },
-  { id:'hv-dmg',   cat:'skill', cap:6, req:()=>gIsSkillUnlocked('heavy'), icon:'🔨', name:'Heavy: Devastation', base:8, frac:false, fmt:v=>`Heavy +${v}% damage`,
+  { id:'hv-dmg',   cat:'skill', req:()=>gIsSkillUnlocked('heavy'), icon:'🔨', name:'Heavy: Devastation', base:8, frac:false, fmt:v=>`Heavy +${v}% damage`,
     apply(p,v){ _addSkillMod(p,'heavyDmgPct', v); } },
   { id:'dash-cd',  cat:'skill', cap:5, req:()=>gIsSkillUnlocked('dash'), icon:'💨', name:'Dash: Recovery', base:12, frac:false, fmt:v=>`Dash −${(v/60).toFixed(1)}s cooldown`,
     apply(p,v){ _addSkillMod(p,'evasionCooldown', -v); } },
