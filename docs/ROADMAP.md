@@ -25,6 +25,7 @@ second god) stays parked because the playtest proved we don't need it yet.
 | # | What we're building | Status | Size | Why it matters |
 |---|---|---|---|---|
 | **0** | **Player animation pass** — directional walk, dash poses, heavy-attack windup | 🔧 In progress (pre-greenlit) | Ongoing | Game feel + the *weighty-combat* directive made visible; runs alongside the queue |
+| **0b** | **Combat card pass** — per-skill damage cards (Swing/Heavy) + Heavy: Reach retarget | ✅ Approved | Quick | Adds build identity to the draft (commit-to-a-skill vs. go-wide); cheap win |
 | **1** | **Make late-game dangerous** — enemies scale harder + glow yellow→red as they get deadly | ✅ Approved | Multi-session | Fixes the flat difficulty curve (playtest weak point #1) |
 | **2** | **Imbue Paths** — turn each fire skill into a 10-level mastery tree with branching upgrades | ✅ Approved — cleared for build | Large, phased | Fixes boring level-ups; the heart of "build your own playstyle" (#2) |
 | **3** | **Wolves stop getting stuck** on their dens + ignore forest slow | ✅ Approved | Quick | Bug fix — unblocks wolf playtesting |
@@ -60,6 +61,55 @@ whiffing reads as the exposed, planted moment it's meant to be. This runs **alon
   frame for the committed heavy attack; wire into the heavy-attack windup window once the sheet lands.
 - **Handoff rule:** Artist delivers sheets + `ART_MANIFEST` snippet; engineer is sole editor of
   `index.html` and owns the wiring (per `CLAUDE.md` role boundary).
+</details>
+
+---
+
+### 0b. Combat card pass — per-skill damage cards + Heavy: Reach retarget
+
+`✅ approved` (2026-06-10, pre-greenlit tuning, Josh-directed) · **Size:** quick · **Pillars:** build-craft depth, game feel · **Art:** none
+
+**What:** Three changes to the level-up draft, all in the existing card pools:
+1. **New "Swing: Bite"** — a +% damage card for the *normal swing only*.
+2. **New "Heavy: Devastation"** — a +% damage card for the *heavy attack only* (reusing the freed name).
+3. **Retarget "Heavy: Devastation" (the width card) → "Heavy: Reach"** — make the heavy hit reach
+   *longer* (forward length) instead of *wider* (fan), per Josh's call. Rename + retarget the same card.
+
+**Why:** Today the only damage card is **Bloodlust** (global +5%). There's no way to *commit to one
+attack*. Per-skill damage cards add the first real "go-deep vs. go-wide" choice to the draft — build
+identity, which is the thing the playtest said level-ups lack. (Pre-figures the Imbue Paths fork.)
+
+**Balance — the governing principle (Josh, 2026-06-10):** a card that buffs **one** skill must give a
+**greater %** than the universal card, or it's *strictly dominated* (Bloodlust covers swing + everything
+else for the same number). The premium is what makes the specific card a real choice. Universal stays the
+generalist's pick (covers the whole kit); specific is the specialist's higher ceiling.
+
+| Card | Scope | Per-pick | Cap | Max |
+|---|---|---|---|---|
+| Bloodlust *(existing, unchanged)* | all damage | +5% | 8 | +40% |
+| **Swing: Bite** *(new)* | swing only | **+8%** | 6 | +48% |
+| **Heavy: Devastation** *(new)* | heavy only | **+8%** | 6 | +48% |
+| **Heavy: Reach** *(retarget of old Devastation)* | heavy length | +8 px/pick | 6 | +48 px |
+
+<details>
+<summary>🔧 Build notes (engineering)</summary>
+
+- **Swing: Bite** — new `SKILL_CARDS` entry (`id:'sw-dmg'`, `cat:'skill'`, always-on like the other swing
+  cards, `icon:'⚔'`), writes a new `swingDmgPct` skillMod. Apply in **`gDoSwingAt` (~L3392)**: multiply the
+  computed `dmg` by `(1 + pSkillStat(p,'swingDmgPct')/100)`. Stacks on top of the global `damagePct`
+  (`_dbuf`). Add `swingDmgPct:0` default wherever `pSkillStat` reads its base.
+- **Heavy: Devastation** (new) — new `SKILL_CARDS` entry (`id:'hv-dmg'`, `req:()=>gIsSkillUnlocked('heavy')`,
+  `icon:'🔨'`), writes `heavyDmgPct`. Apply in **`gDoHeavyAtk` (~L3824)**: multiply `chargedDmg` by
+  `(1 + pSkillStat(p,'heavyDmgPct')/100)`. Stacks on `_dbuf`.
+- **Heavy: Reach** — the existing `id:'hv-rad'` card (currently `name:'Heavy: Devastation'`, `apply` →
+  `heavyWidth`, **L12308**): rename to `'Heavy: Reach'`, retarget `apply` → `heavyLen` (base **56**,
+  `W()` ~L2387; already ×2 when charged), `base:8`, `fmt:v=>\`Heavy +${v} reach\``. Drop the `heavyWidth`
+  mod entirely (no width card remains — fine, that was the less-loved axis).
+- **Tooltip honesty:** the char-screen skill details (~L10850) already show live buffed damage — confirm the
+  two new `%dmg` mods flow into that path so the displayed swing/heavy numbers match what you hit for.
+- **Sim hook:** these are new `cardPicks` ids — they ride the existing `gDrawCards`/`_pickCard` plumbing, no
+  new harness wiring beyond the new ids appearing in the pool.
+- **No art, no MP-protocol change** — skillMods are already per-player and network-synced via the card-pick path.
 </details>
 
 ---
@@ -292,6 +342,11 @@ Keep build detail (line-refs, balance, phasing internals) in the spec; don't mir
 the two drift. Items with no spec (small fixes) keep their detail inline in the 🔧 Build notes.
 
 **⇄ Handoffs (append a line; delete when cleared):**
+- **PM → ENG (NEW, 2026-06-10):** **Item 0b — Combat card pass** is approved and ships ahead of the
+  systemic queue (quick, no art): two new per-skill `%dmg` cards (Swing: Bite, Heavy: Devastation, both
+  +8%/cap6) + retarget the old Heavy: Devastation width card → **Heavy: Reach** (`heavyLen`, +8/cap6).
+  Governing balance rule: per-skill % > universal % (else dominated). Full build notes + line-refs inline
+  in item 0b above.
 - **PM → ENG:** Build *Now* top-down (1→4). Items 1 & 2 are the two systemic wall-fixes — **item 2's 3
   design calls are now resolved (binary tree, names, lore canon), so it's cleared for Phase 1** (the tree
   system + Dance of Fire's full 4-endpoint tree; see [`specs/imbue-paths.md`](specs/imbue-paths.md)). Items
