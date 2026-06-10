@@ -210,6 +210,10 @@ shape as the shipped 9-variant grass set). Cells number 0–8 in reading order; 
 It imports the cutout + QA logic from `slice-turnaround.py` (same `--global`/`--erode`/`--sever`
 flags), defaults to `--bg white --frame cell` (the cell IS the tile frame — preserves in-cell
 placement and relative scale across variants), and `--size 128` matches the shipped floor-tile res.
+For **FX variant sets** (explosions etc.) use `--keyspace fx --keep-specks --frame square --size 256`:
+keys become `'fx.<id>.<n>'` in `assets/fx/`, and `--keep-specks` re-adds the small detached
+embers/debris the speck filter would otherwise drop (on FX sheets they're art, not noise). The
+bg-leak metric over-reports on fire (white-hot cores are bg-coloured on purpose) — trust the contact.
 For tile types whose ground isn't fully covered by the prop, note the **transparent-cutout layering**
 in the handoff: `gDrawTile`'s art path early-returns, so the engineer must draw the ground beneath.
 

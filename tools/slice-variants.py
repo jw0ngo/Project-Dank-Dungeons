@@ -10,11 +10,15 @@ of ONE prop/tile — 9 rocks, 9 fence sections — the same shape as the shipped
     r1c0=3  r1c1=4  r1c2=5
     r2c0=6  r2c1=7  r2c2=8
 
-Cutouts land in assets/tile/ as <id>-<n>.png and the snippet emits
-'tile.<id>.<n>' keys — the auto-wiring keyspace (gInitArt counts tile.* into
-gTileVarCount; gTileArt picks the variant from the gWallVar random table).
-For a NEW tile type the engineer adds one TILE_* → '<id>' mapping line in
-gTileArt; existing types need only the manifest entries.
+Cutouts land in assets/<keyspace>/ as <id>-<n>.png and the snippet emits
+'<keyspace>.<id>.<n>' keys. --keyspace tile (default) is the auto-wiring
+keyspace (gInitArt counts tile.* into gTileVarCount; gTileArt picks the
+variant from the gWallVar random table) — for a NEW tile type the engineer
+adds one TILE_* → '<id>' mapping line in gTileArt. --keyspace fx is for
+effect-sprite variant sets (explosions etc.); the engineer adds the draw
+hook. FX sheets usually also want --keep-specks (detached embers/debris are
+art, not noise) and --frame square (FX draw centred at a point, not as a
+tile cell).
 
 Background removal + the bg-leak QA metric are imported from
 slice-turnaround.py — that file stays the single source of truth for every
@@ -24,15 +28,78 @@ Usage:
   python tools/slice-variants.py "art/tiles/rocks.png" rock --bg white
 """
 import os, argparse, tempfile, importlib.util
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 _spec = importlib.util.spec_from_file_location(
     'slice_turnaround', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'slice-turnaround.py'))
 _st = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_st)
-cut_cell, bg_leak_px = _st.cut_cell, _st.bg_leak_px
+cut_cell, bg_leak_px, is_bg = _st.cut_cell, _st.bg_leak_px, _st.is_bg
 
 CELLS = [(r, c) for r in range(3) for c in range(3)]   # all 9, reading order
+
+
+def recover_specks(cell, fig, bg, thresh, feather, min_core=40):
+    """Re-add small detached components that cut_cell's speck filter dropped.
+
+    cut_cell keeps only components >= max(800, biggest*5%) px — right for character
+    sheets (drops sheet noise), wrong for FX sheets where detached flying embers /
+    debris flecks ARE the art. This pass finds non-bg pixels the cut left transparent,
+    labels them into components, and re-adds every component with at least `min_core`
+    pixels of *clearly* non-bg colour (2x the bg threshold) — so real embers come back
+    while bg-blended fringe slivers stay dropped. `fig` must be cell-framed (crop=False).
+    Returns (merged RGBA, number of components recovered)."""
+    from PIL import ImageChops
+    w, h = cell.size
+    px = cell.load()
+    alpha = fig.split()[3]
+    a = alpha.load()
+    drop = bytearray(w * h)              # 1 = non-bg pixel the cut left transparent
+    for y in range(h):
+        for x in range(w):
+            if a[x, y] <= 10 and not is_bg(px, x, y, bg, thresh):
+                drop[y * w + x] = 1
+
+    def is_core(x, y):
+        r, g, b = px[x, y][:3]
+        lim = 2 * thresh
+        return (r + g + b) / 3 >= lim if bg == 'black' else min(r, g, b) <= 255 - lim
+
+    speck = Image.new('L', (w, h), 0)
+    sp = speck.load()
+    seen = bytearray(w * h)
+    kept = 0
+    for sy in range(h):
+        for sx in range(w):
+            i = sy * w + sx
+            if not drop[i] or seen[i]:
+                continue
+            comp, core = [], 0
+            st = [(sx, sy)]
+            seen[i] = 1
+            while st:
+                x, y = st.pop()
+                comp.append((x, y))
+                if is_core(x, y):
+                    core += 1
+                for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                    if 0 <= nx < w and 0 <= ny < h:
+                        j = ny * w + nx
+                        if drop[j] and not seen[j]:
+                            seen[j] = 1
+                            st.append((nx, ny))
+            if core >= min_core:
+                kept += 1
+                for x, y in comp:
+                    sp[x, y] = 255
+    if kept:
+        if feather > 0:
+            speck = speck.filter(ImageFilter.GaussianBlur(feather))
+        merged = ImageChops.lighter(alpha, speck)
+        out = cell.convert('RGBA')
+        out.putalpha(merged)
+        return out, kept
+    return fig, 0
 
 
 def main():
@@ -55,12 +122,22 @@ def main():
                     help='tighten the alpha mask N px to kill the edge halo')
     ap.add_argument('--sever', type=int, default=0,
                     help='HARD case: variant detail is the same colour as the bg (see slice-turnaround.py)')
-    ap.add_argument('--assets-dir', default=os.path.join('assets', 'tile'),
-                    help='where the cutout PNGs are written (default assets/tile; git-tracked, '
+    ap.add_argument('--keyspace', choices=['tile', 'fx'], default='tile',
+                    help="manifest keyspace + default assets dir: 'tile' -> 'tile.<id>.<n>' in "
+                         "assets/tile (auto-wired via gTileArt); 'fx' -> 'fx.<id>.<n>' in assets/fx "
+                         '(effect sprites — the engineer adds the draw hook)')
+    ap.add_argument('--keep-specks', action='store_true',
+                    help="re-add small detached components cut_cell's speck filter dropped (>=40 px of "
+                         'clearly non-bg core). FX sheets need this: detached flying embers/debris ARE '
+                         'the art, not sheet noise.')
+    ap.add_argument('--assets-dir', default=None,
+                    help='where the cutout PNGs are written (default assets/<keyspace>; git-tracked, '
                          'so a bad slice is recoverable via git checkout)')
     ap.add_argument('--out', default=None,
                     help='QA dir for the contact sheet + manifest snippet (default <tempdir>/slice_<id>)')
     args = ap.parse_args()
+    if args.assets_dir is None:
+        args.assets_dir = os.path.join('assets', args.keyspace)
 
     sheet = Image.open(args.sheet).convert('RGB')
     W, H = sheet.size
@@ -72,17 +149,25 @@ def main():
     worst_leak = 0
     for n, (r, c) in enumerate(CELLS):
         cell = sheet.crop((c * cw, r * ch, (c + 1) * cw, (r + 1) * ch))
+        # --keep-specks needs cell-aligned coordinates, so cut uncropped and tight-crop after.
         fig = cut_cell(cell, args.bg, args.thresh, args.feather, args.glob, args.erode, args.sever,
-                       crop=(args.frame == 'square'))
+                       crop=(args.frame == 'square' and not args.keep_specks))
         if fig is None:
             print(f"  WARN: variant {n} (r{r}c{c}) produced no figure")
             continue
+        specks = 0
+        if args.keep_specks:
+            fig, specks = recover_specks(cell.convert('RGB'), fig, args.bg, args.thresh, args.feather)
+            if args.frame == 'square':
+                bb = fig.split()[3].getbbox()
+                if bb: fig = fig.crop(bb)
         figs[n] = fig
         leak = bg_leak_px(fig, args.bg, args.thresh)
         worst_leak = max(worst_leak, leak)
         flag = '' if args.sever else ('  <-- WARN bg leak (try --erode / --global / --thresh / --sever)'
                                       if leak > max(60, fig.width * fig.height * 0.003) else '')
-        print(f"  {n}: r{r}c{c} bbox {fig.size}  bg-leak {leak}px{flag}")
+        speck_note = f'  specks+{specks}' if args.keep_specks else ''
+        print(f"  {n}: r{r}c{c} bbox {fig.size}  bg-leak {leak}px{speck_note}{flag}")
 
     # Frame. 'cell' keeps the native cell canvas (placement + relative scale preserved);
     # 'square' centres tight crops in a shared square sized to the largest variant.
@@ -130,7 +215,7 @@ def main():
     snippet = os.path.join(outdir, 'manifest_snippet.txt')
     with open(snippet, 'w', encoding='utf-8') as f:
         for n in sorted(paths):
-            f.write(f"'tile.{args.id}.{n}':'{paths[n]}',\n")
+            f.write(f"'{args.keyspace}.{args.id}.{n}':'{paths[n]}',\n")
 
     total = sum(sizes_kb.values())
     print(f"\nassets:   {os.path.join(args.assets_dir, args.id + '-<n>.png')}  ({len(paths)} files, ~{total:.0f} KB total)")
