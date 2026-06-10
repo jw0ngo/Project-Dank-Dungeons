@@ -181,23 +181,133 @@ Maelstrom, Cinderplague, Halo of Damnation.)*
 
 ---
 
-## The other four imbued skills (design skeleton — PM-proposed, build later)
+## The other four imbued skills (Phases 2–5 — fully designed, Josh-approved 2026-06-10)
 
-Same 10-rank shape. Forks pitched to split **distinct playstyles**. **At rank 10 every Form forks the same
-way: one 🐉 Dragon (old-god) leaf that HEALS the caster + one 🔥 Chaos (new-god) leaf that BURNS the caster
-for massive AOE** (per the two-age rule). The `@10` column below sketches *both poles* per skill. Names +
-leaves are proposals pending the CD pass and the per-skill build.
+Same 10-rank shape as Dance of Fire. Each is fleshed to build depth below: ranks 1–4 numeric levers, the
+Form fork @5 (two playstyles on a consistent **concentrate-vs-distribute** axis across the kit), ranks 6–9
+per-Form levers, and the rank-10 Ascension (one 🐉 Dragon *sustain* leaf + one 🔥 Chaos *power+cost* leaf
+per Form, per the two-age rule). **No new core mechanics** — every 🐉 leaf paints the existing **dragonfire
+heal-ground**, every 🔥 leaf the **chaosfire self+enemy-burn ground** (both shipped in Slice C; heal
+0.18× / self-burn 0.35× per tick, see the Slice-C grounding below). The work per skill is **4 numeric
+levers + 2 Form FX shapes + 1 peak transform** — "a session+ each."
 
 > **Note:** the **3-hit-combo LMB transform** is specific to **Dance of Fire** (it *is* the normal attack).
-> The other four skills' peak leaves transform *that skill* (whirlwind, leap, dash, heavy), not the LMB —
-> but they keep the same 🐉 heal-ground / 🔥 self+enemy-burn-ground principle.
+> Each of these four skills' peak leaves transform *that skill* (whirlwind/leap/dash/heavy), not the LMB —
+> but they keep the same 🐉 heal-ground / 🔥 self+enemy-burn-ground principle. The transform per skill is
+> named in each `@10` block ("the transform").
 
-| Skill (base FX) | Art name *(proposed)* | Form A @5 | Form B @5 | @10 — 🐉 Dragon (heal) / 🔥 Chaos (self-burn AOE) |
-|---|---|---|---|---|
-| **Whirlwind** — expanding fire rings (`gFireRings`) | **Pyre Waltz** | **Wildfire Bloom** — slow, huge, persistent rings (zone denial) | **Flame Vortex** — rings collapse *inward*, dragging + burning enemies toward you (melee setup) | 🐉 rings mend you per enemy burned (sustain zone) · 🔥 rings implode into an uncontrolled nova / charred field you stand in |
-| **Leap** — burning cross at impact (`gFireCrosses`) | **Sunfall** | **Meteor** — one big impact burst (gap-close nuke) | **Starfall** — impact scatters several smaller bursts around the landing (zone) | 🐉 impact heals you per enemy struck (dive-and-sustain) · 🔥 lingering burn craters + a delayed 2nd impact on chaos's timing |
-| **Dash** — flame trail (`gFireTrails`) | **Trail of Embers** | **Inferno Wake** — hotter/wider/longer trail (aggressive hit-and-run) | **Ember Shroud** — trail wraps you as a brief burning aura/peel (defensive, still damages) | 🐉 trail/aura heals you as it burns (sustain-on-the-move) · 🔥 trail spreads sideways as wildfire / short-lived fire walls that catch you too |
-| **Heavy** — travelling line of fire pillars (`gFirePillars`) | **Eruption** *(or Pyroclasm)* | **Magma Line** — more pillars, longer focused lane (directional nuke) | **Volcanic Field** — pillars erupt in a radial cluster around the aim point (AOE) | 🐉 pillars heal you per enemy hit (sustain nuke) · 🔥 run-long burning ground / pillars erupt erratically past your aim |
+> **Names:** all Art / Form / leaf names below are **Josh-approved (2026-06-10)** unless tagged
+> *(PM-proposed)*. Dragon leaves evoke the **primal / majestic** old age; Chaos leaves evoke **dread /
+> sinisterness** (Decision #2).
+
+### Phase 2 — Whirlwind → **Pyre Waltz**
+
+*Base imbue today: an expanding fire ring spawns every **2s (120f)** while whirlwind is channelled, expands
+to **6 tiles**, deals `wwDamage ×1.5`, applies 3s burn, knocks back 6 outward (`gFireRings`, ~L3603;
+params `FR_*`).*
+
+- **Ranks 1–4 (numeric):** +ring damage (`FR_DMG_MULT`) · +ring range (`FR_RANGE_TILES`) · faster cadence
+  (`FR_INTERVAL` ↓, **floored**) · +burn duration (`FR_BURN_FRAMES`).
+- **Rank 5 — Form:**
+  - **Form A · Wildfire Bloom** *(zone denial)* — rings expand **slow, huge, persistent**, leaving a charred
+    burning-ground arc as they pass. Stand and hold ground.
+  - **Form B · Flame Vortex** *(melee setup)* — rings **collapse inward**, dragging + burning enemies *toward*
+    you (invert ring direction → inward pull instead of outward knockback), bunching the pack for a punish.
+- **Ranks 6–9 (numeric):** Bloom → +max radius / +linger duration / +concurrent rings · Vortex → +pull
+  strength / +cadence / +bunched-target damage.
+- **Rank 10 — Ascension** *(the transform: the rings stop being timed pulses and become a **sustained
+  field** while channelling):*
+  - **Wildfire Bloom →** 🐉 **Solar Mandala** *(Dragon · heal)* — a breathing mandala of **dragonfire** rings
+    around you; the ground-band heals you per tick you anchor in it. · 🔥 **Cinderstorm** *(Chaos · self-burn)*
+    — the rings implode into an uncontrolled **chaosfire nova** covering where you stand.
+  - **Flame Vortex →** 🐉 **Sun's Embrace** *(Dragon · heal)* — the inward pull is dragonfire; heals you per
+    enemy dragged & burned. · 🔥 **Devouring Pyre** *(Chaos · self-burn)* — the vortex implodes into a
+    self-consuming chaosfire well at your feet.
+
+### Phase 3 — Leap → **Sunfall**
+
+*Base imbue today: a burning **X-cross** at the impact point — arms **70px**, re-ticks every **0.5s (30f)**
+at `leapDmg ×0.4`, 3s burn, **2s (120f)** life (`gFireCrosses`, ~L3863; params `FC_*`).*
+
+- **Ranks 1–4 (numeric):** +impact damage (`FC_DMG_RATIO`) · +cross reach (`FC_REACH`) · +burn duration
+  (`FC_BURN_FRAMES`) · +cross lifetime (`FC_LIFE`).
+- **Rank 5 — Form:**
+  - **Form A · Meteor** *(gap-close nuke)* — the X collapses into **one fat crater burst**: concentrated
+    single-cluster nuke + heavy knockback where you land.
+  - **Form B · Starfall** *(zone)* — impact **scatters 3–5 satellite flares** around the landing for wide
+    crowd coverage (lower per-burst, broad footprint).
+- **Ranks 6–9 (numeric):** Meteor → +crater radius / +center damage / +knockback · Starfall → +flare count /
+  +scatter radius / +flare burn.
+- **Rank 10 — Ascension** *(the transform: the single impact becomes a **celestial event**):*
+  - **Meteor →** 🐉 **Phoenix Descent** *(Dragon · heal)* — the crater blooms **dragonfire** that heals you
+    while you stand in it (dive in and sustain). · 🔥 **Cataclysm** *(Chaos · self-burn)* — a massive chaos
+    comet **plus an uncontrolled delayed 2nd impact**; chaosfire craters burn you.
+  - **Starfall →** 🐉 **Empyrean Bloom** *(Dragon · heal)* — each flare is dragonfire, healing you per enemy
+    struck across the field. · 🔥 **Ruinfall** *(Chaos · self-burn)* — a relentless **chaosfire rain** across
+    a huge zone, craters under you too.
+
+### Phase 4 — Dash → **Trail of Embers**
+
+*Base imbue today: a flame trail — patches every **18px**, radius **26**, **1.6s (96f)** life, ticks every
+**0.4s (24f)** at base 10 (scaled by buffs), 3s burn. **Does NOT hurt the caster** today (`gFireTrails`,
+~L3707; params `FT_*`).*
+
+- **Ranks 1–4 (numeric):** +trail damage (`FT_DMG_BASE`) · +trail width (`FT_REACH`) · +patch duration
+  (`FT_LIFE`) · +burn duration (`FT_BURN_FRAMES`).
+- **Rank 5 — Form:**
+  - **Form A · Inferno Wake** *(aggressive hit-and-run)* — trail runs **hotter / wider / longer**; carve
+    burning lanes through packs.
+  - **Form B · Ember Shroud** *(defensive peel)* — on dash-end a **brief burning aura wraps you**, burning
+    adjacent chasers — a disengage tool (a short-lived aura tied to the player, vs. ground patches).
+- **Ranks 6–9 (numeric):** Wake → +length / +damage / +width · Shroud → +aura duration / +radius / +damage.
+- **Rank 10 — Ascension** *(the transform: the fire **outlives the dash** and ties to you):*
+  - **Inferno Wake →** 🐉 **Wyrmwake** *(Dragon · heal)* — the trail is **dragonfire**; weaving back through
+    your own lanes heals you (sustain-on-the-move). · 🔥 **Scorched Earth** *(Chaos · self-burn)* — the trail
+    spreads sideways as uncontrolled **chaosfire walls** that catch you if you backtrack.
+  - **Ember Shroud →** 🐉 **Phoenix Mantle** *(Dragon · heal)* — a **persistent dragonfire aura** heals you
+    continuously while it burns nearby enemies. · 🔥 **Immolation** *(Chaos · self-burn)* — a permanent
+    **self-immolation aura**: huge constant AOE that drains your own HP.
+
+### Phase 5 — Heavy → **Pyroclasm** *(renamed from "Eruption" — frees the name for Form A)*
+
+*Base imbue today: on heavy release (≥50% charge) a travelling **line of 3–8 fire pillars** (count by
+charge), spacing 0.85 tiles, `heavyDmg ×0.55`, 3s burn, 9f telegraph → 22f eruption, 22px radius
+(`gFirePillars`, ~L3930; params `FP_*`). The weighty-combat showcase.*
+
+- **Ranks 1–4 (numeric):** +pillar damage (`FP_DMG_RATIO`) · +pillar count (`FP_MIN`/`FP_MAX`) · +burn
+  duration (`FP_BURN_FRAMES`) · +pillar radius (`FP_RADIUS`).
+- **Rank 5 — Form:**
+  - **Form A · Eruption** *(skillshot nuke)* — the lane's **final pillar is 5× bigger and hits far harder**;
+    you aim the lane to land the giant finale on a target/cluster. Skillshot payoff. *(The mid-lane pillars
+    are the travel; the nth is the climax.)*
+  - **Form B · Firewall** *(advancing AOE)* — **5 lines of pillars erupt in succession, travelling in the
+    attack direction** — a sweeping wall that clears a corridor.
+- **Ranks 6–9 (numeric):** Eruption → +finale size/damage / +lane range (where the big one lands) /
+  +mid-pillar count · Firewall → +wall count (5→more) / +wall length (pillars per line) / +travel distance.
+- **Rank 10 — Ascension** *(the transform: the pillars become a **sustained volcanic terrain event**):*
+  - **Eruption →** 🐉 **Wyrmspine** *(Dragon · heal)* — the finale pillar **re-erupts 3 more times at regular
+    intervals**, and **standing in the pillar heals you** (dragonfire) — plant on the blast and sustain off
+    it. · 🔥 **Riftmaw** *(Chaos · self-burn)* — tears a **run-long chaosfire fissure** erupting erratically
+    past your aim, burning you when you're near it.
+  - **Firewall →** 🐉 **Dragonmarch** *(Dragon · heal)* — the advancing walls turn to **dragonfire and lay a
+    dragonfire carpet in their wake**; you march forward behind your wall, healing as you push the frontline
+    (sustain-on-the-advance). · 🔥 **Hellfront** *(Chaos · self-burn)* — the disciplined forward sweep
+    **breaks loose: walls erupt outward in every direction** past your aim, blanketing a massive chaosfire
+    field including the ground under you — you can't outrun your own front. *(Alt dread names if needed:
+    Worldfire / Razewall.)*
+
+> **Build order (highest-feedback first, Josh-approved 2026-06-10):** **Phase 2 Heavy (Pyroclasm) → Phase 3
+> Whirlwind (Pyre Waltz) → Phase 4 Leap (Sunfall) → Phase 5 Dash (Trail of Embers).** Heavy is the
+> weighty-combat showcase and its pillars already telegraph hard; Whirlwind's channelled rings are the most
+> *visible* sustained FX; Leap and Dash are punchier but lower-uptime. *(Phase numbers above are slot order,
+> not skill priority — build in this sequence.)*
+
+> **Slice-C grounding the four phases reuse (no new mechanics):** the substance system is live — **dragonfire
+> ground heals the owner 0.18× the climax damage per tick**; **chaosfire ground hurts the owner 0.35× per
+> tick** (outside a 38px bare-center safe zone) and also burns enemies. There is **no generic lifesteal** —
+> all healing routes through standing in *your own dragonfire ground*, so every 🐉 leaf above must lay a
+> dragonfire patch the player can occupy (note where each does: anchor-in-zone, crater, aura, pillar,
+> carpet). Every 🔥 leaf reuses the chaosfire ground turned on the caster — the self-burn *is* the cost.
 
 ---
 
@@ -241,13 +351,16 @@ leaves are proposals pending the CD pass and the per-skill build.
 This is a **system**, not one feature — 5 skills × full tree is an epic. Ship it as a vertical slice, one
 skill at a time, highest-feedback skill first:
 
-- **Phase 1 — System + Dance of Fire (the slice).** Build the 10-rank tree data model + draft integration
-  (rank-up cards + the two evolution-choice events + Sim hooks), and **Dance of Fire's full tree** (both
-  Forms, all Chaos leaves). One named Art, fully playable, proving the whole system feels good. *Multi-session.*
-- **Phases 2–5 — fan out** to Pyre Waltz · Sunfall · Trail of Embers · Eruption, one per slot on the
-  now-built framework + that skill's new FX. *~a session+ each.*
+- **Phase 1 — System + Dance of Fire (the slice).** ✅ Built (Slices A–C). The 10-rank tree data model +
+  draft integration (rank-up cards + the two evolution-choice events + Sim hooks), and **Dance of Fire's
+  full tree** (both Forms, all leaves). One named Art, fully playable, proving the whole system feels good.
+- **Phases 2–5 — fan out** on the now-built framework + that skill's new FX. *~a session+ each.* **Each is
+  fully designed above (Josh-approved 2026-06-10).** **Build order (highest-feedback first):**
+  **Phase 2 = Heavy (Pyroclasm) → Phase 3 = Whirlwind (Pyre Waltz) → Phase 4 = Leap (Sunfall) →
+  Phase 5 = Dash (Trail of Embers).**
 
-Front-loads the system risk into Phase 1; every later phase is additive content on proven rails.
+Front-loads the system risk into Phase 1; every later phase is additive content on proven rails — no new
+core mechanics, just per-skill FX shapes + the existing dragonfire/chaosfire grounds.
 
 ## Balance
 
@@ -303,9 +416,19 @@ Front-loads the system risk into Phase 1; every later phase is additive content 
    (3 escalating chaosfire cones). Two substances: **dragonfire** heals the caster, **chaosfire** hurts
    enemies + the caster. **Dance of Fire's tree is now design-complete and ready for Slice C build.**
 
-**→ Status: Phase 1 (Cilia tree + Dance of Fire) cleared for engineering — Dance of Fire now fully designed
-through rank 10.** Slices A (ranks 1–4, shipped) and B (Form fork @5 + ranks 6–9) are **unaffected by the
-reframe** — it only changes **Slice C** (rank-10), which now carries: the **3-hit-combo swing transform**,
-🐉 **dragonfire heal-ground**, 🔥 **chaosfire self+enemy-burn ground**, and the four named climaxes (all
-specced above). **The other four skills' peak leaves + the other gods' Animal-Spirit poles + Fusion remain
-deferred** (designed per-phase / when their god lands).
+9. **Phases 2–5 (the other four fire skills) fully designed (Josh-approved 2026-06-10).** Each skill's
+   ranks 1–4 / Form fork @5 / ranks 6–9 / two-age @10 leaves are specced in "The other four imbued skills"
+   above, grounded in each skill's live base FX + line-refs. **No new core mechanics** — every 🐉 leaf paints
+   the Slice-C dragonfire heal-ground, every 🔥 leaf the chaosfire self-burn ground. **Heavy reworked in this
+   pass (Josh's edits):** Art name **Eruption → Pyroclasm** (freeing "Eruption" for Form A); Form A
+   **Magma Line → Eruption** (skillshot — final pillar 5× / harder); Form B **Volcanic Field → Firewall**
+   (5 lines erupting in succession, travelling in the attack direction); 🐉 **Wyrmspine** = finale re-erupts
+   3× at intervals + heals if you stand in it; 🔥 **Riftmaw** unchanged; new Firewall leaves 🐉 **Dragonmarch**
+   (dragonfire carpet in the walls' wake) / 🔥 **Hellfront** (walls break loose omnidirectionally, burning
+   you). **Build order:** Heavy → Whirlwind → Leap → Dash (highest-feedback first).
+
+**→ Status: Phase 1 (Cilia tree + Dance of Fire) SHIPPED — full tree through rank 10. Phases 2–5 now fully
+designed and cleared for engineering (build order: Heavy → Whirlwind → Leap → Dash).** Every later phase is
+additive content on the proven Phase-1 rails: per-skill numeric levers + 2 Form FX shapes + 1 peak transform
+reusing the existing dragonfire heal-ground / chaosfire self-burn ground. **The other gods' Animal-Spirit
+poles + Elemental Fusion remain deferred** (designed when their god lands).

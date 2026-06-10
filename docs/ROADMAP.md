@@ -9,16 +9,18 @@ engineering builds **approved** items from *Now*, top-down ([`agents/engineer/en
 
 ## 📍 Where we are (June 10, 2026)
 
-**v0.2.0 is live** (the Favor currency). The "vertical slice" — our test of whether the core combat
-scales fairly against a rising difficulty curve — is **fully built**, and we just ran its first real
-playtest. It told us exactly what we hoped a playtest would:
+**v0.5.0 is live; a large `[Unreleased]` block is staged** (fix it into the next tag). Both weak points
+the first slice playtest surfaced now have their fixes **in the build but unverified**:
 
-> **The two weak points are (1) the difficulty curve is too flat — late game isn't dangerous enough, and
-> (2) leveling up gets boring because the upgrades are repetitive.** Notably, the game did *not* need a
-> whole new god to fix this — both problems are fixable inside the systems we already have.
+> **(1) Flat difficulty curve** → fixed by **item 1** (enemy damage now scales, denser & elite-heavier
+> nights, glowing-eye danger tell) — *shipped, awaiting the verifying playtest.*
+> **(2) Repetitive level-ups** → fixed by **item 0b** (per-skill cards, caps removed) + **item 0c**
+> (Patron burn cards) + **item 2's** Dance-of-Fire mastery tree (Phase 1, rank 1→10) — *all shipped;
+> the remaining four skills (Phases 2–5) are the open build.*
 
-The five items below are the plan. The first four are approved and ranked in build order; the fifth (a
-second god) stays parked because the playtest proved we don't need it yet.
+**The pivot point:** we've now stacked a lot of difficulty + economy change unverified. The highest-value
+next input is a **playtest of the new curve** (does item 1 read fair?), which gates whether we keep pouring
+mastery trees on top. The open approved build is **Imbue Paths Phases 2–5**. Boreas (item 5) stays parked.
 
 ## ⚡ At a glance
 
@@ -26,8 +28,8 @@ second god) stays parked because the playtest proved we don't need it yet.
 |---|---|---|---|---|
 | **0** | **Player animation pass** — directional walk, dash poses, heavy-attack windup | 🔧 In progress (pre-greenlit) | Ongoing | Game feel + the *weighty-combat* directive made visible; runs alongside the queue |
 | **0b** | **Combat card pass** — per-skill dmg cards (Swing/Heavy) + Heavy: Reach + **pool-wide cap removal** | ✅ Shipped (v0.5.0) | Quick | Build identity in the draft + lucky-run variance; RNG governs (caps removed) |
-| **0c** | **Patron Cards** — patron-gated draft cards (Cilia burn set: explode / duration / tick dmg) | 🔧 Built — awaiting push | Session | Your god choice reshapes your draft; reusable per-god system serving god-identity |
-| **1** | **Make late-game dangerous** — enemies scale harder + glow yellow→red as they get deadly | 🔧 In progress (eng 2026-06-10) | Multi-session | Fixes the flat difficulty curve (playtest weak point #1) |
+| **0c** | **Patron Cards** — patron-gated draft cards (Cilia burn set: explode / duration / tick dmg) | ✅ Shipped (Unreleased) | Session | Your god choice reshapes your draft; reusable per-god system serving god-identity |
+| **1** | **Make late-game dangerous** — enemies scale harder + glow yellow→red as they get deadly | ✅ Shipped (Unreleased) — ⚑ needs playtest | Multi-session | Fixes the flat difficulty curve (playtest weak point #1) |
 | **2** | **Imbue Paths** — turn each fire skill into a 10-level mastery tree with branching upgrades | ✅ Approved — cleared for build | Large, phased | Fixes boring level-ups; the heart of "build your own playstyle" (#2) |
 | **3** | **Wolves stop getting stuck** on their dens + ignore forest slow | ✅ Shipped (v0.5.0) | Quick | Bug fix — unblocks wolf playtesting |
 | **4** | **Wolves hit harder early** | ✅ Shipped (v0.5.0) | Quick | Makes a wolf camp a real risk, not free loot |
@@ -137,7 +139,7 @@ already floors `wwCooldown: 30` and `leapCooldown: 45`, and Grit's trigger strea
 
 ### 0c. Patron Cards — patron-gated level-up cards (Cilia burn set first)
 
-`🔧 built` (eng 2026-06-10 — awaiting push/playtest; flips to shipped then) · **Size:** session · **Pillars:** build-craft depth (the heart), game feel · **Art:** none (reuses fire particles; fire card-frame is stretch)
+`✅ shipped` (Unreleased, 2026-06-10 — fold to changelog at next tag) · **Size:** session · **Pillars:** build-craft depth (the heart), game feel · **Art:** none (reuses fire particles; fire card-frame is stretch)
 
 **What:** A **new card category that only appears when you've pledged to a patron**, buffing *that god's
 signature mechanic*. It's a **reusable system**, not 3 one-off cards — every future god (Boreas freeze,
@@ -199,7 +201,7 @@ engine — one ignited enemy detonates and re-ignites the pack.
 
 ### 1. Make late-game dangerous — enemy scaling + a visible danger tell
 
-`🔧 in-progress` (approved 2026-06-09; eng building 2026-06-10) · **Size:** multi-session · **Pillars:** game feel, mastery · **Art:** glowing eyes (no new sprites)
+`✅ shipped` (Unreleased, 2026-06-10) · **⚑ Needs the verifying playtest** — this is the fix for playtest wall #1; until a run confirms the curve climbs *and reads fair*, item 1 isn't truly "done." · **Size:** multi-session · **Pillars:** game feel, mastery · **Art:** glowing eyes (no new sprites)
 
 **What:** Enemies barely get tougher as the nights pass right now. We'll make the difficulty genuinely
 ramp the way *Vampire Survivors* does — more enemies, deadlier mixes, and more damage as the run goes on —
@@ -238,8 +240,8 @@ juiced-up elites — hard, but fair and readable.
 
 ### 2. Imbue Paths — turn each fire skill into a mastery tree
 
-`🔧 in-progress` (eng 2026-06-10 — **Phase 1 (Dance of Fire) complete through rank 10**; Slices A–C landed. Phases 2–5 (other four skills) remain) · **Size:** large, phased · **Pillars:** build-craft depth, game feel, mastery
-**Full design:** [`specs/imbue-paths.md`](specs/imbue-paths.md) · **Build sub-phasing:** Slice A = numeric ranks 1–4 ✅ → Slice B = Form fork @5 (Emberfan/Cinder Ring) + ranks 6–9 ✅ → Slice C = Ascension fork @10 (🐉 Dragon-heal / 🔥 Chaos-self-burn, 3-hit combo) ✅. **Next:** the four distinct climax FX polish + Artist handoff (dragonfire rainbow), then Phases 2–5.
+`🔧 in-progress` (eng 2026-06-10 — **Phase 1 (Dance of Fire) shipped, full tree through rank 10**. **Phases 2–5 now fully designed + cleared** — Josh-approved 2026-06-10) · **Size:** large, phased · **Pillars:** build-craft depth, game feel, mastery
+**Full design:** [`specs/imbue-paths.md`](specs/imbue-paths.md) (source of truth — all four remaining skills specced to build depth). **Phase 1:** Slice A (ranks 1–4) ✅ → Slice B (Form fork @5) ✅ → Slice C (Ascension @10, 🐉heal/🔥self-burn, 3-hit combo) ✅. **Next — Phases 2–5, build order (highest-feedback first):** **Heavy → Pyroclasm** · **Whirlwind → Pyre Waltz** · **Leap → Sunfall** · **Dash → Trail of Embers**. No new core mechanics — each reuses the Slice-C dragonfire/chaosfire grounds (4 numeric levers + 2 Form FX shapes + 1 peak transform per skill).
 
 **What:** Today a fire-imbued skill is just on or off — nowhere to grow, so level-ups become repetitive
 stat bumps. We'll turn **each imbued skill into a named ability you level up 10 times**, with two branch
@@ -464,6 +466,18 @@ Keep build detail (line-refs, balance, phasing internals) in the spec; don't mir
 the two drift. Items with no spec (small fixes) keep their detail inline in the 🔧 Build notes.
 
 **⇄ Handoffs (append a line; delete when cleared):**
+- **PM → ENG (NEW, 2026-06-10):** **Imbue Paths Phases 2–5 fully designed + cleared** — all four remaining
+  fire skills specced to build depth in [`specs/imbue-paths.md`](specs/imbue-paths.md) ("The other four
+  imbued skills"; Decision #9). **Build order (highest-feedback first): Heavy (Pyroclasm) → Whirlwind
+  (Pyre Waltz) → Leap (Sunfall) → Dash (Trail of Embers).** Each = 4 numeric levers + 2 Form FX shapes +
+  1 peak transform; **no new core mechanics** — every 🐉 leaf reuses the Slice-C dragonfire heal-ground,
+  every 🔥 leaf the chaosfire self-burn ground. Base-FX line-refs + per-skill `FR_/FC_/FT_/FP_` params are
+  inline in the spec. **Pyroclasm note:** Heavy's Art name moved Eruption→Pyroclasm (Form A is now
+  "Eruption", the 5×-finale skillshot). Pull Phase 2 (Heavy) when item 1's playtest clears.
+- **PM → ENG (NEW, 2026-06-10):** **CHANGELOG archive done** (this session) — pre-rename Dungeon Forge era
+  (v0.9.0–v0.11.0) moved to `docs/archive/changelog-dungeon-forge.md`, pointer left in `CHANGELOG.md`
+  (610→509 lines). Uncommitted in the working tree; fold into your next `docs:` commit. Going forward,
+  sweep the changelog by era/half-year (like the session journal), not per release.
 - **PM → ENG (NEW, 2026-06-10):** **Item 0c — Patron Cards** approved (session-sized, no art). New
   `PATRON_CARDS` pool gated on the active patron (`gPlayer.imbues` contains the god), injected into the
   draft at **~25%/draft**; Cilia's 3 burn cards (Conflagration = explode-chance/tick scaling off
