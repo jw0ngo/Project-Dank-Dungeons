@@ -18,6 +18,32 @@ lesson: **the principle → why → how to apply.** Quality over volume.
 
 ---
 
+### 2026-06-10 — A "can we do X?" question often hides unstated architecture; ground in the engine before answering, and the cheapest big pivot reuses tuned systems and swaps only their coupling
+
+- **Principle:** Three moves made a major late pivot (gods stop imbuing active skills → become auto-firing,
+  class-agnostic VS-style skills) land in one session. (1) When Josh asked "is multiple classes still
+  feasible?", the high-value response wasn't a yes/no — it was *grounding in the real engine first* (found
+  `gActiveWeapon` + `WeaponRegistry` + a live bow kit), which reframed the answer and surfaced his **unstated
+  platform intent** (the combat system is a reusable platform; the roguelike is mode one). A scoping question
+  frequently encodes an architectural direction the prompter hasn't said out loud yet — draw it out. (2) When
+  two systems compete for the same role ("classes" and "gods" both = build identity), the resolution is almost
+  always **make them orthogonal axes that multiply** (class = active kit/delivery; god = portable passive
+  layer), not pick one. (3) The pivot was cheap to spec because most of the work was a **trigger swap** on FX
+  systems that were *already built and tuned* — the content existed; only the coupling changed. Spotting that
+  one piece was *already* in the target shape (Pyre Waltz already fires on an interval) let me sequence it
+  first as the "proves-the-pattern, near-free" build.
+- **Why:** Pre-1.0 direction moves in big jumps, and the prompter is the only persistent context — so their
+  questions carry intent the docs don't yet hold. And a one-file game accumulates tuned, load-bearing systems;
+  the expensive part of any feature is the *tuned behaviour*, not the wiring. A pivot that preserves the tuned
+  systems and only re-wires their triggers is an order of magnitude cheaper than it first looks — but only if
+  you read the code to *find* that the assets are reusable.
+- **How to apply:** On a feasibility/scoping question, **read the relevant engine systems before answering**
+  and ask what architecture the question implies — name it back and confirm. When two systems want the same
+  identity slot, propose the orthogonal-axes split. When repurposing, **audit what already exists and is
+  tuned** (FX, registries, timers) and frame the work as the *minimal coupling change*; pick the item already
+  closest to the new shape as the first/cheapest build to de-risk the pattern. Capture a revealed platform/vision
+  beat as canon (manifesto) the moment it's stated, so it doesn't drive decisions silently.
+
 ### 2026-06-10 — Phase so creative direction can still pivot; verify "as already written" canon before grounding on it
 
 - **Principle:** Two things made a late, substantial thematic reframe land cheaply this session. (1) The
