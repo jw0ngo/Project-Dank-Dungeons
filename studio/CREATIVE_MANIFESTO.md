@@ -68,6 +68,29 @@ answer recorded.)*
 
 *Newest first. One entry per real creative call. Lead with the call; preserve Josh's words.*
 
+### 2026-06-10 — The combat system is a platform; *To Dust* is mode one; gods are the portable auto-firing layer
+
+A foundational reframe of what we're building (Josh, 2026-06-10):
+
+> *"I had intended for this roguelike build to be just one mode. The action combat system with MOBA-style
+> skills was designed to be transferable to a MOBA or even an MMORPG. This needs multiple classes."*
+
+- **The action-combat + MOBA-skill system is a reusable platform**, not just this game. *To Dust* (the
+  roguelike) is **mode one** of that platform; a MOBA and an MMORPG are intended future modes. This is why
+  the kit is built the way it is.
+- **Classes live at the platform layer** — discrete classes with **unique, swappable kits**, *AQWorlds-inspired*.
+  Classes are **gated by leveling prerequisite classes to max** (Josh's example: *Paladin requires max-level
+  Healer + max-level Warrior*). This is MMORPG-portion direction — not built now, but it fixes the role classes
+  play: they own the **active, manual kit**, and it varies per class.
+- **Because the active kit belongs to the class, the gods can't live inside it.** So in the roguelike, a god
+  grants **auto-firing abilities that play at regular intervals as you move** — *Vampire Survivors-style* — sitting
+  on top of *whatever* class you brought. This makes the god system **class-agnostic and portable across all modes.**
+- **The binary-tree rank evolution survives** (Josh: *"keep the rank system, god skills will still evolve, but
+  will no longer be tied to active skills"*) — ranks 1–4 numeric → Form fork @5 → two-age Ascension @10, now on
+  standalone auto-firing skills. The level-10 myth (Dragon-heal / Chaos-self-burn, prior entry) is intact.
+- **No element skin on the active kit** (Josh's call) — the god is expressed *only* through its own auto-firing
+  skills and their FX, not by tinting the class's attacks. The class stays neutral; the god is the fire.
+
 ### 2026-06-09 — The waning gods & the rise of "perceived higher powers" (the world's central myth)
 
 The foundational myth of the world, in Josh's words (verbatim):

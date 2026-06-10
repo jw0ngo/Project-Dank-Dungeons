@@ -1,10 +1,15 @@
 # Imbue Paths — the imbued-skill mastery system
 
-**Status:** design (PM, 2026-06-09; extended 2026-06-10: per-god forces + Elemental Fusion; **reframed
-2026-06-10: the level-10 peak is a two-age fork — Old-god Animal-Spirit *sustain* leaf vs New-god Concept
-*power+cost* leaf, for Cilia Dragon-heal vs Chaos-self-burn, see Decision #7**) — fleshes out *Now* item 2
-(**Imbue Paths**). Phase 1 (Cilia tree) cleared; Slices A/B unaffected by the reframe, Slice C carries it.
-Fusion + the other gods' poles are specced but deferred (see Decisions).
+> **⚠️ SUPERSEDED (2026-06-10) by [`god-skills.md`](god-skills.md).** The model pivoted: gods no longer imbue
+> *active* skills — their power is now a **class-agnostic, auto-firing (VS-style) god-skill layer** so it ports
+> to the platform's future MOBA/MMORPG modes (Creative Manifesto Direction Log, 2026-06-10). **This file is
+> retained as the detailed design archive** — the binary-tree structure, the two-age peak rule, the full
+> per-skill trees (incl. the cut Dance of Fire / Sunfall), Elemental Fusion, and the other gods' poles all
+> carry forward and are referenced by `god-skills.md`. Read `god-skills.md` for the live design; read this for
+> the FX/line-ref detail behind any skill.
+
+**Status:** ARCHIVE / reference (was: design, PM 2026-06-09–10). The live source of truth is
+[`god-skills.md`](god-skills.md). Below is the original active-skill-imbue design, preserved intact.
 
 **Pillar:** build-craft depth (primary) · game feel · mastery. Serves the Creative Manifesto's *"builds
 are identity, not arithmetic"* and *"the hero wields the gods' power"*.

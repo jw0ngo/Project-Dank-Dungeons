@@ -10,17 +10,22 @@ engineering builds **approved** items from *Now*, top-down ([`agents/engineer/en
 ## 📍 Where we are (June 10, 2026)
 
 **v0.5.0 is live; a large `[Unreleased]` block is staged** (fix it into the next tag). Both weak points
-the first slice playtest surfaced now have their fixes **in the build but unverified**:
+the first slice playtest surfaced now have their fixes in the build (item 1 difficulty curve **playtested
+OK**; item 0b/0c level-up depth shipped).
 
-> **(1) Flat difficulty curve** → fixed by **item 1** (enemy damage now scales, denser & elite-heavier
-> nights, glowing-eye danger tell) — *shipped, awaiting the verifying playtest.*
-> **(2) Repetitive level-ups** → fixed by **item 0b** (per-skill cards, caps removed) + **item 0c**
-> (Patron burn cards) + **item 2's** Dance-of-Fire mastery tree (Phase 1, rank 1→10) — *all shipped;
-> the remaining four skills (Phases 2–5) are the open build.*
+**🔀 Major direction change (Josh, 2026-06-10) — the god layer pivots to auto-firing God Skills.** The
+action-combat system is a **reusable platform** and *To Dust* is **mode one** (MOBA/MMORPG are future modes;
+Creative Manifesto Direction Log). **Classes** own the active manual kit (platform-layer, AQWorlds-style);
+so gods can no longer imbue active skills. Instead each god grants **class-agnostic, auto-firing abilities
+(Vampire-Survivors-style)** that play on intervals as you move — keeping the **binary-tree rank evolution**
+(Form @5, two-age Ascension @10) but cutting the tie to any active skill. **No element skin on the class kit.**
 
-**The pivot point:** the new difficulty curve **playtested OK** (Josh, 2026-06-10), so item 1 is settled and
-nothing's gated on it. The open approved build is **Imbue Paths Phases 2–5** — fully designed, build order
-Heavy → Whirlwind → Leap → Dash, ready to pull now. Boreas (item 5) stays parked.
+**This supersedes the old "Imbue Paths" (active-skill) build.** New source of truth:
+[`specs/god-skills.md`](specs/god-skills.md). **The open approved build is item 2 (God Skills)** — convert
+Cilia's three best fire skills (**Pyre Waltz · Trail of Embers · Pyroclasm**) into auto-firing skills with
+their full trees. The core work is a **trigger swap** on FX systems that already exist + are tuned, so it's
+cheaper than it looks; **Pyre Waltz is already interval-based — build it first to prove the pattern.**
+Boreas (item 5) stays parked.
 
 ## ⚡ At a glance
 
@@ -30,7 +35,7 @@ Heavy → Whirlwind → Leap → Dash, ready to pull now. Boreas (item 5) stays 
 | **0b** | **Combat card pass** — per-skill dmg cards (Swing/Heavy) + Heavy: Reach + **pool-wide cap removal** | ✅ Shipped (v0.5.0) | Quick | Build identity in the draft + lucky-run variance; RNG governs (caps removed) |
 | **0c** | **Patron Cards** — patron-gated draft cards (Cilia burn set: explode / duration / tick dmg) | ✅ Shipped (Unreleased) | Session | Your god choice reshapes your draft; reusable per-god system serving god-identity |
 | **1** | **Make late-game dangerous** — enemies scale harder + glow yellow→red as they get deadly | ✅ Shipped (Unreleased) — playtested OK | Multi-session | Fixes the flat difficulty curve (playtest weak point #1) |
-| **2** | **Imbue Paths** — turn each fire skill into a 10-level mastery tree with branching upgrades | ✅ Approved — cleared for build | Large, phased | Fixes boring level-ups; the heart of "build your own playstyle" (#2) |
+| **2** | **God Skills** — Cilia's 3 best fire skills become **auto-firing (VS-style)** abilities, class-agnostic, keeping the 10-rank binary-tree evolution | ✅ Approved — cleared for build (**supersedes old Imbue Paths**) | Large, phased | The build-craft spine, now portable across platform modes; fixes boring level-ups (#2) |
 | **3** | **Wolves stop getting stuck** on their dens + ignore forest slow | ✅ Shipped (v0.5.0) | Quick | Bug fix — unblocks wolf playtesting |
 | **4** | **Wolves hit harder early** | ✅ Shipped (v0.5.0) | Quick | Makes a wolf camp a real risk, not free loot |
 | **5** | **Boreas** — a second god (ice/control) | ⏸️ Held | Multi-session | Parked — the playtest showed we don't need it yet |
@@ -238,51 +243,51 @@ juiced-up elites — hard, but fair and readable.
 
 ---
 
-### 2. Imbue Paths — turn each fire skill into a mastery tree
+### 2. God Skills — Cilia's fire skills become auto-firing abilities
 
-`🔧 in-progress` (eng 2026-06-10 — **Phase 1 (Dance of Fire) shipped, full tree through rank 10**. **Phases 2–5 now fully designed + cleared** — Josh-approved 2026-06-10) · **Size:** large, phased · **Pillars:** build-craft depth, game feel, mastery
-**Full design:** [`specs/imbue-paths.md`](specs/imbue-paths.md) (source of truth — all four remaining skills specced to build depth). **Phase 1:** Slice A (ranks 1–4) ✅ → Slice B (Form fork @5) ✅ → Slice C (Ascension @10, 🐉heal/🔥self-burn, 3-hit combo) ✅. **Next — Phases 2–5, build order (highest-feedback first):** **Heavy → Pyroclasm** · **Whirlwind → Pyre Waltz** · **Leap → Sunfall** · **Dash → Trail of Embers**. No new core mechanics — each reuses the Slice-C dragonfire/chaosfire grounds (4 numeric levers + 2 Form FX shapes + 1 peak transform per skill).
+`✅ approved — cleared for build` (Josh-directed pivot 2026-06-10; **supersedes old "Imbue Paths" active-skill model**) · **Size:** large, phased · **Pillars:** build-craft depth, game feel, mastery
+**Source of truth:** [`specs/god-skills.md`](specs/god-skills.md). (Old active-skill design archived in [`specs/imbue-paths.md`](specs/imbue-paths.md) — still the FX/line-ref reference.) **Build order (cheapest/proves-the-pattern first):** **Pyre Waltz** (already interval-based) → **Trail of Embers** (movement-emit) → **Pyroclasm** (interval + auto-target).
 
-**What:** Today a fire-imbued skill is just on or off — nowhere to grow, so level-ups become repetitive
-stat bumps. We'll turn **each imbued skill into a named ability you level up 10 times**, with two branch
-points: **level 5 picks 1 of 2 "Forms"** (how it plays — e.g. long-range vs. close-quarters) and **level 10
-picks 1 of 2 "Chaos" upgrades** (the peak — more powerful, more wild, harder to control). Binary tree →
-**4 endpoints per skill.** *Example:* "Dance of Fire" → *Emberlance* (ranged) or *Cinder Ring* (close) at 5,
-each forking into two dread Chaos endpoints at 10.
+**What:** The god's power is no longer welded to your active skills — it's a set of **auto-firing abilities
+(Vampire-Survivors-style)** that play on intervals as you move and fight, sitting on top of *whatever* class
+kit you have. Cilia's launch loadout = her three best fire skills, converted: **Pyre Waltz** (pulsing fire-ring
+nova, around you), **Trail of Embers** (a burning trail you lay as you walk), **Pyroclasm** (an auto-aimed line
+of fire pillars at range). Each keeps the **10-rank binary tree** — **Form fork @5** (how it plays) and the
+**two-age Ascension @10** (🐉 Dragon *heal* vs 🔥 Chaos *self-burn* peak). 4 endpoints per skill.
 
-**Why:** the #2 playtest finding and the core of our "build your own playstyle" promise — every level-up
-becomes a meaningful choice, and two players' builds genuinely diverge.
+**Why the pivot:** the combat system is a **reusable platform** (this roguelike is mode one; MOBA/MMORPG are
+future modes — Creative Manifesto canon). **Classes** own the active manual kit, so the god layer must be
+**class-agnostic** to port across modes — auto-firing skills achieve that. It's *also* the better-proven
+roguelike build model (Hades boons / VS weapons): depth from **what auto-fires and how it stacks**, not from
+transforming each class's actives. And the conversion is cheap — the FX systems already exist; the work is a
+**trigger swap** (channel/dash/release → timer/movement/auto-target).
 
-**Story hook (now canon — Creative Manifesto, 2026-06-09):** the gods are waning and channel "perceived
-higher powers" (chaos/order, light/dark) to survive — *the turning of the age*. A blessing pushed to its
-peak routes through those raw forces, so it corrupts: the level-10 tier is power **and** loss of
-control. It's what *"To Dust"* means — old gods to dust, new powers born from it.
+**Why it's cheaper than it looks:** `gFireRings` / `gFireTrails` / `gFirePillars` are built and tuned; the
+two-age **dragonfire heal-ground / chaosfire self-burn ground are shipped** (Slice C) and reused as-is.
+**Pyre Waltz already spawns a ring every 2s** — drop the whirlwind gate and it auto-fires. Build it first.
 
-**Reframed 2026-06-10 (Josh — spec updated):** the **level-10 peak is now a two-age fork.** Three ages of
-gods exist — **Animal Spirits (past) → Elementals (now) → Concepts (coming)** — and at rank 10 the player
-chooses which way the age turns: an **Old-god (Animal Spirit) leaf** that *heals* the caster (for Cilia,
-**Dragonfire**) **or** a **New-god (Concept) leaf** of massive AOE that *burns* the caster (for Cilia,
-**Chaos**). One of each per Form → still 4 endpoints (2 heal, 2 self-burn). **Dance of Fire's rank-10 is now
-fully designed** (Josh-canon 2026-06-10): Form A renamed **Emberfan**; all four leaves named + specced and
-unified by a **3-hit-combo LMB transform** — 🐉 *Dragonfire* / *Dragondance* (heal-ground) · 🔥 *Flame of
-Chaos* / *Helldance* (self+enemy-burn). Also specced: **Elemental Fusion**, a fuse-a-2nd-element alternative
-to the peak (see the *Next* item). **Slices A & B are unaffected — the reframe only changes Slice C**
-(rank-10), which now carries the combo transform + two fire-substance grounds (fire-heal / fire-self-burn).
-⚑ Open: log the three-age canon to the Creative Manifesto. Full detail in
-[`specs/imbue-paths.md`](specs/imbue-paths.md).
+**Story hook (Creative Manifesto canon):** the gods are waning and channel "perceived higher powers" to
+survive — *the turning of the age*. A skill pushed to its rank-10 peak routes *out of the current age*: reach
+**back** to the Animal-Spirit old gods (🐉 the Dragon — fire that *heals* you) or **forward** to the half-born
+Concepts (🔥 Chaos — massive AOE that *burns* you). What *"To Dust"* means, made playable in one choice.
 
 <details>
 <summary>🔧 Build notes (engineering)</summary>
 
-- **Shape:** ranks 1–4 numeric → rank-5 Form fork → ranks 6–9 numeric → rank-10 Chaos fork (binary,
-  4 endpoints/skill; any run walks one path).
-- **Phasing:** **Phase 1 = the tree system + "Dance of Fire" fully built** (de-risks the whole system) →
-  **Phases 2–5 = fan out** one skill per slot (Pyre Waltz · Sunfall · Trail of Embers · Eruption).
-- **The full build spec is the source of truth — [`specs/imbue-paths.md`](specs/imbue-paths.md)** — and
-  carries the per-player state model, draft/evolution-overlay integration, every FX touch-point + line-ref,
-  balance rules, and the AI-native `gSim*` hooks. *Don't duplicate it here; update the spec.*
-- **✅ All design calls resolved (Josh, 2026-06-09):** binary tree · dread-Chaos naming rule · lore canon →
-  **cleared for Phase 1.**
+- **The core work is a TRIGGER SWAP, not new FX** — see the table + per-skill conversions in
+  [`specs/god-skills.md`](specs/god-skills.md). Decouple each fire FX from its active skill into an independent
+  per-skill updater ticked from `gUpdatePlayer` (cooldown timer for Pyre Waltz/Pyroclasm; movement-distance
+  accumulator for Trail). The active skills (whirlwind/dash/heavy) revert to **plain, un-imbued** behaviour.
+- **Pyroclasm needs one new thing the others don't:** an **auto-target** pick (nearest enemy / densest cluster)
+  to aim the pillar lane.
+- **Standalone damage bases** — Pyre Waltz / Pyroclasm currently scale off `wwDamage` / `heavyDmg`; give each a
+  standalone level+`damagePct`-scaled base.
+- **Migration:** retire the active-skill imbues. **Dance of Fire (shipped Phase 1, the fire swing) reverts to a
+  plain swing and its tree code parks** (can return later as a 4th auto-fire Cilia skill). ⚑ **Open call (Josh
+  + eng):** retire-and-park now (recommended) vs. leave dormant behind a flag. Sunfall (leap) was never built.
+- **Acquire + rank-up via the existing draft**; ranks 5/10 are the 2-option evolution overlays; gated on the
+  active patron (same gate as Patron Cards). Auto-fire needs **no** new Sim input hook (a harness *simplification*).
+- **Don't duplicate the spec here — update [`specs/god-skills.md`](specs/god-skills.md).**
 </details>
 
 ---
@@ -466,14 +471,17 @@ Keep build detail (line-refs, balance, phasing internals) in the spec; don't mir
 the two drift. Items with no spec (small fixes) keep their detail inline in the 🔧 Build notes.
 
 **⇄ Handoffs (append a line; delete when cleared):**
-- **PM → ENG (NEW, 2026-06-10):** **Imbue Paths Phases 2–5 fully designed + cleared** — all four remaining
-  fire skills specced to build depth in [`specs/imbue-paths.md`](specs/imbue-paths.md) ("The other four
-  imbued skills"; Decision #9). **Build order (highest-feedback first): Heavy (Pyroclasm) → Whirlwind
-  (Pyre Waltz) → Leap (Sunfall) → Dash (Trail of Embers).** Each = 4 numeric levers + 2 Form FX shapes +
-  1 peak transform; **no new core mechanics** — every 🐉 leaf reuses the Slice-C dragonfire heal-ground,
-  every 🔥 leaf the chaosfire self-burn ground. Base-FX line-refs + per-skill `FR_/FC_/FT_/FP_` params are
-  inline in the spec. **Pyroclasm note:** Heavy's Art name moved Eruption→Pyroclasm (Form A is now
-  "Eruption", the 5×-finale skillshot). **Pull Phase 2 (Heavy) now — nothing gates it** (item 1 playtested OK).
+- **PM → ENG (NEW, 2026-06-10 — DIRECTION CHANGE, supersedes the prior Imbue Paths handoff):** **Item 2 is
+  now "God Skills" — auto-firing, class-agnostic abilities** ([`specs/god-skills.md`](specs/god-skills.md) is
+  the live source of truth; `imbue-paths.md` is archived reference). The god layer **no longer imbues active
+  skills** — it's a VS-style auto-firing layer that ports to the platform's future MOBA/MMORPG modes. **Core
+  work = a TRIGGER SWAP** on three FX systems that already exist + are tuned (`gFireRings`/`gFireTrails`/
+  `gFirePillars`): decouple them from whirlwind/dash/heavy into independent per-skill auto-fire updaters.
+  **Build order: Pyre Waltz (already interval-based — start here to prove it) → Trail of Embers (emit on
+  movement) → Pyroclasm (interval + auto-target nearest cluster).** Keep the 10-rank binary tree (Form @5,
+  two-age Ascension @10) and reuse the shipped dragonfire/chaosfire grounds. **Migration:** whirlwind/dash/heavy
+  revert to plain; **Dance of Fire (shipped) reverts to a plain swing + its tree parks** (⚑ open: retire-and-park
+  vs. dormant-flag — recommend retire-and-park). All conversions, line-refs, state model, draft/Sim hooks in the spec.
 - **PM → ENG (NEW, 2026-06-10):** **CHANGELOG archive done** (this session) — pre-rename Dungeon Forge era
   (v0.9.0–v0.11.0) moved to `docs/archive/changelog-dungeon-forge.md`, pointer left in `CHANGELOG.md`
   (610→509 lines). Uncommitted in the working tree; fold into your next `docs:` commit. Going forward,
@@ -484,10 +492,8 @@ the two drift. Items with no spec (small fixes) keep their detail inline in the 
   `_burnTickDmg` + re-ignite chain · Lingering Flame = +duration · Searing Heat = +tick dmg). Uncapped
   (explode-chance clamps at 1.0). Full build notes + line-refs (L5339/L5347/L12350) inline in item 0c.
   **Keep the boundary vs. item 2 clean** — patron cards buff burn, Imbue Paths restructure skill shape.
-- **PM → ENG:** Build *Now* top-down (1→4). Items 1 & 2 are the two systemic wall-fixes — **item 2's 3
-  design calls are now resolved (binary tree, names, lore canon), so it's cleared for Phase 1** (the tree
-  system + Dance of Fire's full 4-endpoint tree; see [`specs/imbue-paths.md`](specs/imbue-paths.md)). Items
-  3 & 4 are pre-greenlit and OK'd to ship *ahead* of the big two to unblock wolf playtesting.
+- **PM → ENG:** Items 1, 3, 4 shipped (item 1 playtested OK). **The one open approved build is item 2 (God
+  Skills)** — see the direction-change handoff above. Nothing gates it.
 - **PM → ARTIST:** **eye-glow difficulty tell** (item 1) — enemy eyes glow **yellow (mid tier) → red (top
   tier)**, an additive draw-layer tint (no new sprites). **⚑ UNBLOCKED (eng 2026-06-10):** the flag
   exists — `e.threatTier` (0/1/2, stamped in `_wildScaleEnt`; tiers at nights 4/8 via `WILD_TIER1_THREAT`/
