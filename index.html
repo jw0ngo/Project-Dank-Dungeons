@@ -186,6 +186,15 @@ button{font-family:inherit;cursor:pointer;}
 #g-stat-pick .sc-icon{ font-size:22px; line-height:1; }
 #g-stat-pick .sc-name{ font:bold 10px 'Palatino Linotype',serif; letter-spacing:1px; color:var(--lvl-accent); }
 #g-stat-pick .sc-bonuses{ font:7px monospace; color:#9aaab4; line-height:1.5; text-align:center; background:none; padding:0; }
+/* Imbue-Path rank track (item 2) — 10 dots = the named skill's level; the 5th/10th (fork levels)
+   are larger; on card hover the next level flashes to preview what this pick grants. */
+.imb-track{ display:flex; gap:4px; justify-content:center; align-items:center; margin-top:6px; height:11px; }
+.imb-dot{ width:6px; height:6px; border-radius:50%; background:#4a3f22; box-shadow:inset 0 0 2px rgba(0,0,0,.6); transition:background .15s; }
+.imb-dot.fork{ width:9px; height:9px; border:1px solid #6a5a30; }
+.imb-dot.filled{ background:#ff9a3a; box-shadow:0 0 5px rgba(255,140,40,.85); }
+.imb-dot.fork.filled{ background:#ffcc44; box-shadow:0 0 7px rgba(255,180,60,.95); }
+.stat-card:hover .imb-dot.next{ animation:imbNextFlash .7s ease-in-out infinite; }
+@keyframes imbNextFlash{ 0%,100%{ background:#4a3f22; box-shadow:none; transform:scale(1);} 50%{ background:#ffe0a0; box-shadow:0 0 9px rgba(255,190,70,1); transform:scale(1.35);} }
 /* CSS-built framed portrait — the figure is an image cutout; the frame, glow and name are all CSS */
 /* Fills the full left panel; ornate metallic gradient border + inner hairline + corner studs + glow */
 .lvl-portrait{ position:absolute; inset:0; overflow:hidden; background:#08070c;
@@ -5288,13 +5297,20 @@ function gDealEnemyDamage(e, dmg, opts){
   }
 }
 
-const FW_RANGE_TILES = 7;      // how far the wave travels (tiles)
+// Base wave at rank 0 — deliberately SMALL; the arc widens (waveStep.half) and the reach grows
+// (waveStep.rangeTiles) as Dance of Fire is leveled, so the wave visibly blossoms over a run.
+const FW_RANGE_TILES = 5;      // base reach at rank 0 (tiles) — grows with rank
 const FW_SPEED       = 6;      // px per frame (~0.5s to cross the range)
-const FW_HALF_ANGLE  = 0.55;   // arc half-width in radians (~31°, so ~63° total)
+const FW_HALF_ANGLE  = 0.40;   // base arc half-width (radians) at rank 0 (~23°) — widens with rank
 const FW_DMG_MULT    = 2.0;    // impact = this × the normal attack's damage (inherits its STR/DEX scaling)
 const FW_BURN_FRAMES = 180;    // burn duration: 3 seconds @ 60fps
 const FW_BURN_RATIO  = 0.6;    // burn total damage = this × impact damage
 const FW_BURN_MIN    = 5;      // ...but never less than this
+// Fire-wave visual knobs (live-tunable). The wave is an angular crescent: its lateral spread follows
+// the arc (FW_HALF_ANGLE, which widens with rank) and grows with reach. The hitbox is the SAME arc
+// (gUpdateFireWaves: within ±half, out to the travelling front), so what you see is what you hit.
+const FW_DRAW_FUDGE  = 1.15;   // cosmetic flame overspill beyond the true arc chord
+const FW_MIN_LAT     = 16;     // floor on the crescent's lateral size near the player (px)
 
 function gSpawnFireWave(x, y, angle, atkDmg){
   // Cilia's Fire strikes for fp.dmgMult× the normal attack. atkDmg already carries
@@ -5304,7 +5320,7 @@ function gSpawnFireWave(x, y, angle, atkDmg){
   const dmg = Math.round((atkDmg || 0) * fp.dmgMult);
   gFireWaves.push({
     x, y, angle,
-    traveled: 4, prevTraveled: 0,
+    traveled: 4,
     range: fp.rangeTiles * T,
     speed: FW_SPEED,
     half:  fp.half,
@@ -5421,7 +5437,7 @@ function gSpawnCinderRing(x, y, atkDmg){
 function gSpawnRemoteFireWave(x, y, angle){
   gFireWaves.push({
     x, y, angle,
-    traveled: 4, prevTraveled: 0,
+    traveled: 4,
     range: FW_RANGE_TILES * T,
     speed: FW_SPEED,
     half:  FW_HALF_ANGLE,
@@ -5433,22 +5449,23 @@ function gUpdateFireWaves(dt){
   if(!gFireWaves.length) return;
   for(let i=gFireWaves.length-1; i>=0; i--){
     const w = gFireWaves[i];
-    w.prevTraveled = w.traveled;
     w.traveled += w.speed * dt;
     // _visual waves are remote players' arcs — render only, never damage.
     if(!w._visual){
+      // Hitbox = the drawn arc: enemies within ±half of the heading, out to the travelling front.
+      // Same arc the visual draws (gDrawFireWaves), so what you see is what you hit. Each enemy is hit
+      // once (the wave pierces) — the _hit set means the front "reaching" it is enough.
       for(const en of gEnemies){
         if(en.dead || w._hit.has(en)) continue;
         if(!Number.isFinite(en.wx) || !Number.isFinite(en.wy)) continue;
         const dx = en.wx - w.x, dy = en.wy - w.y;
         const dist = Math.hypot(dx, dy);
-        if(dist > w.range + en.r) continue;          // beyond the arc's reach
-        if(dist < w.prevTraveled - en.r) continue;    // front already passed it
-        if(dist > w.traveled + en.r) continue;        // front hasn't reached it
-        let ad = Math.atan2(dy, dx) - w.angle;        // angle off the wave's heading
+        if(dist > w.traveled + en.r) continue;         // front hasn't reached it yet
+        if(dist > w.range + en.r) continue;             // beyond the wave's reach
+        let ad = Math.atan2(dy, dx) - w.angle;          // angle off the wave's heading
         while(ad >  Math.PI) ad -= Math.PI*2;
         while(ad < -Math.PI) ad += Math.PI*2;
-        if(Math.abs(ad) > w.half) continue;           // outside the arc spread
+        if(Math.abs(ad) > w.half) continue;             // outside the arc spread
         // ── Hit (each enemy only once — the wave pierces through) ──
         w._hit.add(en);
         gDealEnemyDamage(en, w.dmg, {
@@ -5818,14 +5835,14 @@ function gDrawFireWaves(){
     const ox = w.x - camX, oy = w.y - camY;
     const t = w.traveled;
     const fade = Math.max(0, 1 - (t / w.range) * 0.65);
-    // Image fire-wave crescent — black-bg sprite blitted additively so the flames
-    // glow and the black drops out. The crescent's convex edge leads the travel
-    // direction (mirrored), and it grows with the arc's lateral spread as the wave
-    // races outward. Falls back to the procedural arc until the sprite decodes.
+    // Image fire-wave crescent — black-bg sprite blitted additively so the flames glow and the black
+    // drops out. The convex flame edge leads the travel direction (mirrored). The crescent spans the
+    // arc (its lateral chord = 2·t·sin(half)) and so grows both as the wave races outward and as the
+    // arc widens with rank — the same arc the hitbox uses. Procedural fallback below.
     if(FW_SPR.complete && FW_SPR.naturalWidth){
       const iw = FW_SPR.naturalWidth, ih = FW_SPR.naturalHeight;
-      const h   = Math.max(2 * t * Math.sin(w.half) * 1.2, 28); // lateral coverage of the arc
-      const wdt = h * (iw / ih);                                 // keep aspect (sprite ≈ square)
+      const h   = Math.max(2 * t * Math.sin(w.half) * FW_DRAW_FUDGE, FW_MIN_LAT); // lateral coverage of the arc
+      const wdt = h * (iw / ih);                                                   // keep aspect (sprite ≈ square)
       gctx.save();
       gctx.translate(ox, oy);
       gctx.rotate(w.angle);
@@ -12630,7 +12647,9 @@ const IMBUE_PATHS = {
     swing: {
       art: 'Dance of Fire', maxRank: 10, formRank: 5, chaosRank: 10,
       // Ranks 1–4: numeric upgrades to the base fire wave (added ×rarity to imbuePaths.swing.mods).
-      waveStep: { dmgMult: 0.25, half: 0.06, rangeTiles: 0.6, burnFrames: 24 },
+      // The wave starts small (FW_* base) and blossoms: half widens the arc, rangeTiles extends the
+      // reach — so both the arc and the area grow as Dance of Fire is leveled.
+      waveStep: { dmgMult: 0.25, half: 0.07, rangeTiles: 0.7, burnFrames: 24 },
       // Rank 5 — Form fork (Slice B): the wave transforms. Each Form has its own ranks-6–9 `formStep`
       // (added ×rarity to the same mods map under form-specific keys, read by that Form's FX).
       forms: {
@@ -12669,6 +12688,7 @@ function gImbueCardWindow(p){
 }
 const IMBUE_CARDS = [
   { id:'cil-dof', cat:'skill', icon:'🔥', name:'Dance of Fire', base:1, frac:false,
+    imbueSkill:'swing',   // marks this as a rank-up card → _paintDraft draws its 10-dot level track
     req:()=> gImbueCardWindow(gPlayer) != null,
     fmt:()=>{
       const f = gImbueForm(gPlayer,'swing'), s = IMBUE_PATHS.cilia.swing;
@@ -12882,12 +12902,29 @@ function gWildShowStatPick(){
       const upAfford = canUp && _canSpend() && gFavor >= upCost;
       const el = document.createElement('div');
       el.className = 'stat-card';
+      // Imbue-Path rank track (item 2): 10 dots = the named skill's level (filled to current rank);
+      // the 5th/10th are larger (Form/Chaos evolution levels); the next-level dot flashes on hover.
+      let track = '';
+      if(card.imbueSkill){
+        const rank = gImbueRank(p, card.imbueSkill);   // 0..10
+        const next = rank + 1;                          // the level this pick would grant
+        let dots = '';
+        for(let lv=1; lv<=10; lv++){
+          let c = 'imb-dot';
+          if(lv===5 || lv===10) c += ' fork';
+          if(lv<=rank)          c += ' filled';
+          if(lv===next)         c += ' next';
+          dots += `<span class="${c}"></span>`;
+        }
+        track = `<div class="imb-track" title="Level ${rank} / 10 — larger dots are evolution levels">${dots}</div>`;
+      }
       // Frame is themed (CSS); rarity reads on the icon-ring + label. ▲ = Favor rarity-upgrade.
       el.innerHTML = `
         <div class="sc-rarity" style="color:${rarity.color}">${rarity.name.toUpperCase()}</div>
         <div class="sc-ring" style="border-color:${rarity.color};box-shadow:0 0 12px ${rarity.glow}, inset 0 0 10px ${rarity.glow};"><span class="sc-icon" style="color:${rarity.color}">${card.icon}</span></div>
         <div class="sc-name">${card.name}</div>
         <div class="sc-bonuses">${card.fmt(value)}</div>
+        ${track}
         ${canUp ? `<div class="sc-upgrade" style="margin-top:6px;font:bold 10px monospace;letter-spacing:1px;color:${upAfford?'#ffd040':'#7a6a30'};border:1px solid ${upAfford?'#ffd040':'#5a4f28'};border-radius:4px;padding:2px 6px;display:inline-block;cursor:${upAfford?'pointer':'not-allowed'};opacity:${upAfford?1:0.6};" title="Upgrade to ${CARD_RARITIES[ri+1].name} for ${upCost} Favor">▲ ✦${upCost}</div>` : ''}
       `;
       el.onclick = () => _selectStat(() => {

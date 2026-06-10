@@ -28,6 +28,12 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
   - **AI-native:** the fork is a pausing modal, so it ships with a `gSimEvolution` harness hook (mirrors
     `gSimDraft`) resolved in all bot/headless loops — `Sim.batch` never stalls on it. Per-skill rank +
     pending fork are exposed via `Sim.observe`.
+  - **Card level track + readable wave shape (feel pass).** The "Dance of Fire" draft card now shows a
+    **10-dot rank track** (the 5th/10th dots larger to mark the evolution levels; the next level flashes
+    on hover). And the base fire wave starts **smaller** and grows the right way — leveling **widens the
+    arc and extends the reach** rather than ballooning sideways — with the **hitbox matching the drawn
+    arc** exactly (one source of truth), so what you see is what you hit. All shape values are on named,
+    tunable knobs (`FW_HALF_ANGLE`/`FW_DRAW_FUDGE` + the registry `waveStep`).
   - **Caps at rank 9 for now** — the **Chaos fork @10** (the dread capstone) is the next slice.
 - **Patron Cards — your god choice reshapes your draft (roadmap item 0c).** A new, reusable card
   category (`PATRON_CARDS`) that only appears when you've pledged to a patron, buffing *that god's
