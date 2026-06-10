@@ -7,7 +7,7 @@ Each entry captures: what was built, what broke badly, and what the root cause t
 
 > **Older sessions (1-13) are archived** in [`docs/archive/session-journal-2026H1.md`](archive/session-journal-2026H1.md).
 > Their still-live, distilled value survives in the **Debugging Heuristics Reference** table below and in
-> `docs/learnings/engineer.md`. This live file keeps only the **most recent sessions** + the reference tables,
+> `agents/engineer/memory.md`. This live file keeps only the **most recent sessions** + the reference tables,
 > so a session loads the running context without the full back-catalogue. Archive older sessions here as it grows.
 
 ---
@@ -205,7 +205,7 @@ virtual-time timing) — over `http://localhost` it rendered fine. So: `file://`
 but verify headless over HTTP.
 
 **Tooling friction:** `tools/slice-turnaround.py` still emits base64 manifest snippets — now a step behind
-the file-based pipeline (logged in `CLEANUP_BACKLOG.md`, flagged in `ART_PIPELINE.md`).
+the file-based pipeline (logged in `CLEANUP_BACKLOG.md`, flagged in `agents/artist/artist.md`).
 
 ---
 

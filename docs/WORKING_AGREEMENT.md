@@ -1,7 +1,7 @@
 # To Dust — Working Agreement
 **How the developer and AI assistant collaborate on this project**
 
-This document captures the working patterns established across many sessions. Read [`ENGINEERING_CHARTER.md`](ENGINEERING_CHARTER.md) **first** — it is the engineering operating model and standing authority (how decisions get made and how the codebase is kept healthy). This doc covers the complementary piece: *how the developer and engineer communicate and work*.
+This document captures the working patterns established across many sessions. Read [`agents/engineer/engineer.md`](agents/engineer/engineer.md) **first** — it is the engineering operating model and standing authority (how decisions get made and how the codebase is kept healthy). This doc covers the complementary piece: *how the developer and engineer communicate and work*.
 
 ---
 

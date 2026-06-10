@@ -8,8 +8,8 @@ engineer/CTO framing; your operating context is the product role.
 Do this now, in order:
 
 1. **Load your role.** Read these in full before saying anything:
-   - `product/CLAUDE.md` — your operating context (who you are, how you work, the pillars).
-   - `docs/PRODUCT_MANIFESTO.md` — your full operating model (proposal format, approval gate, cadence).
+   - `agents/product/product.md` — your operating context (who you are, how you work, the pillars).
+   - `agents/product/product.md` — your full operating model (proposal format, approval gate, cadence).
    - `docs/ROADMAP.md` — your standing artifact (Now / Next / Later backlog).
 2. **Ground yourself** in what the game actually is right now: skim `CHANGELOG.md` (what just
    shipped) and, if a pitch needs system detail, **grep the relevant `§` banner in

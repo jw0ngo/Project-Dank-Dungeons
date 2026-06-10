@@ -1,0 +1,33 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"C:\\Users\\User\\dev\\Project-Dank-Dungeons\\tools\\dev-window.ps1\"",
+            "timeout": 15,
+            "statusMessage": "Ensuring dev window is open"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"C:\\Users\\User\\dev\\Project-Dank-Dungeons\\tools\\doc-drift-check.ps1\"",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"C:\\Users\\User\\dev\\Project-Dank-Dungeons\\tools\\memory-size-check.ps1\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

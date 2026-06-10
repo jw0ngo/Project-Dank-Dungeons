@@ -1,10 +1,16 @@
 <#
   session-brief.ps1 - SessionStart hook for the From Dust studio.
 
-  Gathers the latest release notes (CHANGELOG) + the newest crystallized learning
-  from each role's LEARNINGS file, and emits them as SessionStart additionalContext
-  with an instruction to open the session with a super-brief executive summary and a
-  reminder of the recursive-learning crystallization doctrine.
+  DATA-DRIVEN off the per-agent cards in agents/<role>/<role>.md: each card's YAML
+  frontmatter declares its `memory:` file and `memory_compact_at:` line budget, so new
+  agents self-register just by existing - no role->path mapping is hardcoded here.
+
+  Emits, as SessionStart additionalContext:
+    - the recursive-learning doctrine reminder,
+    - the latest release notes (CHANGELOG),
+    - the newest crystallized memory entry per role,
+    - a MAINTENANCE nudge for any memory file (or the shared session journal) over budget,
+  then asks the agent to open with a brief executive summary.
 
   Output: a single JSON object on stdout (the SessionStart hook contract). Never throws
   in a way that fails the session - on any error it emits a minimal valid object.
@@ -27,7 +33,7 @@ function Get-Block([string]$path, [string]$pattern, [int]$maxLines) {
   return $block
 }
 
-function Get-NewestLearning([string]$path) {
+function Get-NewestEntry([string]$path) {
   if (-not (Test-Path $path)) { return $null }
   $txt = Get-Content $path -Raw -Encoding UTF8
   $m = [regex]::Match($txt, '(?m)^### (.+)$')
@@ -35,14 +41,30 @@ function Get-NewestLearning([string]$path) {
   return $null
 }
 
+# Parse an agent card's YAML frontmatter (the keys we care about) into a hashtable.
+function Get-Card([string]$path) {
+  if (-not (Test-Path $path)) { return $null }
+  $txt = Get-Content $path -Raw -Encoding UTF8
+  $m = [regex]::Match($txt, '(?s)^---\s*\r?\n(.*?)\r?\n---')
+  if (-not $m.Success) { return $null }
+  $card = @{ file = $path }
+  foreach ($line in ($m.Groups[1].Value -split "`r?`n")) {
+    if ($line -match '^\s*(agent|title|memory|memory_compact_at)\s*:\s*(.+?)\s*$') {
+      $card[$matches[1]] = $matches[2].Trim()
+    }
+  }
+  if (-not $card.ContainsKey('agent')) { return $null }
+  return $card
+}
+
 try {
   $sb = [System.Text.StringBuilder]::new()
   [void]$sb.AppendLine('[From Dust - session start briefing]')
   [void]$sb.AppendLine('')
   [void]$sb.AppendLine('DOCTRINE (recursive learning): at the end of a substantive session, crystallize your')
-  [void]$sb.AppendLine('highest-level, transferable lessons into your role''s LEARNINGS.md (engineer:')
-  [void]$sb.AppendLine('docs/learnings/engineer.md; PM: product/LEARNINGS.md; artist: artist/LEARNINGS.md;')
-  [void]$sb.AppendLine('CD: studio/creative-director/LEARNINGS.md). See studio/STUDIO.md.')
+  [void]$sb.AppendLine('highest-level, transferable lessons into your role''s memory (agents/<role>/memory.md;')
+  [void]$sb.AppendLine('CD: studio/creative-director/LEARNINGS.md), and compact it yourself when it grows past the')
+  [void]$sb.AppendLine('card''s memory_compact_at. See studio/STUDIO.md.')
   [void]$sb.AppendLine('')
 
   $rel = Get-Block (Join-Path $root 'CHANGELOG.md') '(?ms)^## \[\d+\.\d+\.\d+\].*?(?=^## \[|\z)' 28
@@ -52,21 +74,51 @@ try {
     [void]$sb.AppendLine('')
   }
 
-  $roles = @(
-    @{ n = 'Engineer';          p = (Join-Path $root 'docs/learnings/engineer.md') },
-    @{ n = 'Product Manager';   p = (Join-Path $root 'product/LEARNINGS.md') },
-    @{ n = 'Artist';            p = (Join-Path $root 'artist/LEARNINGS.md') },
-    @{ n = 'Creative Director'; p = (Join-Path $root 'studio/creative-director/LEARNINGS.md') }
-  )
-  $any = $false
-  $lb = [System.Text.StringBuilder]::new()
-  foreach ($r in $roles) {
-    $t = Get-NewestLearning $r.p
-    if ($t) { [void]$lb.AppendLine(('- {0}: {1}' -f $r.n, $t)); $any = $true }
+  # Discover the craft-role cards (data-driven). CD is not an agents/ card - appended explicitly.
+  $order = @('engineer', 'product', 'artist')
+  $cards = @()
+  foreach ($r in $order) {
+    $c = Get-Card (Join-Path $root ("agents/{0}/{0}.md" -f $r))
+    if ($c) { $cards += $c }
   }
-  if ($any) {
-    [void]$sb.AppendLine('NEWEST CRYSTALLIZED LEARNING PER ROLE:')
+
+  # Newest crystallized memory entry per role.
+  $lb = [System.Text.StringBuilder]::new()
+  foreach ($c in $cards) {
+    $title = if ($c.ContainsKey('title')) { $c.title } else { $c.agent }
+    $entry = Get-NewestEntry (Join-Path $root $c.memory)
+    if ($entry) { [void]$lb.AppendLine(('- {0}: {1}' -f $title, $entry)) }
+  }
+  $cd = Get-NewestEntry (Join-Path $root 'studio/creative-director/LEARNINGS.md')
+  if ($cd) { [void]$lb.AppendLine(('- Creative Director: {0}' -f $cd)) }
+  if ($lb.Length -gt 0) {
+    [void]$sb.AppendLine('NEWEST CRYSTALLIZED MEMORY PER ROLE:')
     [void]$sb.Append($lb.ToString())
+    [void]$sb.AppendLine('')
+  }
+
+  # MAINTENANCE: memory files over their declared budget + the shared session journal.
+  $over = @()
+  foreach ($c in $cards) {
+    $memPath = Join-Path $root $c.memory
+    if (Test-Path $memPath) {
+      $lines = (Get-Content $memPath | Measure-Object -Line).Lines
+      $budget = 0; [void][int]::TryParse([string]$c.memory_compact_at, [ref]$budget)
+      if ($budget -gt 0 -and $lines -gt $budget) {
+        $over += ('{0} ({1} lines > {2})' -f $c.memory, $lines, $budget)
+      }
+    }
+  }
+  $journal = Join-Path $root 'docs/SESSION_JOURNAL.md'
+  if (Test-Path $journal) {
+    $jlines = (Get-Content $journal | Measure-Object -Line).Lines
+    if ($jlines -gt 400) { $over += ('docs/SESSION_JOURNAL.md ({0} lines > 400)' -f $jlines) }
+  }
+  if ($over.Count -gt 0) {
+    [void]$sb.AppendLine('MAINTENANCE (self-compact before ending a substantive session):')
+    foreach ($o in $over) { [void]$sb.AppendLine(('- ' + $o)) }
+    [void]$sb.AppendLine('Compact each: merge overlapping entries, supersede outdated ones, raise altitude; move')
+    [void]$sb.AppendLine('superseded raw entries to agents/<role>/archive/ (the journal archives by session block).')
     [void]$sb.AppendLine('')
   }
 

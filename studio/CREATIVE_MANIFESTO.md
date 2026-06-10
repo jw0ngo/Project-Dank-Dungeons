@@ -5,8 +5,8 @@ story, the feel, and the taste behind the calls. Josh holds the Creative Directo
 this is where his direction is recorded — in his words where possible — so the whole studio can serve
 one coherent vision, and so a **future Creative Director agent** can one day be trained on it.
 
-> This is not the product roadmap (`docs/PRODUCT_MANIFESTO.md` — *what/why*, owned by the PM) and not
-> the engineering charter (`docs/ENGINEERING_CHARTER.md` — *how*). This is the layer above both:
+> This is not the product roadmap (`agents/product/product.md` — *what/why*, owned by the PM) and not
+> the engineering charter (`agents/engineer/engineer.md` — *how*). This is the layer above both:
 > **why the game should exist and how it should make you feel.** When the others conflict, this wins.
 
 ## How to use this doc

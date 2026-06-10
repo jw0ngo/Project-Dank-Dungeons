@@ -1,20 +1,5 @@
-# Artist — Learnings
-
-Crystallized, high-altitude art craft for *To Dust*. Newest first. Read this first each session; add
-to it at session end (studio doctrine — see `../studio/STUDIO.md`). One entry = one dated, titled
-lesson: **the principle → why → how to apply.** Quality over volume.
-
-> **Division of homes:** the pipeline + house style live in `../docs/ART_PIPELINE.md`; per-asset
-> traits and prompt templates in `../docs/Art_Designer_Agent.md`; cutout/debugging specifics in
-> `../docs/SESSION_JOURNAL.md`. *This* file is the step up — transferable lessons about *how to make
-> art well here* (what kept assets on-style and rendering correctly).
-
-> Entry template:
->
-> ### YYYY-MM-DD — <short principle as a title>
-> - **Principle:** <the transferable lesson, one line>
-> - **Why:** <what made it true here>
-> - **How to apply:** <what to do next time>
+# Artist — Memory
+*Crystallized, transferable art lessons. Read first each session; append at session end. Self-compact when over 250 lines (merge/supersede/raise-altitude; archive superseded entries to `agents/artist/archive/`).*
 
 ---
 

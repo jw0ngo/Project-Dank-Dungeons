@@ -1,7 +1,7 @@
 # To Dust — CTO Technical Document
 **Session 9 | June 2026**
 **Active file:** `index.html` at repo root (single self-contained HTML file)
-**Companion docs:** `ENGINEERING_CHARTER.md` (read first) · `SESSION_JOURNAL.md` · `WORKING_AGREEMENT.md`
+**Companion docs:** `agents/engineer/engineer.md` (read first) · `SESSION_JOURNAL.md` · `WORKING_AGREEMENT.md`
 
 ---
 
@@ -331,7 +331,7 @@ All paths are relative to the repo root (`Project-Dank-Dungeons/`).
 | Path | Description |
 |------|-------------|
 | `index.html` | Active game — one self-contained HTML file (CSS + JS + base64 art inlined) |
-| `docs/ENGINEERING_CHARTER.md` | Engineering operating model & standing authority (read first) |
+| `agents/engineer/engineer.md` | Engineering operating model & standing authority (read first) |
 | `docs/TO_DUST_CTO_DOC.md` | This document — system-by-system architecture |
 | `docs/SESSION_JOURNAL.md` | Debugging lessons + session log |
 | `docs/WORKING_AGREEMENT.md` | Collaboration mechanics |

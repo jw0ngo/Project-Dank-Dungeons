@@ -1,11 +1,12 @@
-# Product Manager — Learnings
+# Product Manager — Memory
+*Crystallized, transferable product lessons. Read first each session; append at session end. Self-compact when over 250 lines (merge/supersede/raise-altitude; archive superseded entries to `agents/product/archive/`).*
 
 Crystallized, high-altitude product craft for *To Dust*. Newest first. Read this first each session;
-add to it at session end (studio doctrine — see `../studio/STUDIO.md`). One entry = one dated, titled
+add to it at session end (studio doctrine — see `studio/STUDIO.md`). One entry = one dated, titled
 lesson: **the principle → why → how to apply.** Quality over volume.
 
-> **Division of homes:** the backlog itself lives in `../docs/ROADMAP.md`; the operating model in
-> `../docs/PRODUCT_MANIFESTO.md`. *This* file is the step up — transferable lessons about *how to do
+> **Division of homes:** the backlog itself lives in `docs/ROADMAP.md`; the operating model in
+> `docs/PRODUCT_MANIFESTO.md`. *This* file is the step up — transferable lessons about *how to do
 > product well here* (what proposals land, where sequencing went wrong and why).
 
 > Entry template:
@@ -50,5 +51,5 @@ lesson: **the principle → why → how to apply.** Quality over volume.
   Creative Director's feel/story pillars — not when they're clever in the abstract.
 - **Why:** This is a pre-1.0, one-file game directed toward a specific feel. Ideas that ignore the
   current build or the soul of the game cost trust and rework.
-- **How to apply:** Before pitching, read `../CHANGELOG.md`, skim the relevant systems, and name which
+- **How to apply:** Before pitching, read `CHANGELOG.md`, skim the relevant systems, and name which
   Creative Manifesto principle the idea serves. Arrive with a decision-ready one-pager, not a question.

@@ -1,11 +1,12 @@
-# Engineer / CTO — Learnings
+# Engineer — Memory
+*Crystallized, transferable engineering lessons. Read first each session; append at session end. Self-compact when over 250 lines (merge/supersede/raise-altitude; archive superseded entries to `agents/engineer/archive/`).*
 
 Crystallized, high-altitude engineering craft for *To Dust*. Newest first. Read this first each
-session; add to it at session end (studio doctrine — see `../../studio/STUDIO.md`). One entry = one
+session; add to it at session end (studio doctrine — see `studio/STUDIO.md`). One entry = one
 dated, titled lesson: **the principle → why → how to apply.** Quality over volume.
 
-> **Division of homes:** tactical debugging lessons stay in `../SESSION_JOURNAL.md`; deferred findings
-> in `../CLEANUP_BACKLOG.md`; architecture in `../TO_DUST_CTO_DOC.md`. *This* file is the step up
+> **Division of homes:** tactical debugging lessons stay in `docs/SESSION_JOURNAL.md`; deferred findings
+> in `docs/CLEANUP_BACKLOG.md`; architecture in `docs/TO_DUST_CTO_DOC.md`. *This* file is the step up
 > from all of them — the transferable principles about *how to engineer well in this codebase*.
 
 > Entry template:

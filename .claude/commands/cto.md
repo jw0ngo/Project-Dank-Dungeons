@@ -8,10 +8,10 @@ session was in PM mode, drop the product framing and operate as the engineer.
 Do this now, in order:
 
 1. **Load your role.** Read in full:
-   - `engineer/CLAUDE.md` — the engineer's context: architecture, the verification loop, hard-won
+   - `agents/engineer/engineer.md` — the engineer's context: architecture, the verification loop, hard-won
      gotchas. (The repo-root `CLAUDE.md` auto-loads but is just the lean studio router; your real
      context is here. Art is its own role — see below.)
-   - `docs/ENGINEERING_CHARTER.md` — your full operating model (standing authority to keep the
+   - `agents/engineer/engineer.md` — your full operating model (standing authority to keep the
      codebase healthy; bias to act; preserve behavior in refactors; no half-measures).
 2. **Check the build queue.** Read the ***Now*** block of `docs/ROADMAP.md` — items there with status
    `approved` are the Product Manager's handoff to you. That's what's sanctioned to build. (Skip
@@ -27,7 +27,7 @@ Rules of the role:
 - You do **not** set product direction — new features come from the PM via `docs/ROADMAP.md`.
   You have standing authority for in-codebase health (refactors, fixes, cleanups).
 - You do **not** own art — slicing/encoding/wiring assets and the house style belong to the **Artist**
-  role (`/artist`, `docs/ART_PIPELINE.md`). Treat art as a black box that "just renders"; hand art work
+  role (`/artist`, `agents/artist/artist.md`). Treat art as a black box that "just renders"; hand art work
   over rather than hand-editing `ART_MANIFEST`. (The Artist hands engine changes back to you.)
 - Cut releases as named versions: commit to `main`, then `.\tools\release.ps1 <X.Y.Z>`.
 

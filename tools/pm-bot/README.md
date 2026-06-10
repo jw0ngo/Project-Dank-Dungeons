@@ -1,7 +1,7 @@
 # Product Manager Telegram bot
 
 Chat with the To Dust **Product Manager** agent from your phone, on the go, to
-work the product roadmap. The PM operates per [`docs/PRODUCT_MANIFESTO.md`](../../docs/PRODUCT_MANIFESTO.md):
+work the product roadmap. The PM operates per [`agents/product/product.md`](../../agents/product/product.md):
 it brings decision-ready proposals, runs them by you for approval, and — once you say
 yes — updates [`docs/ROADMAP.md`](../../docs/ROADMAP.md) and pushes it to `main` so your
 engineering Claude session picks the work up.
@@ -19,8 +19,8 @@ translates to whichever backend you select with `LLM_PROVIDER`:
 | `anthropic` (default) | Anthropic Messages API | Claude (`claude-opus-4-8`, …) |
 | `openai` | OpenAI-compatible `/v1/chat/completions` | OpenAI, OpenRouter, Groq, Together, Mistral, DeepSeek, local Ollama / LM Studio / vLLM |
 
-The agent's *operating model* is plain markdown (`docs/PRODUCT_MANIFESTO.md`,
-`product/CLAUDE.md`), loaded as the system prompt — so any model reads the same brief.
+The agent's *operating model* is plain markdown (`agents/product/product.md`),
+loaded as the system prompt — so any model reads the same brief.
 The PM needs a **tool-calling-capable** model to write/commit the roadmap; models
 without function calling can still chat but can't update `ROADMAP.md`. Backend
 translation lives in `llm_backends.py` — add a new provider by adding one class there.

@@ -3,7 +3,7 @@
 To Dust — Product Manager Telegram bot.
 
 A long-polling Telegram bot that lets the developer chat with the Product Manager
-agent (operating per docs/PRODUCT_MANIFESTO.md) from a phone, to work the product
+agent (operating per agents/product/product.md) from a phone, to work the product
 roadmap on the go. The PM can read the repo's product docs for grounding, rewrite
 docs/ROADMAP.md, and commit + push approved changes so the engineering session sees
 them.
@@ -44,9 +44,9 @@ ROADMAP_REL = "docs/ROADMAP.md"
 # Files the PM may read for grounding (relative to repo root). Read access is
 # restricted to this allow-list so the bot can't be coaxed into reading secrets.
 READABLE_DOCS = [
-    "docs/PRODUCT_MANIFESTO.md",
+    "agents/product/product.md",
     "docs/ROADMAP.md",
-    "docs/ENGINEERING_CHARTER.md",
+    "agents/engineer/engineer.md",
     "docs/WORKING_AGREEMENT.md",
     "docs/TO_DUST_CTO_DOC.md",
     "docs/SESSION_JOURNAL.md",
@@ -246,7 +246,7 @@ TOOL_IMPLS = {
 # ── System prompt ─────────────────────────────────────────────────────────────
 
 def build_system() -> str:
-    manifesto_path = REPO_DIR / "docs" / "PRODUCT_MANIFESTO.md"
+    manifesto_path = REPO_DIR / "agents" / "product" / "product.md"
     roadmap_path = REPO_DIR / ROADMAP_REL
     manifesto = manifesto_path.read_text(encoding="utf-8") if manifesto_path.exists() else "(manifesto missing)"
     roadmap = roadmap_path.read_text(encoding="utf-8") if roadmap_path.exists() else "(roadmap missing)"

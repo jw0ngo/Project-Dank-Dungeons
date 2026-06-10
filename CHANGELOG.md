@@ -16,6 +16,17 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
   the reference tables (474→216; full snapshot archived at `docs/archive/session-journal-2026H1.md`). Role
   entrypoints now read the heavy docs **by section / on demand** (`ROADMAP` *Now* block, `TO_DUST_CTO_DOC`
   `§`-section grep, `Art_Designer_Agent.md` only when generating an asset). Docs/process only — no game change.
+- **Agents restructured into self-contained, self-maintaining files.** Each role is now a single file
+  under `agents/<role>/` (`engineer.md` / `product.md` / `artist.md`) that folds in its identity,
+  operating model (the retired `docs/ENGINEERING_CHARTER.md` / `PRODUCT_MANIFESTO.md` / `ART_PIPELINE.md`),
+  and habits, beside its own crystallized **`memory.md`** (was `docs/learnings/engineer.md` / the role
+  `LEARNINGS.md` files) and an `archive/`. Each file carries YAML frontmatter (`memory`,
+  `memory_compact_at`); `tools/session-brief.ps1` now reads it **data-driven** (new agents self-register)
+  and surfaces a compaction nudge when a memory — or the shared `SESSION_JOURNAL.md` — runs over budget,
+  backed by a new `tools/memory-size-check.ps1` Stop hook. Adds a "Find your section" router atop the
+  Artist file. All inbound references repointed (routers, `/cto`·`/pm`·`/artist`, Codex agents, specs,
+  and the pm-bot system prompt). Agents operate from the repo root → all paths root-relative. Docs/process
+  + tooling only — no game change.
 
 ## [0.3.2] - 2026-06-09
 

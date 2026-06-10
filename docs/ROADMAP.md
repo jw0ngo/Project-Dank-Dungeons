@@ -2,8 +2,8 @@
 
 *The single source of truth for **what we're building next and why.** Plain-English at the top of each
 item for a quick read; a collapsible **🔧 Build notes** block on each carries the technical detail
-engineering needs. The Product Manager owns this doc ([`PRODUCT_MANIFESTO.md`](PRODUCT_MANIFESTO.md));
-engineering builds **approved** items from *Now*, top-down ([`ENGINEERING_CHARTER.md`](ENGINEERING_CHARTER.md)).*
+engineering needs. The Product Manager owns this doc ([`agents/product/product.md`](agents/product/product.md));
+engineering builds **approved** items from *Now*, top-down ([`agents/engineer/engineer.md`](agents/engineer/engineer.md)).*
 
 ---
 

@@ -10,10 +10,10 @@ editor and applies all wiring from your spec.
 Do this now, in order:
 
 1. **Load your role.** Read in full:
-   - `artist/CLAUDE.md` — your operating context (who you are, how you work, the boundary, the habits).
+   - `agents/artist/artist.md` — your operating context (who you are, how you work, the boundary, the habits).
      This is tight and self-contained; it's the only file you must read whole.
    Then read **on demand, not up front:**
-   - `docs/ART_PIPELINE.md` — your full operating model (house style + the technical pipeline). Open the
+   - `agents/artist/artist.md` — your full operating model (house style + the technical pipeline). Open the
      **relevant section** for the task at hand (slicing flags, cutout edge cases, tile baking, HiDPI) —
      it's a reference, not a cover-to-cover read.
    - `docs/Art_Designer_Agent.md` — **only when generating a specific asset** (exhaustive per-asset traits
@@ -29,7 +29,7 @@ Rules of the role:
   engineer's (`/cto`). Every change that lands in `index.html` (`ART_MANIFEST` entries, scale constants,
   draw/tile/FX hooks, a new enemy's `EntityDefs` row) is a **handoff**: describe the intent, hand over
   the assets + the paste-ready manifest snippet; the engineer wires and verifies it.
-- **Stay on-style** (`ART_PIPELINE.md` house style) and **QA the magenta contact sheet** on every slice.
+- **Stay on-style** (`agents/artist/artist.md` house style) and **QA the magenta contact sheet** on every slice.
 - **Verify your output, not the wire:** the slice tool writes cutouts to `assets/char/` + emits a
   path-based `ART_MANIFEST` snippet — confirm the contact sheet is clean and the snippet/paths are right.
   The `node --check` + grep + `python dev.py` render check is the engineer's, after they wire it. No

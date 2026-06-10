@@ -16,18 +16,19 @@ learning, below). Creative direction (vision, story, feel) is set by the **Creat
 
 ## Roles & context routing
 
-Beneath the Creative Director, three craft roles operate the repo. **Each has its own operating
-context file — read it (and only it) when you take the role:**
+Beneath the Creative Director, three craft roles operate the repo. **Each is a single self-contained,
+tool-agnostic file — read it (and only it) when you take the role.** Each file holds the role's identity,
+operating model, and habits, plus a pointer to its own self-maintained memory (`agents/<role>/memory.md`):
 
-| Role | Switch with | Read on entry | Full operating model |
-|------|-------------|---------------|----------------------|
-| **Engineer / CTO** — owns *how* (`index.html`, systems, releases). **The default.** | `/cto` (or just start) | **`engineer/CLAUDE.md`** | `docs/ENGINEERING_CHARTER.md` |
-| **Product Manager** — owns *what & why* (the roadmap). | `/pm` | `product/CLAUDE.md` | `docs/PRODUCT_MANIFESTO.md` |
-| **Artist** — owns the *art* (direction, slicing, asset specs). | `/artist` | `artist/CLAUDE.md` | `docs/ART_PIPELINE.md` |
+| Role | Switch with | Read on entry (self-contained) |
+|------|-------------|--------------------------------|
+| **Engineer / CTO** — owns *how* (`index.html`, systems, releases). **The default.** | `/cto` (or just start) | **`agents/engineer/engineer.md`** |
+| **Product Manager** — owns *what & why* (the roadmap). | `/pm` | **`agents/product/product.md`** |
+| **Artist** — owns the *art* (direction, slicing, asset specs). | `/artist` | **`agents/artist/artist.md`** |
 
-**You are the engineer by default.** If no role command was given, read **`engineer/CLAUDE.md`** for
-your full context (architecture, the verification loop, the hard-won gotchas) before non-trivial work.
-(The role-context files are named `CLAUDE.md` but are tool-agnostic — read them as your context.)
+**You are the engineer by default.** If no role command was given, read **`agents/engineer/engineer.md`**
+for your full context (architecture, the operating model, the verification loop, the hard-won gotchas)
+before non-trivial work.
 
 Hand-offs between roles:
 - The **PM** hands off through `docs/ROADMAP.md` — fills it; the engineer builds from *Now* (status `approved`).
@@ -44,14 +45,15 @@ From Dust compounds through documentation — a lesson not written down is re-pa
 **During** a session, capture specifics where they belong (debugging → `docs/SESSION_JOURNAL.md`;
 deferred findings → `docs/CLEANUP_BACKLOG.md`; architecture → the relevant `docs/` reference). **At the
 end** of a substantive session, *crystallize* the highest-level, transferable lessons into your role's
-`LEARNINGS.md` (engineer: `docs/learnings/engineer.md`; PM: `product/LEARNINGS.md`; artist:
-`artist/LEARNINGS.md`). Read that file first when you start. Full doctrine: `studio/STUDIO.md`.
+memory (engineer: `agents/engineer/memory.md`; PM: `agents/product/memory.md`; artist:
+`agents/artist/memory.md`). Read that file first when you start; compact it yourself when it grows past
+its `memory_compact_at` (archiving superseded entries to `agents/<role>/archive/`). Full doctrine: `studio/STUDIO.md`.
 
 ## Doc map (read on demand, by section)
 
 The `docs/` tree is the authoritative project reference. Don't read these whole up front — open the
 relevant section when a task touches it:
-- `ENGINEERING_CHARTER.md` · `PRODUCT_MANIFESTO.md` · `ART_PIPELINE.md` — the three role operating models.
+- The three role operating models are **folded into each agent's file** under `agents/<role>/` (no longer in `docs/`).
 - `TO_DUST_CTO_DOC.md` — system-by-system architecture (grep its `§` banner for the system you're touching).
 - `ROADMAP.md` — the build queue (read the *Now* block). `CHANGELOG.md` — what just shipped.
 - `SESSION_JOURNAL.md` — recent sessions + the Debugging Heuristics table (older sessions in `docs/archive/`).

@@ -1,7 +1,7 @@
 # Spec — Card-Draft Level-Up System
 
 **Status:** `approved` 2026-06-06 · the progression half of the vertical slice ([`../ROADMAP.md`](../ROADMAP.md) → *Now*).
-**Owner handoff:** PM → engineering. The engineer owns the *how* per [`../ENGINEERING_CHARTER.md`](../ENGINEERING_CHARTER.md); this is the *what/why* with enough detail to build.
+**Owner handoff:** PM → engineering. The engineer owns the *how* per [`agents/engineer/engineer.md`](agents/engineer/engineer.md); this is the *what/why* with enough detail to build.
 **Pillar:** mastery (earned, legible power) · build-craft depth · game feel (the level-up *moment*).
 
 **One-liner:** every level-up pauses into a **draw of 3 randomly-rolled cards; pick one**. Cards improve a **passive stat**, the warrior's **passive skill (Grit)**, or an **active skill** — each rolled at one of four rarities (**Normal / Rare / Epic / Legendary**) that scale its magnitude. Replaces STR/DEX/INT entirely.
