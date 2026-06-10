@@ -8,6 +8,20 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 ## [Unreleased]
 
 ### Added
+- **Patron Cards — your god choice reshapes your draft (roadmap item 0c).** A new, reusable card
+  category (`PATRON_CARDS`) that only appears when you've pledged to a patron, buffing *that god's
+  signature mechanic*. Every future god drops its set into the same pool keyed by `patron`; **Cilia
+  ships first with a 3-card burn set.** When a patron is active, ~25% of drafts swap one fill slot for
+  a patron card (the ≥1 passive / ≥1 skill guarantee is preserved). Uncapped, like the rest of the pool.
+  - **Conflagration** — +6%/pick chance *per burn tick* for a burning enemy to **detonate**: a small
+    AoE that damages and **re-ignites** nearby enemies, so a full burn build chains pack-to-pack.
+    Blast scales off the enemy's current burn tick (~4×). Chance clamps at 100%.
+  - **Lingering Flame** — +0.5s burn duration/pick (more ticks at the same per-tick damage, so it
+    doesn't dilute the explosion).
+  - **Searing Heat** — +20%/pick burn tick damage (also feeds the Conflagration blast).
+  - All host/SP-authoritative (burn already was) — burn + explosion resolve host-side and sync via the
+    existing entity/`s.bn` streams, so **no MP-protocol change**. Known minor MP gap: the explosion
+    *particle* burst draws host-side only; clients still see the damage, deaths, and burning sync.
 - **Late-game danger pass — the difficulty curve now actually climbs (roadmap item 1).** Three layers,
   per the Vampire-Survivors lesson (pressure = density + mix-shift + breakpoints, not one smooth knob):
   - **Enemies finally hit harder as nights pass.** Audit finding: enemy *damage* never scaled at all —

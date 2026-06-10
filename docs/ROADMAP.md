@@ -26,7 +26,7 @@ second god) stays parked because the playtest proved we don't need it yet.
 |---|---|---|---|---|
 | **0** | **Player animation pass** — directional walk, dash poses, heavy-attack windup | 🔧 In progress (pre-greenlit) | Ongoing | Game feel + the *weighty-combat* directive made visible; runs alongside the queue |
 | **0b** | **Combat card pass** — per-skill dmg cards (Swing/Heavy) + Heavy: Reach + **pool-wide cap removal** | ✅ Shipped (v0.5.0) | Quick | Build identity in the draft + lucky-run variance; RNG governs (caps removed) |
-| **0c** | **Patron Cards** — patron-gated draft cards (Cilia burn set: explode / duration / tick dmg) | ✅ Approved | Session | Your god choice reshapes your draft; reusable per-god system serving god-identity |
+| **0c** | **Patron Cards** — patron-gated draft cards (Cilia burn set: explode / duration / tick dmg) | 🔧 Built — awaiting push | Session | Your god choice reshapes your draft; reusable per-god system serving god-identity |
 | **1** | **Make late-game dangerous** — enemies scale harder + glow yellow→red as they get deadly | 🔧 In progress (eng 2026-06-10) | Multi-session | Fixes the flat difficulty curve (playtest weak point #1) |
 | **2** | **Imbue Paths** — turn each fire skill into a 10-level mastery tree with branching upgrades | ✅ Approved — cleared for build | Large, phased | Fixes boring level-ups; the heart of "build your own playstyle" (#2) |
 | **3** | **Wolves stop getting stuck** on their dens + ignore forest slow | ✅ Shipped (v0.5.0) | Quick | Bug fix — unblocks wolf playtesting |
@@ -137,7 +137,7 @@ already floors `wwCooldown: 30` and `leapCooldown: 45`, and Grit's trigger strea
 
 ### 0c. Patron Cards — patron-gated level-up cards (Cilia burn set first)
 
-`✅ approved` (2026-06-10, Josh-directed; design calls resolved) · **Size:** session · **Pillars:** build-craft depth (the heart), game feel · **Art:** none (reuses fire particles; fire card-frame is stretch)
+`🔧 built` (eng 2026-06-10 — awaiting push/playtest; flips to shipped then) · **Size:** session · **Pillars:** build-craft depth (the heart), game feel · **Art:** none (reuses fire particles; fire card-frame is stretch)
 
 **What:** A **new card category that only appears when you've pledged to a patron**, buffing *that god's
 signature mechanic*. It's a **reusable system**, not 3 one-off cards — every future god (Boreas freeze,

@@ -3194,7 +3194,8 @@ function makePlayerState(wx, wy) {
     // Wilderness run buffs from obelisks — reset each run
     wildBuffs: { hpBonus:0, mpBonus:0, hpRegenAdd:0, mpRegenAdd:0,
                  speedPct:0, damagePct:0, cdPct:0, spawnPct:0,
-                 xpPct:0, pickupRange:0 },
+                 xpPct:0, pickupRange:0,
+                 burnExplodeChance:0, burnDurMult:1, burnTickMult:1 },  // Cilia patron cards (item 0c)
     // Look
     angle: 0,
     // Sword swing
@@ -5343,11 +5344,39 @@ function gUpdateFireWaves(dt){
 // Ignite an enemy — burn DoT mirrored on the player fire-trap model.
 // Re-applying refreshes to the longer duration / stronger tick.
 function gApplyEnemyBurn(en, durFrames, totalDmg){
-  const ticks = Math.max(1, Math.round(durFrames / 36));
-  const per   = Math.max(1, Math.round(totalDmg / ticks));
-  en._burnTimer   = Math.max(en._burnTimer || 0, durFrames);
+  // Cilia patron cards (item 0c): the local player's burn mods scale duration & per-tick damage.
+  // burnDurMult extends the burn (more ticks, SAME per-tick — so it doesn't dilute Conflagration);
+  // burnTickMult boosts per-tick damage (and thus the explosion, which scales off tick dmg).
+  const wb       = gPlayer && gPlayer.wildBuffs;
+  const durMult  = (wb && wb.burnDurMult)  || 1;
+  const tickMult = (wb && wb.burnTickMult) || 1;
+  const baseTicks = Math.max(1, Math.round(durFrames / 36));
+  const per   = Math.max(1, Math.round(totalDmg / baseTicks * tickMult));
+  const dur   = Math.round(durFrames * durMult);
+  en._burnTimer   = Math.max(en._burnTimer || 0, dur);
   en._burnTickDmg = Math.max(en._burnTickDmg || 0, per);
   if(en._burnAccum == null) en._burnAccum = 0;
+}
+
+// Conflagration (item 0c): a burning enemy can detonate on a burn tick — a small AoE that damages
+// AND re-ignites nearby enemies, so a full burn build chains pack-to-pack. Blast damage scales off
+// the detonating enemy's current per-tick burn (~4×), so Searing Heat feeds it. Host/SP-only
+// (called from the host-authoritative burn tick), so hp + burn sync as usual — no MP-protocol change.
+const BURN_EXPLODE_R      = 60;    // px AoE radius
+const BURN_EXPLODE_FRAMES = 120;   // re-ignite duration on caught enemies (before the player's durMult)
+function gBurnExplode(src){
+  const dmg = Math.max(4, Math.round((src._burnTickDmg || 1) * 4));
+  spawnGP(src.wx, src.wy, '#ff5512', 18, 4.5);
+  spawnGP(src.wx, src.wy, '#ffcc33', 10, 3);
+  gShake(2, 4);
+  for(const o of gEnemies){
+    if(o.dead || o === src) continue;
+    if(!gWithin(o.wx - src.wx, o.wy - src.wy, BURN_EXPLODE_R + (o.r || 11))) continue;
+    o.hp -= dmg; o.hitFlash = 8;
+    addGDmg(o.wx, o.wy - 12, dmg, '#ff8833');
+    gApplyEnemyBurn(o, BURN_EXPLODE_FRAMES, (src._burnTickDmg || 1) * 3);   // chain the burn
+    if(o.hp <= 0) gKillEnemy(o);
+  }
 }
 
 function gUpdateEnemyBurn(dt){
@@ -5362,6 +5391,9 @@ function gUpdateEnemyBurn(dt){
       en.hp -= d; en.hitFlash = 6;
       spawnGP(en.wx, en.wy, '#ff7a22', 4, 2.2);
       addGDmg(en.wx, en.wy-12, d, '#ff7a33');
+      // Conflagration (item 0c): chance per tick to detonate — AoE + re-ignite chain.
+      const ec = (gPlayer && gPlayer.wildBuffs && gPlayer.wildBuffs.burnExplodeChance) || 0;
+      if(ec > 0 && Math.random() < ec) gBurnExplode(en);
       if(en.hp <= 0){
         gKillEnemy(en);
       }
@@ -10876,6 +10908,18 @@ function gIsImbued(p, skillId, patron){
 function gSkillImbuePatron(skillId){
   return (gPlayer && gPlayer.imbues && gPlayer.imbues[skillId]) || null;
 }
+// ── Patron (item 0c) — the god you've pledged to, driving patron-gated draft cards ──
+// gPlayer.imbues maps skillId→god; the "active patron" is whichever god has imbued any skill
+// (one patron per run today; returns the first if somehow multiple). Drives PATRON_CARDS gating.
+function gActivePatron(p){
+  p = p || gPlayer;
+  const vals = (p && p.imbues) ? Object.values(p.imbues) : [];
+  return vals.length ? vals[0] : null;
+}
+function gIsPatronActive(p, god){
+  p = p || gPlayer;
+  return !!(p && p.imbues && Object.values(p.imbues).includes(god));
+}
 function gImbueEffectText(skillId, god){
   const eff = IMBUE_EFFECTS[god] && IMBUE_EFFECTS[god][skillId];
   if(eff) return eff;
@@ -12392,6 +12436,29 @@ const GRIT_CARDS = [
     apply(p,v){ _addGritMod(p,'streakReduce', v); } },
 ];
 
+// ── PATRON pool (item 0c) — patron-gated cards that ONLY appear when you've pledged to that god,
+// buffing the element's signature mechanic. A reusable system: every future god (Boreas freeze,
+// Ikras chain, Bhumi thorns) drops its set into this same pool keyed by `patron`. Cilia ships
+// first — the burn set. Uncapped (per 0b's pool-wide removal); gated in gDrawCards by
+// gIsPatronActive and injected at PATRON_CARD_CHANCE per draft. These write the wildBuffs burn mods
+// read by gApplyEnemyBurn (duration/tick) and gUpdateEnemyBurn (the Conflagration detonation roll).
+const PATRON_CARD_CHANCE = 0.25;   // chance a draft swaps one fill slot for a patron card (when active)
+const PATRON_CARDS = [
+  // Conflagration: +chance per burn tick to detonate (AoE that re-ignites — chains the burn). Clamps at 100%.
+  { id:'cil-conflag', cat:'patron', patron:'cilia', icon:'🔥', name:'Conflagration', base:6, frac:false,
+    fmt:v=>`+${v}% burst chance per burn tick`,
+    apply(p,v){ p.wildBuffs.burnExplodeChance = Math.min(1, (p.wildBuffs.burnExplodeChance||0) + v/100); } },
+  // Lingering Flame: +burn duration (more ticks at the same per-tick dmg). base=30f → +0.5s on a
+  // standard 180f burn; the mult scales proportionally for other fire sources.
+  { id:'cil-linger',  cat:'patron', patron:'cilia', icon:'🔥', name:'Lingering Flame', base:30, frac:false,
+    fmt:v=>`+${(v/60).toFixed(1)}s burn duration`,
+    apply(p,v){ p.wildBuffs.burnDurMult = (p.wildBuffs.burnDurMult||1) + v/180; } },
+  // Searing Heat: +% burn tick damage (also feeds the Conflagration blast, which scales off tick dmg).
+  { id:'cil-searing', cat:'patron', patron:'cilia', icon:'🔥', name:'Searing Heat', base:20, frac:false,
+    fmt:v=>`+${v}% burn damage`,
+    apply(p,v){ p.wildBuffs.burnTickMult = (p.wildBuffs.burnTickMult||1) + v/100; } },
+];
+
 // A skill is "unlocked" for card purposes once its level ≥1 (auto-unlock) or in town.
 function gIsSkillUnlocked(id){
   const prop = { ww:'wwLevel', leap:'leapLevel', heavy:'heavyLevel', dash:'dashLevel' }[id];
@@ -12431,6 +12498,17 @@ function gDrawCards(n){
   if(actives.length)  take(actives);               // guarantee a skill/Grit card
   const all = passives.concat(actives);
   while(out.length < n && take(all)) { /* fill the rest from the combined pool */ }
+  // Patron-card injection (item 0c): when a patron is active, ~PATRON_CARD_CHANCE of drafts swap a
+  // single FILL slot (never the guaranteed passive[0]/skill[1]) for a patron-gated card.
+  if(out.length > 2 && gActivePatron(gPlayer) && Math.random() < PATRON_CARD_CHANCE){
+    const patrons = PATRON_CARDS.filter(c => gIsPatronActive(gPlayer, c.patron) && gCardAvailable(c) && !used.has(c.id));
+    if(patrons.length){
+      const card   = patrons[Math.floor(Math.random()*patrons.length)];
+      const rarity = rollCardRarity();
+      used.add(card.id);
+      out[out.length-1] = { card, rarity, value: _cardValue(card, rarity.mult) };  // replace the last fill slot
+    }
+  }
   return out;
 }
 
@@ -13070,7 +13148,8 @@ function gWildReset(){
     gPlayer.skillMods = {}; gPlayer.gritMods = {}; gPlayer.cardPicks = {};  // per-run card state
     gPlayer.wildBuffs = { hpBonus:0, mpBonus:0, hpRegenAdd:0, mpRegenAdd:0,
                           speedPct:0, damagePct:0, cdPct:0, spawnPct:0,
-                          xpPct:0, pickupRange:0, critChance:0, critDamage:0 };
+                          xpPct:0, pickupRange:0, critChance:0, critDamage:0,
+                          burnExplodeChance:0, burnDurMult:1, burnTickMult:1 };  // Cilia patron cards (item 0c)
     gPlayer.maxHp = 100; gPlayer.hp = 100;
     gPlayer.maxMp = 100; gPlayer.mp = 100;
   }
