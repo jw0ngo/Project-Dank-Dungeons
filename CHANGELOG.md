@@ -8,10 +8,10 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 ## [Unreleased]
 
 ### Added
-- **Imbue Paths — Dance of Fire becomes a mastery tree (roadmap item 2, Phase 1 · Slices A–B).** The
+- **Imbue Paths — Dance of Fire, a full 1→10 mastery tree (roadmap item 2, Phase 1).** The
   imbued-skill mastery system that fixes "leveling is repetitive." Imbuing the swing with Cilia now
-  creates a *named Art*, **Dance of Fire**, that you rank up 1→10 through the level-up draft, with a
-  branch point that reshapes how it plays.
+  creates a *named Art*, **Dance of Fire**, that you rank up 1→10 through the level-up draft, with two
+  branch points that reshape how it plays.
   - **Numeric ranks (1–4):** a rank-aware **"Dance of Fire"** card (in the existing `actives` pool,
     RNG-governed and rarity-scaled like any card) fattens the fire wave's damage, arc width, travel, and
     burn duration per rank.
@@ -34,7 +34,19 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
     arc and extends the reach** rather than ballooning sideways — with the **hitbox matching the drawn
     arc** exactly (one source of truth), so what you see is what you hit. All shape values are on named,
     tunable knobs (`FW_HALF_ANGLE`/`FW_DRAW_FUDGE` + the registry `waveStep`).
-  - **Caps at rank 9 for now** — the **Chaos fork @10** (the dread capstone) is the next slice.
+  - **Ascension fork @10 — the turning of the age (the capstone).** A second one-time chooser at rank 10
+    picks which way your power turns, and rewrites the LMB into a **3-hit escalating combo** whose 3rd hit
+    is the climax:
+    - 🐉 **Old-god / Dragon (sustain):** *Dragonfire* (Emberfan) blasts three forward fire jets, or
+      *Dragondance* (Cinder Ring) scorches a solid ring-field — both lay **dragonfire that HEALS you** while
+      you stand in it. Lower ceiling, bought survivability.
+    - 🔥 **New-god / Chaos (power + cost):** *Flame of Chaos* (Emberfan) hurls a massive slow orb leaving a
+      ball-wide chaosfire lane across 20 tiles, or *Helldance* (Cinder Ring) fills a solid disc — both lay
+      **chaosfire that burns enemies AND you** if you stand in it. Massive AOE, real self-cost.
+    - New FX systems (`gFireJets` beams, `gFireFields` discs, two-substance burning ground with owner
+      heal/self-burn) reuse the burning-ground/pillar sprites as placeholders; the rank-10 chooser reuses
+      the Slice-B evolution overlay + `gSimEvolution` hook (headless-safe). **Dance of Fire's tree is now
+      complete through rank 10.**
 - **Patron Cards — your god choice reshapes your draft (roadmap item 0c).** A new, reusable card
   category (`PATRON_CARDS`) that only appears when you've pledged to a patron, buffing *that god's
   signature mechanic*. Every future god drops its set into the same pool keyed by `patron`; **Cilia

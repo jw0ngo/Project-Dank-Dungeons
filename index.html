@@ -1994,6 +1994,8 @@ let gFireTrails=[]; // imbued-dash flame trail (Cilia's Fire)
 let gTrailHits=new WeakMap(); // shared per-enemy trail hit cooldown (overlap-proof)
 let gFirePillars=[]; // imbued-RMB fire pillars (Cilia's Fire heavy)
 let gEmberShots=[]; // Dance of Fire · Emberlance Form — volley of travelling fireballs (item 2)
+let gFireJets=[]; // Dance of Fire · Dragonfire ascension — horizontal fire-jet beams (item 2 Slice C)
+let gFireFields=[]; // Dance of Fire · Cinder Ring ascension — solid burning-ground discs (item 2 Slice C)
 // Skills imbued at the Sanctum shrine persist into dungeons (but NOT the wilderness,
 // which grants its own imbues). Survives the per-run player rebuild.
 // Multi-imbue model: a map of skillId -> patron god (more than one skill can be imbued at once).
@@ -3080,6 +3082,8 @@ function gameLoad(mapData) {
   gFireTrails=[]; gTrailHits=new WeakMap();
   gFirePillars=[];
   gEmberShots=[];
+  gFireJets=[];
+  gFireFields=[];
   gBombFireZones=[];
   exitReached=false; gPaused=false;
   const _bbl=document.getElementById('boss-bar');if(_bbl)_bbl.style.display='none';
@@ -3466,16 +3470,21 @@ function gDoSwingAt(aimAngle){
   gPlayer.hitRegistry=new Set();
   gPlayer.smear={cx:gPlayer.wx,cy:gPlayer.wy,startAngle:gPlayer.swingStartAngle,sweepEnd:gPlayer.swingStartAngle,endAngle:gPlayer.swingEndAngle,innerR:W().smearInner,outerR:pSkillStat(gPlayer,'smearOuter'),life:1,fading:false,imbued:gIsImbued(gPlayer,'swing')};
   gPlaySwish();
-  // Imbued LMB (Cilia's Fire): every 3rd normal attack releases the Dance of Fire. Its shape is the
-  // chosen Imbue-Path Form (item 2): base wave (rank 0–4) · Emberlance volley · Cinder Ring.
+  // Imbued LMB (Cilia's Fire), item 2:
+  //  · rank 0–9: every 3rd swing releases the Dance of Fire in its Form shape (base wave / Emberfan / Cinder Ring).
+  //  · rank 10 (ascended): the LMB IS a 3-hit escalating combo — fire on every swing (gDanceComboSwing).
   if(gIsImbued(gPlayer,'swing')){
-    gPlayer._fireSwingCount = (gPlayer._fireSwingCount || 0) + 1;
-    if(gPlayer._fireSwingCount >= 3){
-      gPlayer._fireSwingCount = 0;
-      const _form = gImbueForm(gPlayer,'swing');
-      if(_form === 'emberlance')      gSpawnEmberlance(gPlayer.wx, gPlayer.wy, aimAngle, dmg);
-      else if(_form === 'cinderRing') gSpawnCinderRing(gPlayer.wx, gPlayer.wy, dmg);
-      else                            gSpawnFireWave(gPlayer.wx, gPlayer.wy, aimAngle, dmg);
+    if(gImbueAscension(gPlayer,'swing')){
+      gDanceComboSwing(aimAngle, dmg);
+    } else {
+      gPlayer._fireSwingCount = (gPlayer._fireSwingCount || 0) + 1;
+      if(gPlayer._fireSwingCount >= 3){
+        gPlayer._fireSwingCount = 0;
+        const _form = gImbueForm(gPlayer,'swing');
+        if(_form === 'emberlance')      gSpawnEmberlance(gPlayer.wx, gPlayer.wy, aimAngle, dmg);
+        else if(_form === 'cinderRing') gSpawnCinderRing(gPlayer.wx, gPlayer.wy, dmg);
+        else                            gSpawnFireWave(gPlayer.wx, gPlayer.wy, aimAngle, dmg);
+      }
     }
   }
   // Grit: 5 consecutive attacks while holding LMB grant a shield
@@ -5395,12 +5404,17 @@ function gSpawnEmberlance(x, y, angle, atkDmg){
   gShake(4, 6);
 }
 // One fireball. visual=true → render-only (peer replay), deals no damage.
-function gFireShootEmber(x, y, angle, range, dmg, burn, burnFrames, pierce, visual){
+// opts (optional): { speed, r, trail } — the Flame-of-Chaos ball is slow, oversized, and carries a
+// `trail` { substance, selfDmg, dmg, spacing, clear } that drops ground patches along its flight.
+function gFireShootEmber(x, y, angle, range, dmg, burn, burnFrames, pierce, visual, opts){
+  opts = opts || {};
+  const speed = opts.speed || EMBER_SPEED;
   gEmberShots.push({
-    x, y, angle, vx: Math.cos(angle)*EMBER_SPEED, vy: Math.sin(angle)*EMBER_SPEED,
-    traveled: 0, range, r: EMBER_R,
+    x, y, angle, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed,
+    traveled: 0, range, r: opts.r || EMBER_R, _speed: speed,
     dmg: visual ? 0 : dmg, burn: visual ? 0 : burn, burnFrames: burnFrames || FW_BURN_FRAMES,
     pierceLeft: pierce, _hit: new Set(), _visual: !!visual,
+    _trail: (visual ? null : (opts.trail || null)), _trailLast: 0,
   });
 }
 // Render-only Emberlance volley replayed on peers (no damage; the owner already dealt + synced it).
@@ -5415,9 +5429,15 @@ function gUpdateEmberShots(dt){
   if(!gEmberShots.length) return;
   for(let i=gEmberShots.length-1; i>=0; i--){
     const s = gEmberShots[i];
+    const sp = s._speed || EMBER_SPEED;
     s.x += s.vx * dt; s.y += s.vy * dt;
-    s.traveled += EMBER_SPEED * dt;
-    if((s.traveled % 6) < EMBER_SPEED*dt) spawnGP(s.x, s.y, '#ff7a22', 2, 2.4);  // sparse fiery trail
+    s.traveled += sp * dt;
+    if((s.traveled % 6) < sp*dt) spawnGP(s.x, s.y, '#ff7a22', 2, 2.4);  // sparse fiery trail
+    // Chaos-ball wake: drop chaosfire ground along the flight, started clear of the player.
+    if(s._trail && s.traveled > (s._trail.clear || 0) && s.traveled - s._trailLast >= s._trail.spacing){
+      s._trailLast = s.traveled;
+      gSpawnFireTrail(s.x, s.y, s._trail.dmg, false, { substance:s._trail.substance, selfDmg:s._trail.selfDmg, heal:s._trail.heal, reach:s._trail.reach, life: DANCE_GROUND_LIFE });
+    }
     if(!s._visual){
       for(const en of gEnemies){
         if(en.dead || s._hit.has(en)) continue;
@@ -5464,6 +5484,208 @@ function gSpawnCinderRing(x, y, atkDmg){
   const dmg = Math.round((atkDmg || 0) * fp.dmgMult);
   gSpawnFireRing(x, y, dmg, { rangeTiles: FR_RANGE_TILES + (m.ringTiles||0), burnFrames: fp.burnFrames });
   gShake(4, 6);
+}
+
+// ── Dance of Fire · rank-10 ascension (Slice C) — the 3-hit combo swing ──────────────────────────
+// Once the swing is ascended (e.chaos set), the LMB becomes a 3-hit escalating chain: each swing
+// emits a bigger fire FX than the last, and the 3rd is the CLIMAX that lays the leaf's signature
+// ground (🐉 dragonfire heals you · 🔥 chaosfire burns you + enemies). The chain resets after the
+// climax or if the window lapses. Shape per Form: Emberfan = forward waves/blast · Cinder Ring = rings.
+function _danceLeafDef(p){
+  const form = gImbueForm(p, 'swing'), leaf = gImbueAscension(p, 'swing');
+  if(!form || !leaf) return null;
+  const f = IMBUE_PATHS.cilia.swing.forms[form];
+  return (f && f.ascensions && f.ascensions[leaf]) ? Object.assign({ id:leaf, form }, f.ascensions[leaf]) : null;
+}
+// Cinder Ring climax ground — a SOLID burning-ground disc that grows out from the player with the
+// ring-wave (radius 0 → maxR over `growFrames`, then holds), scorching everything it sweeps.
+// Dragondance → dragonfire (heals you while you stand in it); Helldance → chaosfire (burns enemies
+// across the whole disc, and you when you're in the fire — outside the small bare centre).
+function gSpawnFireField(x, y, maxR, growFrames, substance, dmg, burn, heal, selfDmg){
+  gFireFields.push({ x, y, r:0, maxR, grow: Math.max(1, growFrames), life:0, maxLife: DANCE_GROUND_LIFE + growFrames,
+    substance, dmg, burn, heal, selfDmg, _hits: new Map() });
+}
+function gUpdateFireFields(dt){
+  if(!gFireFields.length) return;
+  for(let i=gFireFields.length-1; i>=0; i--){
+    const f = gFireFields[i];
+    f.life += dt;
+    f.r = Math.min(f.maxR, f.maxR * (f.life / f.grow));   // expand with the wave, then hold at maxR
+    // Enemy DoT anywhere inside the burning disc (per-enemy throttle, like gTrailHits).
+    for(const en of gEnemies){
+      if(en.dead) continue;
+      if(!Number.isFinite(en.wx) || !Number.isFinite(en.wy)) continue;
+      if(Math.hypot(en.wx - f.x, en.wy - f.y) > f.r + en.r) continue;
+      if((f._hits.get(en) || 0) > gFrame) continue;
+      f._hits.set(en, gFrame + FT_TICK);
+      gDealEnemyDamage(en, f.dmg, { burn: f.burn, burnDur: FT_BURN_FRAMES });
+      addGDmg(en.wx, en.wy - 16, f.dmg, '#ff9a3a');
+      gPlayHit && gPlayHit();
+    }
+    // Owner heal (dragonfire) / self-burn (chaosfire) when standing in the fire — outside the bare eye.
+    if(gPlayer && !gPlayer.dead){
+      const pd = Math.hypot(gPlayer.wx - f.x, gPlayer.wy - f.y);
+      if(pd <= f.r + gPlayer.r && pd >= FIREFIELD_EYE && (gPlayer._groundTickFrame || 0) <= gFrame){
+        gPlayer._groundTickFrame = gFrame + FT_TICK;
+        if(f.substance === 'dragonfire' && f.heal > 0){
+          gPlayer.hp = Math.min(gPlayer.maxHp, gPlayer.hp + f.heal);
+          addGDmg(gPlayer.wx, gPlayer.wy - 22, '+' + f.heal, '#7CFC9E');
+          spawnGP(gPlayer.wx, gPlayer.wy, '#ffe08a', 4, 2);
+        } else if(f.substance === 'chaosfire' && f.selfDmg > 0){
+          gDamagePlayer(f.selfDmg, { particle:{ col:'#ff5a18', n:4, spd:2.5 }, number:{ col:'#ff8a3a', y:-22 } });
+        }
+      }
+    }
+    if(f.life >= f.maxLife) gFireFields.splice(i, 1);
+  }
+}
+function gDrawFireFields(){
+  if(!gFireFields.length) return;
+  const haveSpr = FT_SPR.complete && FT_SPR.naturalWidth;
+  for(const f of gFireFields){
+    const ox = f.x - camX, oy = f.y - camY, R = f.r;
+    if(R < 1) continue;
+    const lr = f.life / f.maxLife;
+    const fade = lr > 0.7 ? Math.max(0, (1-lr)/0.3) : 1;
+    gctx.save();
+    gctx.globalCompositeOperation = 'lighter';
+    // Burning-ground wash filling the disc.
+    gctx.globalAlpha = 0.30 * fade;
+    const grad = gctx.createRadialGradient(ox, oy, R*0.15, ox, oy, R);
+    if(f.substance === 'chaosfire'){ grad.addColorStop(0,'rgba(150,30,180,0.55)'); grad.addColorStop(0.55,'rgba(255,60,30,0.55)'); grad.addColorStop(1,'rgba(120,20,0,0)'); }
+    else                           { grad.addColorStop(0,'rgba(120,255,210,0.45)'); grad.addColorStop(0.55,'rgba(255,180,80,0.55)'); grad.addColorStop(1,'rgba(255,140,40,0)'); }
+    gctx.fillStyle = grad; gctx.beginPath(); gctx.arc(ox, oy, R, 0, Math.PI*2); gctx.fill();
+    // Flame texture — sprites scattered evenly across the disc (golden-angle, deterministic → no flicker).
+    if(haveSpr){
+      const n = Math.min(40, Math.round(R/14));
+      gctx.imageSmoothingEnabled = true;
+      for(let i=0; i<n; i++){
+        const ha = i * 2.39996323;                       // golden angle
+        const hr = R * Math.sqrt((i + 0.5) / n);          // even area distribution
+        const fx = ox + Math.cos(ha)*hr, fy = oy + Math.sin(ha)*hr;
+        const D  = FT_REACH * FT_DRAW * (0.7 + 0.5 * ((i*53 % 7) / 7));
+        gctx.globalAlpha = (0.45 + 0.2*Math.sin(gFrame*0.3 + i)) * fade;
+        gctx.drawImage(FT_SPR, fx - D/2, fy - D/2, D, D);
+      }
+    }
+    gctx.restore();
+  }
+  gctx.globalAlpha = 1;
+}
+function gDanceComboSwing(aimAngle, atkDmg){
+  const p = gPlayer;
+  const leaf = _danceLeafDef(p);
+  if(!leaf){ gSpawnFireWave(p.wx, p.wy, aimAngle, atkDmg); return; }   // safety: ascended but no leaf def
+  if(gFrame - (p._danceComboFrame || 0) > DANCE_COMBO_WINDOW) p._danceComboStep = 0;
+  p._danceComboFrame = gFrame;
+  const step = (p._danceComboStep || 0) + 1;        // 1, 2, 3
+  p._danceComboStep = step >= 3 ? 0 : step;          // reset after the climax
+  const climax = step >= 3;
+  const stepMult = 0.6 + 0.2 * step;                 // 0.8 · 1.0 · 1.2 — each hit escalates
+  const fp = gFireWaveParams(p);
+  const climaxDmg = Math.round((atkDmg || 0) * fp.dmgMult);
+  if(leaf.form === 'cinderRing'){
+    // Escalating rings around the player; the 3rd lays the leaf's ground in a ring around you.
+    const ringRangeTiles = FR_RANGE_TILES * (0.55 + 0.22*step);
+    const ringDmg = Math.round(climaxDmg * stepMult);
+    gSpawnFireRing(p.wx, p.wy, ringDmg, { rangeTiles: ringRangeTiles, burnFrames: fp.burnFrames });
+    // The 3rd scorches a SOLID burning-ground disc that grows out with the ring-wave, filling the
+    // whole swept circle. Dragondance → dragonfire heal-field · Helldance → chaosfire self-burn field.
+    if(climax){
+      const maxR = ringRangeTiles * T, grow = maxR / FR_SPEED;
+      const gdmg = Math.max(1, Math.round(climaxDmg * 0.4));
+      const gbrn = Math.max(FT_BURN_MIN, Math.round(gdmg * FT_BURN_RATIO));
+      const heal = leaf.ground === 'dragonfire' ? Math.max(1, Math.round(climaxDmg * DRAGONFIRE_HEAL_RATIO)) : 0;
+      const self = leaf.ground === 'chaosfire'  ? Math.max(1, Math.round(climaxDmg * CHAOSFIRE_SELF_RATIO))  : 0;
+      gSpawnFireField(p.wx, p.wy, maxR, grow, leaf.ground, gdmg, gbrn, heal, self);
+    }
+  } else {
+    // Emberfan: escalating forward waves; the climax is the leaf's signature.
+    gSpawnFireWave(p.wx, p.wy, aimAngle, Math.round((atkDmg || 0) * stepMult));
+    if(climax){
+      if(leaf.ground === 'chaosfire'){
+        // Flame of Chaos: a massive slow chaos-fire ball that lays a chaosfire wake across its full
+        // 20-tile flight (the trail IS the ground — no ring laid under you).
+        const burn = Math.max(FW_BURN_MIN, Math.round(climaxDmg * fp.burnRatio));
+        gFireShootEmber(p.wx, p.wy, aimAngle, FLAMEOFCHAOS_TILES*T, Math.round(climaxDmg*1.5), burn, fp.burnFrames, 99, false, {
+          speed: FLAMEOFCHAOS_SPEED, r: FLAMEOFCHAOS_BALL_R,
+          // wake patches are ball-wide (reach = ball radius); `clear` keeps the first one off the player.
+          trail: { substance:'chaosfire', selfDmg: Math.max(1, Math.round(climaxDmg*CHAOSFIRE_SELF_RATIO)),
+                   dmg: Math.max(1, Math.round(climaxDmg*0.4)), spacing: FLAMEOFCHAOS_TRAIL_SP,
+                   reach: FLAMEOFCHAOS_BALL_R, clear: (((p.r)||12) + FLAMEOFCHAOS_BALL_R + 16) },
+        });
+      } else {
+        // Dragonfire (Emberfan 🐉): three horizontal fire-jet beams blast out from you in a forward
+        // cone, each carving a dragonfire heal-lane along its length (gSpawnFireJet).
+        const heal = Math.max(1, Math.round(climaxDmg * DRAGONFIRE_HEAL_RATIO));
+        const burn = Math.max(FW_BURN_MIN, Math.round(climaxDmg * fp.burnRatio));
+        for(const off of [-DRAGONFIRE_JET_SPREAD, 0, DRAGONFIRE_JET_SPREAD]){
+          gSpawnFireJet(p.wx, p.wy, aimAngle + off, DRAGONFIRE_JET_TILES*T, climaxDmg, burn, fp.burnFrames, heal);
+        }
+      }
+    }
+  }
+  if(climax) gShake(5, 8);
+}
+
+// ── Dragonfire jets (Slice C) — stationary horizontal fire beams blasted from the player ─────────
+// A jet is anchored at the player (base) and points away along `angle`, stretched to `length`. It
+// bursts, holds, then fades over DRAGONFIRE_JET_LIFE (~0.5s). On spawn it carves a dragonfire
+// heal-lane (gFireTrails) along its length; over its life it deals one burst of damage to enemies
+// it covers. Damage is host-authoritative via gDealEnemyDamage.
+function gSpawnFireJet(x, y, angle, length, dmg, burn, burnFrames, heal){
+  gFireJets.push({ x, y, angle, length, life: 0, dmg, burn, burnFrames, _hit: new Set() });
+  const gdmg = Math.max(1, Math.round(dmg * 0.4));
+  for(let d = FT_REACH*0.5; d <= length; d += DRAGONFIRE_JET_TRAIL_SP){
+    gSpawnFireTrail(x + Math.cos(angle)*d, y + Math.sin(angle)*d, gdmg, false, { substance:'dragonfire', heal, life: DANCE_GROUND_LIFE });
+  }
+}
+function gUpdateFireJets(dt){
+  if(!gFireJets.length) return;
+  for(let i=gFireJets.length-1; i>=0; i--){
+    const j = gFireJets[i];
+    // Beam hit — project each enemy onto the jet axis; hit once (the _hit set), even if it walks in.
+    const cos = Math.cos(j.angle), sin = Math.sin(j.angle), halfW = DRAGONFIRE_JET_WIDTH/2;
+    for(const en of gEnemies){
+      if(en.dead || j._hit.has(en)) continue;
+      if(!Number.isFinite(en.wx) || !Number.isFinite(en.wy)) continue;
+      const dx = en.wx - j.x, dy = en.wy - j.y;
+      const lx =  dx*cos + dy*sin;        // along the beam
+      const ly = -dx*sin + dy*cos;        // across the beam
+      if(lx < 0 || lx > j.length + en.r) continue;
+      if(Math.abs(ly) > halfW + en.r) continue;
+      j._hit.add(en);
+      gDealEnemyDamage(en, j.dmg, { burn: j.burn, burnDur: j.burnFrames, kbAngle: j.angle, kbMag: 8 });
+      spawnGP(en.wx, en.wy, '#ffd24a', 8, 3.5);
+      addGDmg(en.wx, en.wy - 16, j.dmg, '#ffd24a');
+      gPlayHit && gPlayHit();
+    }
+    j.life += dt;
+    if(j.life >= DRAGONFIRE_JET_LIFE) gFireJets.splice(i, 1);
+  }
+}
+function gDrawFireJets(){
+  if(!gFireJets.length) return;
+  const haveSpr = FP_SPR.complete && FP_SPR.naturalWidth;
+  for(const j of gFireJets){
+    const bx = j.x - camX, by = j.y - camY;
+    const lr = j.life / DRAGONFIRE_JET_LIFE;
+    const fade = lr < 0.25 ? lr/0.25 : (lr > 0.55 ? Math.max(0, (1-lr)/0.45) : 1);  // quick burst, hold, fade
+    gctx.save();
+    gctx.translate(bx, by);
+    gctx.rotate(j.angle + Math.PI/2);   // pillar's tip (-y in source) → the beam's +x (aim) direction
+    gctx.globalCompositeOperation = 'lighter';
+    gctx.globalAlpha = fade * (0.85 + 0.15 * Math.sin(gFrame*0.8 + j.x));
+    gctx.imageSmoothingEnabled = true;
+    if(haveSpr){
+      gctx.drawImage(FP_SPR, -DRAGONFIRE_JET_WIDTH/2, -j.length, DRAGONFIRE_JET_WIDTH, j.length); // base at player, tip away
+    } else {
+      gctx.fillStyle = '#ffb347';
+      gctx.fillRect(-DRAGONFIRE_JET_WIDTH/2, -j.length, DRAGONFIRE_JET_WIDTH, j.length);
+    }
+    gctx.restore();
+  }
+  gctx.globalAlpha = 1;
 }
 
 // Render-only fire arc replayed on peers when a remote player casts (no damage).
@@ -5796,15 +6018,50 @@ const FT_BURN_RATIO  = 0.6;   // burn total = this x per-tick damage
 const FT_BURN_MIN    = 4;
 const FT_SPR = new Image();
 FT_SPR.src = 'assets/fx/ft.png';
+// ── Dance of Fire — rank-10 ascension (Slice C): the 3-hit combo + two fire-substance grounds ─────
+// Tunable feel knobs. dragonfire ground heals the owner who stands in it (sustain pole); chaosfire
+// ground burns the owner AND enemies (power+cost pole — the self-burn IS the balance cost).
+const DANCE_COMBO_WINDOW    = 150;  // frames to continue the LMB chain before it resets to hit 1.
+                                    // MUST exceed the swing cycle (~swingDur 24 + swingCd 60 ≈ 84f),
+                                    // or the chain resets every swing and the 3rd-hit climax never lands.
+const DANCE_GROUND_LIFE     = 150;  // climax ground lifetime (frames) ~2.5s — longer than a dash patch
+const DRAGONFIRE_HEAL_RATIO = 0.18; // dragonfire per-tick HEAL to owner   = this × climax damage
+const CHAOSFIRE_SELF_RATIO  = 0.35; // chaosfire  per-tick SELF-DAMAGE      = this × climax damage
+// Flame of Chaos (Emberfan 🔥 leaf) — the massive slow ball that lays a chaosfire wake the whole way.
+const FLAMEOFCHAOS_TILES    = 20;   // how far the chaos ball travels (tiles) — a long lane of fire
+const FLAMEOFCHAOS_SPEED    = 4.5;  // px/frame — deliberately slow & lumbering (~3.6s to cross 20 tiles)
+const FLAMEOFCHAOS_BALL_R   = 66;   // ball hit/visual radius (px) — a massive slow orb
+const FLAMEOFCHAOS_TRAIL_SP = 50;   // px between wake patches (patches are ball-wide, so they overlap)
+// Dragonfire (Emberfan 🐉 leaf) — the 3rd hit BLASTS three horizontal fire jets out from the player
+// (base at you, tip pointed away) in a forward cone. They're stationary beams that burst, hold, then
+// fade (~0.5s), each carving a dragonfire heal-lane along its length. (Fire-pillar sprite FP_SPR,
+// rotated horizontal + stretched to the jet length, as a placeholder visual.)
+const DRAGONFIRE_JET_TILES  = 9;    // jet length (tiles) = its reach; the sprite stretches to this
+const DRAGONFIRE_JET_SPREAD = 0.3;  // outer jets' angular offset from the aim (rad) → ~34° cone
+const DRAGONFIRE_JET_TRAIL_SP = 32; // px between dragonfire heal patches along each jet
+const DRAGONFIRE_JET_LIFE   = 30;   // frames the jet sprite holds before fading out (~0.5s @ 60fps)
+const DRAGONFIRE_JET_WIDTH  = 44;   // beam thickness (px) — the stretched sprite's short axis
+// Cinder Ring ascensions (Dragondance/Helldance) — the climax scorches a SOLID burning-ground disc
+// that grows out from the player with the ring-wave (gFireFields). A small bare centre keeps casting
+// from instantly self-ticking on the chaos leaf; enemies burn anywhere inside the disc.
+const FIREFIELD_EYE = 38;           // bare-centre radius (px) — the player's safe footprint at dead centre
 
-function gSpawnFireTrail(x, y, dmg, visual){
+// opts (optional, Slice C): { substance:'dragonfire'|'chaosfire', heal, selfDmg, life }.
+// A substance ground still burns enemies; dragonfire additionally heals the owner standing in it,
+// chaosfire additionally damages the owner (see gUpdateFireTrails). Plain dash trails pass no opts.
+function gSpawnFireTrail(x, y, dmg, visual, opts){
+  opts = opts || {};
   gFireTrails.push({
-    x, y, life: 0, reach: FT_REACH,
+    x, y, life: 0, reach: opts.reach || FT_REACH,
     rot: Math.random() * Math.PI * 2,
     scl: 0.9 + Math.random() * 0.35,
     dmg: visual ? 0 : Math.max(1, dmg|0),
     burn: visual ? 0 : Math.max(FT_BURN_MIN, Math.round((dmg|0) * FT_BURN_RATIO)),
     _visual: !!visual,
+    substance: opts.substance || null,
+    heal: visual ? 0 : (opts.heal || 0),
+    selfDmg: visual ? 0 : (opts.selfDmg || 0),
+    maxLife: opts.life || FT_LIFE,
   });
 }
 
@@ -5833,8 +6090,22 @@ function gUpdateFireTrails(dt){
           hitTrainingDummy(ft.dmg, '#ffaa00', ft.x, ft.y);
         }
       }
+      // Two-age grounds (Slice C): the owner standing in their own dragonfire heals; in chaosfire,
+      // burns. One application per FT_TICK regardless of how many patches overlap (shared player tick).
+      if(ft.substance && gPlayer && !gPlayer.dead &&
+         Math.hypot(gPlayer.wx - ft.x, gPlayer.wy - ft.y) <= ft.reach + gPlayer.r &&
+         (gPlayer._groundTickFrame || 0) <= gFrame){
+        gPlayer._groundTickFrame = gFrame + FT_TICK;
+        if(ft.substance === 'dragonfire' && ft.heal > 0){
+          gPlayer.hp = Math.min(gPlayer.maxHp, gPlayer.hp + ft.heal);
+          addGDmg(gPlayer.wx, gPlayer.wy - 22, '+' + ft.heal, '#7CFC9E');
+          spawnGP(gPlayer.wx, gPlayer.wy, '#ffe08a', 4, 2);
+        } else if(ft.substance === 'chaosfire' && ft.selfDmg > 0){
+          gDamagePlayer(ft.selfDmg, { particle:{ col:'#ff5a18', n:4, spd:2.5 }, number:{ col:'#ff8a3a', y:-22 } });
+        }
+      }
     }
-    if(ft.life >= FT_LIFE) gFireTrails.splice(i, 1);
+    if(ft.life >= (ft.maxLife || FT_LIFE)) gFireTrails.splice(i, 1);
   }
 }
 
@@ -5843,7 +6114,7 @@ function gDrawFireTrails(){
   const haveSpr = FT_SPR.complete && FT_SPR.naturalWidth;
   for(const ft of gFireTrails){
     const ox = ft.x - camX, oy = ft.y - camY;
-    const lr = ft.life / FT_LIFE;
+    const lr = ft.life / (ft.maxLife || FT_LIFE);
     const fade = lr < 0.15 ? lr/0.15 : (lr > 0.6 ? Math.max(0, (1-lr)/0.4) : 1);
     if(haveSpr){
       const D = ft.reach * FT_DRAW * ft.scl;
@@ -5854,6 +6125,20 @@ function gDrawFireTrails(){
       gctx.imageSmoothingEnabled = true;
       gctx.drawImage(FT_SPR, -D/2, -D/2, D, D);
       gctx.restore();
+      // Substance tint (Slice C placeholder — real dragonfire "rainbow" art is an Artist handoff):
+      // 🐉 dragonfire reads cool/iridescent, 🔥 chaosfire reads dark/violet, so the two are readable.
+      if(ft.substance){
+        gctx.save();
+        gctx.translate(ox, oy);
+        gctx.globalCompositeOperation = 'lighter';
+        gctx.globalAlpha = (0.35 + 0.2 * Math.sin(gFrame * 0.3 + ft.x)) * fade;
+        const grad = gctx.createRadialGradient(0, 0, 0, 0, 0, ft.reach);
+        if(ft.substance === 'dragonfire'){ grad.addColorStop(0,'rgba(120,255,210,0.9)'); grad.addColorStop(0.6,'rgba(150,180,255,0.5)'); grad.addColorStop(1,'rgba(120,255,210,0)'); }
+        else                              { grad.addColorStop(0,'rgba(180,40,220,0.9)');  grad.addColorStop(0.6,'rgba(120,20,160,0.5)');  grad.addColorStop(1,'rgba(180,40,220,0)'); }
+        gctx.fillStyle = grad;
+        gctx.beginPath(); gctx.arc(0, 0, ft.reach, 0, Math.PI*2); gctx.fill();
+        gctx.restore();
+      }
     } else {
       gctx.save(); gctx.globalAlpha = 0.4 * fade; gctx.fillStyle = '#ff5a18';
       gctx.beginPath(); gctx.arc(ox, oy, ft.reach, 0, Math.PI*2); gctx.fill(); gctx.restore();
@@ -8179,9 +8464,11 @@ function gRender(){
   gDrawArrows();
   drawables.sort((a,b)=>a.y-b.y);
   for(const d of drawables){ d.draw(d.arg); if(d.arg&&d.arg.threatTier&&!d.arg.dead) gDrawThreatGlow(d.arg); }
+  gDrawFireFields(); // Cinder Ring ascension — solid burning-ground discs (under the rings/entities)
   gDrawFireRings(); // expanding fire rings (imbued whirlwind + Cinder Ring Form)
   gDrawFireWaves(); // fire arcs + burning-enemy flames, over entities
   gDrawEmberShots(); // Emberlance Form — travelling fireballs (item 2)
+  gDrawFireJets(); // Dragonfire ascension — horizontal fire-jet beams (item 2 Slice C)
   gDrawFirePillars(); // Cilia heavy fire pillars
   if(inTown) townDrawHubPlayers();
   if(inTown) townDrawPortal();
@@ -8773,7 +9060,7 @@ function gSimUpdate(dt){
     if(gPlayer)gUpdateShamanBuffs(dt);
     if(gPlayer)gUpdateBurn(dt);
     if(gPlayer)gUpdateShield(dt);
-    if(gPlayer&&!gPlayer.dead){gUpdateFireWaves(dt);gUpdateFireRings(dt);gUpdateFireCrosses(dt);gUpdateFireTrails(dt);gUpdateEmberShots(dt);}
+    if(gPlayer&&!gPlayer.dead){gUpdateFireWaves(dt);gUpdateFireRings(dt);gUpdateFireCrosses(dt);gUpdateFireTrails(dt);gUpdateEmberShots(dt);gUpdateFireJets(dt);gUpdateFireFields(dt);}
     if(gPlayer&&!gPlayer.dead)gUpdateFirePillars(dt);
     if(gPlayer&&!gPlayer.dead)gUpdateEnemyBurn(dt);
     if(gPlayer)gFogReveal(); // wilderness fog of war — throttled inside
@@ -11101,6 +11388,7 @@ function gImbuePath(p, skill){
 }
 function gImbueRank(p, skill){ const e = p && p.imbuePaths && p.imbuePaths[skill]; return (e && e.rank) || 0; }
 function gImbueForm(p, skill){ const e = p && p.imbuePaths && p.imbuePaths[skill]; return (e && e.form) || null; }
+function gImbueAscension(p, skill){ const e = p && p.imbuePaths && p.imbuePaths[skill]; return (e && e.chaos) || null; }  // rank-10 leaf id
 function _addImbuePathMod(p, skill, key, v){ const e = gImbuePath(p, skill); e.mods[key] = (e.mods[key]||0) + v; }
 // Effective Dance-of-Fire wave params = FW_* base const + this player's imbuePaths.swing.mods, clamped
 // (mirrors SKILL_STAT_FLOOR's defensive intent; spec balance §: cap every numeric rank). rank 0 ⇒ base.
@@ -12696,12 +12984,26 @@ const IMBUE_PATHS = {
           desc: 'The wave becomes a fan of fireballs loosed in an arc that travel far. Poke, space, and kite from safety.',
           // ranks 6–9: more fireballs + pierce. (count is fractional — floored at spawn.)
           formStep: { emberCount: 0.6, emberPierce: 0.34, dmgMult: 0.15 },
+          // rank 10 — the two-age fork (Slice C). Each leaf turns LMB into a 3-hit combo; the 3rd hit's
+          // ground is the leaf's signature substance: 🐉 dragonfire heals you · 🔥 chaosfire burns you.
+          ascensions: {
+            dragonfire:   { name:'Dragonfire',     icon:'🐉', age:'old', tag:'OLD · DRAGON · SUSTAIN',     ground:'dragonfire',
+              desc:'LMB becomes a 3-hit combo; the climax jets dragonfire forward and scorches HEALING ground you can stand in. Lower damage — survivability is the prize.' },
+            flameOfChaos: { name:'Flame of Chaos',  icon:'🔥', age:'new', tag:'NEW · CHAOS · POWER+COST',  ground:'chaosfire',
+              desc:'LMB becomes a 3-hit combo; the climax hurls a massive chaos-fire blast leaving a wake of chaosfire that burns enemies AND you. Devastating — and it costs you.' },
+          },
         },
         cinderRing: {
           name: 'Cinder Ring', tag: 'CLOSE', icon: '🔥',
           desc: 'The wave becomes a ring of flame that erupts around you. Wade in, get surrounded, and punish the crowd.',
           // ranks 6–9: bigger ring + harder pulse.
           formStep: { ringTiles: 0.5, dmgMult: 0.2 },
+          ascensions: {
+            dragondance: { name:'Dragondance', icon:'🐉', age:'old', tag:'OLD · DRAGON · SUSTAIN',    ground:'dragonfire',
+              desc:'LMB becomes a 3-hit combo of growing fire rings; the climax lays dragonfire around you that HEALS while you fight surrounded.' },
+            helldance:   { name:'Helldance',   icon:'🔥', age:'new', tag:'NEW · CHAOS · POWER+COST', ground:'chaosfire',
+              desc:'LMB becomes a 3-hit combo of growing chaosfire rings; the ground burns enemies AND you. Maximum AOE, maximum risk.' },
+          },
         },
       },
     },
@@ -14409,7 +14711,8 @@ function gPendingEvolution(p){
   const e = p.imbuePaths && p.imbuePaths.swing;
   if(!e) return null;
   if(e.form == null && e.rank >= s.formRank - 1) return { skill:'swing', kind:'form' };
-  // Chaos fork (Slice C): e.form != null && e.chaos == null && e.rank >= s.chaosRank - 1.
+  // Ascension fork (Slice C): Form chosen, post-form ranks maxed, no leaf chosen yet → the two-age fork.
+  if(e.form != null && e.chaos == null && e.rank >= s.chaosRank - 1) return { skill:'swing', kind:'ascension' };
   return null;
 }
 function _evolutionOptions(evo){
@@ -14417,7 +14720,10 @@ function _evolutionOptions(evo){
   if(evo.kind === 'form'){
     return ['emberlance','cinderRing'].map(id => Object.assign({ id }, s.forms[id]));
   }
-  return [];   // Slice C: chaos leaves of the chosen Form
+  // Ascension: the chosen Form's two age-leaves (🐉 Dragon sustain · 🔥 Chaos power+cost).
+  const form = gImbueForm(gPlayer, evo.skill);
+  const asc  = form && s.forms[form] && s.forms[form].ascensions;
+  return asc ? Object.keys(asc).map(id => Object.assign({ id }, asc[id])) : [];
 }
 function _chooseEvolution(evo, idx){
   const opts = _evolutionOptions(evo);
@@ -14438,7 +14744,7 @@ function _renderEvolutionCards(evo){
   const title = document.getElementById('g-evo-title');
   const sub   = document.getElementById('g-evo-sub');
   if(title) title.textContent = IMBUE_PATHS.cilia.swing.art;
-  if(sub)   sub.textContent   = evo.kind === 'form' ? 'CHOOSE A FORM' : 'CHAOS ASCENSION';
+  if(sub)   sub.textContent   = evo.kind === 'form' ? 'CHOOSE A FORM' : 'ASCENSION — THE TURNING OF THE AGE';
   if(!wrap) return;
   wrap.innerHTML = '';
   _evolutionOptions(evo).forEach((o, i) => {
@@ -14527,12 +14833,13 @@ function gRenderSkillforge(){
     const e        = gPlayer.imbuePaths && gPlayer.imbuePaths[s.id];
     const rank     = (e && e.rank) || 0;
     const formName = (e && e.form && path) ? path.forms[e.form].name : null;
+    const leafName = (e && e.form && e.chaos && path && path.forms[e.form].ascensions) ? path.forms[e.form].ascensions[e.chaos].name : null;
     const row  = document.createElement('div'); row.className = 'forge-row';
     const left = document.createElement('div'); left.className = 'forge-left';
     left.innerHTML = `<div class="forge-name">${s.name}</div><div class="forge-sub">${s.sub}</div>`;
     const state = document.createElement('div'); state.className = 'forge-state';
     state.textContent = !imbued ? '— not imbued —'
-      : path ? `Rank ${rank}/10${formName ? ' · ' + formName : ''}${e && e.chaos ? ' · ' + e.chaos : ''}`
+      : path ? `Rank ${rank}/10${formName ? ' · ' + formName : ''}${leafName ? ' · ' + leafName : ''}`
              : 'imbued · tree in Phase 2–5';
     left.appendChild(state);
     const btns = document.createElement('div'); btns.className = 'forge-btns';
@@ -14791,8 +15098,8 @@ const Sim = (function(){
         cd:{ swing:+(p.swingCooldown||0).toFixed(1), dash:+(p.evasionCooldown||0).toFixed(1),
              leap:+(p.leapCooldown||0).toFixed(1), heavy:+(p.heavyCooldown||0).toFixed(1),
              ww:+(p.wwCooldown||0).toFixed(1) },
-        // Imbue Paths (item 2): per-imbued-skill mastery rank + chosen Form (null until Slice B).
-        imbue:{ swing:{ rank:gImbueRank(p,'swing'), form:gImbueForm(p,'swing') } },
+        // Imbue Paths (item 2): per-imbued-skill mastery rank + chosen Form + rank-10 ascension leaf.
+        imbue:{ swing:{ rank:gImbueRank(p,'swing'), form:gImbueForm(p,'swing'), ascension:gImbueAscension(p,'swing') } },
       };
       const list=[];
       for(const e of gEnemies){

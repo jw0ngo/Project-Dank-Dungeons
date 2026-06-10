@@ -238,8 +238,8 @@ juiced-up elites — hard, but fair and readable.
 
 ### 2. Imbue Paths — turn each fire skill into a mastery tree
 
-`🔧 in-progress` (eng 2026-06-10 — Phase 1 sub-phased; **Slices A–B landed**: tree rails + Dance of Fire ranks 1–4, Form fork @5 (Emberfan/Cinder Ring) + ranks 6–9, capped at 9) · **Size:** large, phased · **Pillars:** build-craft depth, game feel, mastery
-**Full design:** [`specs/imbue-paths.md`](specs/imbue-paths.md) · **Build sub-phasing:** Slice A = system + numeric ranks 1–4 ✅ → Slice B = Form fork @5 (Emberfan/Cinder Ring) + evolution overlay + `gSimEvolution` + ranks 6–9 ✅ → Slice C = Chaos fork @10 + 4 dread leaves (next).
+`🔧 in-progress` (eng 2026-06-10 — **Phase 1 (Dance of Fire) complete through rank 10**; Slices A–C landed. Phases 2–5 (other four skills) remain) · **Size:** large, phased · **Pillars:** build-craft depth, game feel, mastery
+**Full design:** [`specs/imbue-paths.md`](specs/imbue-paths.md) · **Build sub-phasing:** Slice A = numeric ranks 1–4 ✅ → Slice B = Form fork @5 (Emberfan/Cinder Ring) + ranks 6–9 ✅ → Slice C = Ascension fork @10 (🐉 Dragon-heal / 🔥 Chaos-self-burn, 3-hit combo) ✅. **Next:** the four distinct climax FX polish + Artist handoff (dragonfire rainbow), then Phases 2–5.
 
 **What:** Today a fire-imbued skill is just on or off — nowhere to grow, so level-ups become repetitive
 stat bumps. We'll turn **each imbued skill into a named ability you level up 10 times**, with two branch
