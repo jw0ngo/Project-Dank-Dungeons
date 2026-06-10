@@ -18,6 +18,24 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 
 ---
 
+### 2026-06-10 — Wire variant art as a data-driven map, and let the Artist own the assets
+
+- **Principle:** When wiring directional/variant art (an 8-way walk cycle, per-element skins), make the
+  swap a **data-driven lookup** (`PLAYER_WALK_OCT = {octant→dir}` consulted each frame + `char.<id>.<dir>`
+  registry keys) rather than branching code. Each new asset is then a *one-line* wire, and — crucially —
+  the **Artist can commit the `assets/` files independently while the engineer commits only the
+  `index.html` wiring**. That seam let a parallel Artist session deliver/​re-cut sprites (E re-cut, W
+  mirror) with zero re-wiring on my side: same filenames → the manifest already pointed at them.
+- **Why:** This session I overstepped and *sliced* the first three directions as engineer — and promptly
+  misdiagnosed the East scale by **eyeballing an overlay instead of measuring**, bumped the scale, and
+  grew+clipped the helmet. The Artist's measured re-cut was cleaner. The boundary exists because slicing
+  is the Artist's craft; the engineer's job is the map + the keys. (Boundary recorded in user memory
+  `sprite-pipeline-role-boundary`.)
+- **How to apply:** If raw art (frame folders, a sheet, an `.mp4`) lands in an engineer session, hand the
+  slicing to `/artist`; keep your work to the registry/map wiring. Verify the handoff by *measuring*
+  (192² canvas, foot row, body span, no `top_row==0` clip), never by eye. Design the wiring so a new
+  variant = one map entry + its keys, and the two roles commit on their own side of the file boundary.
+
 ### 2026-06-10 — Settle the structure before rewiring references; structure determines the paths
 
 - **Principle:** When a change reshapes *where things live* (a directory move, a doc consolidation, a
