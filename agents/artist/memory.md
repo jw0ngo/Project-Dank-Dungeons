@@ -3,6 +3,49 @@
 
 ---
 
+### 2026-06-10 — A motion clip isn't a turnaround sheet: the separator and the registration both change
+
+- **Principle:** Slicing sprites from a generated **walk video** (vs a flat turnaround sheet) breaks two
+  assumptions at once. (1) **Cutout:** the figure shares the bg's colour — the knight's steel is the
+  same neutral grey as the studio backdrop and the navy tabard's shadows are as dark as it — so a
+  brightness threshold eats the tabard, a tolerance flood leaks *through* the steel, and a median-plate
+  bg-subtraction fails because a centred figure ghosts into the plate. **GrabCut** (colour models +
+  spatial coherence) is the separator when fg/bg colours overlap. (2) **Registration:** a clip *drifts
+  in scale* (subject walks toward/away from camera, ~10-25%), *translates*, and may *turn* in the first
+  frames before settling — so pick all N frames from **one gait cycle** in the settled-facing window,
+  use **one uniform scale** feet-anchored (preserves the natural contact-vs-passing bob; per-frame
+  height-normalisation flattens it), and **match the existing idle sheet's body height + feet baseline**
+  so the live sprite doesn't pop when idle↔walk swap.
+- **Why:** the player walk system swaps idle→walk at the *same* draw scale, so a self-normalised walk
+  frame (body 168px, feet floating at y180) popped vs the idle (body 180, feet y191). Measuring the idle
+  *and the already-shipped* south-walk set gave the exact target (feet 191, bodyH ~180, uniform scale)
+  — the shipped set was the ground-truth spec, not a guess. Also: I burned a cycle slicing a *stale
+  renamed* source (an old clip that turned front→back) and a frame from inside its turn-in; the helmet
+  zoom (smooth back vs visor front) was what finally settled facing.
+- **How to apply:** for any video/photographed source, (a) **verify source identity + facing first**
+  (zoom an unambiguous feature — here helmet back vs visor — don't trust full-body silhouette at
+  thumbnail size; the crest was on both sides of the surcoat), (b) measure fg/bg colour overlap to pick
+  the separator (GrabCut when they overlap, edge-flood only when bg is a distinct flat tone),
+  (c) measure the **idle sheet** you must match and drive scale/feet from it, and (d) encode it in the
+  tool — `tools/slice-walk-video.py` now does GrabCut + idle-scale match (`--match-bodyh`) + feet-anchor,
+  with `--mirror` for the proven opposite-facing flip. Pick frames from a stable one-cycle window.
+
+### 2026-06-10 — Mirroring an asymmetric sprite: measure against ground truth, patch only what flips
+
+- **Principle:** "No lazy mirroring" is a *generation* rule, not an absolute runtime ban. Before
+  committing to redraw/regen an opposite facing, **measure how wrong a flip actually is against the
+  true-rotated idle you already have** — pixel-diff *and* eyeball at full size. For this knight the only
+  asymmetry that visibly flips is the sword shoulder, and at full size even that reads correct (the flip
+  matches the true-rotated idle); the scabbard/strap/rim-light flips are sub-perceptual. So E↔W, NE↔NW,
+  SE↔SW mirror cleanly — halving an 8-direction job. Where a flip *did* break one part, the fix is to
+  re-composite only that part, not regenerate.
+- **Why:** the temptation was to treat the right-hand-sword rule as forbidding all mirroring; a 3-pair
+  ground-truth comparison (`art/player/_mirror-QA/`) proved the flip is shippable, turning ~24 generated
+  frames into ~12 + a deterministic flip.
+- **How to apply:** when an opposite facing is needed and a true-rotated reference exists, build the
+  mirror-vs-truth comparison first and let it decide; only generate fresh art for the parts (or
+  directions) the comparison shows the flip can't carry.
+
 ### 2026-06-10 — Measure the cutout's geometry before reaching for a flag; teach the tool the edge case
 
 - **Principle:** When a sliced sprite reads wrong (holes, a paw cut flat), *diagnose the geometry first* —
