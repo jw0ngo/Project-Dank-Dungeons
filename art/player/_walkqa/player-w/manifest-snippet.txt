@@ -1,0 +1,5 @@
+// player walk — w (mirror of e)
+'char.playerwalk1.w':'assets/char/playerwalk1-w.png',
+'char.playerwalk2.w':'assets/char/playerwalk2-w.png',
+'char.playerwalk3.w':'assets/char/playerwalk3-w.png',
+'char.playerwalk4.w':'assets/char/playerwalk4-w.png',
