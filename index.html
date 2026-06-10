@@ -1183,6 +1183,9 @@ function getAllMaps() {
 //      T · TILE_* · DEMO_MAP · HUB_MAP · HUB_SPAWN
 // ═══════════════════════════════════════════════════════════════
 const T = 24; // tile size px
+// Dev-only surfaces (the Skillforge testing panel) show on localhost / file:// and stay hidden on the
+// deployed GitHub Pages site so players never see the cheat tool. Flip the RHS to `true` to force on.
+const _DEV = (location.protocol === 'file:') || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
 const TILE_VOID = 0, TILE_FLOOR = 1, TILE_WALL = 2, TILE_EXIT = 5;
 // Wilderness tileset — new tile IDs that coexist with dungeon tiles
 const TILE_GRASS = 6;  // open grassy ground
@@ -1414,6 +1417,8 @@ function showScreen(name) {
   document.getElementById(name).classList.add('active');
   if (name === 'editor') { document.getElementById('ed-canvas').focus(); }
   if (name === 'game') { startGameLoop(); document.getElementById('gc').focus(); scaleGameToFit(); }
+  // Skillforge dev panel: visible in any active gameplay (town/dungeon/wilderness) on dev builds, hidden on menus + live site.
+  { const sfb = document.getElementById('skillforge-btn'); if(sfb) sfb.style.display = (_DEV && name === 'game') ? 'block' : 'none'; }
   if (name === 'town') { /* townLoad/startTownLoop called from goTown() directly */ tCanvas && tCanvas.focus(); }
   if (name === 'cc-screen') { ccInit(); }
 }
@@ -3378,7 +3383,7 @@ document.addEventListener('keydown', function(e){
   }
 
   // ── Skillforge (dev/testing) — toggle in the Sanctum only ──
-  if((key === 'k' || key === 'K') && inTown){
+  if((key === 'k' || key === 'K') && _DEV && isGameActive()){
     e.preventDefault();
     if(_skillforgeOpen) gCloseSkillforge(); else gOpenSkillforge();
     return;
@@ -11746,14 +11751,12 @@ function goTown() {
   townStartPresence();
   document.getElementById('gc').focus();
   scaleGameToFit();
-  const sfBtn = document.getElementById('skillforge-btn'); if(sfBtn) sfBtn.style.display = 'block';  // dev panel, Sanctum only
 }
 
 function leaveTown() {
   gTrainingDummy=null;
   gShrine=null;
   if(_skillforgeOpen) gCloseSkillforge();
-  const sfBtn = document.getElementById('skillforge-btn'); if(sfBtn) sfBtn.style.display = 'none';
   if (!inTown) return;
   inTown = false;
   portalOpen = false;
@@ -12571,7 +12574,6 @@ function goWilderness(){
   inWilderness  = true;
   inTown        = false;
   if(_skillforgeOpen) gCloseSkillforge();
-  { const sfBtn = document.getElementById('skillforge-btn'); if(sfBtn) sfBtn.style.display = 'none'; }
   wildernessPortalNearby = false;
   portalNearby  = false;
   exitReached   = false;
@@ -14874,7 +14876,7 @@ function gRenderSkillforge(){
   });
 }
 function gOpenSkillforge(){
-  if(!inTown || !gPlayer) return;       // Sanctum-only
+  if(!_DEV || !gPlayer || !isGameActive()) return;   // dev builds, any active gameplay (town/dungeon/wilderness)
   const el = document.getElementById('g-skillforge-overlay');
   if(!el) return;
   _skillforgeOpen = true; gPaused = true;
