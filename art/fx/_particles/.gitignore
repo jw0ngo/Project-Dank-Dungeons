@@ -1,0 +1,4 @@
+# Regenerable prototype artifacts — the particle cutouts + tools reproduce these.
+# Keep the repo lean: track the <id>-<n>.png cutouts, not the heavy GIF previews / QA sheets.
+_gifs/
+*/_qa/
