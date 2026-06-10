@@ -8,6 +8,14 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 ## [Unreleased]
 
 ### Changed
+- **Wolf camps stream their packs in/out (perf).** The 40 neutral wolf dens no longer spawn all their
+  packs (~160 wolves) up front at run start — each pack now instantiates only when the player comes
+  within ~45 tiles of the den and is shed once they roam past ~62 tiles, so just the handful of dens
+  near the player ever run AI + separation. The den's rock crescent and chest still render at any range
+  (a den you spot from afar still looks "loaded"); the pack appears as you approach. A struck or
+  half-fought den keeps its state — only a pristine (un-engaged, intact) pack is shed, and it leashes
+  home + de-aggros well before the despawn radius. Per-camp `cleared` / `respawnAt` / chest state lives
+  on `gWildCamps` (not `gEnemies`), so the 3-minute clear→reward→respawn cycle survives unload/reload.
 - **Playtest balance & enemy AI.**
   - **Fire waves fall off with distance** — near-full power point-blank, fading to ~35% damage / ~15%
     knockback at max range (knockback drops faster), so a maxed wave no longer launches everything at

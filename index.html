@@ -12510,6 +12510,7 @@ function generateWildernessMap(seed){
       openAng, packSpawns,
       chest:{ tx:cx, ty:cy, wx:(cx+0.5)*T, wy:(cy+0.5)*T, locked:true, looted:false },
       cleared:false, respawnAt:0,
+      _spawned:false,   // is the pack currently instantiated in gEnemies? (streamed by gUpdateWolfCamps)
       _wolves:[],   // populated at runtime by _wolfSpawnPack
     }});
   }
@@ -12600,11 +12601,10 @@ function goWilderness(){
     }
   }
 
-  // Spawn neutral wolf packs at their dens — they ignore the player until the camp is hit
-  for(const camp of gWildCamps){
-    _wolfSpawnPack(camp);
-    camp.chest.locked=true; camp.chest.looted=false;   // reward gated on clear
-  }
+  // Neutral wolf packs are NOT all spawned up front — gUpdateWolfCamps streams each den's pack in
+  // when the player nears it and sheds it when they roam far, so only the handful of dens around the
+  // player are ever live (vs all 40 packs / ~160 wolves running AI + separation every frame). Camp
+  // state (cleared / respawnAt / chest / _wolves) lives on gWildCamps, so the den survives unload.
 
   // Spawn shrine guardians — 3 goblins surrounding the shrine, hold position until alerted
   if(gShrine){
@@ -14341,6 +14341,12 @@ function gUpdateVillages(dt){
 // The chest is the marquee Favor source, gated on clearing the pack.
 
 const WOLF_CAMP_RESPAWN = 180;   // seconds between clear and respawn — the single cadence dial
+// Streaming radii (tiles): a camp's pack instantiates when the player comes within SPAWN_R and is
+// shed once they roam past DESPAWN_R — so only the few dens near the player are ever live, instead of
+// all 40 packs (~160 wolves) at once. Hysteresis (DESPAWN>SPAWN) avoids thrash at the boundary; both
+// sit well outside the 22.6-tile wolf leash, so a pack is always present where you can engage it and
+// is only shed after a struck pack has leashed home + de-aggroed (back to pristine).
+const WOLF_CAMP_SPAWN_R = 45, WOLF_CAMP_DESPAWN_R = 62;
 
 // (Re)spawn a camp's full pack at the den anchors. Reused for initial spawn AND respawn, so
 // the wolves always come back to the same tiles. Marks the camp un-cleared.
@@ -14356,6 +14362,7 @@ function _wolfSpawnPack(camp){
     camp._wolves.push(e);
   }
   camp.cleared=false;
+  camp._spawned=true;
 }
 
 // Per-frame camp maintenance — clear detection, 3-min respawn, chest-on-clear payout.
@@ -14363,20 +14370,39 @@ function _wolfSpawnPack(camp){
 function gUpdateWolfCamps(dt){
   if(!inWilderness || !gPlayer || gPlayer.dead) return;
   const p=gPlayer;
+  const spawnR2   = (WOLF_CAMP_SPAWN_R*T)   * (WOLF_CAMP_SPAWN_R*T);
+  const despawnR2 = (WOLF_CAMP_DESPAWN_R*T) * (WOLF_CAMP_DESPAWN_R*T);
   for(const camp of gWildCamps){
+    const ddx=p.wx-camp.wcx, ddy=p.wy-camp.wcy, d2=ddx*ddx+ddy*ddy;
+
+    // ── Stream the pack in/out with player proximity (perf: only nearby dens stay live) ──
+    // Spawn a guarding pack when the player nears an un-cleared den with none currently live.
+    if(d2<=spawnR2 && !camp.cleared && !camp._spawned){
+      _wolfSpawnPack(camp);                            // sets camp._spawned + repopulates camp._wolves
+      if(!camp.chest.looted) camp.chest.locked=true;   // reward re-gated behind the fresh pack
+    }
+    // Shed a PRISTINE pack (none engaged, none dead) once the player roams far — preserves a
+    // half-fought or cleared den's state; a struck pack leashes home + de-aggros first (WOLF_LEASH_R
+    // ≪ DESPAWN_R), so it's pristine again by the time we shed it.
+    else if(camp._spawned && d2>despawnR2 &&
+            camp._wolves.length>0 && camp._wolves.every(w=>!w.dead && !w.activated)){
+      for(const w of camp._wolves){ const k=gEnemies.indexOf(w); if(k>=0) gEnemies.splice(k,1); }
+      camp._wolves.length=0; camp._spawned=false;
+    }
+
     // Clear: whole pack dead → unlock the chest reward, stamp the respawn timer (run clock).
-    if(!camp.cleared && camp._wolves.length>0 && camp._wolves.every(w=>w.dead)){
+    if(!camp.cleared && camp._spawned && camp._wolves.length>0 && camp._wolves.every(w=>w.dead)){
       camp.cleared=true;
       camp.respawnAt = wildRunTimer + WOLF_CAMP_RESPAWN;
       camp.chest.locked=false;
+      camp._spawned=false;            // pack gone; a fresh one streams in after the respawn cooldown
       addGDmg(camp.wcx, camp.wcy-40, '✓ DEN CLEARED', '#9fe6ff');
     }
-    // Respawn once the timer expires: a fresh pack guards the den again. The chest is a ONE-TIME
-    // reward — never re-armed. An un-looted chest re-locks behind the new pack; a looted one stays
-    // gone (it's already fading out / despawned).
+    // Respawn cooldown elapsed → clear it so the streaming-spawn above re-arms the den (now if the
+    // player is still near, else when they next return). The chest is a ONE-TIME reward — never
+    // re-armed; an un-looted chest re-locks when the fresh pack streams in, a looted one stays gone.
     if(camp.cleared && camp.respawnAt>0 && wildRunTimer>=camp.respawnAt){
-      _wolfSpawnPack(camp);
-      if(!camp.chest.looted) camp.chest.locked=true;
+      camp.cleared=false;
       camp.respawnAt=0;
     }
     // Chest — gated on clear: auto-loots on proximity once the pack is dead, then fades + despawns.
