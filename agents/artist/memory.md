@@ -3,25 +3,31 @@
 
 ---
 
-### 2026-06-10 — A sprite halo can be a COLOUR defect, not an alpha defect — diagnose which before re-cutting anything
+### 2026-06-10 — A sprite halo is a STACK of defects, each invisible to the previous fix's metric — verify against the full edge ring AND the over-ground render, never one number
 
-- **Principle:** When a shipped cutout shows a halo in-game, measure the semi-transparent edge band's
-  *brightness*, not just its size, and compare against a known-clean sheet (the idle). If alpha and
-  registration are right but the fringe RGB is background-coloured (grey bg blend instead of the house
-  style's dark outline), the fix is **colour-only**: `tools/defringe-sprite.py` luminance-clamps the
-  fringe to the idle outline tone (~18) in place — same filenames, zero re-wiring, zero re-registration
-  risk. Re-keying/re-cutting (what the halo *looks* like it needs) is the most invasive option and was
-  empirically wrong here twice over: a `--tol` sweep ate the figure (grey steel sits inside any tolerance
-  that cuts a grey band — the same fg/bg overlap that forces GrabCut), and nearest-solid RGB bleed made
-  the halo *brighter* (the knight's nearest solid pixels are silver highlights, not the outline).
-- **Why:** the walk frames' halos (fringe lum 53–133 vs idle 13–16) were baked at slice time by LANCZOS
-  blending figure edges with the grey studio bg; alpha was fine all along. The clamp brought all 32
-  frames to 10.8–17.0, verified under simulated game rendering (smoothed upscale over dark ground).
-- **How to apply:** for any edge artifact, run `defringe-sprite.py --check` against the clean reference
-  sheet first; let the numbers pick between (a) colour clamp (bright fringe, good alpha), (b) `--erode`
-  (alpha band too wide), (c) re-cut with a better separator (alpha genuinely wrong). And when a fix
-  rewrites shipped assets in place, snapshot the originals first — the rejected bleed experiment was
-  recoverable only because the files were committed.
+- **Principle:** A walk-sprite "halo" reported in-game is rarely one defect. This cycle had **three**,
+  each hidden from the last fix's QA metric: (1) a **grey colour fringe** on the soft edge band; (2) the
+  bright **near-opaque rim** (`α 200–239`) that a soft-band metric *doesn't look at*; (3) an **opaque
+  cast-floor-shadow** smudge (`α=255`) the fringe metric can't see at all. The trap is a **false-passing
+  metric**: defringe-v1 clamped+measured only `8<α<200`, so a frame measured "lum 11 = clean" while the
+  rim still read grey (lum ~113 vs idle ~48) and Josh still saw the halo. **Always QA a fringe metric
+  against the idle's FULL ring (`8≤α<245` = 18–22 here), and trust the over-ground render + the user's
+  eye over any single average** — the mean is blind to a localized bright rim and to opaque smudges.
+- **Why:** the colour clamp (`defringe-sprite.py`, luminance-clamp the bg-blended fringe to the idle
+  outline tone) is still the right *first* tool — same filenames, zero re-wire, and re-keying was wrong
+  twice (a `--tol` sweep ate the grey steel; nearest-solid bleed *brightened* the halo). But colour-only
+  can't fix a baked cast shadow — that needs a **re-cut** (`slice-walk-video.py --shadow-bg` seeds the
+  shadow as definite bg). And `--shadow-bg` itself over-ate the dark **boots** (the seed keyed `lum<16`
+  over the bottom quarter — boots fall in it), so I added `--shadow-lum`/`--shadow-band` to protect them.
+  Net: defringe-v2 (full-ramp `α<245`) + boot-protected `--shadow-bg` re-cut of all 6 clip-derived dirs
+  → 14.9–17.4, boots intact, registration unchanged (size 192/feet 189/body 181).
+- **How to apply:** diagnose the defect *class* before reaching for a tool — `--check` against the clean
+  idle on the **full** ring, then split the edge into sub-bands (soft `8–200`, rim `200–240`, solid) and
+  visualize the **opaque-only** mask over magenta to catch a baked shadow blob the brightness metric
+  misses. Colour clamp for a bright fringe; re-cut for a baked shadow/missing alpha; and when re-cutting,
+  **QA the boots on the contact sheet every time** (the shadow seed lives right where the feet are).
+  Keep the whole 8-set consistent: re-cut E/NE/SE from clips, mirror to W/NW/SW. Snapshot/commit before
+  in-place rewrites — recoverability is what made the rejected experiments safe.
 
 ### 2026-06-10 — A pose's scale recommendation in a handoff must be a head/shoulder measurement, never bbox/body-fill
 
