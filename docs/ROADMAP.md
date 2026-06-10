@@ -7,7 +7,7 @@ engineering builds **approved** items from *Now*, top-down ([`agents/engineer/en
 
 ---
 
-## 📍 Where we are (June 9, 2026)
+## 📍 Where we are (June 10, 2026)
 
 **v0.2.0 is live** (the Favor currency). The "vertical slice" — our test of whether the core combat
 scales fairly against a rising difficulty curve — is **fully built**, and we just ran its first real
@@ -24,6 +24,7 @@ second god) stays parked because the playtest proved we don't need it yet.
 
 | # | What we're building | Status | Size | Why it matters |
 |---|---|---|---|---|
+| **0** | **Player animation pass** — directional walk, dash poses, heavy-attack windup | 🔧 In progress (pre-greenlit) | Ongoing | Game feel + the *weighty-combat* directive made visible; runs alongside the queue |
 | **1** | **Make late-game dangerous** — enemies scale harder + glow yellow→red as they get deadly | ✅ Approved | Multi-session | Fixes the flat difficulty curve (playtest weak point #1) |
 | **2** | **Imbue Paths** — turn each fire skill into a 10-level mastery tree with branching upgrades | ✅ Approved — cleared for build | Large, phased | Fixes boring level-ups; the heart of "build your own playstyle" (#2) |
 | **3** | **Wolves stop getting stuck** on their dens + ignore forest slow | ✅ Approved | Quick | Bug fix — unblocks wolf playtesting |
@@ -33,6 +34,35 @@ second god) stays parked because the playtest proved we don't need it yet.
 ---
 
 ## Now — what engineering builds next (in this order)
+
+### 0. Player animation pass — walk · dash · heavy-attack windup
+
+`🔧 in-progress` (pre-greenlit game-feel polish; no formal gate) · **Size:** ongoing, ships incrementally · **Pillars:** game feel, mastery · **Art:** player pose/anim sheets (Artist-owned)
+
+**What:** A hand-drawn animation pass on the player's core movement and committed actions —
+directional **walk cycles** (✅ all 8 facings, shipped v0.4.0), a **dash pose** sheet, and a
+**heavy-attack windup** telegraph. Animation on already-shipped skills, so it's polish — not a new
+system, no approval gate.
+
+**Why:** Serves pillar #1 directly, and the heavy-windup is the **weighty-combat standing directive**
+(Josh, 2026-06-08) made *visible* — a committed swing should *look* committed before it lands, so
+whiffing reads as the exposed, planted moment it's meant to be. This runs **alongside** the 1–4 queue
+(Artist + wiring), not ahead of it — the approved systemic work below is unchanged.
+
+<details>
+<summary>🔧 Build notes (engineering)</summary>
+
+- **Walk:** ✅ shipped v0.4.0 — `char.playerwalk{1..4}.<dir>`, gated by `PLAYER_WALK_OCT`, driven by
+  `p.walkFrame` (network-synced). `tools/slice-walk-cycle.py` is the slicer.
+- **Dash:** pose sheet delivered (8-dir cutouts, `art/player` + engineer handoff, commit `ffa1df7`) —
+  wiring is the engineer's per the Artist handoff spec.
+- **Heavy windup:** windup poses in flight (`assets/char/playerheavywindup-*`, untracked) — the telegraph
+  frame for the committed heavy attack; wire into the heavy-attack windup window once the sheet lands.
+- **Handoff rule:** Artist delivers sheets + `ART_MANIFEST` snippet; engineer is sole editor of
+  `index.html` and owns the wiring (per `CLAUDE.md` role boundary).
+</details>
+
+---
 
 ### 1. Make late-game dangerous — enemy scaling + a visible danger tell
 
