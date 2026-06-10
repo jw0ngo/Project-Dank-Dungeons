@@ -3,6 +3,32 @@
 
 ---
 
+### 2026-06-10 — Before fixing a "your tool broke my asset" report, prove ownership; and beware a metric that conflates two effects
+
+- **Principle:** When the user says new work corrupted an existing asset, **diagnose ownership before
+  touching anything** — it's usually a two-command exoneration or indictment. Here Josh suspected the new
+  hurt/prop slicing was editing existing PNGs: `git diff HEAD` was **empty** for both suspects and the
+  slicer's entire write-set is `{id}-{dir}.png` for its `id` arg, so slicing `goblinhurt` *cannot* write
+  `warrior-se.png`. That cleared the new work in two checks and redirected to the real cause — a
+  regression from a *prior* session (`playerwalk2-ne`'s rear boot, eaten by that session's `--shadow-bg`
+  re-cut). One suspect (`warrior-se`) was a pre-existing original cut (untouched since externalize) —
+  "didn't notice before" was correct. Separate "did this change?" (git) from "is it defective?" (pixels).
+- **Why — the false metric:** my foot-area pixel count read `−44%` on the worst frame and `−29%` on the
+  user's example, which looked catastrophic — but that count **conflated the intended shadow removal with
+  the unintended boot loss**. Most of the loss was the baked floor-shadow blob (legitimately gone); the
+  actual boot damage was a fraction. Worse, after the fix the count barely moved (1069→1091) because the
+  **recovered boot ≈ the additional shadow removed** — so the number said "no change" while the render
+  showed the rear boot fully restored. A metric that sums two opposing effects is blind to both.
+- **How to apply:** (a) for any "X broke" report, run `git diff HEAD` + identify the tool's write-set
+  first. (b) Never trust a single conflated count — split it (shadow vs boot here) or judge by the
+  **render**; the magenta contact + a before/now/fix three-way is the truth, the pixel delta is a hint.
+  (c) A backlog note that says "**boots survive**" is a claim to **re-measure across every affected
+  facing** — the prior `--shadow-lum 16 / --band 0.80` guard saved N/S but the side/diagonal boots stayed
+  eaten (the planted profile foot sits deepest in the seed band); the real fix was `--shadow-lum 13
+  --shadow-band 0.90`. (d) An mp4 re-cut is **alpha+RGB**, so it *undoes* any prior RGB-only defringe —
+  the re-cut frames came back with the grey halo (ring ~125); **defringe must follow every re-cut**.
+  Single-prop cutout (coin/chest) has no grid tool — added `tools/cut-prop.py` reusing `cut_cell`.
+
 ### 2026-06-10 — A sprite halo is a STACK of defects, each invisible to the previous fix's metric — verify against the full edge ring AND the over-ground render, never one number
 
 - **Principle:** A walk-sprite "halo" reported in-game is rarely one defect. This cycle had **three**,
