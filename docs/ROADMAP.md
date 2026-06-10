@@ -256,11 +256,18 @@ higher powers" (chaos/order, light/dark) to survive — *the turning of the age*
 peak routes through those raw forces, so it corrupts: the level-10 tier is power **and** loss of
 control. It's what *"To Dust"* means — old gods to dust, new powers born from it.
 
-**Extended 2026-06-10 (spec updated):** each god's level-10 peak is its **own** Higher Force —
-Cilia→**Chaos**, Boreas→**Order**, Bhumi→**Light**, Ikras→**Darkness** (not universal Chaos). And a new
-**Elemental Fusion** alternative to the peak is specced (fuse a 2nd element with Favor instead of ascending
-— see the *Next* item). **Phase 1 is unchanged:** Cilia's pure 1→10→Chaos tree. Fusion + the other forces
-are deferred (fusion behind Boreas). Full detail in [`specs/imbue-paths.md`](specs/imbue-paths.md).
+**Reframed 2026-06-10 (Josh — spec updated):** the **level-10 peak is now a two-age fork.** Three ages of
+gods exist — **Animal Spirits (past) → Elementals (now) → Concepts (coming)** — and at rank 10 the player
+chooses which way the age turns: an **Old-god (Animal Spirit) leaf** that *heals* the caster (for Cilia,
+**Dragonfire**) **or** a **New-god (Concept) leaf** of massive AOE that *burns* the caster (for Cilia,
+**Chaos**). One of each per Form → still 4 endpoints (2 heal, 2 self-burn). **Dance of Fire's rank-10 is now
+fully designed** (Josh-canon 2026-06-10): Form A renamed **Emberfan**; all four leaves named + specced and
+unified by a **3-hit-combo LMB transform** — 🐉 *Dragonfire* / *Dragondance* (heal-ground) · 🔥 *Flame of
+Chaos* / *Helldance* (self+enemy-burn). Also specced: **Elemental Fusion**, a fuse-a-2nd-element alternative
+to the peak (see the *Next* item). **Slices A & B are unaffected — the reframe only changes Slice C**
+(rank-10), which now carries the combo transform + two fire-substance grounds (fire-heal / fire-self-burn).
+⚑ Open: log the three-age canon to the Creative Manifesto. Full detail in
+[`specs/imbue-paths.md`](specs/imbue-paths.md).
 
 <details>
 <summary>🔧 Build notes (engineering)</summary>

@@ -1,20 +1,34 @@
 # Imbue Paths — the imbued-skill mastery system
 
-**Status:** design (PM, 2026-06-09; extended 2026-06-10 with per-god Higher Forces + Elemental Fusion) —
-fleshes out *Now* item 2 (**Imbue Paths**). Phase 1 (Cilia pure tree → Chaos) cleared for engineering;
-fusion + the other gods' forces are specced but deferred (see Decisions).
+**Status:** design (PM, 2026-06-09; extended 2026-06-10: per-god forces + Elemental Fusion; **reframed
+2026-06-10: the level-10 peak is a two-age fork — Old-god Animal-Spirit *sustain* leaf vs New-god Concept
+*power+cost* leaf, for Cilia Dragon-heal vs Chaos-self-burn, see Decision #7**) — fleshes out *Now* item 2
+(**Imbue Paths**). Phase 1 (Cilia tree) cleared; Slices A/B unaffected by the reframe, Slice C carries it.
+Fusion + the other gods' poles are specced but deferred (see Decisions).
 
 **Pillar:** build-craft depth (primary) · game feel · mastery. Serves the Creative Manifesto's *"builds
 are identity, not arithmetic"* and *"the hero wields the gods' power"*.
 
-> **Canon (CD beat, Josh 2026-06-09 — now logged in `studio/CREATIVE_MANIFESTO.md` Direction Log):** *the
+> **Canon (CD beat, Josh 2026-06-09 — logged in `studio/CREATIVE_MANIFESTO.md` Direction Log):** *the
 > gods are waning in power and resort to other means of "perceived higher power" to preserve themselves —
 > chaos and order, light and dark. If called upon enough, these concepts become the new gods of the next
 > age.* The game is set in **the turning of the age**: the old gods are passing, the new are being born.
-> Channeling a blessing to its **peak (rank 10)** routes the power through these raw, half-born forces —
-> so the strongest powers carry **chaos: more havoc, less control.** This is what *To Dust* means
-> (old gods crumbling to dust, new powers born from it) and the cost of borrowed divine power: at its
-> limit, it corrupts. The level-10 "Chaos Ascension" is that theme made playable.
+>
+> **Canon extension (CD beat, Josh 2026-06-10 — ⚑ NOT YET in the manifesto; needs a Direction Log
+> entry):** there are **three ages**, and the current elemental gods sit between two others:
+>
+> | Age | Gods | Cilia's pole |
+> |-----|------|--------------|
+> | **Previous** | **Animal Spirit gods** (the primal old powers) | **the Dragon** (dragonfire) |
+> | **Current** | **Elemental gods** (Cilia/fire, Boreas/ice, Ikras/wind, Bhumi/earth) | **Cilia** |
+> | **Coming** | **Concept gods** (Chaos · Order · Light · Dark) | **Chaos** |
+>
+> Channeling a blessing to its **peak (rank 10)** routes the power *out of the current age* — and the
+> player **chooses which way the age turns** for that skill: reach **back** to the Animal-Spirit old gods
+> (for Cilia, the **Dragon** — flame that *heals* as it burns; sustain, life, the primal age's mercy) or
+> **forward** to the half-born Concept gods (for Cilia, **Chaos** — devastating AOE whose flames *burn the
+> caster*; power with corruption, the new age's price). This is what *To Dust* means (old gods crumbling to
+> dust, new powers born from it). The level-10 fork is that whole myth made playable in one choice.
 
 ---
 
@@ -28,7 +42,7 @@ The tree is two numeric stretches bracketing two branch points:
 | **1–4** | **Numeric upgrades** to the base imbue (damage · size/reach · duration · count). Ordinary draft cards, now framed as *ranking up a named ability* — this alone fixes "leveling is boring stat bumps." |
 | **5 — FORM** | **Branch ①: choose 1 of 2 Forms.** A real transformation that changes the *shape and playstyle* of the skill (e.g. ranged vs. close-surround). Irreversible for the run. |
 | **6–9** | **Numeric upgrades** to your chosen Form. |
-| **10 — CHAOS** | **Branch ②: choose 1 of 2 Chaos Ascensions** of your Form. The capstone — power **plus** loss of control, per the waning-gods lore. Irreversible. |
+| **10 — ASCENSION** | **Branch ②: choose the age your power turns to** — 1 of 2 ascensions of your Form: the **Old-god (Animal Spirit)** leaf (sustain — for Cilia, **Dragonfire that heals you**) or the **New-god (Concept)** leaf (power + cost — for Cilia, **Chaos AOE that burns you**). The capstone. Irreversible. |
 
 So each skill is a **binary tree → 4 possible endpoints**, but any one run walks a single path:
 `base → Form (1 of 2) → Chaos (1 of 2)`. Two players who both maxed Dance of Fire can play completely
@@ -38,34 +52,41 @@ differently. That divergence **is** the build-craft payoff.
 the *commitment* you pour into the identity you chose. A fork with no investment on either side feels
 weightless.
 
-## The level-10 peak — each god's Higher Force
+## The level-10 peak — the turning of the age (old gods vs new gods)
 
-The level-10 evolution is the skill **ascending into the god's "higher power"** — the raw force the
-waning god channels to survive. **Each god routes to a different force, with its own signature cost**
-(CD canon, Josh 2026-06-10 — *to be logged in `studio/CREATIVE_MANIFESTO.md`*):
+The level-10 evolution routes the skill **out of the current age** — and the player **picks which way the
+age turns** (CD canon, Josh 2026-06-10 — *the three-age structure + this fork to be logged in
+`studio/CREATIVE_MANIFESTO.md`*). Every god has **two poles** at the peak: its **Animal-Spirit predecessor**
+(the old age — *sustain*) and its **Concept-god successor** (the coming age — *power + cost*):
 
-| God | Element | Level-10 Higher Force | Signature cost (the "grip slipping") |
-|-----|---------|----------------------|--------------------------------------|
-| **Cilia** | Fire | **Chaos** | Uncontrolled / indiscriminate — spreads, splits, lingers in *your* space too |
-| **Boreas** | Ice | **Order** | Rigid / binding — control that constrains the caster as much as the enemy *(define when built)* |
-| **Bhumi** | Earth | **Light** | Overexposing / revealing — power that blinds or burns out *(define when built)* |
-| **Ikras** | Wind | **Darkness** | Draining / obscuring — chaining that consumes or hides *(define when built)* |
+| God | Element | ← Old pole (Animal Spirit) · *sustain* | New pole (Concept god) → · *power + cost* |
+|-----|---------|----------------------------------------|-------------------------------------------|
+| **Cilia** | Fire | **the Dragon** — dragonfire that **heals** the caster as it burns enemies | **Chaos** — devastating AOE whose flames **burn the caster**; spreads / splits past your aim |
+| **Boreas** | Ice | *(frost-beast spirit — define when built)* · sustain-flavored | **Order** — rigid/binding control that constrains the caster too *(define when built)* |
+| **Bhumi** | Earth | *(great-beast spirit — define when built)* · sustain-flavored | **Light** — overexposing/revealing power that blinds or burns out *(define when built)* |
+| **Ikras** | Wind | *(storm-bird spirit — define when built)* · sustain-flavored | **Darkness** — draining/obscuring chaining that consumes or hides *(define when built)* |
 
-(The four forces form oppositional pairs — Chaos↔Order, Light↔Darkness — a latent future axis; not built now.)
+(The new poles form oppositional pairs — Chaos↔Order, Light↔Darkness — a latent future axis. The old poles
+are each god's primal Animal-Spirit ancestor; Cilia's is the Dragon, the rest are the CD's to name.)
 
-### The Chaos rule (Cilia's instance — the template for the others)
+### The two-age rule (Cilia's instance — the template for the others)
 
-A Chaos Ascension is **not** "the same thing but bigger." Every one must add an **uncontrolled,
-indiscriminate element** alongside the power — the god's waning grip showing through:
+A peak leaf is **not** "the same thing but bigger." Each pole carries a **signature, on-theme identity** —
+and the two poles are **mechanical opposites**, so the choice is a real sustain-vs-burst fork:
 
-- **Burning ground that lingers in your space**, not just the enemy's — you now share the battlefield
-  with your own fire (reuses the existing `burning-ground` / `gFireTrails` hazard).
-- **Effects that spread, split, or re-trigger beyond your aim / timing** — you start the havoc, the
-  chaos finishes it where *it* wants.
+- **Old-god leaf (Animal Spirit · for Cilia, the Dragon) → SUSTAIN.** The flames **heal you** while they
+  damage enemies (lifesteal-from-your-own-fire — a new mechanic). Reaching back to the old age is *mercy*:
+  you can wade in, stay in, outlast. The primal power nurtures even as it burns. Tone: **majestic, ancient,
+  reverent** — no self-hazard. Damage is **lower** than the Chaos leaf — sustain is what you bought.
+- **New-god leaf (Concept · for Cilia, Chaos) → POWER + COST.** **Massive AOE**, but you pay for it: the
+  flames **burn the caster** and **spread / split / re-trigger past your aim** (reuses the existing
+  `burning-ground` / `gFireTrails` hazard, now turned on *you*). The half-born god's grip slips. Tone:
+  **dread, chaos, sinisterness.**
 
-This is weighty-combat at the build layer: peak power carries a real cost and a real risk. It also seeds
-co-op chaos (your fire is a hazard your ally must read too). **Each other god's higher force obeys the
-same shape — power + a signature, on-theme cost — expressed through that force, not Chaos.**
+This is weighty-combat at the build layer: the peak is a genuine identity fork, not a power tier. It also
+seeds co-op (the Chaos leaf's fire is a hazard your ally must read; the Dragon leaf's sustain lets you
+anchor a frontline). **Each other god's two poles obey the same shape** — an old Animal-Spirit *sustain*
+leaf and a new Concept *power+cost* leaf, expressed through that god's element.
 
 ---
 
@@ -123,50 +144,88 @@ the fantasy. Josh named the first (**Dance of Fire**). Names below for the other
 
 - **Ranks 1–4 (numeric):** +wave damage · +arc width · +travel distance · +burn duration.
 - **Rank 5 — Form:**
-  - **Form A · Emberlance** *(long range)* — the wave becomes a **volley of fireballs loosed in an arc**
-    that travel a long distance. Playstyle: poke, spacing, kiting from safety.
+  - **Form A · Emberfan** *(long range)* — the wave becomes a **volley of fireballs loosed in an arc**
+    that travel a long distance. Playstyle: poke, spacing, kiting from safety. *(Renamed from "Emberlance,"
+    Josh 2026-06-10 — a fan of embers, not a lance.)*
   - **Form B · Cinder Ring** *(close / surrounded)* — the wave becomes a **ring of flame that erupts
     around you**. Playstyle: wade in, get surrounded, punish the crowd. *(Josh's "flame strike circle.")*
-- **Ranks 6–9 (numeric):** Emberlance → +fireball count / +pierce; Cinder Ring → +ring radius / +pulse damage.
-- **Rank 10 — Chaos Ascension (choose 1 of 2 on your Form):**
-  - From **Emberlance →**
-    - **Wake of Ruin** *(was "Hellfire Lanes" — Josh's example)* — the fireballs become **chaos fireballs
-      that leave trails of burning ground** along their flight paths. You carve long lanes of fire across
-      the field — lanes that linger and box in *you* as much as the enemy.
-    - **Cinderplague** — fireballs **burst on impact into erratic secondary embers** that scatter where
-      they will, spreading fire like a contagion. You aim the first shot; chaos aims the rest.
+- **Ranks 6–9 (numeric):** Emberfan → +fireball count / +pierce; Cinder Ring → +ring radius / +pulse damage.
+- **Rank 10 — Ascension (choose your age: 1 Old-god + 1 New-god leaf per Form).** *Common motif (Josh
+  2026-06-10): **every Dance-of-Fire peak leaf evolves the LMB into a 3-hit combo** — each hit in the chain
+  escalates, and the 3rd hit is the climax that lays down the leaf's signature burning ground (🐉 dragonfire
+  = heals you if you stand in it · 🔥 chaosfire = hurts enemies **and** you).* All four names below are
+  **Josh-canon (2026-06-10).**
+  - From **Emberfan →**
+    - 🐉 **Dragonfire** *(Old · Dragon · sustain)* — LMB becomes a **3-hit combo**: the first two swings emit
+      **small waves of fire**; the third **blasts jets of dragonfire in the swing direction**, scorching the
+      ground with **dragonfire that heals you while you stand in it.** *Visual: dragonfire carries a
+      rainbow-like sheen in its flames (art note).*
+    - 🔥 **Flame of Chaos** *(New · Chaos · power+cost)* — LMB becomes a **3-hit combo**: the first two swings
+      emit **small waves of fire**; the third **launches a massive, slow-moving ball of chaos fire** that
+      devastates enemies in its path and leaves a **wake of chaosfire-burned ground** (damages enemies and you).
   - From **Cinder Ring →**
-    - **Halo of Damnation** *(was "Pyre Halo" — Josh's "chaos fire wave")* — the ring leaves a **lingering
-      circle of burning ground around you** that follows each eruption. Devastating while surrounded — but
-      you're standing in it.
-    - **Unending Maelstrom** — the ring **re-erupts 2–3 times** over a couple seconds on its own cadence,
-      a firestorm that won't be called off. More havoc, on chaos's timing, not yours.
+    - 🐉 **Dragondance** *(Old · Dragon · sustain)* — LMB becomes a **3-hit combo**: each hit emits a
+      **circular wave of fire that burns the ground in a ring around you**, escalating in size (2nd > 1st,
+      3rd largest). The **3rd wave is dragonfire**, scorching the ground with **dragonfire that heals you
+      while you stand in it.**
+    - 🔥 **Helldance** *(New · Chaos · power+cost)* — LMB becomes a **3-hit combo**: each hit emits a
+      **larger cone of chaos fire** than the last, scorching the ground with **chaosfire that hurts enemies
+      and you.**
 
-*(All four Chaos endpoints confirmed — binary tree, Josh 2026-06-09. Naming convention for every Chaos
-leaf, this skill and the four to come: **evoke dread / chaos / sinisterness** — these are the gods' grip
-slipping, not a triumphant power-up.)*
+*(Binary tree confirmed Josh 2026-06-09; the **two-age fork** + all four leaf names + the **3-hit-combo
+motif** are Josh-canon 2026-06-10. **Two fire substances:** *dragonfire* (old age — heals the caster who
+stands in it; rainbow-tinged) vs *chaosfire* (new age — damages enemies **and** the caster). **Naming —
+two tones:** Dragon leaves evoke the **primal, majestic** old powers; Chaos leaves evoke **dread /
+sinisterness.** Retired earlier proposals: Sunwyrm's Breath, Hearth of the Wyrm, Wake of Ruin, Unending
+Maelstrom, Cinderplague, Halo of Damnation.)*
 
 ---
 
 ## The other four imbued skills (design skeleton — PM-proposed, build later)
 
-Same 10-rank shape. Forks pitched to split **distinct playstyles**; Chaos leaves obey the Chaos rule.
-Names + leaves are proposals pending the CD pass and the per-skill build.
+Same 10-rank shape. Forks pitched to split **distinct playstyles**. **At rank 10 every Form forks the same
+way: one 🐉 Dragon (old-god) leaf that HEALS the caster + one 🔥 Chaos (new-god) leaf that BURNS the caster
+for massive AOE** (per the two-age rule). The `@10` column below sketches *both poles* per skill. Names +
+leaves are proposals pending the CD pass and the per-skill build.
 
-| Skill (base FX) | Art name *(proposed)* | Form A @5 | Form B @5 | Chaos flavor @10 |
+> **Note:** the **3-hit-combo LMB transform** is specific to **Dance of Fire** (it *is* the normal attack).
+> The other four skills' peak leaves transform *that skill* (whirlwind, leap, dash, heavy), not the LMB —
+> but they keep the same 🐉 heal-ground / 🔥 self+enemy-burn-ground principle.
+
+| Skill (base FX) | Art name *(proposed)* | Form A @5 | Form B @5 | @10 — 🐉 Dragon (heal) / 🔥 Chaos (self-burn AOE) |
 |---|---|---|---|---|
-| **Whirlwind** — expanding fire rings (`gFireRings`) | **Pyre Waltz** | **Wildfire Bloom** — slow, huge, persistent rings (zone denial) | **Flame Vortex** — rings collapse *inward*, dragging + burning enemies toward you (melee setup) | Bloom → charred field that stays; Vortex → implodes into an uncontrolled nova |
-| **Leap** — burning cross at impact (`gFireCrosses`) | **Sunfall** | **Meteor** — one big impact burst (gap-close nuke) | **Starfall** — impact scatters several smaller bursts around the landing (zone) | Lingering burn craters; or a delayed second impact on chaos's timing |
-| **Dash** — flame trail (`gFireTrails`) | **Trail of Embers** | **Inferno Wake** — hotter/wider/longer trail (aggressive hit-and-run) | **Ember Shroud** — trail wraps you as a brief burning aura/peel (defensive, still damages) | Trail spreads sideways as wildfire; or flares into short-lived fire walls |
-| **Heavy** — travelling line of fire pillars (`gFirePillars`) | **Eruption** *(or Pyroclasm)* | **Magma Line** — more pillars, longer focused lane (directional nuke) | **Volcanic Field** — pillars erupt in a radial cluster around the aim point (AOE) | Pillars leave run-long burning ground; or erupt erratically past where you aimed |
+| **Whirlwind** — expanding fire rings (`gFireRings`) | **Pyre Waltz** | **Wildfire Bloom** — slow, huge, persistent rings (zone denial) | **Flame Vortex** — rings collapse *inward*, dragging + burning enemies toward you (melee setup) | 🐉 rings mend you per enemy burned (sustain zone) · 🔥 rings implode into an uncontrolled nova / charred field you stand in |
+| **Leap** — burning cross at impact (`gFireCrosses`) | **Sunfall** | **Meteor** — one big impact burst (gap-close nuke) | **Starfall** — impact scatters several smaller bursts around the landing (zone) | 🐉 impact heals you per enemy struck (dive-and-sustain) · 🔥 lingering burn craters + a delayed 2nd impact on chaos's timing |
+| **Dash** — flame trail (`gFireTrails`) | **Trail of Embers** | **Inferno Wake** — hotter/wider/longer trail (aggressive hit-and-run) | **Ember Shroud** — trail wraps you as a brief burning aura/peel (defensive, still damages) | 🐉 trail/aura heals you as it burns (sustain-on-the-move) · 🔥 trail spreads sideways as wildfire / short-lived fire walls that catch you too |
+| **Heavy** — travelling line of fire pillars (`gFirePillars`) | **Eruption** *(or Pyroclasm)* | **Magma Line** — more pillars, longer focused lane (directional nuke) | **Volcanic Field** — pillars erupt in a radial cluster around the aim point (AOE) | 🐉 pillars heal you per enemy hit (sustain nuke) · 🔥 run-long burning ground / pillars erupt erratically past your aim |
 
 ---
 
 ## Build / UI grounding (for the engineer, not prescriptive)
 
-- **Heavy FX reuse.** Burning ground already exists (`gFireTrails` / `burning-ground` FX) — the Chaos
-  tier leans on it hard. Form transforms reshape existing systems (`gFireWaves` → projectiles or a ring;
-  `gFireRings` collapse direction; etc.). Fireball projectiles may borrow the arrow/projectile path.
+- **Heavy FX reuse.** Burning ground already exists (`gFireTrails` / `burning-ground` FX) — the **Chaos
+  (new-god) leaves** lean on it hard. Form transforms reshape existing systems (`gFireWaves` → projectiles
+  or a ring; `gFireRings` collapse direction; etc.). Fireball projectiles may borrow the arrow/projectile path.
+- **Slice C — Dance of Fire rank-10 specifics (Slices A/B don't touch any of this):**
+  - **The 3-hit-combo LMB transform.** Every peak leaf converts the normal attack (LMB / `gDoSwingAt`,
+    ~L3392) into a **3-hit chain** where each hit escalates and the **3rd hit is the climax** (lays the
+    signature ground / launches the big projectile). Needs a per-player combo-step counter + timing window
+    (a swing that chains 1→2→3 then resets), each step spawning a bigger FX than the last. This is a *swing*
+    rewrite, not a param tweak — the meatiest part of Slice C. (MP: the combo step rides the existing
+    swing-sync path; confirm the step index syncs so clients render the right escalation.)
+  - **Two fire-substance grounds** (both are burning-ground variants — reuse `gFireTrails` /
+    `burning-ground`, ~L5708):
+    - 🐉 **dragonfire ground — HEALS the owner.** A new friendly hazard: while the casting player stands in
+      *their* dragonfire, they heal (per-tick). No heal mechanic from own-fire exists today; scope a per-tick
+      heal magnitude on the imbue-path state. Host/SP-authoritative like burn; heal syncs to the owner in MP.
+      *Art: rainbow-tinged flame (handoff to Artist).*
+    - 🔥 **chaosfire ground — HURTS enemies AND the owner.** The existing enemy burning-ground, now also
+      testing the *caster* against it (today it spares the caster). Tune the self-DPS to be a real threat,
+      not chip — that self-burn IS the balance cost of the leaf's massive AOE.
+  - **Per-leaf climax spawns:** Flame of Chaos → a **massive slow-moving chaos-fire projectile** (borrow the
+    fireball/arrow path, oversize + slow, leaves a chaosfire wake). Dragonfire → **directional dragonfire
+    jets** on the 3rd swing. Dragondance → **3 escalating concentric ring-waves**, 3rd = dragonfire.
+    Helldance → **3 escalating cones** of chaosfire.
 - **State.** A per-player imbue-path map (rank + chosen Form + chosen Chaos per skill), parallel to the
   existing `skillMods`/`gritMods` (`~2425`). Numeric ranks write magnitudes the FX spawn sites read
   (thread into `gFireWaves`/`gFireTrails`/`gFirePillars` spawn params, `~3619`/`~5708`/etc.).
@@ -194,9 +253,15 @@ Front-loads the system risk into Phase 1; every later phase is additive content 
 
 - **Forms are sidegrades, not upgrades** — a *playstyle* choice (range vs. surround), tuned to comparable
   power so neither is the trap pick.
-- **Chaos is power + cost, not pure power** — the uncontrolled element (self-hazard burning ground, wasted
-  off-aim coverage, off-timing re-triggers) is the balancing lever. If a Chaos leaf is strictly better than
-  its Form, it's under-chaosed.
+- **The two-age fork is sustain-vs-burst — tune it as a real choice, not a power tier.**
+  - 🐉 **Dragon (heal) must NOT be free power.** It's the *sustain* pole, so its **damage is lower** than
+    the Chaos leaf — you trade ceiling for survivability. The trap to avoid: "heals you AND hits hardest" =
+    strictly-better. The heal is the payoff; the damage gap is the price. Tune heal-per-hit so it rewards
+    aggression without making you unkillable (cap/diminish vs. large packs).
+  - 🔥 **Chaos (self-burn) is power + cost.** Massive AOE is the draw; the **self-burn must be a genuine
+    threat** (real DPS to the caster, not chip) or the "cost" is fake and it's strictly better than Dragon.
+    The self-hazard / off-aim spread / off-timing re-trigger is the balancing lever — if a Chaos leaf can be
+    played with no downside, it's under-costed.
 - **Cap every numeric rank** (like `SKILL_STAT_FLOOR`) so a maxed path can't tank FPS or trivialize.
 - Forks **irreversible per run** — build commitment is identity (and the run is non-persistent, so the
   next run re-chooses).
@@ -213,16 +278,34 @@ Front-loads the system risk into Phase 1; every later phase is additive content 
 
 ## Decisions (resolved — Josh, 2026-06-10)
 
-4. **Per-god Higher Forces.** The level-10 peak is each god's own force, not universal Chaos: Cilia→**Chaos**,
-   Boreas→**Order**, Bhumi→**Light**, Ikras→**Darkness**, each with a signature cost. *(CD canon — Josh to log
-   in `studio/CREATIVE_MANIFESTO.md`.)* See "The level-10 peak" section. Cilia's Chaos tree is unchanged.
+4. **Per-god Higher Forces.** *(Superseded by #7.)* The level-10 peak was framed as each god's single
+   Concept force (Cilia→Chaos, Boreas→Order, Bhumi→Light, Ikras→Darkness). #7 keeps these as the **new
+   pole** but adds an **old pole** (the Animal-Spirit predecessor) the player can choose instead.
 5. **Elemental Fusion is a mutually-exclusive alternative to the peak**, not an orthogonal add-on. Fuse a 2nd
    element (Favor, at the shrine) after a skill is level-5 + evolved → caps element A at 5, levels element B
-   1→5 + one evolution, stacks both once-evolved effects. Pure = 1→10→Higher Force; Fusion = 5+5, no peak.
+   1→5 + one evolution, stacks both once-evolved effects. Pure = 1→10→peak; Fusion = 5+5, no peak.
    Second element gets its own 1→5 card track + one evolution (not base-effect-only). See "Elemental Fusion."
-6. **Fusion parks behind Boreas** (needs a 2nd element). Phase 1 (Cilia pure tree → Chaos) is unaffected and
+6. **Fusion parks behind Boreas** (needs a 2nd element). Phase 1 (Cilia pure tree → peak) is unaffected and
    ships first. The fusion hook is specced now; built when a 2nd god lands.
 
-**→ Status: Phase 1 (pure tree + Dance of Fire) cleared for engineering** — the 10-rank tree + per-skill
-level + Form@5 + Chaos@10 for Cilia. **Fusion + the other gods' Higher Forces are specced but deferred**
-(fusion behind Boreas; Order/Light/Darkness costs defined when each god is built).
+7. **The level-10 peak is a TWO-AGE FORK (Josh 2026-06-10 reframe).** Three ages of gods exist —
+   **Animal Spirits (past) → Elementals (now) → Concepts (coming)**. At rank 10 the player chooses which
+   way the age turns: the **Old-god (Animal Spirit) leaf** = *sustain* (for Cilia, the **Dragon** —
+   dragonfire that **heals** the caster), or the **New-god (Concept) leaf** = *power + cost* (for Cilia,
+   **Chaos** — massive AOE whose flames **burn** the caster). **One Old + one New leaf per Form** → still
+   4 endpoints/skill (2 Dragon-heal, 2 Chaos-burn). *(CD canon: the three-age structure + this fork still
+   need a `studio/CREATIVE_MANIFESTO.md` Direction Log entry — ⚑ Josh to log.)*
+8. **Dance of Fire rank-10 fully specced (Josh-canon 2026-06-10).** Form A renamed **Emberlance → Emberfan**.
+   All four leaves named + mechanically defined, unified by a **3-hit-combo LMB transform** (each hit
+   escalates, 3rd is the climax): **Emberfan →** 🐉 *Dragonfire* (3rd swing jets dragonfire / heal-ground;
+   rainbow visual) · 🔥 *Flame of Chaos* (3rd swing = massive slow chaos-fire ball + chaosfire wake);
+   **Cinder Ring →** 🐉 *Dragondance* (3 escalating ring-waves, 3rd = dragonfire heal-ground) · 🔥 *Helldance*
+   (3 escalating chaosfire cones). Two substances: **dragonfire** heals the caster, **chaosfire** hurts
+   enemies + the caster. **Dance of Fire's tree is now design-complete and ready for Slice C build.**
+
+**→ Status: Phase 1 (Cilia tree + Dance of Fire) cleared for engineering — Dance of Fire now fully designed
+through rank 10.** Slices A (ranks 1–4, shipped) and B (Form fork @5 + ranks 6–9) are **unaffected by the
+reframe** — it only changes **Slice C** (rank-10), which now carries: the **3-hit-combo swing transform**,
+🐉 **dragonfire heal-ground**, 🔥 **chaosfire self+enemy-burn ground**, and the four named climaxes (all
+specced above). **The other four skills' peak leaves + the other gods' Animal-Spirit poles + Fusion remain
+deferred** (designed per-phase / when their god lands).
