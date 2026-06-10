@@ -3,6 +3,26 @@
 
 ---
 
+### 2026-06-10 — A sprite halo can be a COLOUR defect, not an alpha defect — diagnose which before re-cutting anything
+
+- **Principle:** When a shipped cutout shows a halo in-game, measure the semi-transparent edge band's
+  *brightness*, not just its size, and compare against a known-clean sheet (the idle). If alpha and
+  registration are right but the fringe RGB is background-coloured (grey bg blend instead of the house
+  style's dark outline), the fix is **colour-only**: `tools/defringe-sprite.py` luminance-clamps the
+  fringe to the idle outline tone (~18) in place — same filenames, zero re-wiring, zero re-registration
+  risk. Re-keying/re-cutting (what the halo *looks* like it needs) is the most invasive option and was
+  empirically wrong here twice over: a `--tol` sweep ate the figure (grey steel sits inside any tolerance
+  that cuts a grey band — the same fg/bg overlap that forces GrabCut), and nearest-solid RGB bleed made
+  the halo *brighter* (the knight's nearest solid pixels are silver highlights, not the outline).
+- **Why:** the walk frames' halos (fringe lum 53–133 vs idle 13–16) were baked at slice time by LANCZOS
+  blending figure edges with the grey studio bg; alpha was fine all along. The clamp brought all 32
+  frames to 10.8–17.0, verified under simulated game rendering (smoothed upscale over dark ground).
+- **How to apply:** for any edge artifact, run `defringe-sprite.py --check` against the clean reference
+  sheet first; let the numbers pick between (a) colour clamp (bright fringe, good alpha), (b) `--erode`
+  (alpha band too wide), (c) re-cut with a better separator (alpha genuinely wrong). And when a fix
+  rewrites shipped assets in place, snapshot the originals first — the rejected bleed experiment was
+  recoverable only because the files were committed.
+
 ### 2026-06-10 — A pose's scale recommendation in a handoff must be a head/shoulder measurement, never bbox/body-fill
 
 - **Principle:** When handing off an action-pose sheet (wind-up, dash, swing — anything whose silhouette

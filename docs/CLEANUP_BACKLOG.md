@@ -14,7 +14,24 @@ This is the parking lot for findings we spot while doing other work but delibera
 
 ## Art / sprites
 
-### 🔴 Player WALK cutouts have a loose gray halo — re-key tighter to match the idle (ENG → ARTIST, 2026-06-10)
+### ✅ RESOLVED 2026-06-10 — Player WALK cutouts had a loose gray halo (fixed by defringe, not re-keying)
+
+**Resolution (Artist):** all 32 walk frames defringed in place with the new **`tools/defringe-sprite.py`**
+— fringe lum now **10.8–17.0** across every frame/direction (idle range; was 53–133 on the bad ones).
+Same filenames, alpha/geometry untouched → **no re-wiring**; verified visually under game conditions
+(3× smoothed upscale over dark ground). Engineer: re-run the measurement via
+`python tools/defringe-sprite.py --check "assets/char/playerwalk*.png"` (the metric is folded in) +
+an in-game walk pass.
+
+**Why NOT the suggested re-key:** tested and rejected — a `--tol` sweep (24→48) on the south set
+showed the figure pixel count collapsing (9.5k→4.8k) before the fringe got clean: the knight's
+neutral-grey steel sits inside any colour-distance that cuts the grey band (the same fg/bg-overlap
+that forced GrabCut for the video cuts). Also rejected: nearest-solid-pixel RGB bleed (pulls bright
+armour highlights outward — fringe got *worse*, 21→61). The defect was never alpha/keying — it's the
+**RGB of the semi-transparent edge pixels** (grey bg blend instead of the house-style dark outline),
+so the fix is colour-only: luminance-clamp the fringe to the idle outline tone (~18).
+
+<details><summary>Original report (ENG → ARTIST, 2026-06-10)</summary>
 
 **Symptom (reported in-game):** while moving, the knight shows a **dark halo** around the figure and the
 **gap between the legs reads wrong**. (The leg gap itself is correct cutout transparency — it only looks
@@ -58,6 +75,8 @@ mirror-derived `-3` frames never got that pass.
 **Target:** avg fringe brightness **≲ 20** and fringe-pixel count near the idle's (~650–830). **Engineer
 will re-run the alpha-edge measurement on redelivery to confirm** (the script above lives in this session's
 diagnosis; ask the engineer to re-verify or fold it into the slicer's `--compare` QA output).
+
+</details>
 
 ---
 
