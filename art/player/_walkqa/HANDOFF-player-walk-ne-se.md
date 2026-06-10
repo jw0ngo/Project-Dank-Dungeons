@@ -78,11 +78,14 @@ const PLAYER_WALK_OCT = {0:'e', 1:'se', 2:'s', 3:'sw', 5:'nw', 6:'n', 7:'ne'};  
 ```
 Same verification as §5, for NW and SW.
 
-## 7. W mirror (E was already wired) — completes all 8 facings
-E walk was already shipped + wired (`0:'e'` in the gate, `char.playerwalk1-4.e`). W is the horizontal
-flip of those E frames (sword reads correct, matches E by construction).
+## 7. E re-cut + W mirror — completes all 8 facings
+**E was re-sliced** from `art/player/Animator Dump/east walk.mp4` via `slice-walk-video.py` (frames
+31/35/39/43, one gait cycle) — **replacing the hand-picked E frames**, which had dirtier cutouts
+(frame-4 ground-shadow remnant, frame-3 leg-gap). Same filenames/keys (`char.playerwalk1-4.e`,
+`0:'e'` already wired) so **E needs no index.html change — just the new PNGs** (already in `assets/char/`).
+W is the horizontal flip of the new E (sword reads correct, matches E by construction).
 
-Assets in `assets/char/`: `playerwalk{1..4}-w.png`. Add to `ART_MANIFEST`:
+W assets in `assets/char/`: `playerwalk{1..4}-w.png`. Add to `ART_MANIFEST`:
 ```js
 'char.playerwalk1.w':'assets/char/playerwalk1-w.png',
 'char.playerwalk2.w':'assets/char/playerwalk2-w.png',
@@ -93,8 +96,6 @@ With everything, the gate is the full octant set:
 ```js
 const PLAYER_WALK_OCT = {0:'e', 1:'se', 2:'s', 3:'sw', 4:'w', 5:'nw', 6:'n', 7:'ne'};  // all 8
 ```
-> Note: the shipped **E** set has minor cutout flaws (faint ground-shadow remnant on frame 4, a small
-> leg-gap on frame 3); W inherits them mirrored. Re-cut E + re-mirror W together if cleaning is wanted.
 
 ## Status
 **All 8 walk facings delivered.** Engineer wiring outstanding as of this handoff: nw(5), sw(3), w(4)
