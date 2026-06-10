@@ -25,7 +25,7 @@ second god) stays parked because the playtest proved we don't need it yet.
 | # | What we're building | Status | Size | Why it matters |
 |---|---|---|---|---|
 | **0** | **Player animation pass** — directional walk, dash poses, heavy-attack windup | 🔧 In progress (pre-greenlit) | Ongoing | Game feel + the *weighty-combat* directive made visible; runs alongside the queue |
-| **0b** | **Combat card pass** — per-skill damage cards (Swing/Heavy) + Heavy: Reach retarget | 🔧 In progress | Quick | Adds build identity to the draft (commit-to-a-skill vs. go-wide); cheap win |
+| **0b** | **Combat card pass** — per-skill dmg cards (Swing/Heavy) + Heavy: Reach + **pool-wide cap removal** | 🔧 In progress | Quick | Build identity in the draft + lucky-run variance; RNG governs (caps removed) |
 | **1** | **Make late-game dangerous** — enemies scale harder + glow yellow→red as they get deadly | ✅ Approved | Multi-session | Fixes the flat difficulty curve (playtest weak point #1) |
 | **2** | **Imbue Paths** — turn each fire skill into a 10-level mastery tree with branching upgrades | ✅ Approved — cleared for build | Large, phased | Fixes boring level-ups; the heart of "build your own playstyle" (#2) |
 | **3** | **Wolves stop getting stuck** on their dens + ignore forest slow | ✅ Approved | Quick | Bug fix — unblocks wolf playtesting |
@@ -69,11 +69,13 @@ whiffing reads as the exposed, planted moment it's meant to be. This runs **alon
 
 `🔧 in-progress` (approved 2026-06-10; eng building 2026-06-10) · **Size:** quick · **Pillars:** build-craft depth, game feel · **Art:** none
 
-**What:** Three changes to the level-up draft, all in the existing card pools:
+**What:** Four changes to the level-up draft, all in the existing card pools:
 1. **New "Swing: Bite"** — a +% damage card for the *normal swing only*.
 2. **New "Heavy: Devastation"** — a +% damage card for the *heavy attack only* (reusing the freed name).
 3. **Retarget "Heavy: Devastation" (the width card) → "Heavy: Reach"** — make the heavy hit reach
    *longer* (forward length) instead of *wider* (fan), per Josh's call. Rename + retarget the same card.
+4. **Remove caps pool-wide** — every card becomes uncapped (Josh, 2026-06-10); the draft RNG is the
+   only governor. One small safety pass first (the two unfloored cooldown cards — see build notes).
 
 **Why:** Today the only damage card is **Bloodlust** (global +5%). There's no way to *commit to one
 attack*. Per-skill damage cards add the first real "go-deep vs. go-wide" choice to the draft — build
@@ -91,16 +93,26 @@ generalist's pick (covers the whole kit); specific is the specialist's higher ce
 | **Heavy: Devastation** *(new)* | heavy only | **+8%** | **none** | uncapped |
 | **Heavy: Reach** *(retarget of old Devastation)* | heavy length | +8 px/pick | **none** | uncapped |
 
-**Caps removed (Josh, 2026-06-10):** these three cards are **uncapped** — balanced by the *draft RNG*
-(you're not reliably offered the card you want, so reliably stacking one is the rare, lucky-run payoff,
-not the norm). Safe to uncap because none touch a `SKILL_STAT_FLOOR` stat — damage has no degenerate
-floor and reach is geometric, so the worst case is a satisfyingly overpowered run, not a broken one.
+**Caps removed pool-wide (Josh, 2026-06-10):** *every* card is now **uncapped** — balanced by the *draft
+RNG* (you're not reliably offered the card you want, so reliably stacking one is the rare, lucky-run
+payoff, not the norm). Safe because the only degenerate states are guarded *independently of caps*: crit
+chance is hard-clamped to 75%, global cooldown (`wildDexCdMult`, L12228) is clamped to 99%, and
+swing-speed / heavy-charge / dash-cooldown are floored in `SKILL_STAT_FLOOR` (L2431). The **one gap** —
+the per-skill cooldown cards `Whirlwind: Rhythm` (`wwCooldown`) and `Leap: Tempo` (`leapCooldown`) have
+no floor — is closed by the safety pass below before caps come off.
 
 <details>
 <summary>🔧 Build notes (engineering)</summary>
 
-- **All three cards are uncapped** — **omit the `cap` field** (`gCardAvailable` falls back to `c.cap||99`,
-  so an omitted cap means the card stays in the pool every level-up; draft RNG is the only governor).
+- **Pool-wide cap removal** — strip the `cap` field from **all** `PASSIVE_CARDS` / `SKILL_CARDS` /
+  `GRIT_CARDS` entries. `gCardAvailable` falls back to `c.cap||99`, so an omitted cap = the card stays in
+  the pool every level-up; draft RNG is the only governor. (Mechanically the three new/retargeted cards
+  below just never carry a `cap` to begin with.)
+- **Safety pass — floor the two unfloored cooldown cards FIRST** (do this before/with the cap strip): add
+  `wwCooldown` and `leapCooldown` entries to `SKILL_STAT_FLOOR` (L2431–2432) so uncapped `Whirlwind: Rhythm`
+  / `Leap: Tempo` can't drive those cooldowns to ~0 (spam). Floor each so the ability bottoms out around
+  **~0.5–0.75s (≈30–45 frames)** — engineer reads each base and picks the exact floor. Everything else is
+  already guarded (crit 75% clamp, global `cdPct` 99% clamp, swing/heavy/dash floors), so no other floors needed.
 - **Swing: Bite** — new `SKILL_CARDS` entry (`id:'sw-dmg'`, `cat:'skill'`, always-on like the other swing
   cards, `icon:'⚔'`, **no `cap`**), writes a new `swingDmgPct` skillMod. Apply in **`gDoSwingAt` (~L3392)**:
   multiply the computed `dmg` by `(1 + pSkillStat(p,'swingDmgPct')/100)`. Stacks on top of the global
@@ -351,9 +363,10 @@ the two drift. Items with no spec (small fixes) keep their detail inline in the 
 **⇄ Handoffs (append a line; delete when cleared):**
 - **PM → ENG (NEW, 2026-06-10):** **Item 0b — Combat card pass** is approved and ships ahead of the
   systemic queue (quick, no art): two new per-skill `%dmg` cards (Swing: Bite, Heavy: Devastation, both
-  +8%/cap6) + retarget the old Heavy: Devastation width card → **Heavy: Reach** (`heavyLen`, +8/cap6).
-  Governing balance rule: per-skill % > universal % (else dominated). Full build notes + line-refs inline
-  in item 0b above.
+  +8%, **uncapped**) + retarget the old Heavy: Devastation width card → **Heavy: Reach** (`heavyLen`, +8,
+  uncapped). **Plus pool-wide cap removal** (strip every card's `cap`) with a safety pass first: floor
+  `wwCooldown`/`leapCooldown` in `SKILL_STAT_FLOOR`. Governing balance rule: per-skill % > universal %
+  (else dominated); caps off → draft RNG governs. Full build notes + line-refs inline in item 0b above.
 - **PM → ENG:** Build *Now* top-down (1→4). Items 1 & 2 are the two systemic wall-fixes — **item 2's 3
   design calls are now resolved (binary tree, names, lore canon), so it's cleared for Phase 1** (the tree
   system + Dance of Fire's full 4-endpoint tree; see [`specs/imbue-paths.md`](specs/imbue-paths.md)). Items
