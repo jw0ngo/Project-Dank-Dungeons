@@ -8,17 +8,27 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 ## [Unreleased]
 
 ### Added
-- **Imbue Paths — Dance of Fire becomes a mastery tree (roadmap item 2, Phase 1 · Slice A).** The first
-  slice of the imbued-skill mastery system that fixes "leveling is repetitive." Imbuing the swing with
-  Cilia now creates a *named Art*, **Dance of Fire**, that you rank up through the level-up draft: a new
-  rank-aware **"Dance of Fire"** card (in the existing `actives` pool, RNG-governed and rarity-scaled
-  like any card) fattens the fire wave's damage, arc width, travel, and burn duration per rank.
+- **Imbue Paths — Dance of Fire becomes a mastery tree (roadmap item 2, Phase 1 · Slices A–B).** The
+  imbued-skill mastery system that fixes "leveling is repetitive." Imbuing the swing with Cilia now
+  creates a *named Art*, **Dance of Fire**, that you rank up 1→10 through the level-up draft, with a
+  branch point that reshapes how it plays.
+  - **Numeric ranks (1–4):** a rank-aware **"Dance of Fire"** card (in the existing `actives` pool,
+    RNG-governed and rarity-scaled like any card) fattens the fire wave's damage, arc width, travel, and
+    burn duration per rank.
+  - **Form fork @5 (the identity moment):** a one-time **2-option chooser** (shown instead of the card
+    draft that level-up) transforms the wave into one of two Forms — **Emberfan** (a fan of fireballs
+    that flies far — ranged poke/kite) or **Cinder Ring** (a ring of flame erupting around you — close
+    crowd punish). Ranks 6–9 then deepen the chosen Form (more fireballs + pierce / wider ring). The
+    choice is permanent for the run, so two players' builds genuinely diverge.
   - Built on a **reusable, data-driven tree model** (`IMBUE_PATHS` registry + per-player `imbuePaths`
-    state, parallel to `skillMods`; local-only, reset per run) so the remaining skills + the Form/Chaos
-    forks layer on without rework. Effective wave params flow through one clamped accessor
-    (`gFireWaveParams`); **rank 0 is identical to the pre-item-2 wave**, so no regression.
-  - **Slice A caps the tree at rank 4.** The Form fork @5 (Emberlance vs. Cinder Ring) and the Chaos
-    fork @10 land in the next slices. Per-skill rank is exposed to the AI harness via `Sim.observe`.
+    state, parallel to `skillMods`; local-only, reset per run) so the remaining skills + the Chaos fork
+    layer on without rework. Effective wave params flow through one clamped accessor (`gFireWaveParams`);
+    **rank 0 is identical to the pre-item-2 wave**, so no regression. Emberfan rides a small MP form byte
+    (`fwf`); Cinder Ring reuses the existing fire-ring sync channel.
+  - **AI-native:** the fork is a pausing modal, so it ships with a `gSimEvolution` harness hook (mirrors
+    `gSimDraft`) resolved in all bot/headless loops — `Sim.batch` never stalls on it. Per-skill rank +
+    pending fork are exposed via `Sim.observe`.
+  - **Caps at rank 9 for now** — the **Chaos fork @10** (the dread capstone) is the next slice.
 - **Patron Cards — your god choice reshapes your draft (roadmap item 0c).** A new, reusable card
   category (`PATRON_CARDS`) that only appears when you've pledged to a patron, buffing *that god's
   signature mechanic*. Every future god drops its set into the same pool keyed by `patron`; **Cilia

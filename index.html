@@ -787,6 +787,18 @@ function _fbInit() {
       <div style="position:relative;z-index:1;margin-top:14px;font:7px monospace;color:#553322;letter-spacing:2px;">ESC to leave</div>
     </div>
 
+    <!-- Imbue Paths (item 2) — Form/Chaos fork chooser. Shown at a level-up instead of the card draft
+         when an imbued skill hits a fork rank (5 = Form, 10 = Chaos). Reuses the draft's .stat-card style. -->
+    <div id="g-evolution-overlay" style="display:none;position:absolute;inset:0;z-index:22;background:rgba(0,0,0,0.92);flex-direction:column;align-items:center;justify-content:center;">
+      <div style="text-align:center;margin-bottom:18px;">
+        <div style="font:bold 9px monospace;letter-spacing:6px;color:#ff7a33;text-transform:uppercase;margin-bottom:4px;">&#10022; Cilia's Fire &#10022;</div>
+        <div id="g-evo-title" style="font:bold 20px 'Palatino Linotype',serif;letter-spacing:3px;color:#ffd8b8;text-shadow:0 0 20px rgba(255,110,0,0.8);">Dance of Fire</div>
+        <div id="g-evo-sub" style="font:7px monospace;color:#aa6644;letter-spacing:3px;margin-top:6px;">CHOOSE A FORM</div>
+      </div>
+      <div id="g-evo-cards" style="display:flex;gap:18px;justify-content:center;flex-wrap:wrap;max-width:90%;"></div>
+      <div style="margin-top:16px;font:7px monospace;color:#553322;letter-spacing:2px;">THIS CHOICE IS PERMANENT FOR THE RUN</div>
+    </div>
+
     <div id="skill-bar" style="
       position:absolute; bottom:30px; left:50%; transform:translateX(-50%);
       display:flex; justify-content:center; align-items:center; gap:6px;
@@ -1948,6 +1960,7 @@ let gFireCrosses=[]; // imbued-leap burning crosses (Cilia's Fire)
 let gFireTrails=[]; // imbued-dash flame trail (Cilia's Fire)
 let gTrailHits=new WeakMap(); // shared per-enemy trail hit cooldown (overlap-proof)
 let gFirePillars=[]; // imbued-RMB fire pillars (Cilia's Fire heavy)
+let gEmberShots=[]; // Dance of Fire · Emberlance Form — volley of travelling fireballs (item 2)
 // Skills imbued at the Sanctum shrine persist into dungeons (but NOT the wilderness,
 // which grants its own imbues). Survives the per-run player rebuild.
 // Multi-imbue model: a map of skillId -> patron god (more than one skill can be imbued at once).
@@ -3033,6 +3046,7 @@ function gameLoad(mapData) {
   gFireCrosses=[];
   gFireTrails=[]; gTrailHits=new WeakMap();
   gFirePillars=[];
+  gEmberShots=[];
   gBombFireZones=[];
   exitReached=false; gPaused=false;
   const _bbl=document.getElementById('boss-bar');if(_bbl)_bbl.style.display='none';
@@ -3410,12 +3424,16 @@ function gDoSwingAt(aimAngle){
   gPlayer.hitRegistry=new Set();
   gPlayer.smear={cx:gPlayer.wx,cy:gPlayer.wy,startAngle:gPlayer.swingStartAngle,sweepEnd:gPlayer.swingStartAngle,endAngle:gPlayer.swingEndAngle,innerR:W().smearInner,outerR:pSkillStat(gPlayer,'smearOuter'),life:1,fading:false,imbued:gIsImbued(gPlayer,'swing')};
   gPlaySwish();
-  // Imbued LMB (Cilia's Fire): every 3rd normal attack releases an arc of fire.
+  // Imbued LMB (Cilia's Fire): every 3rd normal attack releases the Dance of Fire. Its shape is the
+  // chosen Imbue-Path Form (item 2): base wave (rank 0–4) · Emberlance volley · Cinder Ring.
   if(gIsImbued(gPlayer,'swing')){
     gPlayer._fireSwingCount = (gPlayer._fireSwingCount || 0) + 1;
     if(gPlayer._fireSwingCount >= 3){
       gPlayer._fireSwingCount = 0;
-      gSpawnFireWave(gPlayer.wx, gPlayer.wy, aimAngle, dmg);
+      const _form = gImbueForm(gPlayer,'swing');
+      if(_form === 'emberlance')      gSpawnEmberlance(gPlayer.wx, gPlayer.wy, aimAngle, dmg);
+      else if(_form === 'cinderRing') gSpawnCinderRing(gPlayer.wx, gPlayer.wy, dmg);
+      else                            gSpawnFireWave(gPlayer.wx, gPlayer.wy, aimAngle, dmg);
     }
   }
   // Grit: 5 consecutive attacks while holding LMB grant a shield
@@ -5295,9 +5313,107 @@ function gSpawnFireWave(x, y, angle, atkDmg){
     _hit: new Set(),
     _burnFrames: fp.burnFrames,
   });
-  // MP: bump a monotonic signal so other peers replay the arc (see sendState/_onPlayerChanged)
-  if(gPlayer){ gPlayer._fwSeq = (gPlayer._fwSeq||0) + 1; gPlayer._fwAng = angle; }
+  // MP: bump a monotonic signal so other peers replay the arc (see sendState/_onPlayerChanged).
+  // _fwForm tags which shape to replay on peers: 0 = base wave, 1 = Emberlance volley (item 2).
+  if(gPlayer){ gPlayer._fwSeq = (gPlayer._fwSeq||0) + 1; gPlayer._fwAng = angle; gPlayer._fwForm = 0; }
   spawnGP(x + Math.cos(angle)*10, y + Math.sin(angle)*10, '#ff7a22', 12, 4);
+  gShake(4, 6);
+}
+
+// ── Dance of Fire · Emberlance Form (item 2) — a volley of travelling fireballs ──────────────────
+// Replaces the base wave once the swing's Imbue Path evolves to Emberlance @5. Fired every 3rd swing
+// like the wave. Per-fireball damage/burn fold in the path ranks via gFireWaveParams; ranks 6–9 add
+// fireballs (emberCount) and pierce (emberPierce). Damage routes through gDealEnemyDamage (MP-safe).
+const EMBER_SPEED      = 9;    // px/frame — faster than the wave (it flies far)
+const EMBER_R          = 11;   // fireball hit radius (px)
+const EMBER_BASE_COUNT = 3;    // fireballs at Form rank 5 (before ranks 6–9 add more)
+const EMBER_FAN        = 0.42; // total fan spread across the volley (radians)
+const EMBER_RANGE_MULT = 3;    // Emberfan flies 3× the base wave's range — a true long-range poke
+function gSpawnEmberlance(x, y, angle, atkDmg){
+  const fp   = gFireWaveParams(gPlayer);
+  const m    = (gPlayer && gPlayer.imbuePaths && gPlayer.imbuePaths.swing && gPlayer.imbuePaths.swing.mods) || {};
+  const n      = Math.max(EMBER_BASE_COUNT, Math.round(EMBER_BASE_COUNT + (m.emberCount||0)));
+  const pierce = Math.max(0, Math.round(m.emberPierce||0));
+  const dmg    = Math.round((atkDmg || 0) * fp.dmgMult);
+  const burn   = Math.max(FW_BURN_MIN, Math.round(dmg * fp.burnRatio));
+  const range  = fp.rangeTiles * T * EMBER_RANGE_MULT;
+  for(let i=0; i<n; i++){
+    const a = angle + (n>1 ? (i/(n-1) - 0.5) * EMBER_FAN : 0);
+    gFireShootEmber(x, y, a, range, dmg, burn, fp.burnFrames, pierce, false);
+  }
+  if(gPlayer){ gPlayer._fwSeq = (gPlayer._fwSeq||0) + 1; gPlayer._fwAng = angle; gPlayer._fwForm = 1; }
+  spawnGP(x + Math.cos(angle)*10, y + Math.sin(angle)*10, '#ff7a22', 12, 4);
+  gShake(4, 6);
+}
+// One fireball. visual=true → render-only (peer replay), deals no damage.
+function gFireShootEmber(x, y, angle, range, dmg, burn, burnFrames, pierce, visual){
+  gEmberShots.push({
+    x, y, angle, vx: Math.cos(angle)*EMBER_SPEED, vy: Math.sin(angle)*EMBER_SPEED,
+    traveled: 0, range, r: EMBER_R,
+    dmg: visual ? 0 : dmg, burn: visual ? 0 : burn, burnFrames: burnFrames || FW_BURN_FRAMES,
+    pierceLeft: pierce, _hit: new Set(), _visual: !!visual,
+  });
+}
+// Render-only Emberlance volley replayed on peers (no damage; the owner already dealt + synced it).
+function gSpawnRemoteEmberlance(x, y, angle){
+  const n = EMBER_BASE_COUNT;
+  for(let i=0; i<n; i++){
+    const a = angle + (n>1 ? (i/(n-1) - 0.5) * EMBER_FAN : 0);
+    gFireShootEmber(x, y, a, FW_RANGE_TILES*T*EMBER_RANGE_MULT, 0, 0, FW_BURN_FRAMES, 0, true);
+  }
+}
+function gUpdateEmberShots(dt){
+  if(!gEmberShots.length) return;
+  for(let i=gEmberShots.length-1; i>=0; i--){
+    const s = gEmberShots[i];
+    s.x += s.vx * dt; s.y += s.vy * dt;
+    s.traveled += EMBER_SPEED * dt;
+    if((s.traveled % 6) < EMBER_SPEED*dt) spawnGP(s.x, s.y, '#ff7a22', 2, 2.4);  // sparse fiery trail
+    if(!s._visual){
+      for(const en of gEnemies){
+        if(en.dead || s._hit.has(en)) continue;
+        if(!Number.isFinite(en.wx) || !Number.isFinite(en.wy)) continue;
+        if(Math.hypot(en.wx - s.x, en.wy - s.y) > s.r + en.r) continue;
+        s._hit.add(en);
+        gDealEnemyDamage(en, s.dmg, {
+          burn: s.burn, burnDur: s.burnFrames,
+          kbAngle: s.angle, kbMag: 7,
+        });
+        spawnGP(en.wx, en.wy, '#ff6622', 8, 3.2);
+        addGDmg(en.wx, en.wy - 16, s.dmg, '#ff9a3a');
+        gPlayHit && gPlayHit();
+        if(s.pierceLeft-- <= 0){ gEmberShots.splice(i,1); break; }   // spent → stop here
+      }
+    }
+    if(i < gEmberShots.length && gEmberShots[i] === s && s.traveled >= s.range) gEmberShots.splice(i, 1);
+  }
+}
+function gDrawEmberShots(){
+  if(!gEmberShots.length) return;
+  // The render context is already camera-scaled (see gDrawFireRings) — draw in world-minus-camera
+  // units, no gRenderS multiply.
+  gctx.save();
+  gctx.globalCompositeOperation = 'lighter';
+  for(const s of gEmberShots){
+    const ox = s.x - camX, oy = s.y - camY, R = s.r * 1.6;
+    const grad = gctx.createRadialGradient(ox, oy, 0, ox, oy, R);
+    grad.addColorStop(0,   'rgba(255,240,200,0.95)');
+    grad.addColorStop(0.4, 'rgba(255,140,40,0.85)');
+    grad.addColorStop(1,   'rgba(255,80,0,0)');
+    gctx.fillStyle = grad;
+    gctx.beginPath(); gctx.arc(ox, oy, R, 0, Math.PI*2); gctx.fill();
+  }
+  gctx.restore();
+}
+
+// ── Dance of Fire · Cinder Ring Form (item 2) — a flame ring erupting around the player ──────────
+// Reuses the expanding fire-ring FX (gFireRings) and its MP `fr` channel; ranks 6–9 widen it
+// (ringTiles) and add damage (dmgMult, folded into fp). Fired every 3rd swing like the base wave.
+function gSpawnCinderRing(x, y, atkDmg){
+  const fp = gFireWaveParams(gPlayer);
+  const m  = (gPlayer && gPlayer.imbuePaths && gPlayer.imbuePaths.swing && gPlayer.imbuePaths.swing.mods) || {};
+  const dmg = Math.round((atkDmg || 0) * fp.dmgMult);
+  gSpawnFireRing(x, y, dmg, { rangeTiles: FR_RANGE_TILES + (m.ringTiles||0), burnFrames: fp.burnFrames });
   gShake(4, 6);
 }
 
@@ -5431,12 +5547,16 @@ const FR_RING_FRAC   = 0.59;  // sprite's bright-ring radius as a fraction of it
 const FR_SPR = new Image();
 FR_SPR.src = 'assets/fx/fr.png';
 
-function gSpawnFireRing(x, y, dmg){
+// opts (optional): { rangeTiles, burnFrames } — Cinder Ring (item 2) widens the ring + threads its
+// burn duration; the whirlwind caller passes none and gets the FR_* defaults.
+function gSpawnFireRing(x, y, dmg, opts){
+  opts = opts || {};
   gFireRings.push({
     x, y, traveled: 6, prevTraveled: 0,
-    range: FR_RANGE_TILES * T, speed: FR_SPEED, dmg,
+    range: (opts.rangeTiles || FR_RANGE_TILES) * T, speed: FR_SPEED, dmg,
     burnTotal: Math.max(FR_BURN_MIN, Math.round(dmg * FR_BURN_RATIO)),
     _hit: new Set(),
+    _burnFrames: opts.burnFrames || FR_BURN_FRAMES,
   });
   spawnGP(x, y, '#ff7a22', 10, 3);
   // MP: bump a monotonic signal so other peers replay the ring (see sendState/_onPlayerChanged)
@@ -5468,7 +5588,7 @@ function gUpdateFireRings(dt){
       if(dist > w.traveled + en.r) continue;        // ring hasn't reached it
       w._hit.add(en);
       gDealEnemyDamage(en, w.dmg, {
-        burn: w.burnTotal, burnDur: FR_BURN_FRAMES,
+        burn: w.burnTotal, burnDur: w._burnFrames || FR_BURN_FRAMES,
         kbAngle: Math.atan2(en.wy - w.y, en.wx - w.x), kbMag: 6,
       });
       spawnGP(en.wx, en.wy, '#ff6622', 8, 3.2);
@@ -8009,8 +8129,9 @@ function gRender(){
   gDrawArrows();
   drawables.sort((a,b)=>a.y-b.y);
   for(const d of drawables){ d.draw(d.arg); if(d.arg&&d.arg.threatTier&&!d.arg.dead) gDrawThreatGlow(d.arg); }
-  gDrawFireRings(); // expanding fire rings (imbued whirlwind)
+  gDrawFireRings(); // expanding fire rings (imbued whirlwind + Cinder Ring Form)
   gDrawFireWaves(); // fire arcs + burning-enemy flames, over entities
+  gDrawEmberShots(); // Emberlance Form — travelling fireballs (item 2)
   gDrawFirePillars(); // Cilia heavy fire pillars
   if(inTown) townDrawHubPlayers();
   if(inTown) townDrawPortal();
@@ -8602,7 +8723,7 @@ function gSimUpdate(dt){
     if(gPlayer)gUpdateShamanBuffs(dt);
     if(gPlayer)gUpdateBurn(dt);
     if(gPlayer)gUpdateShield(dt);
-    if(gPlayer&&!gPlayer.dead){gUpdateFireWaves(dt);gUpdateFireRings(dt);gUpdateFireCrosses(dt);gUpdateFireTrails(dt);}
+    if(gPlayer&&!gPlayer.dead){gUpdateFireWaves(dt);gUpdateFireRings(dt);gUpdateFireCrosses(dt);gUpdateFireTrails(dt);gUpdateEmberShots(dt);}
     if(gPlayer&&!gPlayer.dead)gUpdateFirePillars(dt);
     if(gPlayer&&!gPlayer.dead)gUpdateEnemyBurn(dt);
     if(gPlayer)gFogReveal(); // wilderness fog of war — throttled inside
@@ -8981,9 +9102,11 @@ if (!room || room.started !== true) return;
       moving:     !!p.moving,
       wwActive:   !!p.wwActive,
       wwSpinAngle: p.wwActive ? +p.wwActive.spinAngle.toFixed(3) : 0,
-      // Imbued fire-wave cast signal — monotonic seq + heading (replayed as a visual arc on peers)
+      // Imbued fire-wave cast signal — monotonic seq + heading (replayed as a visual arc on peers).
+      // fwf tags the Dance-of-Fire shape (item 2): 0 = base wave, 1 = Emberlance volley.
       fw:  p._fwSeq || 0,
       fwa: +((p._fwAng || 0).toFixed(3)),
+      fwf: p._fwForm || 0,
       // Imbued fire-ring cast signal — monotonic seq (replayed as a visual ring on peers,
       // centred on the caster's synced position; symmetric, so no heading needed)
       fr:  p._frSeq || 0,
@@ -9180,11 +9303,14 @@ if (!room || room.started !== true) return;
     p._dashFire     = !!data.df;
     // Smear — reconstruct from serialised form
     p.smear = data.smear || null;
-    // Imbued fire-wave cast — replay as a render-only arc when the seq advances
+    // Imbued fire-wave cast — replay a render-only arc (or Emberlance volley) when the seq advances.
     if(data.fw != null && data.fw !== p._fwSeq){
       p._fwSeq = data.fw;
-      if(typeof gSpawnRemoteFireWave === 'function'){
-        gSpawnRemoteFireWave(p._tx != null ? p._tx : p.wx, p._ty != null ? p._ty : p.wy, data.fwa || 0);
+      const _rx = p._tx != null ? p._tx : p.wx, _ry = p._ty != null ? p._ty : p.wy;
+      if(data.fwf === 1 && typeof gSpawnRemoteEmberlance === 'function'){
+        gSpawnRemoteEmberlance(_rx, _ry, data.fwa || 0);
+      } else if(typeof gSpawnRemoteFireWave === 'function'){
+        gSpawnRemoteFireWave(_rx, _ry, data.fwa || 0);
       }
     }
     // Imbued fire-ring cast — replay as a render-only ring when the seq advances
@@ -12503,8 +12629,24 @@ const IMBUE_PATHS = {
   cilia: {
     swing: {
       art: 'Dance of Fire', maxRank: 10, formRank: 5, chaosRank: 10,
+      // Ranks 1–4: numeric upgrades to the base fire wave (added ×rarity to imbuePaths.swing.mods).
       waveStep: { dmgMult: 0.25, half: 0.06, rangeTiles: 0.6, burnFrames: 24 },
-      forms: {},   // Slice B: emberlance / cinderRing
+      // Rank 5 — Form fork (Slice B): the wave transforms. Each Form has its own ranks-6–9 `formStep`
+      // (added ×rarity to the same mods map under form-specific keys, read by that Form's FX).
+      forms: {
+        emberlance: {
+          name: 'Emberfan', tag: 'RANGED', icon: '🔥',
+          desc: 'The wave becomes a fan of fireballs loosed in an arc that travel far. Poke, space, and kite from safety.',
+          // ranks 6–9: more fireballs + pierce. (count is fractional — floored at spawn.)
+          formStep: { emberCount: 0.6, emberPierce: 0.34, dmgMult: 0.15 },
+        },
+        cinderRing: {
+          name: 'Cinder Ring', tag: 'CLOSE', icon: '🔥',
+          desc: 'The wave becomes a ring of flame that erupts around you. Wade in, get surrounded, and punish the crowd.',
+          // ranks 6–9: bigger ring + harder pulse.
+          formStep: { ringTiles: 0.5, dmgMult: 0.2 },
+        },
+      },
     },
   },
 };
@@ -12514,17 +12656,36 @@ const IMBUE_PATHS = {
 // rarity-scaled step into imbuePaths mods. Concatenated into gDrawCards' actives pool so it inherits
 // the gate/cap/rarity/value/dedup machinery and the two apply sites (DOM + gSimDraft.pick) unchanged.
 // Slice A: caps at rank 4 (Form fork @5 lands in Slice B). req() both gates (imbued + Cilia) and caps.
+// Which numeric-rank window (if any) the swing's Dance-of-Fire tree is offering a rank-up in:
+//   'pre'  → ranks 0..3, before the Form fork @5 (applies waveStep to the base wave)
+//   'post' → ranks 5..8, after a Form is chosen (applies that Form's formStep)
+//   null   → at a fork threshold (rank 4 / rank 9) or maxed — the rank-up card isn't offered;
+//            the fork event (gPendingEvolution) takes over the level-up instead.
+function gImbueCardWindow(p){
+  if(!gIsImbued(p,'swing','cilia')) return null;
+  const s = IMBUE_PATHS.cilia.swing, r = gImbueRank(p,'swing'), f = gImbueForm(p,'swing');
+  if(f == null) return r < s.formRank - 1 ? 'pre' : null;     // 0..3 offered; 4 = Form fork pending
+  return (r >= s.formRank && r < s.chaosRank - 1) ? 'post' : null; // 5..8 offered; 9 = Chaos fork (Slice C)
+}
 const IMBUE_CARDS = [
   { id:'cil-dof', cat:'skill', icon:'🔥', name:'Dance of Fire', base:1, frac:false,
-    req:()=> gIsImbued(gPlayer,'swing','cilia') && gImbueRank(gPlayer,'swing') < IMBUE_PATHS.cilia.swing.formRank - 1,
-    fmt:()=>`Dance of Fire — Rank ${gImbueRank(gPlayer,'swing')+1}: fiercer fire wave`,
+    req:()=> gImbueCardWindow(gPlayer) != null,
+    fmt:()=>{
+      const f = gImbueForm(gPlayer,'swing'), s = IMBUE_PATHS.cilia.swing;
+      const nm = f ? s.forms[f].name : s.art;
+      return `${nm} — Rank ${gImbueRank(gPlayer,'swing')+1}: ${f ? 'deepen your Form' : 'fiercer fire wave'}`;
+    },
     apply(p,v){
-      const step = IMBUE_PATHS.cilia.swing.waveStep, cap = IMBUE_PATHS.cilia.swing.formRank - 1;
-      _addImbuePathMod(p,'swing','dmgMult',    step.dmgMult    * v);
-      _addImbuePathMod(p,'swing','half',       step.half       * v);
-      _addImbuePathMod(p,'swing','rangeTiles', step.rangeTiles * v);
-      _addImbuePathMod(p,'swing','burnFrames', step.burnFrames * v);
-      const e = gImbuePath(p,'swing'); e.rank = Math.min(cap, e.rank + 1);
+      const s = IMBUE_PATHS.cilia.swing, win = gImbueCardWindow(p);
+      if(win === 'post'){
+        const step = s.forms[gImbueForm(p,'swing')].formStep;
+        for(const k in step) _addImbuePathMod(p,'swing',k, step[k] * v);
+        const e = gImbuePath(p,'swing'); e.rank = Math.min(s.chaosRank - 1, e.rank + 1);
+      } else {
+        const step = s.waveStep;
+        for(const k in step) _addImbuePathMod(p,'swing',k, step[k] * v);
+        const e = gImbuePath(p,'swing'); e.rank = Math.min(s.formRank - 1, e.rank + 1);
+      }
     } },
 ];
 
@@ -12588,12 +12749,18 @@ function gDrawCards(n){
 // Set while a level-up card draft is on screen — lets the §8 playtest harness resolve
 // the draft programmatically (the choices are otherwise closure-bound DOM onclicks).
 let gSimDraft = null;
+let gSimEvolution = null;   // set while an Imbue-Path Form/Chaos fork chooser is on screen (item 2);
+                           // mirrors gSimDraft so the §8 harness resolves the fork headlessly.
 // Nameless-knight portrait for the level-up screen when no patron is chosen (warrior class).
 const CILIA_FIG_IMG  = 'assets/portraits/cilia.jpg';   // Cilia portrait (figure+fire), CSS frames it
 const KNIGHT_FIG_IMG = 'assets/portraits/knight.jpg';   // nameless-knight portrait (figure+atmosphere)
 function gWildShowStatPick(){
   const p = gPlayer;
   if(!p) return;
+  // Imbue Paths (item 2): if an imbued skill has hit a fork rank, the Form/Chaos chooser
+  // replaces the card draft for this level-up (one pausing modal at a time).
+  const _evo = gPendingEvolution(p);
+  if(_evo){ gOpenEvolutionMenu(_evo); return; }
   gPaused = true;
 
   const overlay   = document.getElementById('g-stat-pick');
@@ -14154,6 +14321,87 @@ function gCloseImbueMenu(){
   if(el) el.classList.remove('open');
 }
 
+// ── Imbue Paths (item 2) — Form/Chaos fork chooser ──────────────────────────────────────────────
+// A fork is "pending" when an imbued skill has maxed a numeric stretch and hasn't yet chosen the
+// next branch. gWildShowStatPick checks this and shows the chooser instead of the card draft. Both
+// the DOM click and the §8 harness (gSimEvolution.pick) funnel through _chooseEvolution.
+// Slice B implements the Form fork @5; the Chaos fork @10 (Slice C) is detected but not yet offered.
+let _evolutionOpen = false;
+function gPendingEvolution(p){
+  if(!p) return null;
+  const s = IMBUE_PATHS.cilia.swing;
+  if(!gIsImbued(p,'swing','cilia')) return null;
+  const e = p.imbuePaths && p.imbuePaths.swing;
+  if(!e) return null;
+  if(e.form == null && e.rank >= s.formRank - 1) return { skill:'swing', kind:'form' };
+  // Chaos fork (Slice C): e.form != null && e.chaos == null && e.rank >= s.chaosRank - 1.
+  return null;
+}
+function _evolutionOptions(evo){
+  const s = IMBUE_PATHS.cilia.swing;
+  if(evo.kind === 'form'){
+    return ['emberlance','cinderRing'].map(id => Object.assign({ id }, s.forms[id]));
+  }
+  return [];   // Slice C: chaos leaves of the chosen Form
+}
+function _chooseEvolution(evo, idx){
+  const opts = _evolutionOptions(evo);
+  const choice = opts[Math.max(0, Math.min(opts.length - 1, idx|0))];
+  const e = gImbuePath(gPlayer, evo.skill);
+  if(choice){
+    if(evo.kind === 'form'){ e.form = choice.id; e.rank = IMBUE_PATHS.cilia.swing.formRank; }
+    else { e.chaos = choice.id; e.rank = IMBUE_PATHS.cilia.swing.chaosRank; }
+    addGDmg(gPlayer.wx, gPlayer.wy - 32, choice.name.toUpperCase() + ' AWAKENS', '#ff9a3a');
+    spawnGP(gPlayer.wx, gPlayer.wy, '#ff6622', 28, 6);
+    spawnGP(gPlayer.wx, gPlayer.wy, '#ffcc44', 16, 5);
+  }
+  gCloseEvolutionMenu();
+  initSkillBar && initSkillBar();
+}
+function _renderEvolutionCards(evo){
+  const wrap  = document.getElementById('g-evo-cards');
+  const title = document.getElementById('g-evo-title');
+  const sub   = document.getElementById('g-evo-sub');
+  if(title) title.textContent = IMBUE_PATHS.cilia.swing.art;
+  if(sub)   sub.textContent   = evo.kind === 'form' ? 'CHOOSE A FORM' : 'CHAOS ASCENSION';
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  _evolutionOptions(evo).forEach((o, i) => {
+    const el = document.createElement('div');
+    el.className = 'stat-card';
+    el.innerHTML = `
+      <div class="sc-rarity" style="color:#ff9a3a">${o.tag || ''}</div>
+      <div class="sc-ring" style="border-color:#ff7a22;box-shadow:0 0 12px rgba(255,110,0,0.6), inset 0 0 10px rgba(255,110,0,0.5);"><span class="sc-icon" style="color:#ff7a22">${o.icon || '🔥'}</span></div>
+      <div class="sc-name">${o.name}</div>
+      <div class="sc-bonuses">${o.desc || ''}</div>`;
+    el.onclick = () => _chooseEvolution(evo, i);
+    wrap.appendChild(el);
+  });
+}
+function gOpenEvolutionMenu(evo){
+  const el = document.getElementById('g-evolution-overlay');
+  const opts = _evolutionOptions(evo);
+  if(!el || !opts.length){ _chooseEvolution(evo, 0); return; }  // DOM/options missing → auto-resolve, never stall
+  _evolutionOpen = true;
+  gPaused = true;
+  _renderEvolutionCards(evo);
+  el.style.display = 'flex';
+  // §8 harness hook — mirror gSimDraft so headless/bot runs resolve the fork instead of hanging.
+  gSimEvolution = {
+    skill: evo.skill, kind: evo.kind,
+    options: opts.map(o => ({ id:o.id, name:o.name })),
+    pick(i){ _chooseEvolution(evo, i|0); },
+  };
+}
+function gCloseEvolutionMenu(){
+  _evolutionOpen = false;
+  gPaused = false;
+  gSimEvolution = null;
+  const el = document.getElementById('g-evolution-overlay');
+  if(el) el.style.display = 'none';
+  if(typeof gWildUpdateHUD === 'function') gWildUpdateHUD();
+}
+
 function gImbueSelectSkill(id){
   if(!gPlayer) return;
   if(gIsImbued(gPlayer, id)) return;                    // already imbued — no-op
@@ -14372,6 +14620,8 @@ const Sim = (function(){
       level: wildLevel, xp: wildXP, xpToNext: wildXpToNext(wildLevel),
       favor: gFavor,
       draftPending: !!gSimDraft,
+      evolutionPending: !!gSimEvolution,   // an Imbue-Path Form/Chaos fork is on screen (item 2)
+      evolutionOptions: gSimEvolution ? gSimEvolution.options : null,
       rerollCost: gSimDraft && gSimDraft.rerollCost ? gSimDraft.rerollCost() : null,
       draftOptions: gSimDraft ? gSimDraft.opts.map((d,i)=>({ id:d.card.id, name:d.card.name, rarity:d.rarity.id, mult:d.rarity.mult, upgradeCost: gSimDraft.upgradeCost ? gSimDraft.upgradeCost(i) : 0 })) : null,
       player: null, enemies: [], nearestOrb: null, orbCount: (gXPOrbs||[]).length,
@@ -14427,6 +14677,7 @@ const Sim = (function(){
   Sim.bowDraw = function(){ if(typeof bowStartCharge==='function') bowStartCharge(); };
   Sim.bowLoose = function(){ if(typeof bowRelease==='function') bowRelease(); };
   Sim.pickCard = function(i){ if(gSimDraft) gSimDraft.pick(i|0); };
+  Sim.pickEvolution = function(i){ if(gSimEvolution) gSimEvolution.pick(i|0); };   // resolve a Form/Chaos fork (item 2)
   Sim.reroll = function(){ return gSimDraft && gSimDraft.reroll ? gSimDraft.reroll() : false; };      // Favor reroll
   Sim.upgradeCard = function(i){ return gSimDraft && gSimDraft.upgrade ? gSimDraft.upgrade(i|0) : false; }; // Favor rarity-upgrade
   // Convenience: one call applying an intent object.
@@ -14456,6 +14707,9 @@ const Sim = (function(){
       gSimDraft.opts.forEach((o,i)=>{ const s = o.rarity.mult*10 - i*0.01; if(s>bestScore){ bestScore=s; best=i; } });
       gSimDraft.pick(best);
     },
+    // Resolve a pending Imbue-Path Form/Chaos fork (item 2). Deterministic (option 0) so headless
+    // balance runs don't stall on the modal; override for build-specific fork studies.
+    pickEvolution(){ if(gSimEvolution) gSimEvolution.pick(0); },
     think(obs){
       const p = obs.player; if(!p || p.dead) return;
       const e = obs.enemies[0];
@@ -14536,7 +14790,8 @@ const Sim = (function(){
       while(steps < maxSteps){
         const lim = Math.min(steps+batchN, maxSteps);
         for(; steps<lim; steps++){
-          if(gSimDraft){ Sim.bot.pickCard(Sim.observe()); }          // resolve draft (unpauses)
+          if(gSimEvolution){ Sim.bot.pickEvolution(); }              // resolve Form/Chaos fork (unpauses)
+          else if(gSimDraft){ Sim.bot.pickCard(Sim.observe()); }     // resolve draft (unpauses)
           else if(Sim.bot && Sim.bot.think){ Sim.bot.think(Sim.observe()); }
           _simClock += 1000/60;
           gSimUpdate(1);
@@ -14600,7 +14855,8 @@ const Sim = (function(){
     Sim.driving = true;
     const tick = ()=>{
       if(!Sim.driving) return;
-      if(gSimDraft) Sim.bot.pickCard(Sim.observe());
+      if(gSimEvolution) Sim.bot.pickEvolution();
+      else if(gSimDraft) Sim.bot.pickCard(Sim.observe());
       else if(Sim.bot && Sim.bot.think) Sim.bot.think(Sim.observe());
       requestAnimationFrame(tick);
     };
@@ -14622,7 +14878,10 @@ const Sim = (function(){
     const p = obs.player; if(!p || p.dead) return;
     const I = Sim.intent;
     // No plan yet (before Claude's first reply) → keep moving via the built-in heuristic.
-    if(!I){ if(obs.draftPending) Sim.bot.pickCard(); else Sim.bot.think(obs); return; }
+    if(!I){ if(obs.evolutionPending) Sim.bot.pickEvolution(); else if(obs.draftPending) Sim.bot.pickCard(); else Sim.bot.think(obs); return; }
+    // An Imbue-Path Form/Chaos fork is blocking — auto-resolve it (Claude-driven fork choice is a
+    // later enhancement; for now never stall the run).
+    if(obs.evolutionPending){ Sim.bot.pickEvolution(); return; }
     // A level-up draft is blocking the run — apply Claude's card choice, once.
     if(obs.draftPending){
       if(typeof I.cardPick === 'number'){ Sim.pickCard(I.cardPick); I.cardPick = null; }
