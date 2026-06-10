@@ -18,6 +18,27 @@ lesson: **the principle → why → how to apply.** Quality over volume.
 
 ---
 
+### 2026-06-10 — Phase so creative direction can still pivot; verify "as already written" canon before grounding on it
+
+- **Principle:** Two things made a late, substantial thematic reframe land cheaply this session. (1) The
+  Imbue Paths phasing front-loaded *system risk* (build the rails + one skill's lower ranks first) and
+  treated higher tiers as *additive content designed just-in-time* — so when Josh reframed the level-10
+  peak (single "Chaos Ascension" → a two-age Dragon-heal/Chaos-self-burn fork), it touched **only the
+  unbuilt Slice C**; nothing in flight broke. (2) Josh cited the reframe as "already in the manifesto" —
+  a quick grep proved the Animal-Spirit predecessor age was **not** recorded anywhere. Capturing it as
+  *new* canon (and flagging the missing Direction-Log entry) beat silently grounding on a false premise.
+- **Why:** Pre-1.0 creative direction is still moving. A roadmap/spec that bakes full detail into
+  *not-yet-built* tiers makes every pivot a rewrite; one that keeps unbuilt tiers as thin, replaceable
+  design absorbs pivots for free. And the human prompter is the only persistent context across resets, so
+  they sometimes mis-remember what's been logged — treating their canon references as *verify-then-capture*,
+  not gospel, keeps the docs honest.
+- **How to apply:** Phase features so the *system* is proven early and *content/identity* tiers stay
+  cheaply re-designable; don't fully spec a tier you won't build for several sessions. When the CD says
+  "as written in X," **grep X first** — if it's absent, capture it as new canon, write it into the spec
+  (source of truth) verbatim, and flag the canonical home (manifesto/Direction Log) that still needs it.
+  Note when a reframe *grows* an unbuilt slice's scope (here, a 3-hit-combo swing rewrite) so engineering
+  re-sizes before committing.
+
 ### 2026-06-09 — The felt-wall playtest is the highest-value input; design to provoke it, not patch around it
 
 - **Principle:** A vertical slice exists to reveal *where* the current design stops working — the "felt
