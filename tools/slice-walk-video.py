@@ -63,8 +63,16 @@ def load_frame(src, idx):
     return cache[1][idx]
 
 
-def grabcut_cut(rgba, iters=8, pad=14, erode=1):
-    """GrabCut foreground extraction. Returns (cut_rgba, fig_bool_mask)."""
+def grabcut_cut(rgba, iters=8, pad=14, erode=1, shadow_bg=False):
+    """GrabCut foreground extraction. Returns (cut_rgba, fig_bool_mask).
+
+    shadow_bg=True also seeds the figure's CAST FLOOR SHADOW as definite background:
+    rect-init GrabCut keeps the shadow (it differs from the modelled backdrop — on the
+    east clip the floor is lum ~26 and the shadow ~3-13, so it reads as 'figure'), and
+    it ships as an OPAQUE dark smudge trailing the feet. Seed = neutral (channel spread
+    <=14), clearly darker than the border-median backdrop, and in the bottom quarter of
+    the figure rect — boots survive on colour (leather/steel aren't that dark-neutral)
+    and interior recesses survive via fill_holes."""
     arr = np.asarray(rgba)
     rgb = arr[:, :, :3]
     img = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
@@ -82,7 +90,18 @@ def grabcut_cut(rgba, iters=8, pad=14, erode=1):
     mask = np.zeros((H, W), np.uint8)
     bgm = np.zeros((1, 65), np.float64)
     fgm = np.zeros((1, 65), np.float64)
-    cv2.grabCut(img, mask, rect, bgm, fgm, iters, cv2.GC_INIT_WITH_RECT)
+    if shadow_bg:
+        lum_mean = a.mean(2)
+        border = np.concatenate([lum_mean[0], lum_mean[-1], lum_mean[:, 0], lum_mean[:, -1]])
+        bg_med = float(np.median(border))
+        yy = np.arange(H)[:, None]
+        shadow = (spread <= 14) & (lum_mean < bg_med - 10) & (yy > rect[1] + 0.75 * rect[3])
+        mask[:] = cv2.GC_PR_BGD
+        mask[rect[1]:rect[1] + rect[3], rect[0]:rect[0] + rect[2]] = cv2.GC_PR_FGD
+        mask[shadow] = cv2.GC_BGD
+        cv2.grabCut(img, mask, None, bgm, fgm, iters, cv2.GC_INIT_WITH_MASK)
+    else:
+        cv2.grabCut(img, mask, rect, bgm, fgm, iters, cv2.GC_INIT_WITH_RECT)
     fig = ndi.binary_fill_holes((mask == 1) | (mask == 3))
     lab, n = ndi.label(fig)
     if n > 1:  # keep the largest component (drop stray bg-coloured islands)
@@ -135,6 +154,9 @@ def main():
                          "Use the idle player-<dir>.png bodyH (~180 for the 192 sheets) so idle<->walk doesn't pop. "
                          "Omit for a standalone walk not matched to an idle sheet.")
     ap.add_argument("--mirror", default=None, help="also emit horizontally-flipped set for this opposite octant")
+    ap.add_argument("--shadow-bg", action="store_true",
+                    help="seed the cast floor shadow as definite bg (clips where the shadow is "
+                         "darker than the backdrop and ships as an opaque smudge at the feet)")
     ap.add_argument("--qa-dir", default=None)
     ap.add_argument("--assets", action="store_true", help="also copy finals into assets/char/")
     args = ap.parse_args()
@@ -149,7 +171,7 @@ def main():
 
     cuts, mets = [], []
     for i in sel:
-        cut, fig = grabcut_cut(load_frame(args.src, i))
+        cut, fig = grabcut_cut(load_frame(args.src, i), shadow_bg=args.shadow_bg)
         cuts.append(cut)
         mets.append(body_metrics(fig))
         cut.crop(cut.getbbox()).save(os.path.join(qa, f"_fullres_f{i}.png"))

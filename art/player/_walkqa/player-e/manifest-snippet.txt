@@ -3,3 +3,8 @@
 'char.playerwalk2.e':'assets/char/playerwalk2-e.png',
 'char.playerwalk3.e':'assets/char/playerwalk3-e.png',
 'char.playerwalk4.e':'assets/char/playerwalk4-e.png',
+// mirrored -> w
+'char.playerwalk1.w':'assets/char/playerwalk1-w.png',
+'char.playerwalk2.w':'assets/char/playerwalk2-w.png',
+'char.playerwalk3.w':'assets/char/playerwalk3-w.png',
+'char.playerwalk4.w':'assets/char/playerwalk4-w.png',

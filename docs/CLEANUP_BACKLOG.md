@@ -16,12 +16,21 @@ This is the parking lot for findings we spot while doing other work but delibera
 
 ### ✅ RESOLVED 2026-06-10 — Player WALK cutouts had a loose gray halo (fixed by defringe, not re-keying)
 
-**Resolution (Artist):** all 32 walk frames defringed in place with the new **`tools/defringe-sprite.py`**
-— fringe lum now **10.8–17.0** across every frame/direction (idle range; was 53–133 on the bad ones).
-Same filenames, alpha/geometry untouched → **no re-wiring**; verified visually under game conditions
-(3× smoothed upscale over dark ground). Engineer: re-run the measurement via
-`python tools/defringe-sprite.py --check "assets/char/playerwalk*.png"` (the metric is folded in) +
-an in-game walk pass.
+**Resolution (Artist, two rounds):** the halo had TWO stacked causes; the fringe-brightness metric
+only saw the first.
+1. **Grey semi-transparent fringe** (all directions): fixed in place by the new
+   **`tools/defringe-sprite.py`** — luminance-clamps the fringe to the idle outline tone + `--trim`
+   kills semi-transparent smudge pixels >2.5px off the solid silhouette. Fringe lum now
+   **10.8–17.3** everywhere (idle range; was 53–133).
+2. **Opaque baked floor shadow, E/W only** (Josh's in-game report pinpointed it): the east clip's
+   cast shadow (lum 3–13, darker than its lum-26 backdrop) shipped as an opaque smudge trailing the
+   legs — invisible to the fringe metric (α=255) and untouchable by colour fixes. Fixed by re-cutting
+   E from the clip with the new **`--shadow-bg`** seeding in `slice-walk-video.py` (seeds the cast
+   shadow as definite bg) + re-mirroring W. Same frames (31/35/39/43), same registration
+   (feet y189, tallest body 181) → **no re-wiring**.
+
+Engineer: `python tools/defringe-sprite.py --check "assets/char/playerwalk*.png"` + an in-game walk
+pass in all 8 directions (E/W especially).
 
 **Why NOT the suggested re-key:** tested and rejected — a `--tol` sweep (24→48) on the south set
 showed the figure pixel count collapsing (9.5k→4.8k) before the fringe got clean: the knight's

@@ -29,6 +29,7 @@ before → after). Target for the knight sheets: avg ≲ 20 (the idle's 13–16)
 import argparse, glob
 import numpy as np
 from PIL import Image
+import scipy.ndimage as ndi
 
 SOLID_A = 200   # α at/above this = trusted figure colour
 BAND_LO = 8     # the QA fringe band: 8 < α < 200 (matches the engineer's measurement)
@@ -44,6 +45,25 @@ def fringe_metric(arr):
 
 
 TARGET_LUM = 18.0   # the idle outline tone (idle sheets measure 13-16)
+
+
+def trim_smudge(arr, dist=2.5):
+    """Kill semi-transparent pixels farther than `dist` px from the solid figure.
+
+    Genuine edge anti-aliasing hugs the silhouette (a 1-2px ramp). Baked GROUND-SHADOW
+    smudges and wide soft halos extend much farther (the east-walk clip's contact shadow
+    trailed 5-30px behind the legs at low alpha) — the fringe *brightness* metric barely
+    sees them, but on screen they read as a dark blob chasing the figure. Distance from
+    the solid (α≥200) mask separates the two cleanly."""
+    a = arr[..., 3]
+    solid = a >= SOLID_A
+    if not solid.any():
+        return arr, 0
+    d = ndi.distance_transform_edt(~solid)
+    kill = (a > 0) & (a < SOLID_A) & (d > dist)
+    out = arr.copy()
+    out[..., 3][kill] = 0
+    return out, int(kill.sum())
 
 
 def defringe(arr):
@@ -67,6 +87,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('files', nargs='+', help='sprite PNGs (globs ok)')
     ap.add_argument('--check', action='store_true', help='measure only, do not rewrite')
+    ap.add_argument('--trim', type=float, default=None, metavar='DIST',
+                    help='also kill semi-transparent pixels farther than DIST px from the '
+                         'solid figure (ground-shadow smudges / wide soft halos; try 2.5)')
     args = ap.parse_args()
 
     paths = []
@@ -83,9 +106,13 @@ def main():
             worst = max(worst, l0)
             continue
         out = defringe(arr)
+        cut = 0
+        if args.trim is not None:
+            out, cut = trim_smudge(out, args.trim)
         n1, l1 = fringe_metric(out)
         Image.fromarray(out).save(p, optimize=True)
-        print(f'  {p}: fringe {n0}px lum {l0:.1f}  ->  {n1}px lum {l1:.1f}')
+        note = f'  trimmed {cut}px' if args.trim is not None else ''
+        print(f'  {p}: fringe {n0}px lum {l0:.1f}  ->  {n1}px lum {l1:.1f}{note}')
         worst = max(worst, l1)
     print(f'\nworst fringe lum: {worst:.1f}  (target <= ~20; idle sheets measure 13-16)')
 
