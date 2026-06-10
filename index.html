@@ -6727,6 +6727,20 @@ const ART_MANIFEST = {
   'char.player.sw':'assets/char/player-sw.png',
   'char.player.s':'assets/char/player-s.png',
   'char.player.se':'assets/char/player-se.png',
+  // Walk cycles (4 hand-drawn frames each, indexed by p.walkFrame 0..3). South & north
+  // exist; the remaining facings keep the idle pose until their frames are added.
+  'char.playerwalk1.s':'assets/char/playerwalk1-s.png',
+  'char.playerwalk2.s':'assets/char/playerwalk2-s.png',
+  'char.playerwalk3.s':'assets/char/playerwalk3-s.png',
+  'char.playerwalk4.s':'assets/char/playerwalk4-s.png',
+  'char.playerwalk1.n':'assets/char/playerwalk1-n.png',
+  'char.playerwalk2.n':'assets/char/playerwalk2-n.png',
+  'char.playerwalk3.n':'assets/char/playerwalk3-n.png',
+  'char.playerwalk4.n':'assets/char/playerwalk4-n.png',
+  'char.playerwalk1.e':'assets/char/playerwalk1-e.png',
+  'char.playerwalk2.e':'assets/char/playerwalk2-e.png',
+  'char.playerwalk3.e':'assets/char/playerwalk3-e.png',
+  'char.playerwalk4.e':'assets/char/playerwalk4-e.png',
   'tile.grass.0':'assets/tile/grass-0.png',
   'tile.grass.1':'assets/tile/grass-1.png',
   'tile.grass.2':'assets/tile/grass-2.png',
@@ -6952,6 +6966,9 @@ function gBody(id, fallback){
 // 0=E 1=SE 2=S 3=SW 4=W 5=NW 6=N 7=NE
 function gOctant8(dx, dy){ const o = Math.round(Math.atan2(dy, dx) / (Math.PI/4)); return ((o % 8) + 8) % 8; }
 const _DIR8 = ['e','se','s','sw','w','nw','n','ne'];
+// Octants that have a hand-drawn walk cycle (char.playerwalk{1..4}.<dir>). Extend this
+// map as walk art for more facings lands; the player draw consults it each frame.
+const PLAYER_WALK_OCT = {0:'e', 2:'s', 6:'n'};
 // Directional character body: facing sprite if directional art exists,
 // else single char art, else the supplied fallback canvas.
 function gDirBody(id, oct, fallback){
@@ -7136,8 +7153,20 @@ function drawAnyPlayer(p, tint){
                 : p.swinging      ? 'playeratk'
                 : 'player';
   const _fallbackSpr = SpriteRegistry.get('player').canvas || playerSpr;
-  const _spr = tint ? (p._spriteCanvas || gDirBody(_bodyId, _poct, _fallbackSpr))
-                     : gDirBody(_bodyId, _poct, _fallbackSpr);
+  let _spr = tint ? (p._spriteCanvas || gDirBody(_bodyId, _poct, _fallbackSpr))
+                  : gDirBody(_bodyId, _poct, _fallbackSpr);
+  // Directional walk cycle: while moving and facing a direction that has hand-drawn
+  // walk frames (PLAYER_WALK_OCT below), with the sword body (not bow/attack), swap in
+  // the frame for p.walkFrame. Facings without walk art fall through to the idle _spr.
+  // Skip when a remote player carries a custom uploaded sprite (p._spriteCanvas).
+  let _walkCycle = false;
+  if(_bodyId==='player' && !_isBow && p.moving && !(tint && p._spriteCanvas)){
+    const _wd = PLAYER_WALK_OCT[_poct];
+    if(_wd){
+      const _wrec = gArtReg['char.playerwalk'+((p.walkFrame||0)+1)+'.'+_wd];
+      if(_wrec && _wrec.ready){ _spr=_wrec.img; _walkCycle=true; }
+    }
+  }
   // During leap: draw shadow on ground (shrinking), sprite rises
   if(leapH > 0){
     const shadowS = Math.max(0.15, 1 - leapH / W().leapHeight);
@@ -7148,7 +7177,7 @@ function drawAnyPlayer(p, tint){
   const _hvMul   = (_bodyId==='playerheavy') ? HEAVY_DRAW_MULT : 1;
   const _hvScale = PSCALE * _hvMul;
   const _hvYoff  = -PSCALE * (_hvMul - 1) * 0.5;   // grow upward so the bottom-aligned feet stay on the ground
-  gDrawSprite(_spr, p.wx, p.wy - leapH + _hvYoff, _hvScale, _flashAmt, by, _flashCol);
+  gDrawSprite(_spr, p.wx, p.wy - leapH + _hvYoff, _hvScale, _flashAmt, _walkCycle?0:by, _flashCol);
   // Colour tint overlay for remote players (drawn on top of their custom sprite)
   if(tint){
     gctx.save();gctx.translate(sx,sy + _hvYoff);
