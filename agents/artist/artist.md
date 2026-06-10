@@ -217,6 +217,14 @@ bg-leak metric over-reports on fire (white-hot cores are bg-coloured on purpose)
 For tile types whose ground isn't fully covered by the prop, note the **transparent-cutout layering**
 in the handoff: `gDrawTile`'s art path early-returns, so the engineer must draw the ground beneath.
 
+**Extracting from a composed scene (a painted mockup, not an asset sheet) uses
+`tools/extract-town-props.py`** — hand-seeded GrabCut per prop (declarative spec: crop box +
+definite-fg seed shapes + an envelope whose outer *inset* ring stays probable-bg — that margin ring
+is what lets the colour model reclaim the ground apron). Flood-fill keying is useless here: props sit
+on busy same-coloured ground. Lessons encoded there: props fused to same-colour neighbours (dark wood
+on dark ground at ~40px) don't separate — regenerate those instead; ground tiles sampled from a scene
+must be **brightness-normalized to the group mean** or the baked lighting blotches when tiled.
+
 ### 3. Place the file + spec the wiring for the engineer
 Drop the cutout PNG into `assets/<kind>/`. Then hand the engineer a paste-ready `ART_MANIFEST` entry
 pointing at its path (`'char.goblin.n':'assets/char/goblin-n.png'`) — **you don't edit `index.html`; the
