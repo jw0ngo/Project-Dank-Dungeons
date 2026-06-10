@@ -253,8 +253,14 @@ becomes a meaningful choice, and two players' builds genuinely diverge.
 
 **Story hook (now canon — Creative Manifesto, 2026-06-09):** the gods are waning and channel "perceived
 higher powers" (chaos/order, light/dark) to survive — *the turning of the age*. A blessing pushed to its
-peak routes through those raw forces, so it corrupts: the level-10 Chaos tier is power **and** loss of
+peak routes through those raw forces, so it corrupts: the level-10 tier is power **and** loss of
 control. It's what *"To Dust"* means — old gods to dust, new powers born from it.
+
+**Extended 2026-06-10 (spec updated):** each god's level-10 peak is its **own** Higher Force —
+Cilia→**Chaos**, Boreas→**Order**, Bhumi→**Light**, Ikras→**Darkness** (not universal Chaos). And a new
+**Elemental Fusion** alternative to the peak is specced (fuse a 2nd element with Favor instead of ascending
+— see the *Next* item). **Phase 1 is unchanged:** Cilia's pure 1→10→Chaos tree. Fusion + the other forces
+are deferred (fusion behind Boreas). Full detail in [`specs/imbue-paths.md`](specs/imbue-paths.md).
 
 <details>
 <summary>🔧 Build notes (engineering)</summary>
@@ -324,6 +330,12 @@ co-op* play (a second god roughly doubles the build matrix and seeds the marquee
 freezes, another shatters) to unhold once the curve and leveling feel right and we want more breadth. The
 full design below is intact and ready to pick up.
 
+**↑ Role upgraded (2026-06-10):** Boreas is no longer just "more breadth." It's now the **activator of two
+deferred build systems** — **Elemental Fusion** (you can't fuse a 2nd element until one exists; *Next*) and
+**co-op build synergy** (needs ≥2 gods). When the curve/leveling work lands, Boreas is the highest-leverage
+unhold because it lights up fusion + co-op + its own Frost kit at once. Still held, but it's now the keystone
+second god, not an optional one.
+
 <details>
 <summary>🔧 Design notes (full Frost kit — ready when unheld)</summary>
 
@@ -351,6 +363,26 @@ survivability); cap freeze duration + diminishing returns so lockdown never feel
 ---
 
 ## Next — likely, once the slice plays well
+
+### Elemental Fusion — second-imbue alternative to the Higher-Force peak
+
+`proposed` (Josh-directed 2026-06-10; design locked in spec) · **Size:** session+ · **Pillars:** build-craft depth, game feel · **Blocked on:** a 2nd god (Boreas)
+
+**What:** A second way to evolve an imbued skill. Once a skill is **level 5 + evolved once**, the player can
+**spend Favor at the shrine to imbue it with a second element** — which **caps the first element at level 5**
+and levels the second 1→5 (one evolution). The skill then runs **both once-evolved imbue effects, stacked**
+(e.g. fire-wave-every-3-hits **+** ice's level-5 effect). It's the **mutually-exclusive alternative** to
+pouring one element to its level-10 Higher Force: *purity → corruption peak* vs *fusion → two elements*.
+
+**Why:** the cross-god synergy lever the build system has been missing, and it's **cheap** — it reuses each
+element's existing per-skill imbue effect (no bespoke combo content), and it's a real **Favor sink** tying
+the world currency to build-craft. Compounds with Patron Cards (a fused skill draws from both elements'
+card pools → generalize the 0c gate to "element present," not "god selected").
+
+**Blocked on Boreas** (nothing to fuse with until a 2nd element exists). Full design — the conserved 5+5
+vs 1→10 budget, the build-time edges — is in [`specs/imbue-paths.md`](specs/imbue-paths.md) ("Elemental Fusion").
+
+---
 
 ### Co-op build synergy pass
 
