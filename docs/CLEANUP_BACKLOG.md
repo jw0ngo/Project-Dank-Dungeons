@@ -23,18 +23,18 @@ audit. Each row is a wiring to-do; they are **not** all the same kind of work (t
 per-object draw hooks). The two pre-existing handoffs below (hurt poses, chests+coin) are the only parts
 that were already tracked.
 
-| Asset set | Files | Commit | Wiring path / effort |
+| Asset set | Files | Commit | Status / wiring path |
 |---|---|---|---|
-| **Rock tiles** | `assets/tile/rock-0..8` (9) | `c7ddc67` | Tile-art path — add `tile.rock.0..8` manifest keys; `gTileArt`/`gTileVarCount` auto-wire. Replaces the procedural `R` (rock) tile draw. **Mostly mechanical.** |
-| **Wooden spike-fence tiles** | `assets/tile/spike-0..8` (9) | `c7ddc67` | Same tile-art path — `tile.spike.0..8`. Replaces the procedural `S` (spike) tile. **Mostly mechanical.** |
-| **Cobble tiles** | `assets/tile/cobble-0..3` (4) | `2da0b0a` | Same — `tile.cobble.0..3`. Confirm which logical tile char maps to cobble (Sanctum floor?) before wiring. |
+| ~~**Rock tiles**~~ | `assets/tile/rock-0..8` (9) | `c7ddc67` | ✅ **WIRED 2026-06-10.** Turned out **not** mechanical: the cuts are **transparent cutouts** (a rock silhouette, ~45% alpha), not opaque ground — so the `gTileArt` blit-and-return path is wrong (would show black gaps). Wired via a new `gTileProp` overlay path in `gDrawTile`: draw a **grass** ground base, then blit the rock cutout; procedural `R` draw kept as fallback. |
+| ~~**Wooden spike-fence tiles**~~ | `assets/tile/spike-0..8` (9) | `c7ddc67` | ✅ **WIRED 2026-06-10.** Same overlay path (cutout ~55% alpha). Ground base = **dirt** (village palisade). The art cutout is a fixed-orientation fence segment — unlike the procedural draw it isn't neighbor-edge-aware, so a fence line draws same-facing segments; acceptable first wire, flag if it reads wrong. |
+| **Cobble tiles** | `assets/tile/cobble-0..3` (4) | `2da0b0a` | ⏸️ **Deferred (Josh's call 2026-06-10).** Resolved the open question: cobble is **opaque ground**, and the town (HUB_MAP) ground is all `TILE_FLOOR` — the *same* id as the dungeon floor (dark `floor` art). Wiring it means either a Sanctum-only `inTown` branch in `gTileArt` (cobble in town, dark stone in dungeon) **or** replacing `floor` globally. Josh chose to leave it unwired for now. Pick it up by deciding that fork. |
 | **Sanctum set-piece props** | `assets/world/`: `well`, `fountain`, `barrel`, `banner-large`, `banner-small`, `dungeon-gate`, `market-stall`, `target-stand`, `todust-sign`, `torch-post`, `training-dummy`, `weapon-rack` (12) | `2da0b0a` | **Per-prop work** — each is a town set-piece needing a draw hook (most town props load via a separate pipeline, not the manifest; only `world.shrine` is a manifest entry today). Check whether each currently renders procedurally and is meant to *replace* that draw. Raster art → draw at `devicePixelRatio` (`_prepHiDPICanvas`). **Some of these map to existing town objects** (training-dummy, target-stand, weapon-rack, torch-post, well, fountain) — confirm the object exists and where it's drawn before wiring. |
 
-**Why deferred / how to pull:** the tile sets (rock/spike/cobble) are the cheap, mechanical win — wire them
-as a batch through the tile-art path and verify by render (no 404s + the variant pattern reads). The Sanctum
-props want a per-prop pass (confirm the draw site for each, decide procedural-replace vs new object) and are
-better sized as their own focused session. **Scope/priority note:** which props matter and whether they
-replace procedural draws is partly an art-direction/PM call — confirm before a big wiring sweep.
+**Lesson (corrects this entry's first draft):** "tiles auto-wire, mechanical" was wrong for rock/spike —
+**always check a tile cut's alpha before assuming the tile-art path.** Opaque → `gTileArt` (blit-and-return);
+**transparent cutout → an overlay path that draws ground first** (`gTileProp`). The Sanctum props still want a
+per-prop pass (confirm the draw site for each, decide procedural-replace vs new object), better sized as their
+own focused session; which props matter is partly an art-direction/PM call.
 
 **Cross-ref:** the chest/coin (`world.favorcoin`/`chest-closed`/`chest-open`) and the enemy hurt poses are
 tracked separately in the two handoff entries immediately below (also still unwired).
