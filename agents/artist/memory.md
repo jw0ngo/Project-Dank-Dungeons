@@ -3,6 +3,40 @@
 
 ---
 
+### 2026-06-10 — Particle-system FX: hundreds of sliced sprites compose one skill, and a *scaling* effect scales by COUNT, not by upscale
+
+- **Principle:** A second FX layer beyond the static effect-sprite: treat each sliced FX cutout as a tiny
+  *instance* and spawn hundreds — the big skill (expanding spiral, ring, crescent, jet, ball) is *emergent*
+  from the swarm. The one rule that makes it survive in-game: a skill whose reach/area grows with rank must
+  scale by adding particle **count with area** (≈`scale^1.7`) at roughly constant per-particle size — NOT by
+  bitmap-upscaling a fixed image, which goes fat + sparse + blurry. Density and grain stay constant; only the
+  extent grows. Proven by rendering S/M/L at the same display box (wave/ring) — the grain was identical, just
+  more of it. Tool: `tools/fx-skill-fx.py` (scale-aware emitters); `fx-particle-sim.py` (emitter base);
+  `fx-gif-compose.py` (the earlier single-big-sprite keyframe model — the WRONG model for this, kept as a foil).
+- **Why — the recipe that made shapes read** (Josh rejected the first cut as flat vs the dragonfire jet):
+  (1) **sprite-variation MIX** — one sprite repeated reads as tiling; a weighted table across a set's cells
+  (comets as directional streaks, flames as body, swirl as turbulence) reads organic. (2) **Spine
+  concentration** — bias density onto the shape's defining line (ring band, crescent front, X arms, lane
+  centerline, pillar columns, ball core) and taper the edges, so the silhouette is unmistakable; a uniform
+  scatter is a blob. (3) **Directional alignment** — a flame sprite is native-"up", so `rot = target_dir_deg +
+  90` points it along the local shape direction (radial / arm / jet axis); bursts rotate freely. (4) **Colour
+  recovery** — vivid hues that live in a sprite's soft low-alpha wisps sink toward black when composited small;
+  a saturation bump *plus a brightness lift* (black stays black under multiply) raises them back out (dragonfire
+  rainbow). A "solid + rainbow" ask is in tension: dense overlap reads as the hot warm core, colour shows where
+  it's sparse (tips) — name that trade-off rather than chasing both at the core.
+- **How to apply:** (a) **Read the implemented skills before authoring FX** — map effects to what's real
+  (here the Cilia's Fire kit + Dance-of-Fire ascensions), and verify "off-style" art against the code first:
+  the prismatic *dragonfire* and dark-red *chaosfire* I'd flagged as off-house-style were literally named
+  in-game substances. (b) For a *traveling* effect (the chaos ball), drive every particle's start/end off a
+  shared `centre(global_t)` so the mass stays coherent and moves one way — independent per-particle paths gave
+  "two clouds drifting apart". "Heavy/solid" = crank **count** + centre-bias the radius + full opacity, not
+  bigger sprites. (c) A hollow **ring** cell's empty middle is an *enclosed* bg pocket → `--global`, not
+  `--sever` (sever fills it opaque — it keeps interior as figure). Diagnose enclosed-vs-border-connected before
+  picking the flag. (d) Deliverable framing: the **GIF is an evaluation artifact** (gitignore the heavy
+  `_gifs/`/`_qa/`); the in-game form is a **frame-strip PNG + `'lighter'` compositing** + a scale-tier
+  decision — an engineer handoff, not a GIF drop. Build the emitter with live knobs (MIX table, concentration
+  bias, `omax` taper, `saturate`/`bright` on the return) so tuning is data, not code surgery.
+
 ### 2026-06-10 — Before fixing a "your tool broke my asset" report, prove ownership; and beware a metric that conflates two effects
 
 - **Principle:** When the user says new work corrupted an existing asset, **diagnose ownership before
