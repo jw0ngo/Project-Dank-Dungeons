@@ -1,0 +1,5 @@
+// player walk — se (frames [7, 19, 26, 33])
+'char.player.walk1.se':'assets/char/playerwalk1-se.png',
+'char.player.walk2.se':'assets/char/playerwalk2-se.png',
+'char.player.walk3.se':'assets/char/playerwalk3-se.png',
+'char.player.walk4.se':'assets/char/playerwalk4-se.png',
