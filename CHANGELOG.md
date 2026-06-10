@@ -7,6 +7,8 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-10
+
 ### Added
 - **Directional player walk cycles — all 8 facings.** The knight now plays a hand-drawn 4-frame walk
   animation in every direction while moving, driven by the existing `p.walkFrame` counter (network-synced,
