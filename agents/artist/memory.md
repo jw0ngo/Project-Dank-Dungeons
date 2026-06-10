@@ -28,6 +28,22 @@
   --shadow-band 0.90`. (d) An mp4 re-cut is **alpha+RGB**, so it *undoes* any prior RGB-only defringe —
   the re-cut frames came back with the grey halo (ring ~125); **defringe must follow every re-cut**.
   Single-prop cutout (coin/chest) has no grid tool — added `tools/cut-prop.py` reusing `cut_cell`.
+  **Habit for single props — a border on ONE side of a symmetric shape is a directional baked SHADOW, not
+  AA; fix it with `--thresh`, not `--erode`.** The favorcoin haloed white only along the *bottom* of a
+  circle. A uniform anti-alias halo rings the whole edge, so "bottom-only on a circle" was the tell: the
+  source had a **soft cast-shadow gradient under the coin** (lit from above) — a ~6px band of near-neutral
+  light-gray pixels (min(R,G,B) 204–214) sitting just under the flood threshold (bg at min≥215), kept as
+  "figure" and reading white. The top rim was a sharp 1px 255→gold edge with no such band. **`--erode` is
+  the wrong tool** — I tried it first (erode 2 only knocked 43→1 and would chew the good gold rim all the
+  way around); the right fix raises `--thresh` so the shadow band keys as bg, exploiting the **gap between
+  figure colour and shadow colour** (gold rim min <180, shadow band 200–214 → thresh 55 = bg at min≥200
+  cuts the shadow, spares the gold). **How to apply:** when a cutout border is *localized* on a symmetric
+  prop, sample the edge **gradient per side** (sharp vs gradual min(R,G,B) ramp) before reaching for a
+  flag — a gradual ramp into a near-neutral band = baked shadow → `--thresh` to the figure/shadow gap;
+  a uniform thin bright ring = true AA → `--erode`. And measure the halo by **near-white-opaque px**, not
+  edge-lum: a lit rim is legitimately brighter (the coin's top scrollwork keeps 6 bright-gold px — that's
+  detail, not halo). (Josh caught the bottom-only border twice; the second catch is what surfaced the
+  shadow-gradient root cause over my first erode guess.)
 
 ### 2026-06-10 — A sprite halo is a STACK of defects, each invisible to the previous fix's metric — verify against the full edge ring AND the over-ground render, never one number
 
