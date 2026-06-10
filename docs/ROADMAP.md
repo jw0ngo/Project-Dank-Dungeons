@@ -99,17 +99,19 @@ floor and reach is geometric, so the worst case is a satisfyingly overpowered ru
 <details>
 <summary>🔧 Build notes (engineering)</summary>
 
+- **All three cards are uncapped** — **omit the `cap` field** (`gCardAvailable` falls back to `c.cap||99`,
+  so an omitted cap means the card stays in the pool every level-up; draft RNG is the only governor).
 - **Swing: Bite** — new `SKILL_CARDS` entry (`id:'sw-dmg'`, `cat:'skill'`, always-on like the other swing
-  cards, `icon:'⚔'`), writes a new `swingDmgPct` skillMod. Apply in **`gDoSwingAt` (~L3392)**: multiply the
-  computed `dmg` by `(1 + pSkillStat(p,'swingDmgPct')/100)`. Stacks on top of the global `damagePct`
-  (`_dbuf`). Add `swingDmgPct:0` default wherever `pSkillStat` reads its base.
+  cards, `icon:'⚔'`, **no `cap`**), writes a new `swingDmgPct` skillMod. Apply in **`gDoSwingAt` (~L3392)**:
+  multiply the computed `dmg` by `(1 + pSkillStat(p,'swingDmgPct')/100)`. Stacks on top of the global
+  `damagePct` (`_dbuf`). Add `swingDmgPct:0` default wherever `pSkillStat` reads its base.
 - **Heavy: Devastation** (new) — new `SKILL_CARDS` entry (`id:'hv-dmg'`, `req:()=>gIsSkillUnlocked('heavy')`,
-  `icon:'🔨'`), writes `heavyDmgPct`. Apply in **`gDoHeavyAtk` (~L3824)**: multiply `chargedDmg` by
-  `(1 + pSkillStat(p,'heavyDmgPct')/100)`. Stacks on `_dbuf`.
+  `icon:'🔨'`, **no `cap`**), writes `heavyDmgPct`. Apply in **`gDoHeavyAtk` (~L3824)**: multiply
+  `chargedDmg` by `(1 + pSkillStat(p,'heavyDmgPct')/100)`. Stacks on `_dbuf`.
 - **Heavy: Reach** — the existing `id:'hv-rad'` card (currently `name:'Heavy: Devastation'`, `apply` →
   `heavyWidth`, **L12308**): rename to `'Heavy: Reach'`, retarget `apply` → `heavyLen` (base **56**,
-  `W()` ~L2387; already ×2 when charged), `base:8`, `fmt:v=>\`Heavy +${v} reach\``. Drop the `heavyWidth`
-  mod entirely (no width card remains — fine, that was the less-loved axis).
+  `W()` ~L2387; already ×2 when charged), `base:8`, **remove its `cap:6`**, `fmt:v=>\`Heavy +${v} reach\``.
+  Drop the `heavyWidth` mod entirely (no width card remains — fine, that was the less-loved axis).
 - **Tooltip honesty:** the char-screen skill details (~L10850) already show live buffed damage — confirm the
   two new `%dmg` mods flow into that path so the displayed swing/heavy numbers match what you hit for.
 - **Sim hook:** these are new `cardPicks` ids — they ride the existing `gDrawCards`/`_pickCard` plumbing, no
