@@ -14,6 +14,42 @@ This is the parking lot for findings we spot while doing other work but delibera
 
 ## Art / sprites
 
+### 🟢 ENGINEER HANDOFF (Artist → Eng, 2026-06-10) — wire the enemy HURT pose sprites
+
+Art is committed (`art(enemies): hurt-pose sprite sheets…`): 32 cutouts in `assets/char/<id>hurt-<dir>.png`
+for `goblinhurt` / `archerhurt` / `direwolfhurt` / `alphawolfhurt`, sliced to each family's idle/atk frame
+size (goblins 192, wolves 256) so they swap at the same per-enemy `gs`. **This is a NEW pose state the
+engine doesn't have yet** — `gDrawEnemy` (the `_bid` selection, ~`index.html:7784`) only picks idle/atk.
+- **Add to `ART_MANIFEST`** (no-separator id convention, like `goblinatk`):
+  ```
+  'char.goblinhurt.nw':'assets/char/goblinhurt-nw.png', …(8 dirs)… 'char.goblinhurt.se':'assets/char/goblinhurt-se.png',
+  'char.archerhurt.<8 dirs>':'assets/char/archerhurt-<dir>.png',
+  'char.direwolfhurt.<8 dirs>':'assets/char/direwolfhurt-<dir>.png',
+  'char.alphawolfhurt.<8 dirs>':'assets/char/alphawolfhurt-<dir>.png',
+  ```
+  (full 32-line snippet was in the Artist handoff; all are `assets/char/<id>-<dir>.png`.)
+- **Draw intent:** select `char.<defId>hurt.<dir>` while the damage-flash is active (`e.hitFlash>0`),
+  priority over idle (your call vs mid-attack), drawn at the **same `gs`** — there is no per-pose draw-mult.
+- **Two flags:** (a) `hitFlash` is ~8 frames — likely too brief to read; give the swap its own short
+  `_hurtHold` if it flickers (the wolf-bite `biteStrike` flash-past lesson). (b) **Scale parity:**
+  `check-pose-scale.py` vs idle reads goblin ~0.97 / alphawolf ~0.99 (ship at parity) but archer ~0.84 /
+  direwolf ~0.88 measure *wider* (hunched recoils). Since there's no per-pose lever, if the archer/wolf
+  flinch reads oversized in-game either add a per-pose mult in `gDrawEnemy` or ping the Artist to re-pad.
+- **Verify:** `node --check` + grep each new key + `python dev.py`, all 8 facings, hard-refresh.
+
+### 🟢 ENGINEER HANDOFF (Artist → Eng, 2026-06-10) — wire the world props (favor coin + treasure chests)
+
+Art is committed (`art(world): favor coin + treasure chest props…`): `assets/world/favorcoin.png`,
+`chest-closed.png`, `chest-open.png` (transparent cutouts). **These are new world OBJECTS with no draw
+hook or entity kind yet** — more than a manifest paste; it's systems work (coin = a Favor-currency pickup
+drop; chest = an interactable that swaps closed→open on open).
+- **Manifest keys:** `'world.favorcoin':'assets/world/favorcoin.png'`, `'world.chest-closed':…`,
+  `'world.chest-open':…` (most town props load via a separate pipeline; only `world.shrine` is currently a
+  manifest entry, so confirm the load path).
+- **Raster art:** painted/photographic → draw at `devicePixelRatio` (`_prepHiDPICanvas`/`<img>`, not an
+  undersized backing store). Size from the longest side (coin 190×192, chests ~224–256 tall); source
+  masters are large enough to scale up.
+
 ### ✅ RESOLVED 2026-06-10 — Player WALK cutouts had a loose gray halo + E/W shoe (defringe-v2 + boot-protected re-cut)
 
 **Resolution (Artist, three causes — each invisible to the previous fix's metric):**
