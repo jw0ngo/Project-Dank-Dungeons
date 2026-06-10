@@ -195,6 +195,18 @@ button{font-family:inherit;cursor:pointer;}
 .imb-dot.fork.filled{ background:#ffcc44; box-shadow:0 0 7px rgba(255,180,60,.95); }
 .stat-card:hover .imb-dot.next{ animation:imbNextFlash .7s ease-in-out infinite; }
 @keyframes imbNextFlash{ 0%,100%{ background:#4a3f22; box-shadow:none; transform:scale(1);} 50%{ background:#ffe0a0; box-shadow:0 0 9px rgba(255,190,70,1); transform:scale(1.35);} }
+/* Skillforge (dev/testing) — Sanctum-only panel to imbue + rank any skill without grinding the wilderness */
+#skillforge-btn{ position:absolute; top:8px; right:8px; z-index:16; background:rgba(30,18,8,.85); border:1px solid #7a4a1a; color:#ffae5a; font:bold 9px monospace; letter-spacing:1px; padding:5px 9px; border-radius:5px; cursor:pointer; }
+#skillforge-btn:hover{ background:rgba(60,36,14,.95); box-shadow:0 0 8px rgba(255,150,40,.5); }
+.forge-row{ display:flex; align-items:center; justify-content:space-between; gap:14px; background:linear-gradient(180deg,rgba(28,20,12,.9),rgba(12,9,6,.95)); border:1px solid #5a3a18; border-radius:7px; padding:9px 12px; }
+.forge-left{ text-align:left; }
+.forge-name{ font:bold 11px 'Palatino Linotype',serif; color:#ffd8b8; letter-spacing:1px; }
+.forge-sub{ font:6.5px monospace; color:#aa7744; letter-spacing:1px; }
+.forge-state{ font:7px monospace; color:#ffae5a; margin-top:3px; }
+.forge-btns{ display:flex; gap:6px; }
+.forge-btn{ background:rgba(60,36,14,.9); border:1px solid #8a5a22; color:#ffcc88; font:bold 8px monospace; letter-spacing:1px; padding:5px 8px; border-radius:4px; cursor:pointer; transition:all .12s; }
+.forge-btn:hover{ background:rgba(90,54,20,.95); box-shadow:0 0 8px rgba(255,150,40,.5); }
+.forge-btn.dim{ opacity:.4; }
 /* CSS-built framed portrait — the figure is an image cutout; the frame, glow and name are all CSS */
 /* Fills the full left panel; ornate metallic gradient border + inner hairline + corner studs + glow */
 .lvl-portrait{ position:absolute; inset:0; overflow:hidden; background:#08070c;
@@ -806,6 +818,18 @@ function _fbInit() {
       </div>
       <div id="g-evo-cards" style="display:flex;gap:18px;justify-content:center;flex-wrap:wrap;max-width:90%;"></div>
       <div style="margin-top:16px;font:7px monospace;color:#553322;letter-spacing:2px;">THIS CHOICE IS PERMANENT FOR THE RUN</div>
+    </div>
+
+    <!-- Skillforge (dev/testing) — Sanctum-only. Corner button + overlay to imbue & rank any skill,
+         including driving the Imbue-Path Form fork, without grinding the wilderness. -->
+    <button id="skillforge-btn" style="display:none;" onclick="gOpenSkillforge()">⚒ SKILLFORGE</button>
+    <div id="g-skillforge-overlay" style="display:none;position:absolute;inset:0;z-index:23;background:rgba(0,0,0,0.92);flex-direction:column;align-items:center;justify-content:center;">
+      <div style="text-align:center;margin-bottom:16px;">
+        <div style="font:bold 9px monospace;letter-spacing:6px;color:#ffae5a;text-transform:uppercase;">&#9874; Skillforge &#9874;</div>
+        <div style="font:bold 18px 'Palatino Linotype',serif;letter-spacing:2px;color:#ffd8b8;text-shadow:0 0 16px rgba(255,140,0,0.7);">Forge a Skill</div>
+        <div style="font:7px monospace;color:#aa6644;letter-spacing:2px;margin-top:5px;">TESTING — IMBUE &amp; RANK ANY SKILL · K or ESC to leave</div>
+      </div>
+      <div id="skillforge-rows" style="display:flex;flex-direction:column;gap:8px;min-width:400px;"></div>
     </div>
 
     <div id="skill-bar" style="
@@ -3324,6 +3348,8 @@ document.addEventListener('keydown', function(e){
   // Always handle pause toggle
   if(key === 'Escape'){
     e.preventDefault();
+    // Close the Skillforge (dev panel) if open
+    if(_skillforgeOpen){ gCloseSkillforge(); return; }
     // Close portal overlay if open
     if(portalOpen){ portalClose(); return; }
     // Close hub overlay if open
@@ -3342,6 +3368,13 @@ document.addEventListener('keydown', function(e){
       if(gPlayer) gPlayer.leapTargeting = false;
       document.getElementById('g-pause').style.display='flex';
     }
+    return;
+  }
+
+  // ── Skillforge (dev/testing) — toggle in the Sanctum only ──
+  if((key === 'k' || key === 'K') && inTown){
+    e.preventDefault();
+    if(_skillforgeOpen) gCloseSkillforge(); else gOpenSkillforge();
     return;
   }
 
@@ -11402,11 +11435,14 @@ function goTown() {
   townStartPresence();
   document.getElementById('gc').focus();
   scaleGameToFit();
+  const sfBtn = document.getElementById('skillforge-btn'); if(sfBtn) sfBtn.style.display = 'block';  // dev panel, Sanctum only
 }
 
 function leaveTown() {
   gTrainingDummy=null;
   gShrine=null;
+  if(_skillforgeOpen) gCloseSkillforge();
+  const sfBtn = document.getElementById('skillforge-btn'); if(sfBtn) sfBtn.style.display = 'none';
   if (!inTown) return;
   inTown = false;
   portalOpen = false;
@@ -12223,6 +12259,8 @@ function goWilderness(){
   const mapData = generateWildernessMap();
   inWilderness  = true;
   inTown        = false;
+  if(_skillforgeOpen) gCloseSkillforge();
+  { const sfBtn = document.getElementById('skillforge-btn'); if(sfBtn) sfBtn.style.display = 'none'; }
   wildernessPortalNearby = false;
   portalNearby  = false;
   exitReached   = false;
@@ -14437,6 +14475,86 @@ function gCloseEvolutionMenu(){
   const el = document.getElementById('g-evolution-overlay');
   if(el) el.style.display = 'none';
   if(typeof gWildUpdateHUD === 'function') gWildUpdateHUD();
+}
+
+// ── Skillforge (dev/testing) — Sanctum-only panel to imbue + rank any skill ──────────────────────
+// Drives the real systems (gImbueSelectSkill's state, the IMBUE_CARDS rank-up apply, the Form fork)
+// so you can reach any tree state without grinding the wilderness. Cilia-only for now (the only god
+// with effects); skills without a mastery tree yet (Phases 2–5) can still be imbued to test base FX.
+const SKILLFORGE_SKILLS = [
+  { id:'swing',   name:'Dance of Fire', sub:'Swing · LMB' },
+  { id:'heavy',   name:'Heavy',         sub:'RMB' },
+  { id:'ww',      name:'Whirlwind',     sub:'Q' },
+  { id:'leap',    name:'Leap',          sub:'E' },
+  { id:'evasion', name:'Dash',          sub:'Space' },
+];
+let _skillforgeOpen = false;
+function _forgeImbue(skill, on){
+  if(!gPlayer) return;
+  gPlayer.imbues = gPlayer.imbues || {};
+  if(on){ gPlayer.imbues[skill] = 'cilia'; gImbuePath(gPlayer, skill); if(!inWilderness) gImbuedSkills[skill] = 'cilia'; }
+  else  { delete gPlayer.imbues[skill]; if(gPlayer.imbuePaths) delete gPlayer.imbuePaths[skill]; if(gImbuedSkills) delete gImbuedSkills[skill]; }
+}
+function gForgeToggleImbue(skill){ _forgeImbue(skill, !gIsImbued(gPlayer, skill)); gRenderSkillforge(); if(typeof initSkillBar==='function') initSkillBar(); }
+function gForgeReset(skill){ _forgeImbue(skill, false); gRenderSkillforge(); if(typeof initSkillBar==='function') initSkillBar(); }
+function gForgeRankSkill(skill){
+  if(!gPlayer) return;
+  if(!gIsImbued(gPlayer, skill, 'cilia')) _forgeImbue(skill, true);   // auto-imbue with Cilia
+  // At a fork rank, hand off to the real Form/Chaos chooser (close the forge so it shows on top).
+  const evo = gPendingEvolution(gPlayer);
+  if(evo && evo.skill === skill){ gCloseSkillforge(); gOpenEvolutionMenu(evo); return; }
+  const card = IMBUE_CARDS.find(c => c.imbueSkill === skill);
+  if(card && card.req && card.req()){ card.apply(gPlayer, 1); spawnGP(gPlayer.wx, gPlayer.wy, '#ff8a2a', 12, 4); }
+  else if(!card) addGDmg(gPlayer.wx, gPlayer.wy - 24, 'NO MASTERY TREE YET (PHASE 2–5)', '#ffaa44');
+  else addGDmg(gPlayer.wx, gPlayer.wy - 24, 'MAX — CHAOS FORK @10 (SLICE C)', '#ffaa44');
+  gRenderSkillforge();
+  if(typeof initSkillBar==='function') initSkillBar();
+}
+function gRenderSkillforge(){
+  const wrap = document.getElementById('skillforge-rows');
+  if(!wrap || !gPlayer) return;
+  wrap.innerHTML = '';
+  const mkBtn = (label, fn, dim) => {
+    const b = document.createElement('button');
+    b.className = 'forge-btn' + (dim ? ' dim' : '');
+    b.textContent = label;
+    b.addEventListener('click', ev => { ev.stopPropagation(); fn(); });
+    return b;
+  };
+  SKILLFORGE_SKILLS.forEach(s => {
+    const imbued   = gIsImbued(gPlayer, s.id);
+    const path     = IMBUE_PATHS.cilia[s.id];
+    const e        = gPlayer.imbuePaths && gPlayer.imbuePaths[s.id];
+    const rank     = (e && e.rank) || 0;
+    const formName = (e && e.form && path) ? path.forms[e.form].name : null;
+    const row  = document.createElement('div'); row.className = 'forge-row';
+    const left = document.createElement('div'); left.className = 'forge-left';
+    left.innerHTML = `<div class="forge-name">${s.name}</div><div class="forge-sub">${s.sub}</div>`;
+    const state = document.createElement('div'); state.className = 'forge-state';
+    state.textContent = !imbued ? '— not imbued —'
+      : path ? `Rank ${rank}/10${formName ? ' · ' + formName : ''}${e && e.chaos ? ' · ' + e.chaos : ''}`
+             : 'imbued · tree in Phase 2–5';
+    left.appendChild(state);
+    const btns = document.createElement('div'); btns.className = 'forge-btns';
+    btns.appendChild(mkBtn(imbued ? 'Unimbue' : 'Imbue', () => gForgeToggleImbue(s.id)));
+    if(path) btns.appendChild(mkBtn('Rank +1', () => gForgeRankSkill(s.id)));
+    btns.appendChild(mkBtn('Reset', () => gForgeReset(s.id), !imbued));
+    row.appendChild(left); row.appendChild(btns);
+    wrap.appendChild(row);
+  });
+}
+function gOpenSkillforge(){
+  if(!inTown || !gPlayer) return;       // Sanctum-only
+  const el = document.getElementById('g-skillforge-overlay');
+  if(!el) return;
+  _skillforgeOpen = true; gPaused = true;
+  gRenderSkillforge();
+  el.style.display = 'flex';
+}
+function gCloseSkillforge(){
+  _skillforgeOpen = false; gPaused = false;
+  const el = document.getElementById('g-skillforge-overlay');
+  if(el) el.style.display = 'none';
 }
 
 function gImbueSelectSkill(id){
