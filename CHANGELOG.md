@@ -7,6 +7,8 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-06-10
+
 ### Added
 - **Combat card pass — per-skill damage cards (roadmap item 0b).** The level-up draft gains its first
   *commit-to-one-skill* damage choices, so a build can go deep on a single attack instead of only taking
