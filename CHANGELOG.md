@@ -8,12 +8,11 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 ## [Unreleased]
 
 ### Added
-- **Directional player walk cycles (south, north, east).** The knight now plays a hand-drawn 4-frame
-  walk animation while moving and facing down / up / right, driven by the existing `p.walkFrame` counter
-  (network-synced, so remote players animate too) and gated by a data-driven `PLAYER_WALK_OCT` octant→dir
-  map — adding a facing is one map entry plus its `char.playerwalk{1..4}.<dir>` art. Facings without
-  frames (west + the four diagonals) keep the idle pose; the engine's 1px walk-bob is suppressed when a
-  cycle plays since the frames carry their own bob. New tool `tools/slice-walk-cycle.py` slices a folder
+- **Directional player walk cycles — all 8 facings.** The knight now plays a hand-drawn 4-frame walk
+  animation in every direction while moving, driven by the existing `p.walkFrame` counter (network-synced,
+  so remote players animate too) and gated by a data-driven `PLAYER_WALK_OCT` octant→dir map — each facing
+  is one map entry plus its `char.playerwalk{1..4}.<dir>` art. The engine's 1px walk-bob is suppressed when
+  a cycle plays since the frames carry their own bob. New tool `tools/slice-walk-cycle.py` slices a folder
   of single-pose frames into registered, background-removed sprites (color-distance keying, single common
   scale, body-height anchoring + body-centering so a held sword doesn't shrink or off-center the figure).
 

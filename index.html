@@ -6741,6 +6741,26 @@ const ART_MANIFEST = {
   'char.playerwalk2.e':'assets/char/playerwalk2-e.png',
   'char.playerwalk3.e':'assets/char/playerwalk3-e.png',
   'char.playerwalk4.e':'assets/char/playerwalk4-e.png',
+  'char.playerwalk1.se':'assets/char/playerwalk1-se.png',
+  'char.playerwalk2.se':'assets/char/playerwalk2-se.png',
+  'char.playerwalk3.se':'assets/char/playerwalk3-se.png',
+  'char.playerwalk4.se':'assets/char/playerwalk4-se.png',
+  'char.playerwalk1.ne':'assets/char/playerwalk1-ne.png',
+  'char.playerwalk2.ne':'assets/char/playerwalk2-ne.png',
+  'char.playerwalk3.ne':'assets/char/playerwalk3-ne.png',
+  'char.playerwalk4.ne':'assets/char/playerwalk4-ne.png',
+  'char.playerwalk1.sw':'assets/char/playerwalk1-sw.png',
+  'char.playerwalk2.sw':'assets/char/playerwalk2-sw.png',
+  'char.playerwalk3.sw':'assets/char/playerwalk3-sw.png',
+  'char.playerwalk4.sw':'assets/char/playerwalk4-sw.png',
+  'char.playerwalk1.w':'assets/char/playerwalk1-w.png',
+  'char.playerwalk2.w':'assets/char/playerwalk2-w.png',
+  'char.playerwalk3.w':'assets/char/playerwalk3-w.png',
+  'char.playerwalk4.w':'assets/char/playerwalk4-w.png',
+  'char.playerwalk1.nw':'assets/char/playerwalk1-nw.png',
+  'char.playerwalk2.nw':'assets/char/playerwalk2-nw.png',
+  'char.playerwalk3.nw':'assets/char/playerwalk3-nw.png',
+  'char.playerwalk4.nw':'assets/char/playerwalk4-nw.png',
   'tile.grass.0':'assets/tile/grass-0.png',
   'tile.grass.1':'assets/tile/grass-1.png',
   'tile.grass.2':'assets/tile/grass-2.png',
@@ -6966,9 +6986,9 @@ function gBody(id, fallback){
 // 0=E 1=SE 2=S 3=SW 4=W 5=NW 6=N 7=NE
 function gOctant8(dx, dy){ const o = Math.round(Math.atan2(dy, dx) / (Math.PI/4)); return ((o % 8) + 8) % 8; }
 const _DIR8 = ['e','se','s','sw','w','nw','n','ne'];
-// Octants that have a hand-drawn walk cycle (char.playerwalk{1..4}.<dir>). Extend this
-// map as walk art for more facings lands; the player draw consults it each frame.
-const PLAYER_WALK_OCT = {0:'e', 2:'s', 6:'n'};
+// Octants that have a hand-drawn walk cycle (char.playerwalk{1..4}.<dir>) — now all 8.
+// The player draw consults it each frame; an octant absent here falls back to the idle pose.
+const PLAYER_WALK_OCT = {0:'e', 1:'se', 2:'s', 3:'sw', 4:'w', 5:'nw', 6:'n', 7:'ne'};
 // Directional character body: facing sprite if directional art exists,
 // else single char art, else the supplied fallback canvas.
 function gDirBody(id, oct, fallback){
