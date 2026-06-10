@@ -26,6 +26,7 @@ second god) stays parked because the playtest proved we don't need it yet.
 |---|---|---|---|---|
 | **0** | **Player animation pass** — directional walk, dash poses, heavy-attack windup | 🔧 In progress (pre-greenlit) | Ongoing | Game feel + the *weighty-combat* directive made visible; runs alongside the queue |
 | **0b** | **Combat card pass** — per-skill dmg cards (Swing/Heavy) + Heavy: Reach + **pool-wide cap removal** | ✅ Shipped (v0.5.0) | Quick | Build identity in the draft + lucky-run variance; RNG governs (caps removed) |
+| **0c** | **Patron Cards** — patron-gated draft cards (Cilia burn set: explode / duration / tick dmg) | ✅ Approved | Session | Your god choice reshapes your draft; reusable per-god system serving god-identity |
 | **1** | **Make late-game dangerous** — enemies scale harder + glow yellow→red as they get deadly | 🔧 In progress (eng 2026-06-10) | Multi-session | Fixes the flat difficulty curve (playtest weak point #1) |
 | **2** | **Imbue Paths** — turn each fire skill into a 10-level mastery tree with branching upgrades | ✅ Approved — cleared for build | Large, phased | Fixes boring level-ups; the heart of "build your own playstyle" (#2) |
 | **3** | **Wolves stop getting stuck** on their dens + ignore forest slow | ✅ Shipped (v0.5.0) | Quick | Bug fix — unblocks wolf playtesting |
@@ -130,6 +131,68 @@ already floors `wwCooldown: 30` and `leapCooldown: 45`, and Grit's trigger strea
 - **Sim hook:** these are new `cardPicks` ids — they ride the existing `gDrawCards`/`_pickCard` plumbing, no
   new harness wiring beyond the new ids appearing in the pool.
 - **No art, no MP-protocol change** — skillMods are already per-player and network-synced via the card-pick path.
+</details>
+
+---
+
+### 0c. Patron Cards — patron-gated level-up cards (Cilia burn set first)
+
+`✅ approved` (2026-06-10, Josh-directed; design calls resolved) · **Size:** session · **Pillars:** build-craft depth (the heart), game feel · **Art:** none (reuses fire particles; fire card-frame is stretch)
+
+**What:** A **new card category that only appears when you've pledged to a patron**, buffing *that god's
+signature mechanic*. It's a **reusable system**, not 3 one-off cards — every future god (Boreas freeze,
+Ikras chain, Bhumi thorns) drops its own set into the same slot. **Cilia's set ships first (3 burn cards).**
+
+**Why:** The cheapest, highest-identity way to make your *god choice reshape your draft*, not just your
+skills — directly serves the god-identity north star. Sits as a light "elemental flavor" layer between the
+generic stat cards and the heavyweight Imbue Paths tree (item 2).
+
+**Player experience:** Imbue with Cilia and your drafts start occasionally offering glowing fire cards no
+other build sees. Stack burn duration + tick damage + explode-chance and your DoT becomes a chain-reaction
+engine — one ignited enemy detonates and re-ignites the pack.
+
+**The Cilia set:**
+| Card | Effect | Starting value (tune by playtest) |
+|---|---|---|
+| **Conflagration** | +% chance *per burn tick* for a burning enemy to explode (AoE that re-ignites) | +6%/pick · **chance clamps at 100%** |
+| **Lingering Flame** | +burn duration | +0.5s (30f)/pick · uncapped |
+| **Searing Heat** | +% burn tick damage | +20%/pick · uncapped |
+
+**Resolved design calls (Josh, 2026-06-10):**
+- **Explosion model:** AoE damage **scales off the enemy's current `_burnTickDmg`** (~4× a tick) and
+  **re-ignites** enemies caught in the radius — so a full burn build chains pack-to-pack (Searing Heat feeds
+  the explosion; the three cards interlock).
+- **Appear rate:** **~25% chance per draft** that one of the 3 offered cards is a patron card (when the
+  patron is active) — occasional/special, RNG-governed like the rest of the pool.
+
+<details>
+<summary>🔧 Build notes (engineering)</summary>
+
+- **New `PATRON_CARDS` pool** (mirrors `SKILL_CARDS` shape) keyed by patron god. Each card carries its
+  `patron:'cilia'`. **Gate:** available only when that patron is active — `gPlayer.imbues` (skillId→god,
+  ~L3045) contains the patron, i.e. `Object.values(p.imbues||{}).includes('cilia')`. Add a
+  `gActivePatron(p)` / `gIsPatronActive(p,'cilia')` helper if cleaner.
+- **Draft injection:** in `gDrawCards` (L12350), after the normal guaranteed-mix draw, roll **~25%**; on
+  success and if ≥1 patron card is available, replace one non-guaranteed slot with a rolled patron card
+  (de-dupe by id, independent rarity like other cards). Keep the ≥1 passive / ≥1 skill guarantee intact.
+- **Uncapped** (consistent with 0b pool-wide removal) — omit `cap`. **Conflagration's chance clamps at
+  1.0** in apply (`Math.min(1, …)`), like Precision's crit clamp.
+- **The three burn levers** — add player mods (e.g. `wildBuffs.burnExplodeChance` / `burnDurMult` /
+  `burnTickMult`, defaulting 0 / 1 / 1):
+  - **Lingering Flame** → scale `durFrames` at burn-apply (the `burnDur` passed into `gApplyEnemyBurn`,
+    L5339 — or scale `_burnTimer` there by the local player's `burnDurMult`).
+  - **Searing Heat** → scale `_burnTickDmg` (in `gApplyEnemyBurn` L5341, multiply `per`/`totalDmg` by
+    `burnTickMult`).
+  - **Conflagration** → in the tick loop `gUpdateEnemyBurn` (L5353), each tick `if(rand < burnExplodeChance)`
+    spawn an explosion: AoE damage ≈ `4 × en._burnTickDmg` to enemies within a small radius, re-apply burn to
+    those caught (chain), `spawnGP` fire particles + a flash. Host-authoritative (burn already is — L5348),
+    so no MP-protocol change.
+- **MP note:** burn + explosion resolve host-side; the burning visual already syncs via `s.bn` (L8987). The
+  explosion FX on clients can ride the existing particle/flash path or a lightweight event — engineer's call.
+- **No new art required.** Stretch: a fire-themed card-frame so patron cards *read* as special in the draft.
+- **Boundary vs. item 2 (Imbue Paths):** Patron Cards buff the **element's signature DoT (burn)**; Imbue
+  Paths restructure each **skill's shape**. Keep them distinct — don't let item 2 absorb or double-count
+  burn scaling. (Noting here; will mirror into the item-2 spec.)
 </details>
 
 ---
@@ -362,6 +425,12 @@ Keep build detail (line-refs, balance, phasing internals) in the spec; don't mir
 the two drift. Items with no spec (small fixes) keep their detail inline in the 🔧 Build notes.
 
 **⇄ Handoffs (append a line; delete when cleared):**
+- **PM → ENG (NEW, 2026-06-10):** **Item 0c — Patron Cards** approved (session-sized, no art). New
+  `PATRON_CARDS` pool gated on the active patron (`gPlayer.imbues` contains the god), injected into the
+  draft at **~25%/draft**; Cilia's 3 burn cards (Conflagration = explode-chance/tick scaling off
+  `_burnTickDmg` + re-ignite chain · Lingering Flame = +duration · Searing Heat = +tick dmg). Uncapped
+  (explode-chance clamps at 1.0). Full build notes + line-refs (L5339/L5347/L12350) inline in item 0c.
+  **Keep the boundary vs. item 2 clean** — patron cards buff burn, Imbue Paths restructure skill shape.
 - **PM → ENG:** Build *Now* top-down (1→4). Items 1 & 2 are the two systemic wall-fixes — **item 2's 3
   design calls are now resolved (binary tree, names, lore canon), so it's cleared for Phase 1** (the tree
   system + Dance of Fire's full 4-endpoint tree; see [`specs/imbue-paths.md`](specs/imbue-paths.md)). Items
