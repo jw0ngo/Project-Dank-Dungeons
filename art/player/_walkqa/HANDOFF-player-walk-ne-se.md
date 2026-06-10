@@ -53,8 +53,31 @@ required.** (No HP-bar impact either.)
    off the ground vs idle, sword stays shouldered, facing reads correct (NE = back/no-visor,
    SE = front/visor).
 
-## Deferred (per Creative Director)
-**NW + SW mirrors are NOT included** — we're reviewing NE/SE in-game first. Mirroring is proven for
-this knight (see `art/player/_mirror-QA/`); once approved, `tools/slice-walk-video.py … --mirror nw`
-(and `--mirror sw`) emits them. **E/W** profiles remain ungenerated.
-QA artifacts for this batch: `art/player/_walkqa/player-{ne,se}/` (`_magenta-contact.png`, `_preview_2x.gif`).
+## 6. NW + SW mirrors (added after NE/SE approved in-game)
+NE/SE looked good in-game, so the opposite facings are now shipped too — **horizontal flips of the
+approved NE/SE frames** (NW = mirror of NE, SW = mirror of SE), so they're idle-matched/registered by
+construction. Mirroring is valid for this knight (sword shoulder reads correct; ground-truthed in
+`art/player/_mirror-QA/`).
+
+Assets in `assets/char/`: `playerwalk{1..4}-nw.png`, `playerwalk{1..4}-sw.png`.
+
+Add to `ART_MANIFEST`:
+```js
+'char.playerwalk1.nw':'assets/char/playerwalk1-nw.png',
+'char.playerwalk2.nw':'assets/char/playerwalk2-nw.png',
+'char.playerwalk3.nw':'assets/char/playerwalk3-nw.png',
+'char.playerwalk4.nw':'assets/char/playerwalk4-nw.png',
+'char.playerwalk1.sw':'assets/char/playerwalk1-sw.png',
+'char.playerwalk2.sw':'assets/char/playerwalk2-sw.png',
+'char.playerwalk3.sw':'assets/char/playerwalk3-sw.png',
+'char.playerwalk4.sw':'assets/char/playerwalk4-sw.png',
+```
+And extend the gate (**sw = oct 3, nw = oct 5**). With NE/SE + these, the full map is:
+```js
+const PLAYER_WALK_OCT = {0:'e', 1:'se', 2:'s', 3:'sw', 5:'nw', 6:'n', 7:'ne'};  // all but w(4)
+```
+Same verification as §5, for NW and SW.
+
+## Remaining
+**E/W** profile walks are the only facings left ungenerated (the procedural/idle sprite covers W=oct4
+until then). QA artifacts: `art/player/_walkqa/player-{ne,se,nw,sw}/`.

@@ -1,0 +1,5 @@
+// player walk — nw (mirror of ne)
+'char.playerwalk1.nw':'assets/char/playerwalk1-nw.png',
+'char.playerwalk2.nw':'assets/char/playerwalk2-nw.png',
+'char.playerwalk3.nw':'assets/char/playerwalk3-nw.png',
+'char.playerwalk4.nw':'assets/char/playerwalk4-nw.png',

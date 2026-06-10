@@ -1,0 +1,5 @@
+// player walk — sw (mirror of se)
+'char.playerwalk1.sw':'assets/char/playerwalk1-sw.png',
+'char.playerwalk2.sw':'assets/char/playerwalk2-sw.png',
+'char.playerwalk3.sw':'assets/char/playerwalk3-sw.png',
+'char.playerwalk4.sw':'assets/char/playerwalk4-sw.png',
