@@ -12264,29 +12264,35 @@ function _addSkillMod(p, key, v){ p.skillMods = p.skillMods||{}; p.skillMods[key
 function _addGritMod(p, key, v){ p.gritMods  = p.gritMods||{};  p.gritMods[key]  = (p.gritMods[key]||0)  + v; }
 
 // PASSIVE pool (cat:'passive') — routes through wildBuffs (same pipeline as Obelisks).
+// ALL card pools are UNCAPPED (Josh, 2026-06-10): the draft RNG is the only governor — stacking
+// one card into a monster run is the rare lucky payoff, not the norm. Degenerate states are
+// guarded independently of pick caps: crit chance hard-clamps at 75% (its apply), global
+// cooldown clamps at 99% (wildDexCdMult), per-skill reductions floor in SKILL_STAT_FLOOR,
+// Grit's trigger streak floors at 2 (gGritStreak). A future card MAY still set `cap:` —
+// gCardAvailable honours it (c.cap || 99).
 const PASSIVE_CARDS = [
-  { id:'dmg',     cat:'passive', cap:8, icon:'⚔', name:'Bloodlust',     base:5,  frac:false, fmt:v=>`+${v}% Damage`,
+  { id:'dmg',     cat:'passive', icon:'⚔', name:'Bloodlust',     base:5,  frac:false, fmt:v=>`+${v}% Damage`,
     apply(p,v){ p.wildBuffs.damagePct  = (p.wildBuffs.damagePct||0)  + v; } },
-  { id:'speed',   cat:'passive', cap:6, icon:'⚡', name:'Swiftness',     base:6,  frac:false, fmt:v=>`+${v}% Move Speed`,
+  { id:'speed',   cat:'passive', icon:'⚡', name:'Swiftness',     base:6,  frac:false, fmt:v=>`+${v}% Move Speed`,
     apply(p,v){ p.wildBuffs.speedPct   = (p.wildBuffs.speedPct||0)   + v; } },
-  { id:'cd',      cat:'passive', cap:6, icon:'↺', name:'Alacrity',      base:4,  frac:false, fmt:v=>`−${v}% Cooldowns`,
+  { id:'cd',      cat:'passive', icon:'↺', name:'Alacrity',      base:4,  frac:false, fmt:v=>`−${v}% Cooldowns`,
     apply(p,v){ p.wildBuffs.cdPct      = (p.wildBuffs.cdPct||0)      + v; } },
-  { id:'hp',      cat:'passive', cap:8, icon:'❤', name:'Vitality',      base:12, frac:false, fmt:v=>`+${v} Max HP`,
+  { id:'hp',      cat:'passive', icon:'❤', name:'Vitality',      base:12, frac:false, fmt:v=>`+${v} Max HP`,
     apply(p,v){ p.wildBuffs.hpBonus    = (p.wildBuffs.hpBonus||0)    + v; _wildApplyStats(); } },
-  { id:'hpregen', cat:'passive', cap:5, icon:'✚', name:'Regeneration',  base:0.25,frac:true, fmt:v=>`+${v} HP/s`,
+  { id:'hpregen', cat:'passive', icon:'✚', name:'Regeneration',  base:0.25,frac:true, fmt:v=>`+${v} HP/s`,
     apply(p,v){ p.wildBuffs.hpRegenAdd = (p.wildBuffs.hpRegenAdd||0) + v; } },
-  { id:'mp',      cat:'passive', cap:8, icon:'✦', name:'Arcane Vessel', base:12, frac:false, fmt:v=>`+${v} Max MP`,
+  { id:'mp',      cat:'passive', icon:'✦', name:'Arcane Vessel', base:12, frac:false, fmt:v=>`+${v} Max MP`,
     apply(p,v){ p.wildBuffs.mpBonus    = (p.wildBuffs.mpBonus||0)    + v; _wildApplyStats(); } },
-  { id:'mpregen', cat:'passive', cap:8, icon:'❖', name:'Clarity',       base:0.3,frac:true,  fmt:v=>`+${v} MP/s`,
+  { id:'mpregen', cat:'passive', icon:'❖', name:'Clarity',       base:0.3,frac:true,  fmt:v=>`+${v} MP/s`,
     apply(p,v){ p.wildBuffs.mpRegenAdd = (p.wildBuffs.mpRegenAdd||0) + v; } },
-  { id:'xp',      cat:'passive', cap:6, icon:'★', name:'Wisdom',        base:12, frac:false, fmt:v=>`+${v}% XP Gain`,
+  { id:'xp',      cat:'passive', icon:'★', name:'Wisdom',        base:12, frac:false, fmt:v=>`+${v}% XP Gain`,
     apply(p,v){ p.wildBuffs.xpPct      = (p.wildBuffs.xpPct||0)      + v; } },
-  { id:'pickup',  cat:'passive', cap:4, icon:'◎', name:'Magnetism',     base:30, frac:false, fmt:v=>`+${v} Pickup Range`,
+  { id:'pickup',  cat:'passive', icon:'◎', name:'Magnetism',     base:30, frac:false, fmt:v=>`+${v} Pickup Range`,
     apply(p,v){ p.wildBuffs.pickupRange= (p.wildBuffs.pickupRange||0)+ v; } },
   // Crit (Card Pool Expansion §2): chance hard-capped 75%; crit multiplier = CRIT_BASE_MULT (1.5) + critDamage.
-  { id:'crit',    cat:'passive', cap:6, icon:'✷', name:'Precision',     base:4,  frac:false, fmt:v=>`+${v}% Crit Chance`,
+  { id:'crit',    cat:'passive', icon:'✷', name:'Precision',     base:4,  frac:false, fmt:v=>`+${v}% Crit Chance`,
     apply(p,v){ p.wildBuffs.critChance = Math.min(0.75, (p.wildBuffs.critChance||0) + v/100); } },
-  { id:'critdmg', cat:'passive', cap:6, icon:'✸', name:'Savagery',      base:20, frac:false, fmt:v=>`+${v}% Crit Damage`,
+  { id:'critdmg', cat:'passive', icon:'✸', name:'Savagery',      base:20, frac:false, fmt:v=>`+${v}% Crit Damage`,
     apply(p,v){ p.wildBuffs.critDamage = (p.wildBuffs.critDamage||0) + v/100; } },
 ];
 
@@ -12294,51 +12300,49 @@ const PASSIVE_CARDS = [
 // MP-safe. Only whirlwind & leap (the stats migrated in Stage 1); `req` gates on that skill's
 // unlock. Reductions store a negative mod; pSkillStat floors stop them hitting zero.
 const SKILL_CARDS = [
-  { id:'ww-dmg', cat:'skill', cap:6, req:()=>gIsSkillUnlocked('ww'),   icon:'⚡', name:'Whirlwind: Edge',  base:5,  frac:false, fmt:v=>`Whirlwind +${v} damage`,
+  { id:'ww-dmg', cat:'skill', req:()=>gIsSkillUnlocked('ww'),   icon:'⚡', name:'Whirlwind: Edge',  base:5,  frac:false, fmt:v=>`Whirlwind +${v} damage`,
     apply(p,v){ _addSkillMod(p,'wwDamage', v); } },
-  { id:'ww-rad', cat:'skill', cap:6, req:()=>gIsSkillUnlocked('ww'),   icon:'⚡', name:'Whirlwind: Reach', base:4,  frac:false, fmt:v=>`Whirlwind +${v}px radius`,
+  { id:'ww-rad', cat:'skill', req:()=>gIsSkillUnlocked('ww'),   icon:'⚡', name:'Whirlwind: Reach', base:4,  frac:false, fmt:v=>`Whirlwind +${v}px radius`,
     apply(p,v){ _addSkillMod(p,'wwRadius', v); } },
-  { id:'ww-cd',  cat:'skill', cap:5, req:()=>gIsSkillUnlocked('ww'),   icon:'⚡', name:'Whirlwind: Rhythm',base:18, frac:false, fmt:v=>`Whirlwind −${(v/60).toFixed(1)}s cooldown`,
+  { id:'ww-cd',  cat:'skill', req:()=>gIsSkillUnlocked('ww'),   icon:'⚡', name:'Whirlwind: Rhythm',base:18, frac:false, fmt:v=>`Whirlwind −${(v/60).toFixed(1)}s cooldown`,
     apply(p,v){ _addSkillMod(p,'wwCooldown', -v); } },
-  { id:'leap-dmg', cat:'skill', cap:6, req:()=>gIsSkillUnlocked('leap'), icon:'🌀', name:'Leap: Force',    base:8,  frac:false, fmt:v=>`Leap +${v} damage`,
+  { id:'leap-dmg', cat:'skill', req:()=>gIsSkillUnlocked('leap'), icon:'🌀', name:'Leap: Force',    base:8,  frac:false, fmt:v=>`Leap +${v} damage`,
     apply(p,v){ _addSkillMod(p,'leapDamage', v); } },
-  { id:'leap-rad', cat:'skill', cap:6, req:()=>gIsSkillUnlocked('leap'), icon:'🌀', name:'Leap: Impact',   base:8,  frac:false, fmt:v=>`Leap +${v}px impact radius`,
+  { id:'leap-rad', cat:'skill', req:()=>gIsSkillUnlocked('leap'), icon:'🌀', name:'Leap: Impact',   base:8,  frac:false, fmt:v=>`Leap +${v}px impact radius`,
     apply(p,v){ _addSkillMod(p,'leapRadius', v); } },
-  { id:'leap-rng', cat:'skill', cap:5, req:()=>gIsSkillUnlocked('leap'), icon:'🌀', name:'Leap: Bound',    base:16, frac:false, fmt:v=>`Leap +${v}px range`,
+  { id:'leap-rng', cat:'skill', req:()=>gIsSkillUnlocked('leap'), icon:'🌀', name:'Leap: Bound',    base:16, frac:false, fmt:v=>`Leap +${v}px range`,
     apply(p,v){ _addSkillMod(p,'leapRange', v); } },
-  { id:'leap-cd',  cat:'skill', cap:5, req:()=>gIsSkillUnlocked('leap'), icon:'🌀', name:'Leap: Tempo',    base:30, frac:false, fmt:v=>`Leap −${(v/60).toFixed(1)}s cooldown`,
+  { id:'leap-cd',  cat:'skill', req:()=>gIsSkillUnlocked('leap'), icon:'🌀', name:'Leap: Tempo',    base:30, frac:false, fmt:v=>`Leap −${(v/60).toFixed(1)}s cooldown`,
     apply(p,v){ _addSkillMod(p,'leapCooldown', -v); } },
   // ── Card Pool Expansion: swing/heavy/dash (the level-1 core kit). Swing is always on; heavy
   //    unlocks @L1, dash @L2. Speed cards write a % mod read via pSkillSpeed; the rest are flat. ──
-  { id:'sw-reach', cat:'skill', cap:6, icon:'⚔', name:'Swing: Reach',     base:4, frac:false, fmt:v=>`Swing +${v} reach`,
+  { id:'sw-reach', cat:'skill', icon:'⚔', name:'Swing: Reach',     base:4, frac:false, fmt:v=>`Swing +${v} reach`,
     apply(p,v){ _addSkillMod(p,'smearOuter', v); } },
-  { id:'sw-spd',   cat:'skill', cap:6, icon:'⚔', name:'Swing: Tempo',     base:6, frac:false, fmt:v=>`Swing +${v}% attack speed`,
+  { id:'sw-spd',   cat:'skill', icon:'⚔', name:'Swing: Tempo',     base:6, frac:false, fmt:v=>`Swing +${v}% attack speed`,
     apply(p,v){ _addSkillMod(p,'swingSpdPct', v); } },
-  // Uncapped %dmg cards (Josh, 2026-06-10): balanced by draft RNG, not a pick cap — stacking one
-  // is the rare lucky-run payoff. Safe: no SKILL_STAT_FLOOR stat involved.
   { id:'sw-dmg',   cat:'skill', icon:'⚔', name:'Swing: Bite',      base:8, frac:false, fmt:v=>`Swing +${v}% damage`,
     apply(p,v){ _addSkillMod(p,'swingDmgPct', v); } },
-  { id:'hv-chg',   cat:'skill', cap:5, req:()=>gIsSkillUnlocked('heavy'), icon:'🔨', name:'Heavy: Quickdraw',  base:8, frac:false, fmt:v=>`Heavy +${v}% charge speed`,
+  { id:'hv-chg',   cat:'skill', req:()=>gIsSkillUnlocked('heavy'), icon:'🔨', name:'Heavy: Quickdraw',  base:8, frac:false, fmt:v=>`Heavy +${v}% charge speed`,
     apply(p,v){ _addSkillMod(p,'heavyChgPct', v); } },
   { id:'hv-rad',   cat:'skill', req:()=>gIsSkillUnlocked('heavy'), icon:'🔨', name:'Heavy: Reach', base:8, frac:false, fmt:v=>`Heavy +${v} reach`,
     apply(p,v){ _addSkillMod(p,'heavyLen', v); } },
   { id:'hv-dmg',   cat:'skill', req:()=>gIsSkillUnlocked('heavy'), icon:'🔨', name:'Heavy: Devastation', base:8, frac:false, fmt:v=>`Heavy +${v}% damage`,
     apply(p,v){ _addSkillMod(p,'heavyDmgPct', v); } },
-  { id:'dash-cd',  cat:'skill', cap:5, req:()=>gIsSkillUnlocked('dash'), icon:'💨', name:'Dash: Recovery', base:12, frac:false, fmt:v=>`Dash −${(v/60).toFixed(1)}s cooldown`,
+  { id:'dash-cd',  cat:'skill', req:()=>gIsSkillUnlocked('dash'), icon:'💨', name:'Dash: Recovery', base:12, frac:false, fmt:v=>`Dash −${(v/60).toFixed(1)}s cooldown`,
     apply(p,v){ _addSkillMod(p,'evasionCooldown', -v); } },
-  { id:'dash-dist',cat:'skill', cap:5, req:()=>gIsSkillUnlocked('dash'), icon:'💨', name:'Dash: Momentum', base:14, frac:false, fmt:v=>`Dash +${v}px distance`,
+  { id:'dash-dist',cat:'skill', req:()=>gIsSkillUnlocked('dash'), icon:'💨', name:'Dash: Momentum', base:14, frac:false, fmt:v=>`Dash +${v}px distance`,
     apply(p,v){ _addSkillMod(p,'evasionRange', v); } },
 ];
 
 // GRIT pool (cat:'grit') — writes per-player gritMods; gated on the Grit unlock (level 5).
 const GRIT_CARDS = [
-  { id:'grit-shield', cat:'grit', cap:6, req:gGritUnlocked, icon:'🛡', name:'Grit: Bulwark',   base:6,  frac:false, fmt:v=>`Grit +${v} shield/trigger`,
+  { id:'grit-shield', cat:'grit', req:gGritUnlocked, icon:'🛡', name:'Grit: Bulwark',   base:6,  frac:false, fmt:v=>`Grit +${v} shield/trigger`,
     apply(p,v){ _addGritMod(p,'shield', v); } },
-  { id:'grit-cap',    cat:'grit', cap:5, req:gGritUnlocked, icon:'🛡', name:'Grit: Resolve',   base:4,  frac:false, fmt:v=>`Grit +${v}% shield cap`,
+  { id:'grit-cap',    cat:'grit', req:gGritUnlocked, icon:'🛡', name:'Grit: Resolve',   base:4,  frac:false, fmt:v=>`Grit +${v}% shield cap`,
     apply(p,v){ _addGritMod(p,'capPct', v); } },
-  { id:'grit-dur',    cat:'grit', cap:5, req:gGritUnlocked, icon:'🛡', name:'Grit: Endurance', base:30, frac:false, fmt:v=>`Grit +${(v/60).toFixed(1)}s shield duration`,
+  { id:'grit-dur',    cat:'grit', req:gGritUnlocked, icon:'🛡', name:'Grit: Endurance', base:30, frac:false, fmt:v=>`Grit +${(v/60).toFixed(1)}s shield duration`,
     apply(p,v){ _addGritMod(p,'duration', v); } },
-  { id:'grit-streak', cat:'grit', cap:3, req:gGritUnlocked, icon:'🛡', name:'Grit: Instinct',  base:1,  frac:false, fmt:v=>`Grit triggers ${v} hit${v>1?'s':''} sooner`,
+  { id:'grit-streak', cat:'grit', req:gGritUnlocked, icon:'🛡', name:'Grit: Instinct',  base:1,  frac:false, fmt:v=>`Grit triggers ${v} hit${v>1?'s':''} sooner`,
     apply(p,v){ _addGritMod(p,'streakReduce', v); } },
 ];
 

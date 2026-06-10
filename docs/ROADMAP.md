@@ -97,9 +97,10 @@ generalist's pick (covers the whole kit); specific is the specialist's higher ce
 RNG* (you're not reliably offered the card you want, so reliably stacking one is the rare, lucky-run
 payoff, not the norm). Safe because the only degenerate states are guarded *independently of caps*: crit
 chance is hard-clamped to 75%, global cooldown (`wildDexCdMult`, L12228) is clamped to 99%, and
-swing-speed / heavy-charge / dash-cooldown are floored in `SKILL_STAT_FLOOR` (L2431). The **one gap** —
-the per-skill cooldown cards `Whirlwind: Rhythm` (`wwCooldown`) and `Leap: Tempo` (`leapCooldown`) have
-no floor — is closed by the safety pass below before caps come off.
+swing-speed / heavy-charge / dash-cooldown are floored in `SKILL_STAT_FLOOR` (L2431). ~~The one gap —
+`Whirlwind: Rhythm` / `Leap: Tempo` floors~~ **(eng audit 2026-06-10: not a gap — `SKILL_STAT_FLOOR`
+already floors `wwCooldown: 30` and `leapCooldown: 45`, and Grit's trigger streak floors at 2 in
+`gGritStreak`. No safety pass needed; caps removed pool-wide as-is.)**
 
 <details>
 <summary>🔧 Build notes (engineering)</summary>

@@ -12,17 +12,23 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
   *commit-to-one-skill* damage choices, so a build can go deep on a single attack instead of only taking
   the universal **Bloodlust** (+5% all damage). **Swing: Bite** (+8%/pick) buffs the normal swing only;
   **Heavy: Devastation** (+8%/pick) buffs the heavy attack only. Per the governing balance rule, a
-  single-skill card out-%s the universal one (+8% vs +5%) so it's never strictly dominated — and all
-  three new cards are **uncapped** (Josh's call): the draft RNG is the balancer, so stacking one into a
-  monster run is the rare lucky payoff, not the norm. Both write per-player skillMods
+  single-skill card out-%s the universal one (+8% vs +5%) so it's never strictly dominated. Both write
+  per-player skillMods
   (`swingDmgPct`/`heavyDmgPct`), stack multiplicatively on the global %damage buff, are network-synced
   through the existing card-pick path, and flow into the char-screen damage readout so the displayed
   numbers match what you hit for.
 
 ### Changed
 - **Heavy: Devastation → Heavy: Reach** (same `hv-rad` card). The heavy's only shape card now lengthens
-  its forward **reach** (`heavyLen`, +8 px/pick, uncapped) instead of widening its fan (`heavyWidth`) —
-  the less-loved axis. The freed "Heavy: Devastation" name is reused by the new heavy %damage card above.
+  its forward **reach** (`heavyLen`, +8 px/pick) instead of widening its fan (`heavyWidth`) — the
+  less-loved axis. The freed "Heavy: Devastation" name is reused by the new heavy %damage card above.
+- **All level-up cards are now uncapped — pool-wide** (Josh's call, part of item 0b). Every pick cap is
+  removed from the passive, skill, and Grit pools; the draft RNG is the only governor, so stacking one
+  card into a monster run is the rare lucky payoff, not the norm. Safe without new code: the degenerate
+  states were already guarded independently of caps — crit chance hard-clamps at 75%, global cooldown at
+  99% (`wildDexCdMult`), per-skill cooldown/speed reductions floor in `SKILL_STAT_FLOOR` (incl. the
+  `wwCooldown`/`leapCooldown` floors the roadmap flagged as a gap — audit found them already in place),
+  and Grit's trigger streak floors at 2.
 - **Wolves hit harder early (roadmap item 4).** A wolf camp is now a genuine risk-vs-reward gamble
   instead of free loot: direwolf 26→38 hp, bite 10→15; alpha wolf 72→105 hp, bite 17→25. The direwolf
   now sits between a goblin and a warrior; the alpha is clearly elite. Telegraphs, speeds, and contact
