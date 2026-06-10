@@ -57,6 +57,25 @@ serves the stale image).
 > **Lesson:** QA a fringe metric against the idle's FULL ring (`8≤α<245`), never a soft sub-band, and
 > trust the over-ground render — not the number alone.
 
+> **Follow-up (Artist, 2026-06-10 — item 3's `--shadow-lum 16` was insufficient; boots still eaten):**
+> Josh flagged `warrior-se` (head) and `playerwalk2-ne` (foot) as broken and suspected the *new* hurt/prop
+> slicing was corrupting existing PNGs. **It wasn't** — `git diff HEAD` was empty for both and the slicer
+> only ever writes `{id}-{dir}.png` for its `id` arg (proven). `warrior-se` is a pre-existing original cut
+> (untouched since the externalize commit). But `playerwalk2-ne` **was** a real regression from this same
+> walk-halo session: a sweep of all 32 frames vs the pre-halo version showed **14 frames** lost foot area —
+> **E/W −31…−54%, SE/SW −11…−21%, the worst diagonals (ne2/ne4) −29%** — i.e. item 3's `--shadow-lum 16 /
+> --shadow-band 0.80` did **not** actually save the side/diagonal boots; the planted side-profile foot sits
+> deepest in the seed band. **Real fix:** re-cut E/NE/SE (+ mirrors W/NW/SW), 24 frames, with a tighter seed
+> **`--shadow-lum 13 --shadow-band 0.90`** (only the lum 3–13 shadow core, bottom 10% — boots at lum≥13
+> survive), then **re-ran defringe-v2** (the re-cut from the mp4 reintroduced the bright-grey halo, edge
+> ring ~125; back to ~17 after). Same frames/size 192/feet 189/match-bodyh 181 → registration + manifest
+> keys unchanged, **no `index.html` change**. N/S un-touched (0–2% loss, no baked shadow). **Lessons:**
+> (a) the feet-area pixel count is a *false metric* here — it conflates intended shadow removal with boot
+> loss, so the −44% was mostly shadow; verify boots by the **render**, not the count. (b) "boots survive"
+> in a backlog note is a claim to **re-measure across every affected facing**, not assert from the easy
+> frames. (c) an mp4 re-cut is **alpha+RGB** — it undoes any prior RGB-only defringe, so defringe must
+> follow every re-cut. Verify in-game with a hard-refresh.
+
 **Why NOT the suggested re-key:** tested and rejected — a `--tol` sweep (24→48) on the south set
 showed the figure pixel count collapsing (9.5k→4.8k) before the fringe got clean: the knight's
 neutral-grey steel sits inside any colour-distance that cuts the grey band (the same fg/bg-overlap
