@@ -1966,6 +1966,9 @@ const gKeys={}; let gMouseX=VW/2, gMouseY=VH/2;
 
 function gTileAt(tx,ty){if(tx<0||ty<0||tx>=gMapW||ty>=gMapH)return TILE_WALL;return gTiles[ty*gMapW+tx];}
 function gIsWalk(tx,ty){const t=gTileAt(tx,ty);return t===TILE_FLOOR||t===TILE_EXIT||t===TILE_GRASS||t===TILE_DIRT||t===TILE_TREE;}
+// Wolves are native climbers — rock outcrops (incl. their own den arcs) don't block them.
+// Everything else (hut walls, spike fences) still does, so village defenses hold.
+function gIsWalkWolf(tx,ty){return gIsWalk(tx,ty)||gTileAt(tx,ty)===TILE_ROCK;}
 // Returns 0.75 if the world position is inside a tree tile, 1 otherwise
 function gTreeSlow(wx,wy){return gTileAt(Math.floor(wx/T),Math.floor(wy/T))===TILE_TREE?0.75:1;}
 
@@ -2181,7 +2184,7 @@ function gAstar(sx,sy,gx,gy){
 }
 function gLos(x0,y0,x1,y1){const steps=Math.ceil(Math.hypot(x1-x0,y1-y0)/T)*2+1;for(let i=1;i<steps;i++){const t=i/steps;const cx=Math.floor((x0+(x1-x0)*t)/T),cy=Math.floor((y0+(y1-y0)*t)/T);if(cx<0||cy<0||cx>=gMapW||cy>=gMapH)continue;if(gBlocked[gCI(cx,cy)])return false;}return true;}
 function gSmooth(sx,sy,path){if(!path||!path.length)return path;const out=[];let fx=sx,fy=sy,i=0;while(i<path.length){let last=i;for(let j=i+1;j<path.length;j++){if(gLos(fx,fy,path[j].wx,path[j].wy))last=j;else break;}out.push(path[last]);fx=path[last].wx;fy=path[last].wy;i=last+1;}return out;}
-function gRC(wx,wy,r){let x=wx,y=wy;const tR=Math.ceil(r/T)+1,tcx=Math.floor(x/T),tcy=Math.floor(y/T);for(let dy=-tR;dy<=tR;dy++)for(let dx=-tR;dx<=tR;dx++){const tx=tcx+dx,ty=tcy+dy;if(gIsWalk(tx,ty))continue;const bx=tx*T,by=ty*T,nx=Math.max(bx,Math.min(x,bx+T)),ny=Math.max(by,Math.min(y,by+T));const dd=Math.hypot(x-nx,y-ny);if(dd<r&&dd>0.001){const nxx=(x-nx)/dd,nyy=(y-ny)/dd;x+=nxx*(r-dd+.5);y+=nyy*(r-dd+.5);}}return[x,y];}
+function gRC(wx,wy,r,isWalk=gIsWalk){let x=wx,y=wy;const tR=Math.ceil(r/T)+1,tcx=Math.floor(x/T),tcy=Math.floor(y/T);for(let dy=-tR;dy<=tR;dy++)for(let dx=-tR;dx<=tR;dx++){const tx=tcx+dx,ty=tcy+dy;if(isWalk(tx,ty))continue;const bx=tx*T,by=ty*T,nx=Math.max(bx,Math.min(x,bx+T)),ny=Math.max(by,Math.min(y,by+T));const dd=Math.hypot(x-nx,y-ny);if(dd<r&&dd>0.001){const nxx=(x-nx)/dd,nyy=(y-ny)/dd;x+=nxx*(r-dd+.5);y+=nyy*(r-dd+.5);}}return[x,y];}
 // Push circle out of unbroken destructibles (circle-circle collision)
 function gRCDestructibles(wx,wy,r){
   let x=wx,y=wy;
@@ -2639,11 +2642,11 @@ const EntityDefs = {
   // They are NEUTRAL (isNeutral): ignore the player until the camp is hit; the AI lives in
   // _aiWolf, NOT _aiGoblin (both are in the goblin-AI exclusion list at gUpdateEnemies).
   direwolf: {
-    hp:             26,
+    hp:             38,    // between goblin (30) and warrior (80) — a camp is a fight, not free loot
     radius:         12,    // body hitbox — kept just inside the quadruped draw box
     speedMin:       0.34,  // fast — clearly quicker than a goblin (0.193); the "flanker" feel
     speedRange:     0.07,
-    meleeDamage:    10,    // the lunge-bite
+    meleeDamage:    15,    // the lunge-bite — chunks like a warrior swing; the crouch tell keeps it fair
     meleeCooldown:  70,
     biteReach:      54,    // px in front the pounce-bite lands (reach + half-arc gate)
     biteArc:        0.50,  // half-angle of the bite cone (rad)
@@ -2659,11 +2662,11 @@ const EntityDefs = {
     favor:          { chance:0.04, min:1, max:1 },   // goblin-tier trickle
   },
   alphawolf: {
-    hp:             72,
+    hp:             105,   // clearly above warrior (80) — an elite you must respect
     radius:         18,    // larger body — the standout that guards the chest
     speedMin:       0.28,  // still fast, but heavier than a direwolf
     speedRange:     0.05,
-    meleeDamage:    17,    // harder bite
+    meleeDamage:    25,    // harder bite — a real chunk; punished by the slower tell
     meleeCooldown:  90,
     biteReach:      66,
     biteArc:        0.55,
@@ -4722,6 +4725,8 @@ function _aiGoblin(e, dt){
 // HARD LEASH: drag the fight too far from the den (or die) and the whole pack disengages,
 // FULL-HEALS, and walks home — you fight a camp at its camp, or you leave it. Both wolf types
 // share this AI (EnemyRegistry maps both to _aiWolf); per-type numbers come from EntityDefs.
+// NATIVE TO THE LAND: wolves climb over rocks (gIsWalkWolf — incl. their own den arcs, the
+// old stuck-on-the-den bug) and destructibles, and take no forest tree-slow. Nothing stops them.
 const WOLF_LEASH_R = 17*T;   // px from the camp centre before the pack gives up and heals
 function _aiWolf(e, dt){
   const d = EntityDefs[e.defId] || EntityDefs.direwolf;
@@ -4755,8 +4760,8 @@ function _aiWolf(e, dt){
       if(ad>T*0.5){ e.vx+=(adx/ad)*0.22*dt; e.vy+=(ady/ad)*0.22*dt; }
     }
     if(Math.hypot(e.vx,e.vy)>.2){e.walkTimer++;if(e.walkTimer%8===0)e.walkFrame=(e.walkFrame+1)%4;}else{e.walkFrame=0;e.walkTimer=0;}
-    {const _ts=gTreeSlow(e.wx,e.wy);e.wx+=e.vx*_ts*dt;e.wy+=e.vy*_ts*dt;}
-    let[whx,why]=gRC(e.wx,e.wy,e.r);[whx,why]=gRCDestructibles(whx,why,e.r);e.wx=whx;e.wy=why;
+    e.wx+=e.vx*dt;e.wy+=e.vy*dt;                       // native: no tree-slow
+    let[whx,why]=gRC(e.wx,e.wy,e.r,gIsWalkWolf);e.wx=whx;e.wy=why;   // climbs rocks & destructibles
     return;
   }
 
@@ -4813,8 +4818,8 @@ function _aiWolf(e, dt){
     if(gHitPlayer(d.contactDamage,40,4,6,'#d6dde8','#9aa6b8')) e.contactCd=d.contactCooldown;
   }
 
-  {const _ts=gTreeSlow(e.wx,e.wy);e.wx+=e.vx*_ts*dt;e.wy+=e.vy*_ts*dt;}
-  let[ex2,ey2]=gRC(e.wx,e.wy,e.r);[ex2,ey2]=gRCDestructibles(ex2,ey2,e.r);[ex2,ey2]=gRCTraps(ex2,ey2,e.r);e.wx=ex2;e.wy=ey2;
+  e.wx+=e.vx*dt;e.wy+=e.vy*dt;                         // native: no tree-slow
+  let[ex2,ey2]=gRC(e.wx,e.wy,e.r,gIsWalkWolf);[ex2,ey2]=gRCTraps(ex2,ey2,e.r);e.wx=ex2;e.wy=ey2;   // climbs rocks & destructibles; traps still block
 }
 
 // Wake the whole pack when any member is hit (camp-linked aggro). Called from the damage

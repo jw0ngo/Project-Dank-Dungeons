@@ -28,8 +28,8 @@ second god) stays parked because the playtest proved we don't need it yet.
 | **0b** | **Combat card pass** — per-skill dmg cards (Swing/Heavy) + Heavy: Reach + **pool-wide cap removal** | 🔧 In progress | Quick | Build identity in the draft + lucky-run variance; RNG governs (caps removed) |
 | **1** | **Make late-game dangerous** — enemies scale harder + glow yellow→red as they get deadly | ✅ Approved | Multi-session | Fixes the flat difficulty curve (playtest weak point #1) |
 | **2** | **Imbue Paths** — turn each fire skill into a 10-level mastery tree with branching upgrades | ✅ Approved — cleared for build | Large, phased | Fixes boring level-ups; the heart of "build your own playstyle" (#2) |
-| **3** | **Wolves stop getting stuck** on their dens + ignore forest slow | ✅ Approved | Quick | Bug fix — unblocks wolf playtesting |
-| **4** | **Wolves hit harder early** | ✅ Approved | Quick | Makes a wolf camp a real risk, not free loot |
+| **3** | **Wolves stop getting stuck** on their dens + ignore forest slow | 🔧 Built — awaiting push | Quick | Bug fix — unblocks wolf playtesting |
+| **4** | **Wolves hit harder early** | 🔧 Built — awaiting push | Quick | Makes a wolf camp a real risk, not free loot |
 | **5** | **Boreas** — a second god (ice/control) | ⏸️ Held | Multi-session | Parked — the playtest showed we don't need it yet |
 
 ---
@@ -210,7 +210,7 @@ control. It's what *"To Dust"* means — old gods to dust, new powers born from 
 
 ### 3. Wolves stop getting stuck
 
-`✅ approved` (2026-06-09, pre-greenlit bug fix) · **Size:** quick · **Pillar:** game feel · **Art:** none
+`🔧 built` (eng 2026-06-10 — awaiting push; flips to shipped then) · **Size:** quick · **Pillar:** game feel · **Art:** none
 
 **What:** Wolves are currently getting trapped on the rocky dens they spawn in. We'll let them climb over
 obstacles to reach the player, and make them **unhindered by the forest** (no slowdown in trees) — they're
@@ -230,7 +230,7 @@ inevitable, exactly like the pack-flanker they're meant to be. Fixing this unblo
 
 ### 4. Wolves hit harder early
 
-`✅ approved` (2026-06-09, pre-greenlit balance) · **Size:** quick · **Pillar:** mastery · **Art:** none
+`🔧 built` (eng 2026-06-10 — awaiting push; flips to shipped then; tuned dire 38hp/15 bite · alpha 105hp/25 bite) · **Size:** quick · **Pillar:** mastery · **Art:** none
 
 **What:** Wolves are too soft at the start of a run, so a wolf camp is free loot instead of a real fight.
 Bump their early-game health and bite damage so clearing a camp is a genuine **risk-vs-reward gamble.**

@@ -23,6 +23,17 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 - **Heavy: Devastation → Heavy: Reach** (same `hv-rad` card). The heavy's only shape card now lengthens
   its forward **reach** (`heavyLen`, +8 px/pick, uncapped) instead of widening its fan (`heavyWidth`) —
   the less-loved axis. The freed "Heavy: Devastation" name is reused by the new heavy %damage card above.
+- **Wolves hit harder early (roadmap item 4).** A wolf camp is now a genuine risk-vs-reward gamble
+  instead of free loot: direwolf 26→38 hp, bite 10→15; alpha wolf 72→105 hp, bite 17→25. The direwolf
+  now sits between a goblin and a warrior; the alpha is clearly elite. Telegraphs, speeds, and contact
+  chip are unchanged — the crouch-tell dodge window is what keeps the bigger bite fair.
+
+### Fixed
+- **Wolves no longer get stuck on their dens (roadmap item 3).** Wolves are native to the land: they
+  now climb over rocks (a wolf-specific walk predicate, `gIsWalkWolf`, threaded through the shared
+  `gRC` tile resolver — including the den's own rock arc, which steering-only wolves used to pin
+  themselves against) and over destructibles, and forest tree-slow no longer applies to them. Hut
+  walls, spike fences, and traps still block, so village defenses hold.
 
 ## [0.4.0] - 2026-06-10
 
