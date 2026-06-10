@@ -14,6 +14,33 @@ This is the parking lot for findings we spot while doing other work but delibera
 
 ## Art / sprites
 
+### 🟢 UNWIRED ART INVENTORY (audit 2026-06-10) — prepped + committed to `assets/`, zero refs in `index.html`
+
+A batch of Artist-prepped art is committed to `assets/` but **not referenced anywhere in `index.html`**
+(verified: the whole `ART_MANIFEST` wires only `tile.grass`/`tile.floor`/`tile.dirt` + `world.shrine` +
+the character sprites). No engineering handoff was queued for most of it, so it was untracked until this
+audit. Each row is a wiring to-do; they are **not** all the same kind of work (tiles auto-wire; props need
+per-object draw hooks). The two pre-existing handoffs below (hurt poses, chests+coin) are the only parts
+that were already tracked.
+
+| Asset set | Files | Commit | Wiring path / effort |
+|---|---|---|---|
+| **Rock tiles** | `assets/tile/rock-0..8` (9) | `c7ddc67` | Tile-art path — add `tile.rock.0..8` manifest keys; `gTileArt`/`gTileVarCount` auto-wire. Replaces the procedural `R` (rock) tile draw. **Mostly mechanical.** |
+| **Wooden spike-fence tiles** | `assets/tile/spike-0..8` (9) | `c7ddc67` | Same tile-art path — `tile.spike.0..8`. Replaces the procedural `S` (spike) tile. **Mostly mechanical.** |
+| **Cobble tiles** | `assets/tile/cobble-0..3` (4) | `2da0b0a` | Same — `tile.cobble.0..3`. Confirm which logical tile char maps to cobble (Sanctum floor?) before wiring. |
+| **Sanctum set-piece props** | `assets/world/`: `well`, `fountain`, `barrel`, `banner-large`, `banner-small`, `dungeon-gate`, `market-stall`, `target-stand`, `todust-sign`, `torch-post`, `training-dummy`, `weapon-rack` (12) | `2da0b0a` | **Per-prop work** — each is a town set-piece needing a draw hook (most town props load via a separate pipeline, not the manifest; only `world.shrine` is a manifest entry today). Check whether each currently renders procedurally and is meant to *replace* that draw. Raster art → draw at `devicePixelRatio` (`_prepHiDPICanvas`). **Some of these map to existing town objects** (training-dummy, target-stand, weapon-rack, torch-post, well, fountain) — confirm the object exists and where it's drawn before wiring. |
+
+**Why deferred / how to pull:** the tile sets (rock/spike/cobble) are the cheap, mechanical win — wire them
+as a batch through the tile-art path and verify by render (no 404s + the variant pattern reads). The Sanctum
+props want a per-prop pass (confirm the draw site for each, decide procedural-replace vs new object) and are
+better sized as their own focused session. **Scope/priority note:** which props matter and whether they
+replace procedural draws is partly an art-direction/PM call — confirm before a big wiring sweep.
+
+**Cross-ref:** the chest/coin (`world.favorcoin`/`chest-closed`/`chest-open`) and the enemy hurt poses are
+tracked separately in the two handoff entries immediately below (also still unwired).
+
+---
+
 ### 🟢 ENGINEER HANDOFF (Artist → Eng, 2026-06-10) — wire the enemy HURT pose sprites
 
 Art is committed (`art(enemies): hurt-pose sprite sheets…`): 32 cutouts in `assets/char/<id>hurt-<dir>.png`
@@ -169,16 +196,6 @@ diagnosis; ask the engineer to re-verify or fold it into the slicer's `--compare
 
 ---
 
-## Wilderness / spawning
-
-### 🟡 All 40 wolf camps spawn their packs up front (~160 always-live enemies)
-`goWilderness` calls `_wolfSpawnPack` for **every** camp at run start, and camp wolves are despawn-exempt (`campId` set), so ~160 wolves sit in `gEnemies` for the whole run — running AI + separation every frame even when far off-screen. This already bit the **night stream** (the siege live-cap census counted them and starved the stream — fixed by excluding `campId`/`isHeld` in `gWildSpawnTick`), but the perf cost (and the conceptual oddity of every den being "loaded" at once) remains.
-
-**Why deferred:** the stream bug is fixed without it; lazy spawning changes the wolf system's lifecycle and wants its own focused pass + playtest.
-**Fix:** spawn a camp's pack lazily when the player nears (mirror the village/ambient pattern), despawn when far, and persist `cleared`/`respawnAt` on the camp so the 3-min cycle survives unload. Keeps the "fixed, revisitable den" model while bounding live-enemy count.
-
----
-
 ## Character / inventory screen
 
 ### 🟢 Your own custom sprite is invisible to you (only other players see it)
@@ -205,6 +222,16 @@ a CD/PM call, not an engineer drive-by.
 ## Resolved
 *(Move items here with a date when fixed, or just delete them — git history is the real record.)*
 
+- **2026-06-10 — Wolf camps stream their packs in/out instead of all spawning up front.** `goWilderness`
+  no longer pre-spawns all 40 packs (~160 always-live wolves). `gUpdateWolfCamps` now instantiates a
+  camp's pack when the player comes within `WOLF_CAMP_SPAWN_R` (45 tiles) and sheds a *pristine* pack
+  (none dead, none engaged) once they pass `WOLF_CAMP_DESPAWN_R` (62 tiles) — both well outside the
+  22.6-tile leash, so a struck pack leashes home + de-aggros before it's shed and half-fought/cleared
+  state is preserved. Per-camp `cleared`/`respawnAt`/`chest`/`_wolves` live on `gWildCamps`, so the
+  3-min clear→reward→respawn cycle survives unload; the rock crescent (tile layer) + chest still render
+  at any range. New `camp._spawned` flag tracks instantiation; respawn now just clears the cooldown and
+  lets the streaming spawn re-arm the den. `node --check` + grep-verified; behavior canary
+  (`Sim.batch`) is browser-side.
 - **2026-06-09 — `slice-turnaround.py` is path-native.** The slice tool now writes its 8 cutouts
   straight into `assets/char/` as `<id>-<dir>.png` (hyphen = manifest convention) and emits a path-based
   `'char.<id>.<dir>':'assets/char/<id>-<dir>.png',` snippet — base64 encode step removed, `import io`/
