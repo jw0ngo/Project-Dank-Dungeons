@@ -2384,8 +2384,10 @@ const WeaponRegistry = {
     // Smash — overhead rectangular slam (right-click)
     heavyDamage:  40,     // base damage (uncharged)
     heavyDamageMax: 80,   // fully charged damage (2× base)
-    heavyLen:     56,     // base rectangle length (px) — grows to 2× when fully charged
+    heavyLen:     56,     // base rectangle length (px) — grows to 2× when fully charged; +reach via Heavy: Reach card
     heavyWidth:   18,     // rectangle half-width each side (px)
+    swingDmgPct:   0,     // +% normal-swing damage from the Swing: Bite card (skillMod, specialist premium over Bloodlust)
+    heavyDmgPct:   0,     // +% heavy-attack damage from the Heavy: Devastation card (skillMod)
     heavyDur:     26,     // frames of the ACTIVE smash swing (lunge + hitbox + sword extend)
     heavyRecover: 26,     // planted recovery lock AFTER the swing — committed/exposed, no move/act
                           //   (heavyDur+heavyRecover = the full commitment window; recovery doubles it)
@@ -3389,7 +3391,7 @@ function gDoSwing(){
 function gDoSwingAt(aimAngle){
   if(!gPlayer||gPlayer.swinging||gPlayer.swingCooldown>0||gPlayer.wwActive||gPlayer.dead)return;
   const _dbuf = (gPlayer.wildBuffs && (1+(gPlayer.wildBuffs.damagePct||0)/100))||1;
-  const dmg   = Math.round(W().baseDamage * _dbuf);
+  const dmg   = Math.round(W().baseDamage * _dbuf * (1 + pSkillStat(gPlayer,'swingDmgPct')/100));
   gPlayer._chargeDmg=dmg;
   gPlayer.swinging=true;gPlayer.swingTimer=0;gPlayer.swingDir*=-1;
   gPlayer.swingAimAngle=aimAngle;
@@ -3821,7 +3823,7 @@ function _fireHeavyAtk(p){
   const r = p.heavyChargeRatio;
   const chargedLen = pSkillStat(p,'heavyLen') * (1 + r);
   const _dbuf = (p.wildBuffs && (1+(p.wildBuffs.damagePct||0)/100))||1;   // obelisk + level-up %damage
-  const chargedDmg = Math.round((W().heavyDamage + (W().heavyDamageMax - W().heavyDamage) * r) * _dbuf);
+  const chargedDmg = Math.round((W().heavyDamage + (W().heavyDamageMax - W().heavyDamage) * r) * _dbuf * (1 + pSkillStat(p,'heavyDmgPct')/100));
   p._heavyChargedLen = chargedLen;
   p._heavyChargedDmg = chargedDmg;
   p.heavyRect = {
@@ -10855,10 +10857,12 @@ function _charSkillDetail(skill){
   let dmgLine = '';
 
   if(skill.id === 'swing'){
-    dmgLine = `Damage: ${Math.round(W.baseDamage * _dbuf)}`;
+    const swMult = 1 + pSkillStat(p,'swingDmgPct')/100;          // Swing: Bite card
+    dmgLine = `Damage: ${Math.round(W.baseDamage * _dbuf * swMult)}`;
   } else if(skill.id === 'heavy'){
-    const base = Math.round(W.heavyDamage    * _dbuf);
-    const max  = Math.round(W.heavyDamageMax * _dbuf);
+    const hvMult = 1 + pSkillStat(p,'heavyDmgPct')/100;          // Heavy: Devastation card
+    const base = Math.round(W.heavyDamage    * _dbuf * hvMult);
+    const max  = Math.round(W.heavyDamageMax * _dbuf * hvMult);
     dmgLine = `Damage: ${base} – ${max}`;
   } else if(skill.id === 'ww'){
     const d = Math.round(pSkillStat(gPlayer,'wwDamage') * _dbuf);
@@ -12305,10 +12309,14 @@ const SKILL_CARDS = [
     apply(p,v){ _addSkillMod(p,'smearOuter', v); } },
   { id:'sw-spd',   cat:'skill', cap:6, icon:'⚔', name:'Swing: Tempo',     base:6, frac:false, fmt:v=>`Swing +${v}% attack speed`,
     apply(p,v){ _addSkillMod(p,'swingSpdPct', v); } },
+  { id:'sw-dmg',   cat:'skill', cap:6, icon:'⚔', name:'Swing: Bite',      base:8, frac:false, fmt:v=>`Swing +${v}% damage`,
+    apply(p,v){ _addSkillMod(p,'swingDmgPct', v); } },
   { id:'hv-chg',   cat:'skill', cap:5, req:()=>gIsSkillUnlocked('heavy'), icon:'🔨', name:'Heavy: Quickdraw',  base:8, frac:false, fmt:v=>`Heavy +${v}% charge speed`,
     apply(p,v){ _addSkillMod(p,'heavyChgPct', v); } },
-  { id:'hv-rad',   cat:'skill', cap:6, req:()=>gIsSkillUnlocked('heavy'), icon:'🔨', name:'Heavy: Devastation', base:6, frac:false, fmt:v=>`Heavy +${v} blast radius`,
-    apply(p,v){ _addSkillMod(p,'heavyWidth', v); } },
+  { id:'hv-rad',   cat:'skill', cap:6, req:()=>gIsSkillUnlocked('heavy'), icon:'🔨', name:'Heavy: Reach', base:8, frac:false, fmt:v=>`Heavy +${v} reach`,
+    apply(p,v){ _addSkillMod(p,'heavyLen', v); } },
+  { id:'hv-dmg',   cat:'skill', cap:6, req:()=>gIsSkillUnlocked('heavy'), icon:'🔨', name:'Heavy: Devastation', base:8, frac:false, fmt:v=>`Heavy +${v}% damage`,
+    apply(p,v){ _addSkillMod(p,'heavyDmgPct', v); } },
   { id:'dash-cd',  cat:'skill', cap:5, req:()=>gIsSkillUnlocked('dash'), icon:'💨', name:'Dash: Recovery', base:12, frac:false, fmt:v=>`Dash −${(v/60).toFixed(1)}s cooldown`,
     apply(p,v){ _addSkillMod(p,'evasionCooldown', -v); } },
   { id:'dash-dist',cat:'skill', cap:5, req:()=>gIsSkillUnlocked('dash'), icon:'💨', name:'Dash: Momentum', base:14, frac:false, fmt:v=>`Dash +${v}px distance`,

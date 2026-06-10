@@ -7,6 +7,21 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+### Added
+- **Combat card pass — per-skill damage cards (roadmap item 0b).** The level-up draft gains its first
+  *commit-to-one-skill* damage choices, so a build can go deep on a single attack instead of only taking
+  the universal **Bloodlust** (+5% all damage). **Swing: Bite** (+8%/pick, cap 6 → +48%) buffs the normal
+  swing only; **Heavy: Devastation** (+8%/pick, cap 6 → +48%) buffs the heavy attack only. Per the
+  governing balance rule, a single-skill card out-%s the universal one (+8% vs +5%) so it's never strictly
+  dominated. Both write per-player skillMods (`swingDmgPct`/`heavyDmgPct`), stack multiplicatively on the
+  global %damage buff, are network-synced through the existing card-pick path, and flow into the
+  char-screen damage readout so the displayed numbers match what you hit for.
+
+### Changed
+- **Heavy: Devastation → Heavy: Reach** (same `hv-rad` card). The heavy's only shape card now lengthens
+  its forward **reach** (`heavyLen`, +8 px/pick, cap 6) instead of widening its fan (`heavyWidth`) — the
+  less-loved axis. The freed "Heavy: Devastation" name is reused by the new heavy %damage card above.
+
 ## [0.4.0] - 2026-06-10
 
 ### Added

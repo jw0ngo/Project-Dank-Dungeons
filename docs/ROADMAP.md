@@ -25,7 +25,7 @@ second god) stays parked because the playtest proved we don't need it yet.
 | # | What we're building | Status | Size | Why it matters |
 |---|---|---|---|---|
 | **0** | **Player animation pass** — directional walk, dash poses, heavy-attack windup | 🔧 In progress (pre-greenlit) | Ongoing | Game feel + the *weighty-combat* directive made visible; runs alongside the queue |
-| **0b** | **Combat card pass** — per-skill damage cards (Swing/Heavy) + Heavy: Reach retarget | ✅ Approved | Quick | Adds build identity to the draft (commit-to-a-skill vs. go-wide); cheap win |
+| **0b** | **Combat card pass** — per-skill damage cards (Swing/Heavy) + Heavy: Reach retarget | 🔧 In progress | Quick | Adds build identity to the draft (commit-to-a-skill vs. go-wide); cheap win |
 | **1** | **Make late-game dangerous** — enemies scale harder + glow yellow→red as they get deadly | ✅ Approved | Multi-session | Fixes the flat difficulty curve (playtest weak point #1) |
 | **2** | **Imbue Paths** — turn each fire skill into a 10-level mastery tree with branching upgrades | ✅ Approved — cleared for build | Large, phased | Fixes boring level-ups; the heart of "build your own playstyle" (#2) |
 | **3** | **Wolves stop getting stuck** on their dens + ignore forest slow | ✅ Approved | Quick | Bug fix — unblocks wolf playtesting |
@@ -67,7 +67,7 @@ whiffing reads as the exposed, planted moment it's meant to be. This runs **alon
 
 ### 0b. Combat card pass — per-skill damage cards + Heavy: Reach retarget
 
-`✅ approved` (2026-06-10, pre-greenlit tuning, Josh-directed) · **Size:** quick · **Pillars:** build-craft depth, game feel · **Art:** none
+`🔧 in-progress` (approved 2026-06-10; eng building 2026-06-10) · **Size:** quick · **Pillars:** build-craft depth, game feel · **Art:** none
 
 **What:** Three changes to the level-up draft, all in the existing card pools:
 1. **New "Swing: Bite"** — a +% damage card for the *normal swing only*.
@@ -87,9 +87,14 @@ generalist's pick (covers the whole kit); specific is the specialist's higher ce
 | Card | Scope | Per-pick | Cap | Max |
 |---|---|---|---|---|
 | Bloodlust *(existing, unchanged)* | all damage | +5% | 8 | +40% |
-| **Swing: Bite** *(new)* | swing only | **+8%** | 6 | +48% |
-| **Heavy: Devastation** *(new)* | heavy only | **+8%** | 6 | +48% |
-| **Heavy: Reach** *(retarget of old Devastation)* | heavy length | +8 px/pick | 6 | +48 px |
+| **Swing: Bite** *(new)* | swing only | **+8%** | **none** | uncapped |
+| **Heavy: Devastation** *(new)* | heavy only | **+8%** | **none** | uncapped |
+| **Heavy: Reach** *(retarget of old Devastation)* | heavy length | +8 px/pick | **none** | uncapped |
+
+**Caps removed (Josh, 2026-06-10):** these three cards are **uncapped** — balanced by the *draft RNG*
+(you're not reliably offered the card you want, so reliably stacking one is the rare, lucky-run payoff,
+not the norm). Safe to uncap because none touch a `SKILL_STAT_FLOOR` stat — damage has no degenerate
+floor and reach is geometric, so the worst case is a satisfyingly overpowered run, not a broken one.
 
 <details>
 <summary>🔧 Build notes (engineering)</summary>
