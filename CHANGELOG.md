@@ -7,6 +7,26 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+### Added
+- **Late-game danger pass — the difficulty curve now actually climbs (roadmap item 1).** Three layers,
+  per the Vampire-Survivors lesson (pressure = density + mix-shift + breakpoints, not one smooth knob):
+  - **Enemies finally hit harder as nights pass.** Audit finding: enemy *damage* never scaled at all —
+    `wildThreatMult` only ever touched HP/speed, so night 12 goblins hit like night 1. A new
+    `wildDmgMult` (+15%/night) applies at the `gDamagePlayer` chokepoint, so every source (melee,
+    arrows, bombs, fireballs, the MP client mirror) scales identically with zero per-site wiring.
+    Dungeons untouched (threat is 0 outside wilderness).
+  - **Steeper, denser nights.** HP slope ×0.25→×0.35/night; opening horde +10→+13/night (cap 60→72);
+    night stream +0.4→+0.6 enemies/sec/night; live cap +4→+5/threat (t12 night ≈ 128). Speed slope
+    unchanged — mobility creep feels unfair; density and damage carry the pressure.
+  - **The mix shifts — and flips.** Warriors arrive night 4 (was 5), shamans night 6 (was 7), elite
+    weights ramp ~60% harder, and at night 8+ the goblin backbone thins 100→60 so late nights read
+    elite-heavy instead of "more goblins."
+- **The danger tell — glowing enemy eyes.** Every wilderness enemy carries a `threatTier` flag stamped
+  at spawn (tier 1 at night 4+, tier 2 at night 8+) driving an additive eye-glow overlay: **yellow =
+  dangerous, red = deadly**. Cheap two-dot + halo pass (no gradients — the night field runs 100+
+  sprites). The flag is the contract; the rendered look is an engineer placeholder for the Artist to
+  restyle (PM→Artist handoff now unblocked).
+
 ## [0.5.0] - 2026-06-10
 
 ### Added

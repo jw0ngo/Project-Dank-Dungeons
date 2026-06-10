@@ -2696,6 +2696,8 @@ function _wildScaleEnt(e){
   e.maxHp = e.hp;
   // Speed boost — gentle
   e.speed = (e.speed||0.4) * wildSpeedMult();
+  // Danger tell (item 1): tier stamped at spawn → eye glow (1 yellow, 2 red) in gDrawThreatGlow.
+  e.threatTier = gWildThreatTier();
   return e;
 }
 
@@ -4092,7 +4094,7 @@ function _bombExplodeFeedback(b){
   gBombFireZones.push({wx:b.tx, wy:b.ty, radius:b.radius, life:300, maxLife:300});
   if(gPlayer&&!gPlayer.dead&&gPlayer.iFrames<=0){
     if(gWithin(gPlayer.wx-b.tx,gPlayer.wy-b.ty, b.radius+gPlayer.r)){
-      gDamagePlayer(b.damage, {iframes:12, number:{val:b.damage||40, col:'#ff6600'}});
+      gDamagePlayer(b.damage, {iframes:12, number:{col:'#ff6600'}});  // no explicit val — shows the threat-scaled dmg
     }
   }
 }
@@ -4528,6 +4530,10 @@ function checkDummyHit(wx, wy, r, dmg, col){
 function gDamagePlayer(dmg, opts){
   if(!gPlayer || gPlayer.dead) return false;
   opts = opts || {};
+  // Threat damage curve (item 1): the night number scales what enemies hit for. Applied here at
+  // the single chokepoint so every source (melee, arrows, bombs, fireballs, the MP client-side
+  // mirror) scales identically. wildThreatLevel is 0 outside wilderness → mult 1, dungeons untouched.
+  if(inWilderness) dmg = Math.round(dmg * wildDmgMult());
   gPlayer.hp = Math.max(0, gPlayer.hp - gShieldAbsorb(dmg));
   // No post-hit invincibility: taking damage never grants i-frames, so a swarm / repeated hits
   // can't be cheesed by a mercy-invuln window. (opts.iframes is intentionally ignored here.
@@ -7738,6 +7744,31 @@ function gDrawBombs(){
 }
 function gDrawEnemy(e){if(e.dead)return;const sx=e.wx-camX,sy=e.wy-camY;if(e._dpx===undefined){e._dpx=e.wx;e._dpy=e.wy;e._faceOct=2;}const _ddx=e.wx-e._dpx,_ddy=e.wy-e._dpy;if(_ddx*_ddx+_ddy*_ddy>0.04)e._faceOct=gOctant8(_ddx,_ddy);e._dpx=e.wx;e._dpy=e.wy;if(sx<-30||sx>VW+30||sy<-30||sy>VH+30)return;const by=bobY(e.walkFrame,Math.hypot(e.vx,e.vy)>.2);const flash=e.hitFlash>0?Math.min(1,e.hitFlash/8):0;const gs=(e.defId&&ENEMY_DRAW_SCALE[e.defId])||((e.defId&&e.defId!=='goblin')?PSCALE:PSCALE*1.333);gctx.save();gctx.globalAlpha=.2;gctx.fillStyle='#000';gctx.beginPath();gctx.ellipse(sx,sy+gs*.44,gs*.3,gs*.1,0,0,Math.PI*2);gctx.fill();gctx.restore();if(e.defId==='goblin'&&e.atkWindup>0){const _cr=EntityDefs.goblin.atkReach+12,_ca=EntityDefs.goblin.atkArc,_cf=1-e.atkWindup/(e.atkMax||1);gctx.save();gctx.translate(sx,sy);gctx.rotate(e.atkAngle||0);gctx.fillStyle='rgba(255,45,45,0.12)';gctx.beginPath();gctx.moveTo(0,0);gctx.arc(0,0,_cr,-_ca,_ca);gctx.closePath();gctx.fill();gctx.fillStyle='rgba(255,30,30,0.45)';gctx.beginPath();gctx.moveTo(0,0);gctx.arc(0,0,_cr*_cf,-_ca,_ca);gctx.closePath();gctx.fill();gctx.restore();}const _wolfBiting=(e.isDirewolf||e.isAlphawolf)&&(e.biteWindup>0||e.biteStrike>0||e._biteHold>0);const _bid=(e.defId==='goblin'&&(e.atkWindup>0||e.atkStrike>0))?'goblinatk':_wolfBiting?(e.defId+'atk'):(e.defId||'goblin');gDrawSprite(gDirBody(_bid,e._faceOct,SpriteRegistry.get(e.defId||'goblin').canvas||goblinSpr),e.wx,e.wy,gs,flash,by);const bw=PSCALE;gctx.fillStyle='#2a1010';gctx.fillRect(sx-bw/2,sy-PSCALE*.6,bw,1.5);gctx.fillStyle='#e05555';gctx.fillRect(sx-bw/2,sy-PSCALE*.6,bw*(e.hp/e.maxHp),1.5);}
 
+// ── Threat-tier eye glow (item 1's danger tell) — drawn OVER the enemy sprite ───────────
+// Two additive glow "eyes" above the body centre: yellow at tier 1 (nights 4-7), red at tier 2
+// (night 8+). Cheap on purpose (no gradients/shadowBlur — the night field runs >100 sprites).
+// ENGINEER'S PLACEHOLDER LOOK — the flag (e.threatTier) is the contract; the Artist owns the
+// final styling per the PM→Artist handoff.
+function gDrawThreatGlow(e){
+  const sx=e.wx-camX, sy=e.wy-camY;
+  if(sx<-30||sx>VW+30||sy<-30||sy>VH+30) return;
+  const col   = e.threatTier>=2 ? '#ff4030' : '#ffd84d';
+  const pulse = 0.55 + 0.35*Math.sin((gFrame + (e.flankPhase||e.r*7))*0.13);   // desync per enemy
+  const eyeY  = sy - e.r*1.15;            // head height, scaled off the body hitbox
+  const eyeDx = Math.max(2.5, e.r*0.28);  // eye separation
+  const eyeR  = Math.max(1.4, e.r*0.13);
+  gctx.save();
+  gctx.globalCompositeOperation='lighter';
+  gctx.globalAlpha = 0.75*pulse;
+  gctx.fillStyle = col;
+  gctx.beginPath();gctx.arc(sx-eyeDx,eyeY,eyeR,0,Math.PI*2);gctx.fill();
+  gctx.beginPath();gctx.arc(sx+eyeDx,eyeY,eyeR,0,Math.PI*2);gctx.fill();
+  // faint wide halo so the tell reads at a distance / in a dense pack
+  gctx.globalAlpha = 0.10*pulse;
+  gctx.beginPath();gctx.arc(sx,eyeY,e.r*0.9,0,Math.PI*2);gctx.fill();
+  gctx.restore();
+}
+
 function gDrawArcher(e){
   if(e.dead)return;
   const sx=e.wx-camX,sy=e.wy-camY;
@@ -7938,7 +7969,7 @@ function gRender(){
   if(inTown&&gTrainingDummy) drawables.push({y:gTrainingDummy.wy,draw:drawTrainingDummy,arg:gTrainingDummy});
   gDrawArrows();
   drawables.sort((a,b)=>a.y-b.y);
-  for(const d of drawables) d.draw(d.arg);
+  for(const d of drawables){ d.draw(d.arg); if(d.arg&&d.arg.threatTier&&!d.arg.dead) gDrawThreatGlow(d.arg); }
   gDrawFireRings(); // expanding fire rings (imbued whirlwind)
   gDrawFireWaves(); // fire arcs + burning-enemy flames, over entities
   gDrawFirePillars(); // Cilia heavy fire pillars
@@ -12072,12 +12103,27 @@ function wildXpToNext(level){
 
 // ── Threat scaling ────────────────────────────────────────────
 // Returns a multiplier for enemy stats based on current threat level.
-// HP and damage both scale; speed scales more gently.
+// HP scales steeply, damage moderately, speed gently — three separate dials
+// (mobility creep feels unfair; density + HP carry the pressure, damage makes
+// mistakes COST something late). Item 1: late-game danger.
 function wildThreatMult(){
-  return 1 + wildThreatLevel * 0.25;
+  return 1 + wildThreatLevel * 0.35;
 }
 function wildSpeedMult(){
   return 1 + wildThreatLevel * 0.08;
+}
+// Enemy→player damage curve — applied at the gDamagePlayer chokepoint (NOT stamped per-entity),
+// so every enemy damage source (melee, arrows, bombs, fireballs, MP client mirror) scales with
+// zero per-site wiring and no MP protocol change. 1 outside the wilderness (threat resets to 0).
+function wildDmgMult(){
+  return 1 + wildThreatLevel * 0.15;
+}
+// Threat TIERS — the visible danger tell (eye glow: 0 none · 1 yellow · 2 red). Stamped
+// per-enemy at spawn by _wildScaleEnt; gDrawThreatGlow renders it. Artist owns the look.
+const WILD_TIER1_THREAT = 4;   // nights 4-7: glow yellow
+const WILD_TIER2_THREAT = 8;   // night 8+:  glow red
+function gWildThreatTier(){
+  return wildThreatLevel >= WILD_TIER2_THREAT ? 2 : wildThreatLevel >= WILD_TIER1_THREAT ? 1 : 0;
 }
 
 // ── Grant XP on kill ─────────────────────────────────────────
@@ -12753,8 +12799,8 @@ function _wildOnNightBegin(){
 // Night opens with one big COMPACT goblin horde from a single direction, then a constant goblin
 // STREAM refills the field until dawn (Vampire-Survivors-style). These two knobs are the night
 // difficulty curve — scale freely.
-function _wildHordeSize(n){ return Math.min(60, 20 + (n - 1) * 10); }   // opening horde: night1=20, +10/night, capped for perf
-function _wildNightStreamRate(n){ return 1.5 + n * 0.4; }               // enemies/sec streaming in after the horde
+function _wildHordeSize(n){ return Math.min(72, 20 + (n - 1) * 13); }   // opening horde: night1=20, +13/night, capped for perf (item 1: steeper)
+function _wildNightStreamRate(n){ return 1.5 + n * 0.6; }               // enemies/sec streaming in after the horde (item 1: 0.4→0.6/night)
 
 // Threat-weighted enemy type for the night swarm (horde + stream). Goblins are always the
 // backbone; tougher types unlock and grow their share as the threat level (= night number)
@@ -12764,12 +12810,15 @@ function _wildSwarmType(){
   const t = wildThreatLevel;
   const pool = [];
   const w = (type, weight) => { for(let i = 0; i < weight; i++) pool.push(type); };
-  w('goblin', 100);                                       // backbone — always the majority
-  if(t >= 2) w('archer',  Math.min(40, (t - 1) * 6));     // ranged pressure
-  if(t >= 3) w('bomber',  Math.min(25, (t - 2) * 4));     // zone denial
-  if(t >= 5) w('warrior', Math.min(30, (t - 4) * 5));     // frontline bruisers
-  if(t >= 7) w('shaman',  Math.min(15, (t - 6) * 3));     // support / fireballs
-  if(t >= 6) w('king',    Math.min(4,  (t - 5)));         // rare miniboss spike, late nights only
+  // Item 1 (the VS lesson): pressure = density + MIX-SHIFT + breakpoints. Elites unlock earlier,
+  // ramp harder, and at the red-glow tier the goblin backbone thins so the mix FLIPS elite-heavy
+  // (t8+: ~125 elite weight vs 60 goblin — a late night reads completely differently to night 1).
+  w('goblin', t >= WILD_TIER2_THREAT ? 60 : 100);         // backbone — thins at the red tier
+  if(t >= 2) w('archer',  Math.min(40, (t - 1) * 8));     // ranged pressure
+  if(t >= 3) w('bomber',  Math.min(30, (t - 2) * 6));     // zone denial
+  if(t >= 4) w('warrior', Math.min(40, (t - 3) * 8));     // frontline bruisers (was t5 — now arrives with yellow glow)
+  if(t >= 6) w('shaman',  Math.min(20, (t - 5) * 5));     // support / fireballs (was t7)
+  if(t >= 6) w('king',    Math.min(5,  (t - 5)));         // rare miniboss spike, late nights only
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
@@ -12901,8 +12950,8 @@ function gWildPatrolTick(secs){
 // Max simultaneously-live siege enemies — the budget spawner throttles against this so
 // the roster trickles in instead of all appearing at once. Scales with the night.
 function wildCurrentCap(){
-  const base = 20 + wildThreatLevel * 4;
-  return wildIsNight ? Math.floor(base * 1.6) : base;
+  const base = 20 + wildThreatLevel * 5;   // item 1: 4→5/threat — density is the VS pressure dial
+  return wildIsNight ? Math.floor(base * 1.6) : base;   // t12 night ≈ 128 live — perf ceiling, mix-shift carries the rest
 }
 
 // Pick a random walkable spawn point just off the visible screen edge

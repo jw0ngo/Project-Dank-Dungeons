@@ -436,8 +436,10 @@ the two drift. Items with no spec (small fixes) keep their detail inline in the 
   system + Dance of Fire's full 4-endpoint tree; see [`specs/imbue-paths.md`](specs/imbue-paths.md)). Items
   3 & 4 are pre-greenlit and OK'd to ship *ahead* of the big two to unblock wolf playtesting.
 - **PM → ARTIST:** **eye-glow difficulty tell** (item 1) — enemy eyes glow **yellow (mid tier) → red (top
-  tier)**, an additive draw-layer tint (no new sprites). Engineer sets the per-enemy threat-tier flag;
-  Artist owns the look. Hand off once that flag exists.
+  tier)**, an additive draw-layer tint (no new sprites). **⚑ UNBLOCKED (eng 2026-06-10):** the flag
+  exists — `e.threatTier` (0/1/2, stamped in `_wildScaleEnt`; tiers at nights 4/8 via `WILD_TIER1_THREAT`/
+  `WILD_TIER2_THREAT`) — and a placeholder two-dot+halo render is live in `gDrawThreatGlow` (contract
+  comment inline). Restyle via a spec handed back to the engineer (sole `index.html` editor).
 - **PM → ENG (release housekeeping):** Favor shipped as **v0.2.0**; the Wolf Camps spine is still untagged
   in CHANGELOG `[Unreleased]`. Fold items 1–4 in and cut **v0.3.0** when they land (or tag wolf-camps alone
   first if it ships sooner). The Favor-coin art handoff (`fx.favor-coin` + HUD glyph for the placeholder
