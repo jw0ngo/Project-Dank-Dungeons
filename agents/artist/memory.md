@@ -3,6 +3,32 @@
 
 ---
 
+### 2026-06-10 — A pose's scale recommendation in a handoff must be a head/shoulder measurement, never bbox/body-fill
+
+- **Principle:** When handing off an action-pose sheet (wind-up, dash, swing — anything whose silhouette
+  differs from idle), the draw-mult I recommend to the engineer must come from **`python
+  tools/check-pose-scale.py <prefix>`** (mean of head-width and shoulder-width ratios vs idle, per facing),
+  **not** from bbox height, `bodyH`, or "body-fill" parity. `--match-bodyh` in the slicer is correct only
+  for idle-silhouette sheets (walk cycles); for a coiled/extended pose, bbox height lies about body size.
+  Paste the tool's `RECOMMEND draw-mult` and `feet-plant` lines into the handoff verbatim.
+- **Why:** I handed off the heavy WIND-UP recommending the swing's `1.3` mult, justified by a 0.736-vs-0.732
+  body-fill parity — and it rendered ~30% too big in-game (Josh flagged it). The coiled pose has a short
+  bbox but a normal-sized body: measured by head/shoulder it's already idle-sized in-cell (shoulder 90 vs
+  92), true mult ~1.07. Head and shoulder each alone are noisy and move *oppositely* across silhouettes
+  (a coil shrinks the head's bbox share, widens shoulders); their **mean** cancels it — verified because the
+  dash, correct at 1.0 in-game, measures head 1.12 / shoulder 0.88 / mean 1.00.
+- **How to apply:** every pose handoff includes the `check-pose-scale.py` output, and for a pose whose feet
+  sit above the cell bottom, the measured feet-plant (idle feetY − pose feetY) too. A body-fill / bbox figure
+  is never a scale spec — it's the trap that this exact bug keeps falling into. (Sibling to the idle-match
+  lesson below; user memory `sprite-size-consistency` + engineer memory updated with the same tool+gate.)
+- **Corollary — recovering overflow that won't fit forces a bigger frame, which is a COUPLED engineer change,
+  flag it loudly.** Same session: the heavy-swing back foot overflowed its 192 cell; recovering it (the
+  `--bleed` class — pixels existed in the sheet, not redrawn) made the full figure ~202px, so I re-cut all 8
+  facings to a **208** frame, body pixel-scale + feet baseline held identical. But `gDrawSprite` scales the
+  whole canvas, so the engineer's draw-mult had to grow by `208/192` (≈1.08×) or the body shrinks. I flagged
+  the exact ratio in the handoff — do that whenever a re-cut changes the canvas size, because "I preserved the
+  body scale" is *not* enough: the frame size is itself a render coupling.
+
 ### 2026-06-10 — A motion clip isn't a turnaround sheet: the separator and the registration both change
 
 - **Principle:** Slicing sprites from a generated **walk video** (vs a flat turnaround sheet) breaks two
