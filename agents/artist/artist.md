@@ -203,6 +203,16 @@ CLEAN/CHECK verdict; in `--sever` mode that metric over-reports (detail is bg-co
 trust the contact sheet. The recurring sprite bugs are exactly two: an **edge halo** (try `--erode`) or
 an **enclosed bg pocket** (try `--global`).
 
+**Variant sheets (props/tiles) use `tools/slice-variants.py`** — for a 3×3 sheet where **all 9 cells
+are occupied** and each is an interchangeable variant of one thing (9 rocks, 9 fence sections — same
+shape as the shipped 9-variant grass set). Cells number 0–8 in reading order; cutouts land in
+`assets/tile/<id>-<n>.png` and the snippet emits `'tile.<id>.<n>'` keys (the auto-wiring keyspace).
+It imports the cutout + QA logic from `slice-turnaround.py` (same `--global`/`--erode`/`--sever`
+flags), defaults to `--bg white --frame cell` (the cell IS the tile frame — preserves in-cell
+placement and relative scale across variants), and `--size 128` matches the shipped floor-tile res.
+For tile types whose ground isn't fully covered by the prop, note the **transparent-cutout layering**
+in the handoff: `gDrawTile`'s art path early-returns, so the engineer must draw the ground beneath.
+
 ### 3. Place the file + spec the wiring for the engineer
 Drop the cutout PNG into `assets/<kind>/`. Then hand the engineer a paste-ready `ART_MANIFEST` entry
 pointing at its path (`'char.goblin.n':'assets/char/goblin-n.png'`) — **you don't edit `index.html`; the
