@@ -137,6 +137,8 @@ erode for the halo).
 | Chunks of a sprite missing / fragmented | Interior detail shares the bg colour — lower `--thresh`; if detail truly matches the bg, `--sever N` (morphological channel cut) |
 | New pose renders bigger/smaller than idle | Source sheet drawn at a different zoom — match by front-view helmet width (not the bbox); re-slice `side` or feet-anchored draw mult |
 | Sprite clipped flat at a cell edge / limbs cut off | Figure drawn larger than its 3×3 cell, overflowing into the empty centre — `--bleed N` (cut on an expanded window, keep the cell's owner blob). Confirm overflow is past the cell, not the sheet edge, first |
+| User blames a visual bug on your recent code edits | Prove causation before accepting it: `git diff <session-base>..HEAD -- index.html` filtered for the render path (`gDrawSprite`/`drawAnyPlayer`/`_smooth`/composite) — often **zero** matches. Then measure the asset's alpha-fringe (8<α<200 band brightness) vs a known-good sibling — a baked-in keying halo (walk frames ~55, idle ~14) is an art-pipeline regression, not a code one |
+| A documented multiplier "doesn't scale" in play | Grep that the multiplier is *actually applied* — `wildThreatMult` was believed to scale HP+dmg but had ONE caller touching HP/speed only; enemy damage never scaled. A roadmap claim about scaling is a hypothesis until grep confirms the call-site exists |
 
 ---
 
@@ -206,6 +208,48 @@ but verify headless over HTTP.
 
 **Tooling friction:** `tools/slice-turnaround.py` still emits base64 manifest snippets — now a step behind
 the file-based pipeline (logged in `CLEANUP_BACKLOG.md`, flagged in `agents/artist/artist.md`).
+
+---
+
+## Session 17 — Card pass, wolf fixes, late-game danger, patron cards + a walk-halo diagnosis
+*June 10 2026 | engineer (alongside parallel PM + Artist sessions on the shared tree)*
+
+### Built (shipped v0.5.0 + uncommitted/awaiting-push)
+- **0b Combat card pass (shipped v0.5.0):** per-skill damage cards (Swing: Bite, Heavy: Devastation, both
+  +8% via new `swingDmgPct`/`heavyDmgPct` skillMods applied at `gDoSwingAt`/`_fireHeavyAtk` + the char-screen
+  readout), retargeted the old width card → **Heavy: Reach** (`heavyLen`). Then **removed pick caps
+  pool-wide** (27 cards, scripted) — draft RNG is the only governor; degenerate states were already
+  clamped/floored independently (crit 75%, CD 99%, `SKILL_STAT_FLOOR`, Grit streak ≥2).
+- **3+4 Wolf fixes (shipped v0.5.0):** wolves are native climbers — added an optional walk-predicate param
+  to `gRC` (default `gIsWalk`, zero change for other callers) and resolve wolves with `gIsWalkWolf` (rock
+  climbable) + skip `gRCDestructibles`/`gTreeSlow`; bumped base HP/bite (dire 26→38/10→15, alpha 72→105/17→25).
+- **1 Late-game danger (built, awaiting push):** new `wildDmgMult` (+15%/night) at the **`gDamagePlayer`
+  chokepoint** so every damage source scales with one edit; steeper HP/density/cap slopes; mix-shift
+  breakpoints (warriors n4, shamans n6, goblin backbone thins 100→60 at n8+); `e.threatTier` flag (0/1/2)
+  → `gDrawThreatGlow` yellow/red eye-glow tell.
+- **0c Patron Cards (built, awaiting push):** reusable `PATRON_CARDS` pool keyed by patron god, gated by
+  `gIsPatronActive`, ~25% draft injection swapping one fill slot. Cilia burn set: Conflagration (per-tick
+  detonation → `gBurnExplode` AoE+re-ignite chain), Lingering Flame (`burnDurMult`), Searing Heat
+  (`burnTickMult`); duration/tick applied in `gApplyEnemyBurn`, detonation rolled in `gUpdateEnemyBurn`
+  (already inside `gSimUpdate`). Host/SP-authoritative → no MP-protocol change.
+
+### Lessons
+- **A user attributing a visual bug to your edits is a hypothesis to test, not a fact to accept.** The
+  "walk sprites have a dark halo" report felt caused by my reload, but the session-wide `index.html` diff
+  had **zero** player-render lines and the assets were git-clean. Measuring the PNG alpha-fringe nailed it:
+  walk frames carry a wide mid-gray semi-transparent edge band (brightness ~55-64) vs the idle's tight dark
+  fringe (~14) — a slicer keying artifact, fixable by the Artist (the cleanly re-cut `-e`/`-w` frames at
+  ~22 prove it). Diagnosis = diff for causation + measure the asset against a known-good sibling; then hand
+  it to the owning role with the data (`CLEANUP_BACKLOG` "Art / sprites" + a roadmap ENG→ARTIST line).
+- **A roadmap's "X scales with threat" is a claim to grep, not a given — then fix at the chokepoint.** The
+  board said HP+dmg both scaled ×(1+0.25·night); `wildThreatMult` had a single caller touching HP/speed
+  only, so enemy *damage never scaled at all*. Applying the new `wildDmgMult` at the one `gDamagePlayer`
+  chokepoint covered melee/arrows/bombs/fireballs/MP-mirror with zero per-site wiring — the same
+  "one interface-narrow chokepoint" move that made the burn mods and the threat tell cheap.
+- **The shared tree carries other roles' WIP — commit only your lane, every time.** All session, the PM's
+  `imbue-paths.md`/`ROADMAP.md` edits and the Artist's `slice-turnaround.py` sat modified in the tree; the
+  release gate (`release.ps1`) refused to run with them dirty, so I `git stash push -- <path>` for the
+  exact Artist file across the tag, then popped it. Always stage explicit paths; never `git add -A`.
 
 ---
 

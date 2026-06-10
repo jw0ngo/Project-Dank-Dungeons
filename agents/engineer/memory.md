@@ -18,68 +18,49 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 
 ---
 
-### 2026-06-10 — When your metric is noisy and the user gives bracketing reports, triangulate from THEIR observations
+### 2026-06-10 — Measure sprite scale & art quality; never trust a handoff figure or an eyeball (consolidated)
 
-- **Principle:** If an automated measurement is unreliable for a case (the heavy-swing scale: the extended
-  sword inflates shoulder width, the pitched head corrupts the head band → per-facing 0.77..1.94), do **not**
-  override the user's in-game observations with a clever theory. Successive user reports often *bracket* the
-  truth: "it pops bigger" (at 1.3/192≈1.41/208) and then "it's smaller than idle" (at 1.16/208) pin the
-  answer between them — which is exactly the tool's idle-match (~1.31/208) that I'd dismissed as noise.
-- **Why:** I thrashed the swing mult 1.3→1.10→1.16→1.31 across three rounds because I kept reasoning from
-  corrupted numbers and a plausible-but-wrong "anchor it to the wind-up" shortcut, treating the tool's 1.31
-  as too-noisy-to-trust. The user's two plain observations had already fenced the value; trusting them sooner
-  would have skipped two iterations. The metric was noisy *and* the human signal was strong — I weighted them
-  backwards.
-- **How to apply:** when eyeball feedback and a shaky metric disagree, let the human reports set the bracket
-  and use the metric only to interpolate within it. Two contradictory-sounding reports ("too big" then "too
-  small") aren't the user being fickle — they're a binary search; take the midpoint. Reserve the confident
-  metric-over-eyeball move for cases where the metric is actually trustworthy (stable stances), not the
-  pathological ones.
+- **Principle:** Sprite-art numbers — a pose's draw-mult, a cutout's edge quality, a facing's scale — are
+  **measured against a known-good reference**, never trusted from a handoff or judged by eye. (1) **Draw-mult:**
+  before wiring any action-pose sheet, run `python tools/check-pose-scale.py <prefix> --mult M --plant P` to
+  exit 0; match idle *apparent* size by the **mean of head- and shoulder-width ratios** (pose-invariant) — never
+  bbox/`bodyH`/body-fill, which a different silhouette distorts. Each pose gets its own named const; coiled
+  stances also need a plant offset (= idle feetY − pose feetY). (2) **Cutout quality:** measure the alpha-fringe
+  (8<α<200 band brightness) against a clean sibling — a wide mid-gray band (~55) vs a tight dark one (~14) is a
+  keying halo, an *art* defect, not a render one. (3) **Role boundary:** slicing is the Artist's craft; the
+  engineer wires a **data-driven map** (`PLAYER_WALK_OCT`{octant→dir} + `char.<id>.<dir>` keys) so each variant
+  is a one-line wire and the Artist commits `assets/` independently of your `index.html`.
+- **Why:** the heavy wind-up shipped at `1.3` (copied from the swing on a bbox-fill parity in the handoff) and
+  rendered ~30% too big; I once *eyeballed* an overlay and grew+clipped a helmet — both "trusted a number I didn't
+  measure." The estimator validates against known-good art (the in-game-correct dash measures head/shoulder mean
+  1.00), and the metric can itself be noisy (an extended sword inflates shoulder width → per-facing 0.77..1.94).
+  **Gotcha:** `gDrawSprite` maps the WHOLE canvas to `PSCALE*mult`, so the mult is coupled to cell size — re-cut a
+  sheet to a new cell (192→208 to recover a foot) and the mult must re-scale `new/old`; re-run the tool.
+- **How to apply:** treat every scale/quality figure in a handoff as a hypothesis; verify with the tool before
+  wiring. **When a shaky metric and the user's eyeball disagree, let the user's reports set the bracket and the
+  metric interpolate within it** — two contradictory-sounding reports ("too big" then "too small") are a binary
+  search, take the midpoint; reserve metric-over-eyeball for trustworthy stable stances. When a recurring
+  art-wiring judgment keeps biting, encode it as a pass/fail measuring tool (normalised by the unit it compares
+  in) so the next session can't trust-the-eyeball back in. (Memories `sprite-size-consistency`, `sprite-pipeline-role-boundary`; raw originals in `archive/`.)
 
-### 2026-06-10 — A pose's draw-mult is a measured number with a gate, not a handoff figure you trust
+### 2026-06-10 — A user blaming a visual bug on your edits is a hypothesis to test, not a fact to accept
 
-- **Principle:** Before wiring the draw multiplier for any new action-pose sheet (`playeratk`/`playerheavy`/
-  `playerdash`/`playerheavywindup`/enemy poses), **run `python tools/check-pose-scale.py <prefix> --mult M
-  --plant P`** and make it pass (exit 0). The body must match idle *apparent* size by a pose-invariant
-  feature — the **mean of head-width and shoulder-width ratios** vs idle — never by bbox height / `bodyH` /
-  body-fill, which a different silhouette distorts. Give each pose its own named constant
-  (`WINDUP_DRAW_MULT`=1.07, `WINDUP_PLANT`=0.14·PSCALE) — don't reuse another pose's mult.
-- **Why:** the heavy WIND-UP shipped at `1.3` (copied from the swing, justified by a 0.736-vs-0.732
-  *bbox-fill* parity in the Artist handoff) and rendered ~30% too big — Josh flagged the pop immediately.
-  Measured properly, the coiled wind-up is already idle-sized in-cell (shoulder 90 vs idle 92); the true
-  mult is ~1.07. The head/shoulder *mean* is what's robust (each alone is noisy and they move oppositely):
-  the dash, correct in-game at 1.0, measures head 1.12 / shoulder 0.88 / mean 1.00 — that validated the
-  estimator against known-good art. The "match by helmet width not bbox" rule was *already* in memory but
-  unenforced, so a bbox-fill recommendation slipped through. The fix was to turn the rule into a tool+gate.
-- **How to apply:** treat any scale figure in an Artist handoff as a hypothesis, not a fact — verify it with
-  `check-pose-scale.py` before wiring. A pose whose feet sit above the cell bottom (coiled stances) needs a
-  downward plant offset too (= idle feetY − pose feetY; the tool reports it). **`gDrawSprite` maps the WHOLE
-  sprite canvas to `PSCALE*mult`, so the draw-mult is coupled to the canvas (cell) size: if a sheet is re-cut
-  to a different cell size (the heavy swing went 192→208 to fit a recovered foot), the mult must re-scale by
-  `new/old` (1.3→1.41-equiv) or the body silently shrinks/grows — RE-RUN the tool, which now normalises by
-  cell so it stays canvas-correct.** When a recurring art-wiring judgment keeps biting, encode it as a
-  measuring tool that emits a pass/fail, so the next session can't trust-the-eyeball its way back into the
-  bug — and make the tool normalise by the unit it compares in, or it gives confidently-wrong numbers the
-  moment an assumption (uniform canvas) breaks. (Sharpens the eyeball-vs-measure lesson below; user memory
-  `sprite-size-consistency` updated.)
-
-### 2026-06-10 — Wire variant art as a data-driven map, and let the Artist own the assets
-
-- **Principle:** When wiring directional/variant art (an 8-way walk cycle, per-element skins), make the
-  swap a **data-driven lookup** (`PLAYER_WALK_OCT = {octant→dir}` consulted each frame + `char.<id>.<dir>`
-  registry keys) rather than branching code. Each new asset is then a *one-line* wire, and — crucially —
-  the **Artist can commit the `assets/` files independently while the engineer commits only the
-  `index.html` wiring**. That seam let a parallel Artist session deliver/​re-cut sprites (E re-cut, W
-  mirror) with zero re-wiring on my side: same filenames → the manifest already pointed at them.
-- **Why:** This session I overstepped and *sliced* the first three directions as engineer — and promptly
-  misdiagnosed the East scale by **eyeballing an overlay instead of measuring**, bumped the scale, and
-  grew+clipped the helmet. The Artist's measured re-cut was cleaner. The boundary exists because slicing
-  is the Artist's craft; the engineer's job is the map + the keys. (Boundary recorded in user memory
-  `sprite-pipeline-role-boundary`.)
-- **How to apply:** If raw art (frame folders, a sheet, an `.mp4`) lands in an engineer session, hand the
-  slicing to `/artist`; keep your work to the registry/map wiring. Verify the handoff by *measuring*
-  (192² canvas, foot row, body span, no `top_row==0` clip), never by eye. Design the wiring so a new
-  variant = one map entry + its keys, and the two roles commit on their own side of the file boundary.
+- **Principle:** When a user attributes a visual regression to your recent work, **prove causation before you
+  accept or deny it** — with two cheap, decisive checks: (1) `git diff <session-base>..HEAD -- <artifact>`
+  filtered for the relevant code path (here the player-render path: `gDrawSprite`/`drawAnyPlayer`/`_smooth`/
+  composite) — it's often **zero** matches; (2) measure the suspect asset against a known-good sibling. Don't
+  argue from theory or timing; let the diff and the measurement decide, then hand the finding to the owning role
+  *with the data*.
+- **Why:** the "walk sprites have a dark halo, your latest edits did it" report felt plausible (livereload had
+  just reloaded after my commit) but was wrong: the whole-session `index.html` diff touched **no** player-render
+  line (the one render line added all session was a `save/restore`-wrapped, player-exempt composite op in the
+  enemy threat-glow), and `assets/char/` was git-clean. Measuring the PNGs settled it — walk frames carry a wide
+  gray fringe (~55-64) vs the idle's tight dark one (~14), a `slice-walk-cycle.py` keying artifact baked into the
+  art (fixable: the cleanly re-cut `-e`/`-w` frames measure ~22). Never my code.
+- **How to apply:** for "X looks wrong" reports, separate **render-path regression** (your lane — a session diff
+  proves/disproves) from **asset defect** (measure vs a sibling → owning role's lane); route the asset defect to
+  the Artist with the measured table + a roadmap handoff (`CLEANUP_BACKLOG` "Art / sprites") and re-verify on
+  redelivery. Generalises the eyeball-vs-measure discipline from *making* art to *diagnosing* it.
 
 ### 2026-06-10 — Settle the structure before rewiring references; structure determines the paths
 
