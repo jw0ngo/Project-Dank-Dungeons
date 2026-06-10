@@ -14,23 +14,48 @@ This is the parking lot for findings we spot while doing other work but delibera
 
 ## Art / sprites
 
-### ✅ RESOLVED 2026-06-10 — Player WALK cutouts had a loose gray halo (fixed by defringe, not re-keying)
+### ✅ RESOLVED 2026-06-10 — Player WALK cutouts had a loose gray halo + E/W shoe (defringe-v2 + boot-protected re-cut)
 
-**Resolution (Artist, two rounds):** the halo had TWO stacked causes; the fringe-brightness metric
-only saw the first.
-1. **Grey semi-transparent fringe** (all directions): fixed in place by the new
-   **`tools/defringe-sprite.py`** — luminance-clamps the fringe to the idle outline tone + `--trim`
-   kills semi-transparent smudge pixels >2.5px off the solid silhouette. Fringe lum now
-   **10.8–17.3** everywhere (idle range; was 53–133).
-2. **Opaque baked floor shadow, E/W only** (Josh's in-game report pinpointed it): the east clip's
-   cast shadow (lum 3–13, darker than its lum-26 backdrop) shipped as an opaque smudge trailing the
-   legs — invisible to the fringe metric (α=255) and untouchable by colour fixes. Fixed by re-cutting
-   E from the clip with the new **`--shadow-bg`** seeding in `slice-walk-video.py` (seeds the cast
-   shadow as definite bg) + re-mirroring W. Same frames (31/35/39/43), same registration
-   (feet y189, tallest body 181) → **no re-wiring**.
+**Resolution (Artist, three causes — each invisible to the previous fix's metric):**
+1. **Grey semi-transparent fringe** (all directions): `tools/defringe-sprite.py` luminance-clamps the
+   fringe to the idle outline tone. **defringe-v2 fix:** v1 clamped only `8<α<200` and its `--check`
+   measured the same soft band — but the visible halo is the **near-opaque rim** (`α 200–239`, bright
+   grey ~113 vs idle ~48), so v1 false-passed (measured "11" yet still haloed in-game). v2 covers the
+   full ramp to `α<245` (`FRINGE_HI`); a separate `SOLID_A=200` still drives `--trim`. **Always QA a
+   fringe metric against the idle's FULL ring (`8≤α<245` = 18–22), never a soft sub-band.**
+2. **Cast floor shadow** (the clip-derived dirs): the studio clip's cast shadow (lum 3–13, darker than
+   its lum-26 backdrop) shipped as an opaque smudge trailing the feet — invisible to the fringe metric
+   (α=255). Fixed by `--shadow-bg` seeding in `slice-walk-video.py` (seeds the shadow as definite bg).
+   **Extended to the DIAGONALS:** the first pass only re-cut E/W; NE/SE were still the pre-`--shadow-bg`
+   morning cuts (Josh's "diagonals still haloed"). Re-cut **E, NE, SE** from their source clips
+   (`east/northeast/southeast walk.mp4`) with `--shadow-bg`, re-mirrored **W, NW, SW**.
+3. **`--shadow-bg` ate the boot** (Josh's "part of the shoe isn't appearing", E/W): the shadow seed
+   keyed on `lum<bg_med-10` over the bottom *quarter* of the figure rect — the dark leather/steel boots
+   fall in that band and GrabCut removed the front shoe. **Fix:** an absolute darkness ceiling
+   `--shadow-lum` (default 16; the cast shadow is lum 3–13, boots are brighter) + a narrower
+   `--shadow-band` (0.80 = bottom 20%). Boots survive; shadow still removed.
 
-Engineer: `python tools/defringe-sprite.py --check "assets/char/playerwalk*.png"` + an in-game walk
-pass in all 8 directions (E/W especially).
+**State:** all 8 dirs full-ring fringe **14.9–17.4** (idle 18–22), boots intact, registration unchanged
+(size 192, feet 189, match-bodyh 181) → same filenames, **no `index.html` / manifest change, no
+re-wiring**. QA'd over forest + dirt ground at game scale (`art/player/_haloqa/FINAL_all8.png`). N/S have
+no source clip and weren't part of either report — left as-is (defringed). **Verify in-game with a
+hard-refresh** (`Ctrl+Shift+R`; the dev server sends no cache headers, so an in-place re-cut otherwise
+serves the stale image).
+
+> **Follow-up (Artist, 2026-06-10, same day — completes round 1):** round-1's "10.8–17.3" was a
+> **defringe-v1 false-pass**. v1 trusted every `α≥200` pixel as figure and clamped only the `8<α<200`
+> soft band, and its `--check` metric only measured that band — but the visible halo lives in the
+> **near-opaque rim** (`α 200–239`), which on the bad frames was bright grey (lum ~113 vs the idle's
+> ~48). So a haloed frame measured "clean" yet Josh still saw it in-game (E/W worst). **Fixed in
+> defringe-v2:** the clamp + metric now cover the full antialiased ramp to `α<245` (`FRINGE_HI`); a
+> separate `SOLID_A=200` still defines "solid body" for `--trim`. Re-ran all 32 frames →
+> **full-ring lum 12.2–17.3** (idle 18–22); QA'd over forest ground at game scale
+> (`art/player/_haloqa/QA-after_idle-vs-walk.png`), idle-vs-walk match confirmed e/s/n/se. This stacks
+> *on top of* round-2's `--shadow-bg` re-cut (alpha/geometry) — v2 is RGB-only, doesn't touch alpha.
+> **No re-wiring / no `index.html` change.** Verify in-game with a **hard-refresh** (`Ctrl+Shift+R` —
+> the dev server sends no cache headers, so an in-place re-cut otherwise serves the stale image).
+> **Lesson:** QA a fringe metric against the idle's FULL ring (`8≤α<245`), never a soft sub-band, and
+> trust the over-ground render — not the number alone.
 
 **Why NOT the suggested re-key:** tested and rejected — a `--tol` sweep (24→48) on the south set
 showed the figure pixel count collapsing (9.5k→4.8k) before the fringe got clean: the knight's

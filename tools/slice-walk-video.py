@@ -63,16 +63,25 @@ def load_frame(src, idx):
     return cache[1][idx]
 
 
-def grabcut_cut(rgba, iters=8, pad=14, erode=1, shadow_bg=False):
+def grabcut_cut(rgba, iters=8, pad=14, erode=1, shadow_bg=False, shadow_lum=16, shadow_band=0.80):
     """GrabCut foreground extraction. Returns (cut_rgba, fig_bool_mask).
 
     shadow_bg=True also seeds the figure's CAST FLOOR SHADOW as definite background:
     rect-init GrabCut keeps the shadow (it differs from the modelled backdrop — on the
     east clip the floor is lum ~26 and the shadow ~3-13, so it reads as 'figure'), and
     it ships as an OPAQUE dark smudge trailing the feet. Seed = neutral (channel spread
-    <=14), clearly darker than the border-median backdrop, and in the bottom quarter of
-    the figure rect — boots survive on colour (leather/steel aren't that dark-neutral)
-    and interior recesses survive via fill_holes."""
+    <=14), clearly darker than the border-median backdrop, and in the bottom band of the
+    figure rect.
+
+    BOOT PROTECTION (2026-06-10): v1 seeded the whole bottom QUARTER and keyed only on
+    `lum < bg_med-10` (~lum<16 on the east clip) — but the knight's dark leather/steel
+    BOOTS dip below that, so GrabCut ate the front shoe (Josh's report). Fix: an ABSOLUTE
+    darkness ceiling `shadow_lum` (default 16; the cast shadow is lum 3-13, boots are
+    brighter) AND a narrower bottom band `shadow_band` (default 0.80 → only the bottom
+    20%, where the floor shadow lives, not the boot uppers). Both are CLI-tunable
+    (`--shadow-lum` / `--shadow-band`) so a clip whose boots are darker can raise the
+    ceiling / lower the band without a code edit. Interior recesses survive via
+    fill_holes; QA the boots on the magenta contact sheet every time."""
     arr = np.asarray(rgba)
     rgb = arr[:, :, :3]
     img = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
@@ -95,7 +104,9 @@ def grabcut_cut(rgba, iters=8, pad=14, erode=1, shadow_bg=False):
         border = np.concatenate([lum_mean[0], lum_mean[-1], lum_mean[:, 0], lum_mean[:, -1]])
         bg_med = float(np.median(border))
         yy = np.arange(H)[:, None]
-        shadow = (spread <= 14) & (lum_mean < bg_med - 10) & (yy > rect[1] + 0.75 * rect[3])
+        # neutral + clearly-darker-than-bg + below an ABSOLUTE ceiling (protects boots) + bottom band
+        shadow = ((spread <= 14) & (lum_mean < bg_med - 10) & (lum_mean < shadow_lum)
+                  & (yy > rect[1] + shadow_band * rect[3]))
         mask[:] = cv2.GC_PR_BGD
         mask[rect[1]:rect[1] + rect[3], rect[0]:rect[0] + rect[2]] = cv2.GC_PR_FGD
         mask[shadow] = cv2.GC_BGD
@@ -157,6 +168,12 @@ def main():
     ap.add_argument("--shadow-bg", action="store_true",
                     help="seed the cast floor shadow as definite bg (clips where the shadow is "
                          "darker than the backdrop and ships as an opaque smudge at the feet)")
+    ap.add_argument("--shadow-lum", type=int, default=16,
+                    help="absolute lum ceiling for the shadow seed (default 16; raise if boots get "
+                         "eaten, lower if the shadow survives). Boots brighter than this are protected.")
+    ap.add_argument("--shadow-band", type=float, default=0.80,
+                    help="only seed shadow below this fraction of the figure rect (default 0.80 = "
+                         "bottom 20%%; raise toward 0.9 to spare the boot uppers)")
     ap.add_argument("--qa-dir", default=None)
     ap.add_argument("--assets", action="store_true", help="also copy finals into assets/char/")
     args = ap.parse_args()
@@ -171,7 +188,8 @@ def main():
 
     cuts, mets = [], []
     for i in sel:
-        cut, fig = grabcut_cut(load_frame(args.src, i), shadow_bg=args.shadow_bg)
+        cut, fig = grabcut_cut(load_frame(args.src, i), shadow_bg=args.shadow_bg,
+                               shadow_lum=args.shadow_lum, shadow_band=args.shadow_band)
         cuts.append(cut)
         mets.append(body_metrics(fig))
         cut.crop(cut.getbbox()).save(os.path.join(qa, f"_fullres_f{i}.png"))

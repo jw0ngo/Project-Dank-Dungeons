@@ -17,11 +17,22 @@ solid pixels are bright silver armour, not the outline — nearest-solid bleed p
 highlights outward and brightens the halo. Clamping is also a no-op on already-dark
 fringes, so clean sheets pass through unchanged (idempotent, safe on shipped art).
 
+THE RIM-BAND FALSE-PASS (fixed 2026-06-10, same-day follow-up): v1 trusted every α≥200 pixel as "figure"
+and clamped only the 8<α<200 band — but the most VISIBLE part of the antialiased
+silhouette is the near-opaque rim (α 200–239), and on the bad walk frames that rim
+was bright grey (lum ~113) while the idle's was dark (~48). v1 left it alone AND its
+--check metric only looked at α<200, so the halo measured "clean" (lum ~11) yet the
+eye still saw it. Fix: the edge band the clamp+metric cover now runs to FRINGE_HI=245
+(the whole antialiased ramp, not just the soft half), so the rim is darkened too and
+the metric can't false-pass. A separate SOLID_A=200 still defines the "solid figure
+body" for --trim's distance field (that behaviour is unchanged). VERIFY against the
+idle's FULL-ring lum (8≤α<245 = 18–22), not the old soft-band number.
+
 Alpha, geometry, frame size, and registration are untouched — same filenames, no
 re-wiring.
 
-Prints the QA metric per file (avg lum + px count of the 8<α<200 edge band,
-before → after). Target for the knight sheets: avg ≲ 20 (the idle's 13–16).
+Prints the QA metric per file (avg lum + px count of the 8<α<245 edge band,
+before → after). Target for the knight sheets: avg <= 20 (the idle's full ring).
 
   python tools/defringe-sprite.py assets/char/playerwalk*-n.png
   python tools/defringe-sprite.py --check assets/char/player-s.png   # measure only
@@ -31,13 +42,14 @@ import numpy as np
 from PIL import Image
 import scipy.ndimage as ndi
 
-SOLID_A = 200   # α at/above this = trusted figure colour
-BAND_LO = 8     # the QA fringe band: 8 < α < 200 (matches the engineer's measurement)
+SOLID_A = 200    # α at/above this = "solid figure body" — used ONLY by --trim's distance field
+FRINGE_HI = 245  # clamp+metric cover the whole antialiased ramp up to here (incl. the near-opaque rim)
+BAND_LO = 8      # the QA fringe band: 8 < α < FRINGE_HI (the full visible silhouette edge)
 
 
 def fringe_metric(arr):
     a = arr[..., 3]
-    band = (a > BAND_LO) & (a < SOLID_A)
+    band = (a > BAND_LO) & (a < FRINGE_HI)
     if not band.any():
         return 0, 0.0
     lum = arr[..., :3].astype(np.float64).mean(axis=2)
@@ -68,7 +80,7 @@ def trim_smudge(arr, dist=2.5):
 
 def defringe(arr):
     a = arr[..., 3]
-    band = (a > 0) & (a < SOLID_A)
+    band = (a > 0) & (a < FRINGE_HI)
     if not band.any():
         return arr
     rgb = arr[..., :3].astype(np.float64)
@@ -114,7 +126,7 @@ def main():
         note = f'  trimmed {cut}px' if args.trim is not None else ''
         print(f'  {p}: fringe {n0}px lum {l0:.1f}  ->  {n1}px lum {l1:.1f}{note}')
         worst = max(worst, l1)
-    print(f'\nworst fringe lum: {worst:.1f}  (target <= ~20; idle sheets measure 13-16)')
+    print(f'\nworst fringe lum: {worst:.1f}  (full-ring 8<a<245; target <= ~22, the idle 18-22)')
 
 
 if __name__ == '__main__':
