@@ -16,6 +16,14 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
   half-fought den keeps its state — only a pristine (un-engaged, intact) pack is shed, and it leashes
   home + de-aggros well before the despawn radius. Per-camp `cleared` / `respawnAt` / chest state lives
   on `gWildCamps` (not `gEnemies`), so the 3-minute clear→reward→respawn cycle survives unload/reload.
+- **Wolf combat — bite lands on contact, real pounce, readable pause.** Four fixes to the lunge-bite:
+  (1) the hit reach is re-anchored to the colliders (`e.r + target.r + snout`) so it lands on visible
+  sprite contact, slightly inside the silhouettes — it was a 54/66px reach that bit from a sprite-width
+  away; (2) the pounce is now a gap-scaled **leap** that actually closes the distance, so a standing
+  target gets bitten (the hit was checked once at launch and always fell short); (3) wolves **plant
+  fully in place for ~0.37s (direwolf) / ~0.47s (alpha) before pouncing** — a clear, dodgeable tell
+  (the windup only damped velocity before, so momentum carried them through it); (4) the airborne lunge
+  frame now shows only during the actual pounce or when hopping a rock, not during the windup crouch.
 - **Playtest balance & enemy AI.**
   - **Fire waves fall off with distance** — near-full power point-blank, fading to ~35% damage / ~15%
     knockback at max range (knockback drops faster), so a maxed wave no longer launches everything at
@@ -30,6 +38,16 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
     attacked (`eAnyPlayerNear` gained an `ignoreNight` option used by the hold-position release).
 
 ### Added
+- **Rocky outcrops are now collidable entities of varying sizes.** Rocks moved off the tile grid into
+  free-placed entities (`gRocks`) with per-rock size/height: depth-sorted with characters so tall
+  boulders occlude and small ones tuck behind, circle-collision (`gRCRocks`) the player and ground
+  enemies weave through, generated as organic clusters (`_genRockOutcrop`) mixing small rubble with the
+  occasional big boulder. The open wilderness gets 60–110 such outcrops (replacing the old uniform
+  tile-rock blobs), and each wolf-camp den arc is dressed with boulder clumps. Outcrops reject onto open
+  ground so they never block the shrine / villages / obelisks / camps; wolves keep their climber identity
+  (skip rock collision); sizable rocks stamp the nav grid so enemies route around them. The painterly
+  **rock-outcrop + wooden spike-fence tile cutouts** are also wired (transparent cutouts over a ground
+  base via `gTileProp`) for the camp crescent walls and village fences.
 - **Imbue Paths — Dance of Fire, a full 1→10 mastery tree (roadmap item 2, Phase 1).** The
   imbued-skill mastery system that fixes "leveling is repetitive." Imbuing the swing with Cilia now
   creates a *named Art*, **Dance of Fire**, that you rank up 1→10 through the level-up draft, with two

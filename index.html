@@ -1992,6 +1992,9 @@ let gTiles = new Uint8Array(gMapW*gMapH).fill(TILE_WALL);
 let gEntsRaw = [];
 let camX=0, camY=0;
 let gDestructibles=[], gEnemies=[], gTorches=[], gArrows=[], gPlayerArrows=[], gTraps=[], gPotions=[], gBombs=[], gXPOrbs=[], gFavorOrbs=[], gObelisks=[], gVillages=[], gWildCamps=[];
+// Free-placed rock entities (off-grid collidable boulders forming organic outcrops). Unlike TILE_ROCK
+// (grid-locked impassable tiles), each has its own world pos, collision radius, and draw scale/height.
+let gRocks=[];
 let gFireWaves=[]; // imbued-LMB fire arcs (Cilia's Fire)
 let gFireRings=[]; // imbued-whirlwind expanding fire rings (Cilia's Fire)
 let gFireCrosses=[]; // imbued-leap burning crosses (Cilia's Fire)
@@ -2225,7 +2228,7 @@ let gBlocked = new Uint8Array(1);
 function gCI(cx,cy){return cy*gMapW+cx;}
 function ghp(h,n){h.push(n);let i=h.length-1;while(i>0){const p=(i-1)>>1;if(h[p].f<=h[i].f)break;const t=h[p];h[p]=h[i];h[i]=t;i=p;}}
 function gpp(h){const top=h[0];const last=h.pop();if(h.length){h[0]=last;let i=0;for(;;){let s=i;const l=2*i+1,r=2*i+2,n=h.length;if(l<n&&h[l].f<h[s].f)s=l;if(r<n&&h[r].f<h[s].f)s=r;if(s===i)break;const t=h[s];h[s]=h[i];h[i]=t;i=s;}}return top;}
-function gRebuildNav(){gBlocked=new Uint8Array(gMapW*gMapH);for(let i=0;i<gMapW*gMapH;i++)gBlocked[i]=(gTiles[i]===TILE_WALL||gTiles[i]===TILE_ROCK||gTiles[i]===TILE_SPIKE||gTiles[i]===TILE_HUT)?1:0;for(const d of gDestructibles){if(!d.broken)gBlocked[Math.floor(d.wy/T)*gMapW+Math.floor(d.wx/T)]=1;}for(const t of gTraps){gBlocked[t.ty*gMapW+t.tx]=1;}}
+function gRebuildNav(){gBlocked=new Uint8Array(gMapW*gMapH);for(let i=0;i<gMapW*gMapH;i++)gBlocked[i]=(gTiles[i]===TILE_WALL||gTiles[i]===TILE_ROCK||gTiles[i]===TILE_SPIKE||gTiles[i]===TILE_HUT)?1:0;for(const d of gDestructibles){if(!d.broken)gBlocked[Math.floor(d.wy/T)*gMapW+Math.floor(d.wx/T)]=1;}for(const t of gTraps){gBlocked[t.ty*gMapW+t.tx]=1;}for(const k of gRocks){if(k.r>=T*0.4){const _rtx=Math.floor(k.wx/T),_rty=Math.floor(k.wy/T);if(_rtx>=0&&_rty>=0&&_rtx<gMapW&&_rty<gMapH)gBlocked[_rty*gMapW+_rtx]=1;}}}
 function gAstar(sx,sy,gx,gy){
   let scx=Math.max(0,Math.min(gMapW-1,Math.floor(sx/T))),scy=Math.max(0,Math.min(gMapH-1,Math.floor(sy/T)));
   let gcx=Math.max(0,Math.min(gMapW-1,Math.floor(gx/T))),gcy=Math.max(0,Math.min(gMapH-1,Math.floor(gy/T)));
@@ -2260,6 +2263,22 @@ function gRCTraps(wx,wy,r){
     const minDist=r+10; // trap radius matches visual stone base (~10px)
     if(dd<minDist&&dd>0.001){
       const nx=(x-t.wx)/dd,ny=(y-t.wy)/dd;
+      x+=nx*(minDist-dd+0.5);
+      y+=ny*(minDist-dd+0.5);
+    }
+  }
+  return[x,y];
+}
+// Push a mover (radius r) out of any overlapping rock entity — circle-vs-circle, mirrors
+// gRCDestructibles. Rocks are static, so order vs the other resolvers doesn't matter.
+function gRCRocks(wx,wy,r){
+  let x=wx,y=wy;
+  for(const k of gRocks){
+    const minDist=r+k.r;
+    if(Math.abs(x-k.wx)>minDist || Math.abs(y-k.wy)>minDist) continue;   // cheap AABB reject → scales to a mapful of rocks
+    const dd=Math.hypot(x-k.wx,y-k.wy);
+    if(dd<minDist&&dd>0.001){
+      const nx=(x-k.wx)/dd,ny=(y-k.wy)/dd;
       x+=nx*(minDist-dd+0.5);
       y+=ny*(minDist-dd+0.5);
     }
@@ -2702,7 +2721,8 @@ const EntityDefs = {
     speedRange:     0.07,
     meleeDamage:    15,    // the lunge-bite — chunks like a warrior swing; the crouch tell keeps it fair
     meleeCooldown:  70,
-    biteReach:      54,    // px in front the pounce-bite lands (reach + half-arc gate)
+    biteReach:      4,     // bite snout reach BEYOND the bodies (added to e.r+target.r) — keeps the
+                           // hit on visible sprite contact, slightly inside the silhouette for fairness
     biteArc:        0.50,  // half-angle of the bite cone (rad)
     biteWindup:     22,    // frames to crouch/tell before the pounce — the dodge window
     lungeSpeed:     6.8,   // px/frame dash the wolf carries through its strike
@@ -2722,7 +2742,8 @@ const EntityDefs = {
     speedRange:     0.05,
     meleeDamage:    25,    // harder bite — a real chunk; punished by the slower tell
     meleeCooldown:  90,
-    biteReach:      66,
+    biteReach:      4,     // snout reach beyond the bodies (see direwolf) — bigger alpha body (r18) already
+                           // gives it a longer effective bite via e.r
     biteArc:        0.55,
     biteWindup:     28,    // a touch slower tell — more punishable, fits the elite
     lungeSpeed:     6.2,
@@ -2925,7 +2946,7 @@ function makeWolfEnt(tx,ty,type){
     speed:d.speedMin+Math.random()*d.speedRange,
     attackCooldown:0,
     activated:false, isNeutral:true,
-    biteWindup:0,biteStrike:0,_bitePending:false,biteAngle:0,biteMax:0,lungeTimer:0,_biteHold:0,
+    biteWindup:0,biteStrike:0,_bitePending:false,biteAngle:0,biteMax:0,lungeTimer:0,_biteHold:0,_biteConnect:0,
     flankSign: Math.random()<0.5?1:-1, flankPhase: Math.floor(Math.random()*150),
     contactCd:0,
     defId:type,_tgt:null,_tgtTimer:0,
@@ -3081,7 +3102,7 @@ function gameLoad(mapData) {
   if(_db){ _db.textContent='RESPAWN'; _db.onclick=mpRespawn; }
   gTiles = tilesFromRows(mapData.rows, gMapW, gMapH);
   gEntsRaw = JSON.parse(JSON.stringify(mapData.entities || []));
-  gDestructibles=[]; gEnemies=[]; gTorches=[]; gArrows=[]; gPlayerArrows=[]; gTraps=[]; gPotions=[]; gBombs=[]; gXPOrbs=[]; gFavorOrbs=[]; gObelisks=[]; gWildCamps=[];
+  gDestructibles=[]; gEnemies=[]; gTorches=[]; gArrows=[]; gPlayerArrows=[]; gTraps=[]; gPotions=[]; gBombs=[]; gXPOrbs=[]; gFavorOrbs=[]; gObelisks=[]; gWildCamps=[]; gRocks=[];
   gFireWaves=[];
   gFireRings=[];
   gFireCrosses=[];
@@ -3122,6 +3143,7 @@ function gameLoad(mapData) {
     });
     if(e.kind==='village') gVillages.push(e.data);
     if(e.kind==='wolfcamp') gWildCamps.push(e.data);
+    if(e.kind==='rock') gRocks.push({wx:e.wx, wy:e.wy, r:e.r, scale:e.scale, vr:e.vr});
     if(e.kind==='shrine')  gShrine = {
       wx:(e.tx+0.5)*T, wy:(e.ty+0.5)*T, tx:e.tx, ty:e.ty,
       activated:false,  // lights up after first patron selection
@@ -3692,7 +3714,7 @@ function gUpdateEvasion(p, dt){
   p.wx += Math.cos(ev.angle) * step;
   p.wy += Math.sin(ev.angle) * step;
   let[rx,ry] = gRC(p.wx,p.wy,p.r);
-  [rx,ry] = gRCDestructibles(rx,ry,p.r);
+  [rx,ry] = gRCDestructibles(rx,ry,p.r);[rx,ry]=gRCRocks(rx,ry,p.r);
   [rx,ry] = gRCTraps(rx,ry,p.r);
   [rx,ry] = gRCEnemies(rx,ry,p.r);
   p.wx = rx; p.wy = ry;
@@ -3965,7 +3987,7 @@ function gUpdateHeavyAtk(p, dt){
     p.wx += Math.cos(p.heavyAngle) * lungeSpeed * dt;
     p.wy += Math.sin(p.heavyAngle) * lungeSpeed * dt;
     // Clamp to walls
-    let[lx,ly]=gRC(p.wx,p.wy,p.r);[lx,ly]=gRCDestructibles(lx,ly,p.r);[lx,ly]=gRCEnemies(lx,ly,p.r);p.wx=lx;p.wy=ly;
+    let[lx,ly]=gRC(p.wx,p.wy,p.r);[lx,ly]=gRCDestructibles(lx,ly,p.r);[lx,ly]=gRCRocks(lx,ly,p.r);[lx,ly]=gRCEnemies(lx,ly,p.r);p.wx=lx;p.wy=ly;
   }
 
   // Blade edge particles — stream along both edges of sword during extend
@@ -4116,7 +4138,7 @@ function gUpdatePlayer(dt=1){
   const tsm = gTreeSlow(p.wx, p.wy);                  // 0.75 inside tree tiles
   const dsm = ((p.wildBuffs&&(1+(p.wildBuffs.speedPct||0)/100))||1);  // obelisk + card speed
   p.wx+=dx*p.speed*csm*tsm*dsm*dt;p.wy+=dy*p.speed*csm*tsm*dsm*dt;
-  let[rx,ry]=gRC(p.wx,p.wy,p.r);[rx,ry]=gRCDestructibles(rx,ry,p.r);[rx,ry]=gRCTraps(rx,ry,p.r);[rx,ry]=gRCEnemies(rx,ry,p.r);p.wx=rx;p.wy=ry;
+  let[rx,ry]=gRC(p.wx,p.wy,p.r);[rx,ry]=gRCDestructibles(rx,ry,p.r);[rx,ry]=gRCRocks(rx,ry,p.r);[rx,ry]=gRCTraps(rx,ry,p.r);[rx,ry]=gRCEnemies(rx,ry,p.r);p.wx=rx;p.wy=ry;
   if(p.moving){p.walkTimer+=dt;if(p.walkTimer>=8){p.walkTimer=0;p.walkFrame=(p.walkFrame+1)%4;if(p.walkFrame===1||p.walkFrame===3)gPlayStep();}p.stepTimer+=dt;}else{p.walkFrame=0;p.walkTimer=0;}
   if(p.swinging){p.swingTimer+=dt;if(p.smear){p.smear.cx=p.wx;p.smear.cy=p.wy;p.smear.sweepEnd=p.swingStartAngle+(p.swingEndAngle-p.swingStartAngle)*easeSwing(p.swingTimer/pSkillSpeed(p,'swingDur','swingSpdPct'));}gCheckHits(p);if(p.swingTimer>=pSkillSpeed(p,'swingDur','swingSpdPct')){p.swinging=false;p.swingCooldown=Math.round(W().swingCd*wildDexCdMult());if(p.smear)p.smear.fading=true;p._chargeDmg=null;}}
   if(p.smear&&p.smear.fading){p.smear.life-=0.1*dt;if(p.smear.life<=0)p.smear=null;}
@@ -4804,7 +4826,7 @@ function _aiGoblin(e, dt){
     if(gHitPlayer(_gd.contactDamage,40,4,6,'#e08040','#e08855')) e.contactCd=_gd.contactCooldown;
   }
   {const _ts=gTreeSlow(e.wx,e.wy);e.wx+=e.vx*_ts*dt;e.wy+=e.vy*_ts*dt;}
-  let[ex2,ey2]=gRC(e.wx,e.wy,e.r);[ex2,ey2]=gRCDestructibles(ex2,ey2,e.r);[ex2,ey2]=gRCTraps(ex2,ey2,e.r);e.wx=ex2;e.wy=ey2;
+  let[ex2,ey2]=gRC(e.wx,e.wy,e.r);[ex2,ey2]=gRCDestructibles(ex2,ey2,e.r);[ex2,ey2]=gRCRocks(ex2,ey2,e.r);[ex2,ey2]=gRCTraps(ex2,ey2,e.r);e.wx=ex2;e.wy=ey2;
 
 }
 
@@ -4818,6 +4840,7 @@ function _aiGoblin(e, dt){
 // NATIVE TO THE LAND: wolves climb over rocks (gIsWalkWolf — incl. their own den arcs, the
 // old stuck-on-the-den bug) and destructibles, and take no forest tree-slow. Nothing stops them.
 const WOLF_LEASH_R = 22.6*T;   // px from the camp centre before the pack gives up and heals (+33% chase range)
+const WOLF_LEAP_MAX = 22;      // cap on the pounce impulse (px/frame) — the bite leaps the gap to contact, capped so it reads as a leap not a teleport
 // Pack attack token — only ONE wolf per pack commits a lunge at a time, so a pack pressures in turns
 // instead of all charging at once (the early-game "instant death" cause). Keyed by camp/home; the
 // value is the frame the slot frees (set on commit; auto-expires so a dead/leashed wolf can't hold it).
@@ -4844,7 +4867,7 @@ function _aiWolf(e, dt){
     if(farFromDen){
       e.activated=false;
       e.hp=e.maxHp;                       // full-heal on disengage
-      e._bitePending=false; e.biteWindup=0; e.biteStrike=0;
+      e._bitePending=false; e.biteWindup=0; e.biteStrike=0; e._biteConnect=0;
     }
   }
 
@@ -4864,19 +4887,33 @@ function _aiWolf(e, dt){
   const tgt=eNearestTarget(e);
   const dist=Math.hypot(e.wx-tgt.wx,e.wy-tgt.wy);
   e.angle=Math.atan2(tgt.wy-e.wy,tgt.wx-e.wx);
-  const _reach = d.biteReach + (tgt.r||11);
+  const _reach = e.r + (tgt.r||11) + d.biteReach;   // bite lands on body contact + a small snout reach (hitbox just inside the sprites)
 
   // Resolve a pending bite when the windup empties → pounce-dash along the locked angle.
   if(e._bitePending && e.biteWindup<=0){
     e._bitePending=false; e.biteStrike=12; e._biteHold=24;   // biteStrike = combat follow-through (12f); _biteHold = pure display dwell so the pounce reads (~0.4s)
-    e.vx += Math.cos(e.biteAngle)*d.lungeSpeed;
-    e.vy += Math.sin(e.biteAngle)*d.lungeSpeed;
-    const a2t=Math.atan2(tgt.wy-e.wy,tgt.wx-e.wx);
-    const ad=Math.abs(((a2t-e.biteAngle+Math.PI*3)%(Math.PI*2))-Math.PI);
-    if(dist<=_reach && ad<=d.biteArc && !gPlayer.dead)
-      gHitPlayer(d.meleeDamage,55,5,8,'#d6dde8','#9aa6b8');   // MP-safe
+    // Pounce: leap impulse sized to clear the gap to body-contact (impulse ≈ gap/5 over the friction
+    // tail), capped at WOLF_LEAP_MAX so it reads as a leap. This is what makes the wolf actually reach
+    // a standing target — orbiting at flankDist, a fixed short dash fell well short of the tight reach.
+    const _gap = Math.max(0, dist - (e.r + (tgt.r||11)));
+    const _leap = Math.min(WOLF_LEAP_MAX, _gap*0.26 + d.lungeSpeed*0.4);
+    e.vx += Math.cos(e.biteAngle)*_leap;
+    e.vy += Math.sin(e.biteAngle)*_leap;
     e.attackCooldown=d.meleeCooldown;
     e.lungeTimer=18;                       // committed/exposed recovery — the punish window
+    e._biteConnect=16;                     // the pounce can land over the next ~16f of the leap
+  }
+  // Land the bite the FIRST frame the lunging wolf is actually within reach — the pounce-leap closes
+  // the gap, so the hit must be checked across the strike, not once at launch. Reach is now tight to
+  // the colliders (e.r + target.r + snout), so it only lands on visible sprite contact.
+  if(e._biteConnect>0){
+    e._biteConnect--;
+    const a2t=Math.atan2(tgt.wy-e.wy,tgt.wx-e.wx);
+    const ad=Math.abs(((a2t-e.biteAngle+Math.PI*3)%(Math.PI*2))-Math.PI);
+    if(dist<=_reach && ad<=d.biteArc && !gPlayer.dead){
+      gHitPlayer(d.meleeDamage,55,5,8,'#d6dde8','#9aa6b8');   // MP-safe
+      e._biteConnect=0;                    // one bite per lunge
+    }
   }
 
   // Commit a bite when in lunge range, off cooldown, not mid-recovery — AND the pack's attack slot
@@ -4891,8 +4928,10 @@ function _aiWolf(e, dt){
   }
 
   if(e._bitePending){
-    // crouch tell — plant before the pounce so the lunge is readable/dodgeable
-    e.vx*=Math.pow(0.5,dt); e.vy*=Math.pow(0.5,dt);
+    // Pre-lunge tell — PLANT fully in place for the whole windup so the player gets a clear, readable
+    // pause before the pounce (just damping velocity let orbit momentum carry it, so it didn't read as
+    // a stop). Pause length = biteWindup: 22f ≈ 0.37s (direwolf) / 28f ≈ 0.47s (alpha) — both ≥ 0.3s.
+    e.vx=0; e.vy=0;
   } else if(e.lungeTimer>0){
     // mid-lunge / recovery — coast along the dash, exposed (no steering)
   } else {
@@ -4976,7 +5015,7 @@ function _aiArcher(e, dt){
     e.vy+=Math.sin(e.patrolAngle||0)*0.08*dt;
   }
   {const _ts=gTreeSlow(e.wx,e.wy);e.wx+=e.vx*_ts;e.wy+=e.vy*_ts;}
-  let[ex2,ey2]=gRC(e.wx,e.wy,e.r);[ex2,ey2]=gRCDestructibles(ex2,ey2,e.r);[ex2,ey2]=gRCTraps(ex2,ey2,e.r);e.wx=ex2;e.wy=ey2;
+  let[ex2,ey2]=gRC(e.wx,e.wy,e.r);[ex2,ey2]=gRCDestructibles(ex2,ey2,e.r);[ex2,ey2]=gRCRocks(ex2,ey2,e.r);[ex2,ey2]=gRCTraps(ex2,ey2,e.r);e.wx=ex2;e.wy=ey2;
 }
 
 // ── Goblin Warrior AI ────────────────────────────────────────────
@@ -5099,7 +5138,7 @@ function _aiWarrior(e, dt){
   if(e.phase!=='charging'){
     {const _ts=gTreeSlow(e.wx,e.wy);e.wx+=e.vx*_ts*dt;e.wy+=e.vy*_ts*dt;}
   }
-  let[ex3,ey3]=gRC(e.wx,e.wy,e.r);[ex3,ey3]=gRCDestructibles(ex3,ey3,e.r);[ex3,ey3]=gRCTraps(ex3,ey3,e.r);
+  let[ex3,ey3]=gRC(e.wx,e.wy,e.r);[ex3,ey3]=gRCDestructibles(ex3,ey3,e.r);[ex3,ey3]=gRCRocks(ex3,ey3,e.r);[ex3,ey3]=gRCTraps(ex3,ey3,e.r);
   e.wx=ex3;e.wy=ey3;
 
 }
@@ -5188,7 +5227,7 @@ function _aiShaman(e, dt){
 
   // ── Movement + collision ──
   {const _ts=gTreeSlow(e.wx,e.wy);e.wx+=e.vx*_ts;e.wy+=e.vy*_ts;}
-  let[ex2,ey2]=gRC(e.wx,e.wy,e.r);[ex2,ey2]=gRCDestructibles(ex2,ey2,e.r);e.wx=ex2;e.wy=ey2;
+  let[ex2,ey2]=gRC(e.wx,e.wy,e.r);[ex2,ey2]=gRCDestructibles(ex2,ey2,e.r);[ex2,ey2]=gRCRocks(ex2,ey2,e.r);e.wx=ex2;e.wy=ey2;
 }
 
 function _shamanFireFireball(e, d, tgt){
@@ -6661,7 +6700,7 @@ function _aiKing(e, dt){
   // Wall/obstacle collision — fully skipped while jumping (single state)
   // King is committed to the leap from windup start; obstacles don't pin it
   if(e.phase!=='jumping'){
-    let[ekx,eky]=gRC(e.wx,e.wy,e.r);[ekx,eky]=gRCDestructibles(ekx,eky,e.r);[ekx,eky]=gRCTraps(ekx,eky,e.r);
+    let[ekx,eky]=gRC(e.wx,e.wy,e.r);[ekx,eky]=gRCDestructibles(ekx,eky,e.r);[ekx,eky]=gRCRocks(ekx,eky,e.r);[ekx,eky]=gRCTraps(ekx,eky,e.r);
     e.wx=ekx;e.wy=eky;
   }
 
@@ -6726,7 +6765,7 @@ function _aiBomber(e, dt){
   else{e.walkFrame=0;e.walkTimer=0;}
 
   {const _ts=gTreeSlow(e.wx,e.wy);e.wx+=e.vx*_ts*dt;e.wy+=e.vy*_ts*dt;}
-  let[ebx,eby]=gRC(e.wx,e.wy,e.r);[ebx,eby]=gRCDestructibles(ebx,eby,e.r);[ebx,eby]=gRCTraps(ebx,eby,e.r);
+  let[ebx,eby]=gRC(e.wx,e.wy,e.r);[ebx,eby]=gRCDestructibles(ebx,eby,e.r);[ebx,eby]=gRCRocks(ebx,eby,e.r);[ebx,eby]=gRCTraps(ebx,eby,e.r);
   e.wx=ebx;e.wy=eby;
 }
 
@@ -6996,6 +7035,22 @@ function gDrawTile(sx,sy,sz,tid,tx,ty){
     gctx.fillStyle='rgba(85,165,30,.22)';
     gctx.beginPath();gctx.ellipse(sx+sz/2-3,sy+sz/2-5,sz*.14,sz*.1,-.4,0,Math.PI*2);gctx.fill();
     return;
+  }
+
+  // Rock outcrop & spike fence: painterly art cutout over a ground base, else fall through to the
+  // procedural draw below. These cutouts are TRANSPARENT props (not ground), so we draw ground first.
+  if(tid===TILE_ROCK || tid===TILE_SPIKE){
+    const _ov = gTileProp(tid, tx, ty);
+    if(_ov){
+      // Ground under the prop — single-point art choice (retune here): rock sits on grass
+      // (forest/clearing), the village palisade on dirt. Baked ground art if loaded, else its colour.
+      const _baseId = (tid===TILE_SPIKE) ? TILE_DIRT : TILE_GRASS;
+      const _g = gTileArt(_baseId, tx, ty);
+      if(_g) gctx.drawImage(_g, sx, sy, sz, sz);
+      else { gctx.fillStyle = (tid===TILE_SPIKE ? _TC_DIRT : _TC_GRASS)[v]; gctx.fillRect(sx,sy,sz,sz); }
+      gctx.drawImage(_ov, sx, sy, sz, sz);
+      return;
+    }
   }
 
   if(tid===TILE_ROCK){
@@ -7322,6 +7377,26 @@ const ART_MANIFEST = {
   'tile.dirt.1':'assets/tile/dirt-1.png',
   'tile.dirt.2':'assets/tile/dirt-2.png',
   'tile.dirt.3':'assets/tile/dirt-3.png',
+  // Rock outcrop + wooden spike-fence — TRANSPARENT cutouts (props over terrain, not ground), so
+  // gDrawTile draws a ground base then overlays these via gTileProp (NOT the gTileArt blit path).
+  'tile.rock.0':'assets/tile/rock-0.png',
+  'tile.rock.1':'assets/tile/rock-1.png',
+  'tile.rock.2':'assets/tile/rock-2.png',
+  'tile.rock.3':'assets/tile/rock-3.png',
+  'tile.rock.4':'assets/tile/rock-4.png',
+  'tile.rock.5':'assets/tile/rock-5.png',
+  'tile.rock.6':'assets/tile/rock-6.png',
+  'tile.rock.7':'assets/tile/rock-7.png',
+  'tile.rock.8':'assets/tile/rock-8.png',
+  'tile.spike.0':'assets/tile/spike-0.png',
+  'tile.spike.1':'assets/tile/spike-1.png',
+  'tile.spike.2':'assets/tile/spike-2.png',
+  'tile.spike.3':'assets/tile/spike-3.png',
+  'tile.spike.4':'assets/tile/spike-4.png',
+  'tile.spike.5':'assets/tile/spike-5.png',
+  'tile.spike.6':'assets/tile/spike-6.png',
+  'tile.spike.7':'assets/tile/spike-7.png',
+  'tile.spike.8':'assets/tile/spike-8.png',
   'char.goblin.n':'assets/char/goblin-n.png',
   'char.goblin.ne':'assets/char/goblin-ne.png',
   'char.goblin.e':'assets/char/goblin-e.png',
@@ -7531,6 +7606,20 @@ function gTileArt(tid, tx, ty){
   // procedural/grass tiles use (line ~5722). The old coordinate hash's low bits are
   // linear in (tx,ty), so `% n` for n=4 (floor/dirt/stone) drew a regular diagonal
   // pattern; gWallVar has no such structure, so variants scatter randomly.
+  const vi = gWallVar[(ty*120+tx) % gWallVar.length] % n;
+  const rec = gArtReg['tile.'+name+'.'+vi];
+  return (rec && rec.ready) ? rec.baked : null;
+}
+
+// Baked TRANSPARENT prop art (rock outcrop / spike fence) for an overlay tile, or null →
+// caller renders procedurally. Unlike gTileArt (opaque ground, blitted alone), these are cutouts
+// the caller draws ON TOP of a ground base, so they live on their own path (same variant picker).
+function gTileProp(tid, tx, ty){
+  let name = null;
+  if(tid===TILE_ROCK)       name='rock';
+  else if(tid===TILE_SPIKE) name='spike';
+  if(!name) return null;
+  const n = gTileVarCount[name]; if(!n) return null;
   const vi = gWallVar[(ty*120+tx) % gWallVar.length] % n;
   const rec = gArtReg['tile.'+name+'.'+vi];
   return (rec && rec.ready) ? rec.baked : null;
@@ -8264,7 +8353,7 @@ function gDrawBombs(){
     gctx.restore();
   }
 }
-function gDrawEnemy(e){if(e.dead)return;const sx=e.wx-camX,sy=e.wy-camY;if(e._dpx===undefined){e._dpx=e.wx;e._dpy=e.wy;e._faceOct=2;}const _ddx=e.wx-e._dpx,_ddy=e.wy-e._dpy;if(_ddx*_ddx+_ddy*_ddy>0.04)e._faceOct=gOctant8(_ddx,_ddy);e._dpx=e.wx;e._dpy=e.wy;if(sx<-30||sx>VW+30||sy<-30||sy>VH+30)return;const by=bobY(e.walkFrame,Math.hypot(e.vx,e.vy)>.2);const flash=e.hitFlash>0?Math.min(1,e.hitFlash/8):0;const gs=(e.defId&&ENEMY_DRAW_SCALE[e.defId])||((e.defId&&e.defId!=='goblin')?PSCALE:PSCALE*1.333);gctx.save();gctx.globalAlpha=.2;gctx.fillStyle='#000';gctx.beginPath();gctx.ellipse(sx,sy+gs*.44,gs*.3,gs*.1,0,0,Math.PI*2);gctx.fill();gctx.restore();if(e.defId==='goblin'&&e.atkWindup>0){const _cr=EntityDefs.goblin.atkReach+12,_ca=EntityDefs.goblin.atkArc,_cf=1-e.atkWindup/(e.atkMax||1);gctx.save();gctx.translate(sx,sy);gctx.rotate(e.atkAngle||0);gctx.fillStyle='rgba(255,45,45,0.12)';gctx.beginPath();gctx.moveTo(0,0);gctx.arc(0,0,_cr,-_ca,_ca);gctx.closePath();gctx.fill();gctx.fillStyle='rgba(255,30,30,0.45)';gctx.beginPath();gctx.moveTo(0,0);gctx.arc(0,0,_cr*_cf,-_ca,_ca);gctx.closePath();gctx.fill();gctx.restore();}const _wolfBiting=(e.isDirewolf||e.isAlphawolf)&&(e.biteWindup>0||e.biteStrike>0||e._biteHold>0);const _bid=(e.defId==='goblin'&&(e.atkWindup>0||e.atkStrike>0))?'goblinatk':_wolfBiting?(e.defId+'atk'):(e.defId||'goblin');gDrawSprite(gDirBody(_bid,e._faceOct,SpriteRegistry.get(e.defId||'goblin').canvas||goblinSpr),e.wx,e.wy,gs,flash,by);const bw=PSCALE;gctx.fillStyle='#2a1010';gctx.fillRect(sx-bw/2,sy-PSCALE*.6,bw,1.5);gctx.fillStyle='#e05555';gctx.fillRect(sx-bw/2,sy-PSCALE*.6,bw*(e.hp/e.maxHp),1.5);}
+function gDrawEnemy(e){if(e.dead)return;const sx=e.wx-camX,sy=e.wy-camY;if(e._dpx===undefined){e._dpx=e.wx;e._dpy=e.wy;e._faceOct=2;}const _ddx=e.wx-e._dpx,_ddy=e.wy-e._dpy;if(_ddx*_ddx+_ddy*_ddy>0.04)e._faceOct=gOctant8(_ddx,_ddy);e._dpx=e.wx;e._dpy=e.wy;if(sx<-30||sx>VW+30||sy<-30||sy>VH+30)return;const by=bobY(e.walkFrame,Math.hypot(e.vx,e.vy)>.2);const flash=e.hitFlash>0?Math.min(1,e.hitFlash/8):0;const gs=(e.defId&&ENEMY_DRAW_SCALE[e.defId])||((e.defId&&e.defId!=='goblin')?PSCALE:PSCALE*1.333);gctx.save();gctx.globalAlpha=.2;gctx.fillStyle='#000';gctx.beginPath();gctx.ellipse(sx,sy+gs*.44,gs*.3,gs*.1,0,0,Math.PI*2);gctx.fill();gctx.restore();if(e.defId==='goblin'&&e.atkWindup>0){const _cr=EntityDefs.goblin.atkReach+12,_ca=EntityDefs.goblin.atkArc,_cf=1-e.atkWindup/(e.atkMax||1);gctx.save();gctx.translate(sx,sy);gctx.rotate(e.atkAngle||0);gctx.fillStyle='rgba(255,45,45,0.12)';gctx.beginPath();gctx.moveTo(0,0);gctx.arc(0,0,_cr,-_ca,_ca);gctx.closePath();gctx.fill();gctx.fillStyle='rgba(255,30,30,0.45)';gctx.beginPath();gctx.moveTo(0,0);gctx.arc(0,0,_cr*_cf,-_ca,_ca);gctx.closePath();gctx.fill();gctx.restore();}const _wolfPounce=(e.isDirewolf||e.isAlphawolf)&&(e.biteStrike>0||e._biteHold>0);   /* actual pounce/strike — NOT the windup crouch */const _wolfHopRock=(e.isDirewolf||e.isAlphawolf)&&gTileAt((e.wx/T)|0,(e.wy/T)|0)===TILE_ROCK;   /* climbing/hopping a rock */const _bid=(e.defId==='goblin'&&(e.atkWindup>0||e.atkStrike>0))?'goblinatk':(_wolfPounce||_wolfHopRock)?(e.defId+'atk'):(e.defId||'goblin');gDrawSprite(gDirBody(_bid,e._faceOct,SpriteRegistry.get(e.defId||'goblin').canvas||goblinSpr),e.wx,e.wy,gs,flash,by);const bw=PSCALE;gctx.fillStyle='#2a1010';gctx.fillRect(sx-bw/2,sy-PSCALE*.6,bw,1.5);gctx.fillStyle='#e05555';gctx.fillRect(sx-bw/2,sy-PSCALE*.6,bw*(e.hp/e.maxHp),1.5);}
 
 // ── Threat-tier eye glow (item 1's danger tell) — drawn OVER the enemy sprite ───────────
 // Two additive glow "eyes" above the body centre: yellow at tier 1 (nights 4-7), red at tier 2
@@ -8425,6 +8514,48 @@ function gDrawDestructible(d){
   gctx.restore();
 }
 
+// ── Rock entities (organic outcrops) — feel knobs ──────────────────────────────
+const ROCK_BASE = 30;    // px draw-width at scale 1.0 (a scale-1 rock ≈ one tile wide)
+const ROCK_FOOT = 0.86;  // share of the drawn height ABOVE the foot line (rest tucks below → grounded)
+// Draw one rock, foot-anchored at (wx,wy), scaled per-rock from the full-res cutout. Pushed into the
+// depth-sorted `drawables` list, so a tall rock occludes characters behind it and tucks behind those
+// in front. Falls back to a procedural grey boulder until the art loads.
+function gDrawRock(k){
+  const rec = gArtReg['tile.rock.'+k.vr];
+  const sx=k.wx-camX, sy=k.wy-camY;
+  if(rec && rec.ready && rec.img){
+    const img=rec.img;
+    const w=ROCK_BASE*k.scale, h=w*(img.height/img.width);
+    gctx.imageSmoothingEnabled=true;
+    gctx.drawImage(img, sx-w/2, sy-h*ROCK_FOOT, w, h);
+  } else {
+    const w=ROCK_BASE*k.scale;
+    gctx.fillStyle='#54515c'; gctx.beginPath(); gctx.ellipse(sx, sy-w*0.28, w*0.5, w*0.42, 0, 0, Math.PI*2); gctx.fill();
+    gctx.fillStyle='#43404a'; gctx.beginPath(); gctx.ellipse(sx, sy, w*0.5, w*0.18, 0, 0, Math.PI*2); gctx.fill();
+  }
+}
+
+// Build an organic rock outcrop: `count` boulders scattered around (wx,wy) — denser, bigger rocks
+// in the core thinning to smaller ones at the rim. Returns {kind:'rock'} entity descriptors (off-grid,
+// collidable). rng is the seeded generator so outcrops are deterministic per map seed. Feel-knobs are
+// explicit args so each caller (camp dressing, open scatter) tunes independently. Collision radius is
+// ~0.42× the draw width (the rock's solid base).
+function _genRockOutcrop(wx, wy, rng, count, spreadPx, minScale, maxScale, bigChance, bigScale){
+  bigChance = bigChance || 0;            // chance per rock to be an oversized boulder
+  bigScale  = bigScale  || maxScale;     // boulder upper scale (≫ maxScale for real heft)
+  const out=[];
+  for(let i=0;i<count;i++){
+    const ang  = rng()*Math.PI*2;
+    const dist = Math.sqrt(rng())*spreadPx;                       // sqrt → denser toward the core
+    const edge = spreadPx>0 ? dist/spreadPx : 0;                  // 0 core … 1 rim
+    let scale  = Math.max(minScale, maxScale - (maxScale-minScale)*edge*(0.5+0.5*rng()));  // big core, small rim
+    if(rng()<bigChance) scale = maxScale + (bigScale-maxScale)*(0.4+0.6*rng());            // occasional boulder
+    out.push({ kind:'rock', wx:wx+Math.cos(ang)*dist, wy:wy+Math.sin(ang)*dist,
+               r: ROCK_BASE*scale*0.42, scale, vr: Math.floor(rng()*9) });
+  }
+  return out;
+}
+
 function gRender(){
   if(!gPlayer)return;
   gctx.save();
@@ -8489,6 +8620,8 @@ function gRender(){
   const drawables=[{y:gPlayer.dead?-999:gPlayer.wy,draw:gDrawPlayer,arg:gPlayer}];
   for(const e of gEnemies){ if(!e.dead) drawables.push({y:e.wy,draw:e.isArcher?gDrawArcher:e.isWarrior?gDrawWarrior:e.isBomber?gDrawBomber:e.isKing?gDrawKing:e.isShaman?gDrawShaman:gDrawEnemy,arg:e}); }
   if(inTown&&gTrainingDummy) drawables.push({y:gTrainingDummy.wy,draw:drawTrainingDummy,arg:gTrainingDummy});
+  // Rock entities depth-sort with characters (foot y) so tall boulders occlude and tuck correctly.
+  for(const k of gRocks){ const sx=k.wx-camX, sy=k.wy-camY; if(sx<-90||sx>VW+90||sy<-160||sy>VH+90) continue; drawables.push({y:k.wy,draw:gDrawRock,arg:k}); }
   gDrawArrows();
   drawables.sort((a,b)=>a.y-b.y);
   for(const d of drawables){ d.draw(d.arg); if(d.arg&&d.arg.threatTier&&!d.arg.dead) gDrawThreatGlow(d.arg); }
@@ -12129,26 +12262,11 @@ function generateWildernessMap(seed){
     }
   }
 
-  // 4. Rocky outcrops — smaller, denser, solid (cannot be walked through)
-  // Fewer than trees so they feel like distinct landmarks
-  const rocks = new Uint8Array(W * H); // separate array — rocks override trees
-  const numRocks = 40 + Math.floor(rng()*35); // 40-75, sparser than tree clusters
-  for(let r=0;r<numRocks;r++){
-    let rx, ry, attempts=0;
-    do {
-      rx = 4 + Math.floor(rng()*(W-8));
-      ry = 4 + Math.floor(rng()*(H-8));
-      attempts++;
-    } while(Math.hypot(rx-W/2,ry-H/2)<10 && attempts<20);
-    const rs = 1 + Math.floor(rng()*2); // radius 1-2 tiles — small tight clusters
-    for(let dy=-rs;dy<=rs;dy++){
-      for(let dx=-rs;dx<=rs;dx++){
-        const tx=rx+dx, ty=ry+dy;
-        if(tx<1||ty<1||tx>=W-1||ty>=H-1)continue;
-        if(Math.hypot(dx,dy)<=rs && rng()<0.8) rocks[idx(tx,ty)]=1;
-      }
-    }
-  }
+  // 4. Rocky outcrops are now organic clusters of free-placed boulders of VARYING sizes (gRocks
+  //    entities, not grid tiles) so the terrain reads natural with walkable gaps. They are generated
+  //    in step 4b BELOW — after the map's features — so each cluster can land on open ground clear of
+  //    villages/obelisks/shrine/camps. This `rocks` tile-layer now holds only the camp crescent walls.
+  const rocks = new Uint8Array(W * H);
 
   // 5. Ensure spawn area (centre) is clear — 5-tile radius
   const spawnX=Math.floor(W/2), spawnY=Math.floor(H/2);
@@ -12465,7 +12583,9 @@ function generateWildernessMap(seed){
   // spawn/obelisks. Carve the arc into `rocks` and clear the interior floor BEFORE the rows
   // are stringified below, so the crescent renders straight from the tile layer.
   const NUM_CAMPS = 40, CAMP_MIN_SEP = 35, CAMP_R = 4;
+  const CAMP_ROCK_CLUMPS = 5;   // organic boulder clumps dressing the OUTSIDE of each den arc (knob)
   const campEntities = [];
+  const rockEntities = [];      // free-placed rock entities (organic outcrops) → gRocks at load
   let _campId = 0;
   for(let attempt=0; attempt<1500 && campEntities.length<NUM_CAMPS; attempt++){
     const cx = 8 + Math.floor(rng()*(W-16));
@@ -12492,6 +12612,18 @@ function generateWildernessMap(seed){
         if(da>=0.85){ rocks[idx(tx,ty)]=1; tiles[idx(tx,ty)]=0; }  // arc rock (mouth left open)
       }
     }
+    // Dress the den as a natural outcrop: organic boulder clumps around the OUTSIDE of the arc
+    // (mouth kept clear), varied size/height — collidable off-grid entities, not tile walls. They
+    // sit at/just past the arc radius so the thin tile crescent reads as a chunky rocky ridge.
+    const _camWx=(cx+0.5)*T, _camWy=(cy+0.5)*T;
+    for(let s=0; s<CAMP_ROCK_CLUMPS; s++){
+      const ang = rng()*Math.PI*2;
+      const da  = Math.abs(((ang-openAng+Math.PI*3)%(Math.PI*2))-Math.PI);
+      if(da < 1.0) continue;                              // keep the entrance mouth clear
+      const rad = (CAMP_R + 0.4) * T;
+      const ox  = _camWx + Math.cos(ang)*rad, oy = _camWy + Math.sin(ang)*rad;
+      for(const rk of _genRockOutcrop(ox, oy, rng, 2+Math.floor(rng()*3), T*1.1, 0.45, 1.6, 0.25, 2.6)) rockEntities.push(rk);
+    }
     // Pack: 1 Alpha (at the den centre, guarding the chest) + 2-4 Direwolves scattered inside.
     const packN = 2 + Math.floor(rng()*3);
     const packSpawns = [{tx:cx, ty:cy, type:'alphawolf'}];
@@ -12513,6 +12645,26 @@ function generateWildernessMap(seed){
       _spawned:false,   // is the pack currently instantiated in gEnemies? (streamed by gUpdateWolfCamps)
       _wolves:[],   // populated at runtime by _wolfSpawnPack
     }});
+  }
+
+  // 4b. Scattered rocky outcrops — organic boulder clusters across the open map, varied sizes incl.
+  //     occasional boulders (same generator as the camp dressing). Generated AFTER every feature so
+  //     each cluster lands on open ground, clear of spawn / shrine / villages / obelisks / camps —
+  //     pure entities (gRocks): collidable with walkable gaps, never blocking a feature.
+  const NUM_OUTCROPS = 60 + Math.floor(rng()*50);   // 60-110 clusters across the 600×300 map
+  for(let o=0; o<NUM_OUTCROPS; o++){
+    const rx = 4 + Math.floor(rng()*(W-8));
+    const ry = 4 + Math.floor(rng()*(H-8));
+    if(Math.hypot(rx-spawnX, ry-spawnY) < 14) continue;                        // clear of the player start
+    if(rocks[idx(rx,ry)] || tiles[idx(rx,ry)]) continue;                       // not on a camp arc / tree
+    if(shrineFound && Math.hypot(rx-shrineTx, ry-shrineTy) < SHRINE_R+5) continue;
+    if(villageDefs.some(v=>Math.hypot(v.cx-rx,v.cy-ry) < v.radius+4)) continue;
+    if(obeliskTiles.some(ob=>Math.hypot(ob.tx-rx,ob.ty-ry) < 4)) continue;
+    if(campEntities.some(c=>Math.hypot(c.data.cx-rx,c.data.cy-ry) < CAMP_R+5)) continue;
+    const _ox=(rx+0.5)*T, _oy=(ry+0.5)*T;
+    const _n=3+Math.floor(rng()*5);                        // 3-7 boulders per outcrop
+    const _spread=T*(1.2+rng()*1.7);                       // cluster radius varies per outcrop
+    for(const rk of _genRockOutcrop(_ox, _oy, rng, _n, _spread, 0.4, 1.6, 0.25, 2.6)) rockEntities.push(rk);
   }
 
   // 7. Convert to row strings using wilderness tile characters
@@ -12555,6 +12707,7 @@ function generateWildernessMap(seed){
       ...obeliskTiles,
       ...villageEntities,
       ...campEntities,
+      ...rockEntities,
       ...(shrineFound ? [{kind:'shrine', tx:shrineTx, ty:shrineTy}] : []),
     ],
     createdAt: Date.now(), updatedAt: Date.now(),
@@ -13756,6 +13909,7 @@ function gWildEnd(){
   _minimapFull = false;
   gVillages = [];
   gWildCamps = [];
+  gRocks = [];
   gShrine = null;
   gShamanFireballs = [];
   const _mm = document.getElementById('minimap-canvas');
