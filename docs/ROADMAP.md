@@ -18,9 +18,9 @@ the first slice playtest surfaced now have their fixes **in the build but unveri
 > (Patron burn cards) + **item 2's** Dance-of-Fire mastery tree (Phase 1, rank 1→10) — *all shipped;
 > the remaining four skills (Phases 2–5) are the open build.*
 
-**The pivot point:** we've now stacked a lot of difficulty + economy change unverified. The highest-value
-next input is a **playtest of the new curve** (does item 1 read fair?), which gates whether we keep pouring
-mastery trees on top. The open approved build is **Imbue Paths Phases 2–5**. Boreas (item 5) stays parked.
+**The pivot point:** the new difficulty curve **playtested OK** (Josh, 2026-06-10), so item 1 is settled and
+nothing's gated on it. The open approved build is **Imbue Paths Phases 2–5** — fully designed, build order
+Heavy → Whirlwind → Leap → Dash, ready to pull now. Boreas (item 5) stays parked.
 
 ## ⚡ At a glance
 
@@ -29,7 +29,7 @@ mastery trees on top. The open approved build is **Imbue Paths Phases 2–5**. B
 | **0** | **Player animation pass** — directional walk, dash poses, heavy-attack windup | 🔧 In progress (pre-greenlit) | Ongoing | Game feel + the *weighty-combat* directive made visible; runs alongside the queue |
 | **0b** | **Combat card pass** — per-skill dmg cards (Swing/Heavy) + Heavy: Reach + **pool-wide cap removal** | ✅ Shipped (v0.5.0) | Quick | Build identity in the draft + lucky-run variance; RNG governs (caps removed) |
 | **0c** | **Patron Cards** — patron-gated draft cards (Cilia burn set: explode / duration / tick dmg) | ✅ Shipped (Unreleased) | Session | Your god choice reshapes your draft; reusable per-god system serving god-identity |
-| **1** | **Make late-game dangerous** — enemies scale harder + glow yellow→red as they get deadly | ✅ Shipped (Unreleased) — ⚑ needs playtest | Multi-session | Fixes the flat difficulty curve (playtest weak point #1) |
+| **1** | **Make late-game dangerous** — enemies scale harder + glow yellow→red as they get deadly | ✅ Shipped (Unreleased) — playtested OK | Multi-session | Fixes the flat difficulty curve (playtest weak point #1) |
 | **2** | **Imbue Paths** — turn each fire skill into a 10-level mastery tree with branching upgrades | ✅ Approved — cleared for build | Large, phased | Fixes boring level-ups; the heart of "build your own playstyle" (#2) |
 | **3** | **Wolves stop getting stuck** on their dens + ignore forest slow | ✅ Shipped (v0.5.0) | Quick | Bug fix — unblocks wolf playtesting |
 | **4** | **Wolves hit harder early** | ✅ Shipped (v0.5.0) | Quick | Makes a wolf camp a real risk, not free loot |
@@ -201,7 +201,7 @@ engine — one ignited enemy detonates and re-ignites the pack.
 
 ### 1. Make late-game dangerous — enemy scaling + a visible danger tell
 
-`✅ shipped` (Unreleased, 2026-06-10) · **⚑ Needs the verifying playtest** — this is the fix for playtest wall #1; until a run confirms the curve climbs *and reads fair*, item 1 isn't truly "done." · **Size:** multi-session · **Pillars:** game feel, mastery · **Art:** glowing eyes (no new sprites)
+`✅ shipped` (Unreleased, 2026-06-10 — **playtested OK**, Josh) · **Size:** multi-session · **Pillars:** game feel, mastery · **Art:** glowing eyes (no new sprites)
 
 **What:** Enemies barely get tougher as the nights pass right now. We'll make the difficulty genuinely
 ramp the way *Vampire Survivors* does — more enemies, deadlier mixes, and more damage as the run goes on —
@@ -473,7 +473,7 @@ the two drift. Items with no spec (small fixes) keep their detail inline in the 
   1 peak transform; **no new core mechanics** — every 🐉 leaf reuses the Slice-C dragonfire heal-ground,
   every 🔥 leaf the chaosfire self-burn ground. Base-FX line-refs + per-skill `FR_/FC_/FT_/FP_` params are
   inline in the spec. **Pyroclasm note:** Heavy's Art name moved Eruption→Pyroclasm (Form A is now
-  "Eruption", the 5×-finale skillshot). Pull Phase 2 (Heavy) when item 1's playtest clears.
+  "Eruption", the 5×-finale skillshot). **Pull Phase 2 (Heavy) now — nothing gates it** (item 1 playtested OK).
 - **PM → ENG (NEW, 2026-06-10):** **CHANGELOG archive done** (this session) — pre-rename Dungeon Forge era
   (v0.9.0–v0.11.0) moved to `docs/archive/changelog-dungeon-forge.md`, pointer left in `CHANGELOG.md`
   (610→509 lines). Uncommitted in the working tree; fold into your next `docs:` commit. Going forward,
