@@ -55,6 +55,18 @@ Each entry captures: what was built, what broke badly, and what the root cause t
   still in key order. *Lesson: when a cost should "feel" like the action, charge it as a discrete lump at the
   event's commit point AND gate the event on affording it (no effect ⇒ no drain ⇒ no effect), rather than a
   smooth drain that floors at 0 and lets the effect fire for free; surface both on the HUD (`1.7/s +10`).*
+  (6) **Cost must SCALE with rank; final model (Josh, after I overengineered):** the base-aura chunk **grows
+  per level** (`mpChunk 10 + mpChunkInc 27 × (rank-1)` → ~253 MP @rank 10, charged every fixed 3 s), the
+  evolved emit adds a **flat** chunk, and at rank 10 the time-average lands in the **80-100 MP/s** benchmark.
+  **No cap** — the rank-10 chunk deliberately **exceeds a starting 100 pool**, so a maxed skill won't fire
+  until you build Max-MP (HUD chunk turns red ⛔). *Lesson — when a designer gives a benchmark like "~90 MP/s
+  at max," it's a TARGET to back-solve a per-level increment from, not a literal continuous rate to implement;
+  I burned several rounds converting the discrete chunk system to a smooth drain, adding frequency-scaling and
+  cost caps, all of which the designer then had to walk back ("keep the dynamic system", "keep the interval",
+  "no cap"). Implement the simplest discrete mechanic that meets the stated knobs, expose the numbers as live
+  consts, and let the benchmark drive ONE increment — don't re-architect the model to hit a number. And when a
+  constraint pair looks impossible (here: "~90/s avg" + "castable on a base pool"), surface it instead of
+  silently capping — the designer's resolution ("you can't cast it without Max-MP") was the whole point.*
 
 ### Decisions / lessons
 - **Where to put a per-second drain: pay centrally in the dispatcher, not inside each skill's tick.** The

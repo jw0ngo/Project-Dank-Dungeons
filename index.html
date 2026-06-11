@@ -3784,8 +3784,9 @@ function gGodSkillHud(p){
     const tree = gGodSkillTree(p, id); if(!tree) continue;
     const d = gGodSkillDisplay(p, id);   // show the CURRENT evolution (Firebloom/Dragonbreath…), not the base
     out.push({ id, key: i + 1, icon: d.icon, name: d.name,
-               active: !off[id], dormant: !!dorm[id],
-               mpCostPerSec: gGodFireParam(p, id, 'mpCost'), mpEmit: gGodSkillEmitCost(p, id) });
+               active: !off[id], dormant: !!dorm[id], affordable: p.mp >= gGodSkillBaseChunk(p, id),
+               mpChunk: Math.round(gGodSkillBaseChunk(p, id)), mpCostPerSec: gGodSkillDrainPerSec(p, id),
+               mpEmit: gGodSkillEmitCost(p, id) });
   }
   return out;
 }
@@ -3819,15 +3820,41 @@ function gGodSkillDisplay(p, id){
   }
   return { name: tree.art || id, icon: tree.icon || '✦' };
 }
-// The CURRENT per-emit mana cost (item 7) — the chunk charged each time this skill's discrete effect fires
-// (0 before a Form is chosen). Leaf overrides its Form's emit cost. Mirrors the lookup in gTickBurningBody.
+// The CURRENT base-aura mana CHUNK (MP) — charged every BB_AURA_INTERVAL (3s). GROWS per rank (Josh: the
+// base cost rises every level alongside damage/area). rank 1 = base.mpChunk; +mpChunkInc per level. NO cap —
+// at high rank this can exceed a base pool, gating the skill until the player builds Max-MP. Single source
+// for the charge (gTickBurningBody), the HUD, and Sim.
+function gGodSkillBaseChunk(p, id){
+  const tree = gGodSkillTree(p, id); if(!tree || !tree.fire) return 0;
+  const b = tree.fire.base, rank = Math.max(1, gImbueRank(p, id));
+  return (b.mpChunk || 0) + (b.mpChunkInc || 0) * (rank - 1);
+}
+// The CURRENT emit cadence (frames between this skill's auto-cast emits) — mirrors gTickBurningBody's
+// interval calc so the averaged drain (below) and the real charge agree. 0 before a Form is chosen.
+function gGodSkillEmitInterval(p, id){
+  const tree = gGodSkillTree(p, id); if(!tree || !tree.fire) return 0;
+  const form = gImbueForm(p, id), fdef = form && tree.forms && tree.forms[form];
+  if(!fdef) return 0;
+  const asc = gImbueAscension(p, id), leaf = asc && fdef.ascensions && fdef.ascensions[asc];
+  const e = gImbuePath(p, id);
+  return Math.max((tree.fire.floors && tree.fire.floors.emitInterval) || 60,
+                  ((leaf && leaf.interval) || fdef.fire.interval) + ((e && e.mods && e.mods.emitInterval) || 0));
+}
+// The ADDITIONAL flat mana cost charged each time an evolved skill emits its effect (item 7). 0 before a
+// Form. Leaf overrides its Form. Flat (no rank scaling, no cap) — the base chunk carries the rank scaling.
 function gGodSkillEmitCost(p, id){
   const tree = gGodSkillTree(p, id); if(!tree) return 0;
   const form = gImbueForm(p, id), fdef = form && tree.forms && tree.forms[form];
   if(!fdef) return 0;
   const asc = gImbueAscension(p, id), leaf = asc && fdef.ascensions && fdef.ascensions[asc];
-  if(leaf && leaf.mpEmit != null) return leaf.mpEmit;
-  return (fdef.fire && fdef.fire.mpEmit) || 0;
+  return (leaf && leaf.mpEmit != null) ? leaf.mpEmit : (fdef.fire && fdef.fire.mpEmit) || 0;
+}
+// Time-AVERAGED total drain (MP/sec) while the skill auto-fires = base chunk/3s + emit/cadence. The
+// "~80-100/s at rank 10" benchmark figure the HUD shows.
+function gGodSkillDrainPerSec(p, id){
+  const baseRate = gGodSkillBaseChunk(p, id) * 60 / BB_AURA_INTERVAL;
+  const ei = gGodSkillEmitInterval(p, id);
+  return baseRate + (ei > 0 ? gGodSkillEmitCost(p, id) * 60 / ei : 0);
 }
 // Render the god-skill toggle row by the MP bar — one chip per owned skill (hotkey · icon · mp/s · state).
 // Rebuilds innerHTML only when the chip set/state changes (signature-gated), not every frame; hidden when
@@ -3837,7 +3864,7 @@ function gUpdateGodSkillHud(){
   const el = document.getElementById('g-godskills'); if(!el) return;
   const list = (inWilderness && gPlayer && !gPlayer.dead) ? gGodSkillHud(gPlayer) : [];
   if(!list.length){ if(el.style.display !== 'none'){ el.style.display = 'none'; el.innerHTML = ''; } _godHudSig = ''; return; }
-  const sig = list.map(s => s.key + s.id + (s.active ? (s.dormant ? 'd' : 'on') : 'off') + s.mpCostPerSec.toFixed(1) + 'e' + s.mpEmit).join('|');
+  const sig = list.map(s => s.key + s.id + (s.active ? (s.dormant ? 'd' : 'on') : 'off') + s.mpChunk + 'e' + s.mpEmit + (s.affordable ? '' : 'x')).join('|');
   if(sig === _godHudSig) return;
   _godHudSig = sig;
   el.style.display = 'flex';
@@ -3845,12 +3872,14 @@ function gUpdateGodSkillHud(){
     const st  = !s.active ? 'off' : s.dormant ? 'dormant' : 'on';
     const col = st === 'on' ? '#ff9a3a' : st === 'dormant' ? '#9c6a3a' : '#556677';
     const op  = st === 'on' ? '1' : st === 'dormant' ? '0.75' : '0.4';
-    const emit = s.mpEmit > 0 ? `+${s.mpEmit}` : '';            // per-emit chunk (item 7) — drain you see when it fires
-    const cost = `${s.mpCostPerSec.toFixed(1)}${emit}`;
-    return `<span title="${s.name} — ${s.mpCostPerSec.toFixed(1)} mp/s${s.mpEmit>0?` + ${s.mpEmit}/emit`:''} · press ${s.key} to toggle" `
+    // Show the base CHUNK you must afford to run it (the gate) — turns red when your pool can't cover it.
+    const costCol = (s.active && !s.affordable) ? '#ff5555' : col;
+    const emit = s.mpEmit > 0 ? `+${s.mpEmit}` : '';
+    const tail = (s.active && !s.affordable) ? '⛔' : s.dormant ? '⚠' : st === 'off' ? '✕' : '';
+    return `<span title="${s.name} — base ${s.mpChunk} MP / 3s${s.mpEmit>0?` + ${s.mpEmit}/emit`:''} ≈ ${s.mpCostPerSec.toFixed(0)} mp/s${s.affordable?'':' · NOT ENOUGH MAX MP'} · press ${s.key} to toggle" `
       + `style="display:inline-flex;align-items:center;gap:3px;padding:1px 5px;border:1px solid ${col};border-radius:4px;opacity:${op};background:rgba(8,8,20,.6);">`
       + `<b style="color:#8aa;font-size:7px;">${s.key}</b><span style="font-size:11px;line-height:1;">${s.icon}</span>`
-      + `<span style="color:${col};font-size:7px;">${cost}${s.dormant ? '⚠' : st === 'off' ? '✕' : ''}</span></span>`;
+      + `<span style="color:${costCol};font-size:7px;">${s.mpChunk}${emit}${tail}</span></span>`;
   }).join('');
 }
 
@@ -3886,16 +3915,16 @@ function gUpdateGodSkills(p, dt){
 function gTickBurningBody(p, dt, id, tree){
   const dbuf = (p.wildBuffs && (1 + (p.wildBuffs.damagePct || 0) / 100)) || 1;
 
-  // (0) Base mana cost — a GATED chunk: Burning Body charges its base aura cost (mpCost mp/s × the
-  //     BB_AURA_INTERVAL window = 5 MP per 3s) as one lump when the cost timer comes due. If you can't
-  //     afford the chunk, the WHOLE skill goes dormant — no aura, no emit — until mana recovers (Josh:
-  //     "if you don't have 5mp, Burning Body shouldn't run"). The timer isn't reset until you can pay, so
-  //     it charges the instant mana returns.
-  const baseCost = gGodFireParam(p, id, 'mpCost') * BB_AURA_INTERVAL / 60;   // 5/3 mp/s × 3s = 5 MP
+  // (0) Base-aura mana cost — a CHUNK charged every BB_AURA_INTERVAL (3s, fixed). The chunk GROWS per rank
+  //     (gGodSkillBaseChunk: 10 MP @rank 1 → ~253 MP @rank 10), so leveling Burning Body costs more, not just
+  //     hits harder. HARD-GATED, NO cap: if you can't afford the whole chunk the skill goes dormant (no aura,
+  //     no emit) — at high rank that means a base pool literally can't run it until you build Max-MP. The
+  //     timer holds while dormant, so it charges the instant you can pay.
+  const baseChunk = gGodSkillBaseChunk(p, id);
   p._bbCostTimer = (p._bbCostTimer || 0) - dt;
   if(p._bbCostTimer <= 0){
-    if(p.mp < baseCost){ if(p.godSkillDormant) p.godSkillDormant[id] = true; return; }   // can't afford base → dormant, do nothing
-    p.mp -= baseCost;
+    if(p.mp < baseChunk){ if(p.godSkillDormant) p.godSkillDormant[id] = true; return; }   // can't afford base chunk → dormant
+    p.mp -= baseChunk;
     p._bbCostTimer = BB_AURA_INTERVAL;
   }
 
@@ -3931,11 +3960,11 @@ function gTickBurningBody(p, dt, id, tree){
   if(p._bbTimer > 0) return;
   p._bbTimer = interval;
 
-  // Per-emit mana cost (item 7) — each discrete burst/ring costs a chunk ON TOP of the base aura, so mana
-  // drops in step with the effect on screen (Cinderburst nova = 10 MP/detonation; leaf overrides its Form).
-  // GATED: if you can't afford the chunk, the emit does NOT fire (you just miss this beat — the base aura,
-  // already paid above, keeps running). The emit timer was reset above, so the next attempt is one interval out.
-  const emitCost = (leaf && leaf.mpEmit != null) ? leaf.mpEmit : (fdef.fire.mpEmit || 0);
+  // Per-emit ADDITIONAL mana cost (item 7) — each evolved burst/ring costs a flat chunk ON TOP of the base
+  // aura, so mana drops in step with the effect on screen (Cinderburst nova = 10 MP/detonation; leaf overrides
+  // its Form). GATED: if you can't afford it the emit does NOT fire (you miss this beat — the base aura, already
+  // paid above, keeps running). Uses the shared helper so the charge equals the HUD/Sim figure.
+  const emitCost = gGodSkillEmitCost(p, id);
   if(p.mp < emitCost) return;       // can't afford the emit → skip it (no fire, no charge)
   if(emitCost > 0) p.mp -= emitCost;
 
@@ -6267,7 +6296,7 @@ const AURA_RADIUS       = 64;   // base ignite-aura radius (px ~2 tiles): enemie
 const AURA_DMG          = 4;    // aura contact damage per tick
 const AURA_TICK         = 24;   // frames between aura ticks (~0.4s)
 const AURA_BURN_FRAMES  = 120;  // burn duration the aura applies (2s)
-const BB_AURA_INTERVAL  = 180;  // item 7: frames between Burning Body's base-aura mana charges (3s) — the "5mp/3s" base, charged as a gated chunk
+const BB_AURA_INTERVAL  = 180;  // item 7: FIXED 3s cadence of Burning Body's base-aura mana chunk. The interval never changes; the CHUNK grows per rank (gGodSkillBaseChunk) so leveling the skill costs more — at high rank the chunk can exceed a base 100-MP pool, gating the skill to dormant until you build Max-MP (intended: "grow into your power"). NO cost cap.
 const BB_RING_INTERVAL  = 300;  // Firebloom: an expanding ring every 5s
 const BB_BURST_INTERVAL = 240;  // Cinderburst: a detonation nova every 4s
 const BB_NOVA_SPEED     = 13;   // Cinderburst nova expansion (fast = a detonation read, not a slow sweep)
@@ -13903,7 +13932,7 @@ const IMBUE_PATHS = {
         kind:'burningBody', timerKey:'_bbTimer',
         base:   { auraRadius:AURA_RADIUS, auraDmg:AURA_DMG, auraBurn:AURA_BURN_FRAMES,
                   emitDmg:FR_BASE_DMG, emitRange:FR_RANGE_TILES, burnFrames:FR_BURN_FRAMES,
-                  mpCost:10/3 },  // item 7: base aura cost = 10 MP / 3s. mp/SEC (=10/3) for HUD display; the actual charge is a GATED 10-MP chunk every BB_AURA_INTERVAL (won't run without 10 MP). Flat across ranks — dynamism is in per-emit mpEmit (below).
+                  mpChunk:10, mpChunkInc:27 },  // item 7: base-aura mana COST, charged as a chunk every BB_AURA_INTERVAL (3s). rank 1 = 10 MP; +27 MP per level → rank 10 ≈ 253 MP/3s (~84/s). With the evolved emit (mpEmit) the rank-10 skill averages in the ~80-100 MP/s benchmark. NO cap — exceeds a base pool at high rank by design (build Max-MP to wield it).
         floors: { auraRadius:40, emitInterval:90 },
         caps:   { emitRange:12 },
       },
@@ -16388,8 +16417,8 @@ const Sim = (function(){
         godSkills: (gSyncGodSkillOrder(p), gOwnedGodSkills(p).reduce((m,id)=>{
           m[id] = { rank:gImbueRank(p,id), form:gImbueForm(p,id), ascension:gImbueAscension(p,id),
                     key:((p.godSkillOrder||[]).indexOf(id)+1)||null, active:!(p.godSkillOff&&p.godSkillOff[id]),
-                    dormant:!!(p.godSkillDormant&&p.godSkillDormant[id]), mpCostPerSec:+gGodFireParam(p,id,'mpCost').toFixed(2),
-                    mpEmitCost:gGodSkillEmitCost(p,id) };
+                    dormant:!!(p.godSkillDormant&&p.godSkillDormant[id]), mpCostPerSec:+gGodSkillDrainPerSec(p,id).toFixed(2),
+                    mpBaseChunk:Math.round(gGodSkillBaseChunk(p,id)), mpEmitCost:gGodSkillEmitCost(p,id) };
           return m;
         }, {})),
         pendingEvolution: (()=>{ const e = gPendingEvolution(p); return e ? { skill:e.skill, kind:e.kind } : null; })(),

@@ -267,20 +267,23 @@ The god layer no longer imbues active skills; it grants **class-agnostic auto-fi
     at run start.** Tuned for "run dry early": leap = mana + a 15 s CD (CD-led); whirlwind = an 18 mp/s drain +
     5 s CD (mana-led, with a paired damage/radius power bump).
   - *Regen:* base passive `mpRegen` is a tight **~1 MP/s** (`WeaponRegistry.sword.mpRegen 0.01667`; was ~9/s),
-    so even one god-skill aura (~1.67/s) net-drains the pool. `wildBuffs.mpRegenAdd` cards loosen it over a run.
-    Regen is suppressed while whirlwind is active (it drains instead); god-skill drain is *layered* on regen
-    (not suppressed) — net = regen − Σ(active drains).
-  - *God-skill drain — gated discrete chunks (drain tracks on-screen effects, and you must afford each):*
-    charges happen **inside the tick** as affordability-gated lumps, not a smooth per-frame drain. **Base aura:**
-    a registry **`mpCost` (mp/sec)** in `fire.base` (Burning Body `5/3`, *flat* across ranks) is charged as a
-    lump of `mpCost × BB_AURA_INTERVAL/60` = **5 MP every 3 s** (`p._bbCostTimer`); if `mp < chunk` the WHOLE
-    skill goes **dormant** (no aura, no emit) and the timer holds so it charges the instant mana returns.
-    (Burning Body base `mpCost 10/3` → a 10-MP lump every 3 s.)
-    **Per-emit:** **`mpEmit`** on each Form's `fire` block (Firebloom ring 8 · Cinderburst nova 10), overridable
-    per Ascension leaf (Dragonbreath 6 · Chaos Crown 14 · Dragonheart 12 · Cataclysm 16), charged when an emit
-    fires — **gated**: `if(mp < emitCost) return` skips the emit (the already-paid aura keeps running).
-    `gGodSkillEmitCost(p,id)` mirrors the lookup for HUD/Sim. `mpCost` is mp/sec only for the HUD's per-second
-    display (the real charge is the 5-MP lump).
+    so a god skill's chunk charges drain far faster than you refill. `wildBuffs.mpRegenAdd` cards loosen it.
+    Regen is suppressed while whirlwind is active (it drains instead); god-skill chunk charges are layered on
+    regen (regen keeps ticking between/after chunks, refilling toward the next affordable charge).
+  - *God-skill cost — gated discrete chunks that scale with rank; NO cap (you grow into your power):* charges
+    happen **inside the tick**, not as a smooth drain. **Base aura:** a chunk charged every `BB_AURA_INTERVAL`
+    (3 s, fixed) whose SIZE grows per rank — `fire.base.mpChunk` (10) `+ mpChunkInc` (27) `× (rank-1)` →
+    `gGodSkillBaseChunk` = 10 MP @rank 1 → ~253 MP @rank 10. **Hard-gated, uncapped:** if `mp < chunk` the WHOLE
+    skill goes **dormant** (no aura, no emit), `p._bbCostTimer` holds so it charges the instant you can pay. By
+    design the rank-10 chunk **exceeds a base 100-MP pool** — the maxed skill can't fire until the player builds
+    `maxMp` (Josh: "not enough Max-MP → you can't cast max-level skills"). **Per-emit (additional, flat):**
+    `mpEmit` on each Form's `fire` block (Firebloom 8 · Cinderburst 10), overridable per Ascension leaf
+    (Dragonbreath 6 · Chaos Crown 14 · Dragonheart 12 · Cataclysm 16); charged when an emit fires, **gated** —
+    `if(mp < emitCost) return` skips just the emit (the already-paid aura keeps running). `gGodSkillBaseChunk` /
+    `gGodSkillEmitCost` are the single sources for the charge AND the HUD/Sim. `gGodSkillDrainPerSec` =
+    `baseChunk×60/BB_AURA_INTERVAL + emit×60/cadence` = the time-averaged drain (~80-100/s at rank 10, the
+    benchmark figure the HUD shows). The base mpChunk/mpChunkInc also implicitly scale damage/area (those scale
+    via the separate waveStep/formStep mods) — leveling buys power *and* cost together.
   - *Dispatch + toggles:* `gUpdateGodSkills` runs owned, toggled-on skills **in hotkey order (1→9)** and lets
     each tick charge its own gated chunks — so lower-key skills charge first and, under pressure, the
     **last-toggled** starve first (`p.godSkillDormant[id]`, defaulted false in the dispatcher, set true by a

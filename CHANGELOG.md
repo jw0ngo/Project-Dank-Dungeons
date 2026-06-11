@@ -17,18 +17,19 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
     sustains only ~5.5 s of spin. To keep the rarer, costlier spin worth committing to, its **payoff rose with
     it** — damage per hit `22→30` and hit radius `36→44`. Net benchmark: **1 leap + ~3 s of whirlwind ≈ empties
     a fresh 100 pool.** (Swing stays free; dash/heavy cooldowns left as-is pending playtest.)
-  - **Phase 2 — God Skills drain mana dynamically, tracking what's on screen — and you must afford it.** Two
-    gated charges: a **base-aura chunk** (Burning Body = **10 MP / 3 s**) **plus a per-emit chunk** the instant a
-    discrete effect fires, so mana drops in step with the action. **Both are hard-gated** — if you can't afford
-    a charge, that effect simply does not happen: below the base cost the whole skill goes **dormant** (no aura, no
-    emit); and an individual burst you can't pay for is **skipped** (you miss that beat) while the aura keeps
-    running. Emit costs: Cinderburst nova **+10 MP**, Firebloom ring **+8**, scaling up for the Ascensions
-    (Dragonbreath +6 · Chaos Crown +14 · Dragonheart +12 · Cataclysm +16). **Passive regen is cut to a tight
-    1 MP/s starting rate** (was ~9/s); `+MP regen` cards loosen it over a run.
-    A toggled god skill is **one evolving ability**: toggling it (or it going dormant) hides the **whole**
-    skill — base aura *and* its current emit — and the HUD chip shows the skill's **current evolution**
-    name/icon and live cost (`1.7/s +10`), since an evolution replaces the base (Burning Body → Firebloom →
-    Dragonbreath…).
+  - **Phase 2 — God-skill mana cost scales with rank, and you grow into your power.** Two hard-gated charges,
+    **no cap**: a **base-aura chunk** charged every **3 s** that **gets bigger every level** (Burning Body
+    `10 MP → +27/level → ~253 MP at rank 10`), **plus an additional flat chunk each time an evolved effect
+    emits** (Cinderburst nova **+10**, Firebloom ring **+8**, Ascensions Dragonbreath +6 · Chaos Crown +14 ·
+    Dragonheart +12 · Cataclysm +16). At rank 10 the skill **averages ~80–100 MP/s**. Because there's no cap,
+    a maxed skill's base chunk **outgrows a starting 100-MP pool** — leveling it up can make it cost more than
+    you can hold, so it **won't fire until you build Max-MP**. That's the intended arc: power up a skill, watch
+    your pool stop covering it, then hunt for `+Max MP`. Both charges are gated: can't afford the base chunk →
+    the **whole skill** goes **dormant** (no aura, no emit); can't afford an emit → that **burst is skipped**
+    while the aura keeps running. **Passive regen is a tight 1 MP/s** (was ~9/s); `+MP regen` cards loosen it.
+    A toggled god skill is **one evolving ability**: toggling it (or it going dormant) hides the **whole** skill,
+    and the HUD chip shows the **current evolution** name/icon plus its base chunk cost — turning **red ⛔ when
+    your Max-MP can't cover it** (Burning Body → Firebloom → Dragonbreath…).
   - **Phase 3 — toggle your auto-casts on hotkeys 1–9** (in the order you acquire them; default ON). A small
     **chip row by the MP bar** shows each owned god skill: its key, icon, live mp/s cost, and state. When mana
     can't cover everything, skills **starve lowest-key-last** — your core (key 1) keeps running while the
@@ -38,8 +39,8 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
     how many auras you can keep lit, becoming the deliberate early→late loosening of the economy.
   - *Multiplayer/AI-native:* mana is per-player and god-skill firing is host-authoritative, so toggle/dormant
     state is purely local — no protocol change. The `Sim` harness gained `Sim.toggleGodSkill(n)` and now exposes
-    each owned skill's `{key, active, dormant, mpCostPerSec}` (+ `mp`) in `observe()`, so headless bots can
-    manage mana and runs reflect the real economy.
+    each owned skill's `{key, active, dormant, mpBaseChunk, mpEmitCost, mpCostPerSec}` (+ `mp`/`maxMp`) in
+    `observe()`, so headless bots can manage mana, see when a skill outgrew the pool, and reflect the real economy.
 
 ## [0.12.0] - 2026-06-12
 
