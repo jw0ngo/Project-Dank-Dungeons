@@ -18,6 +18,35 @@ lesson: **the principle → why → how to apply.** Quality over volume.
 
 ---
 
+### 2026-06-11 — When you split a doc to separate concerns, split on the axis that genuinely differs; and don't be precious about a structure you just shipped
+
+- **Principle:** Two doc-architecture moves, one right and one wrong, in one session. The **right** split is
+  by *altitude/concern that actually differs*: I made `ROADMAP.md` product-pure (strategy: what/why/priority,
+  PM-owned) and pushed execution state to a separate shared doc. The **wrong** split, made minutes earlier,
+  was carving *execution* into two docs (a new `BOARD.md` + the existing `CLEANUP_BACKLOG.md`) — which Josh
+  caught as redundant one day later: a "hand-off log" and a "deferred-findings backlog" are **the same
+  primitive** — *a task, sometimes flagged by another agent*. The fix was to merge them into one
+  owner-laned tracker (`TASKS.md`: lanes by the agent who owns+updates the task; anyone may file into any
+  lane). **Test before adding a doc/section:** "is this a genuinely different *kind* of thing, or the same
+  thing sliced by who-touched-it / when-I-noticed-it?" If the latter, it's one list with a field
+  (owner, status, flagged-by), not two docs.
+- **Why:** A one-file game with reset-between-session agents leans hard on docs as the shared brain, so doc
+  *structure* is real infrastructure — and overlapping task lists drift immediately (the Favor coin was
+  already double-tracked, framed two ways, within 24h). The cost of a redundant doc isn't storage; it's that
+  every cross-role item now has two homes that disagree. Consolidating cost a second restructure of the same
+  governance files in one session — cheap *only* because I treated the day-old `BOARD.md` as disposable the
+  moment the overlap was clear, instead of defending it.
+- **How to apply:** (1) Before creating a doc or a parallel section, name the **one axis** it splits on and
+  check the existing docs don't already cover that axis differently — collapse same-primitive lists into one
+  with distinguishing *fields*, don't spawn parallel docs. (2) For cross-agent work, the durable shape is
+  **owner-laned with a flagged-by field**: each agent reads/owns its lane, anyone can enqueue into another's.
+  (3) A structural change ripples — re-point **every** live operating doc (`CLAUDE.md`/`AGENTS.md`/`STUDIO.md`
+  + each agent file) *and* the stale routing-pointers in agent memories; leave historical journals/archives
+  alone (they're records of what was true then). (4) When the shared tree carries another session's **staged**
+  changes, commit with an explicit pathspec (`git commit -- <paths>`), not a bare commit, or you sweep their
+  lane into yours. (5) Don't be precious: a doc/structure you shipped this session is still disposable if it's
+  shown wrong — re-doing it now is cheaper than a drift surface that compounds.
+
 ### 2026-06-10 — A "can we do X?" question often hides unstated architecture; ground in the engine before answering, and the cheapest big pivot reuses tuned systems and swaps only their coupling
 
 - **Principle:** Three moves made a major late pivot (gods stop imbuing active skills → become auto-firing,
