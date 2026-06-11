@@ -2540,7 +2540,7 @@ const WeaponRegistry = {
     wwCooldown:   300,    // frames between whirlwinds (item-7: 120→300 = 5s — a deliberate burst, not spammable)
     wwHitCd:      40,     // frames between repeated hits on same enemy
     mpRegen:       0.01667, // mp per frame passive regen (~1/s — item 7: the tight STARTING rate; mpRegenAdd cards loosen it over a run, and one god-skill aura at ~1.67/s now net-drains the pool)
-    mpCostHeavy:   30,    // heavy attack charge release (item-7: 25→30)
+    mpCostHeavy:   10,    // heavy attack charge release (Josh 2026-06-12: 30→10 — was starving the heavy under the tighter mana economy)
     mpCostEvasion: 18,    // evasion dash (item-7: 15→18 — mobility stays affordable)
     mpCostLeap:    45,    // leap (item-7: 35→45 — the opening leap+WW burst must bite the pool)
     mpCostWwTick:  0.30,  // whirlwind mp drain per frame while spinning (item-7: 0.08→0.30 = 18/s — mana-led; a full 100 pool sustains ~5.5s of spin)

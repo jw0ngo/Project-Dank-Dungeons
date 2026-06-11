@@ -7,6 +7,10 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+### Changed
+- **Heavy attack mana cost lowered 30 → 10.** Under the tighter mana economy the heavy was starving (you'd run
+  dry and it silently wouldn't fire even with the cooldown ready); 10 keeps it usable as a staple.
+
 ## [0.0.1] - 2026-06-12
 
 ### Changed
