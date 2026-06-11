@@ -37,6 +37,14 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 ## 🟧 Engineer / CTO lane
 
+- ◻️ ✨ **Heavy charge locks out the normal swing** (↳ from PM playtest, 2026-06-11 · roadmap #6 `approved`) —
+  while the heavy attack is charging (`p.heavyWindingUp === true`, `index.html:3327`) the player can still fire a
+  normal swing; gate it out. Suppress the swing trigger (LMB→`gDoSwingAt`, dispatch `~index.html:3517`) whenever
+  `heavyWindingUp` is set, so committing to a heavy means committing — no free swing mid-charge. **Why:**
+  weighty-combat directive (Josh, standing) — a committed action must compromise other options; charging heavy
+  shouldn't let you also poke. Engineer owns whether to drop the input or queue it; product intent = no swing
+  damage/animation while winding up a heavy.
+
 - 🔄 ✨ **Item 2 — God Skills** (roadmap #2 `approved` · spec [`specs/god-skills.md`](specs/god-skills.md)) —
   phased trigger-swap, 3/5 done:
   - [x] **Architecture generalization** (2026-06-11) — imbue-path mastery machinery generalized from
@@ -51,6 +59,7 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
     pledge sets `gPlayer.patron` (`#g-imbue-overlay` parked); **Dance of Fire retired-and-parked** (`IMBUE_PATHS.cilia.swing` + wave FX kept, unreachable).
   - [ ] **Trail of Embers** — add `kind:'distance'` registry entry + a movement-accumulator branch in `gUpdateGodSkills` (dash trail spawn already removed; just the updater branch remains).
   - [ ] **Pyroclasm** — add `kind:'interval+autotarget'` entry + a nearest-cluster helper + updater branch (heavy spawn already removed).
+  - [ ] **Burning Body Ascension refinement — Eye of Chaos + leaf swap** (↳ from PM playtest, 2026-06-11 · spec [`specs/god-skills.md`](specs/god-skills.md) rank-10 table) — in `IMBUE_PATHS.cilia.burningBody` (`index.html:~13547–13563`): (1) **Firebloom 🔥** leaf `chaosCrown` → **`eyeOfChaos`** ('Eye of Chaos'), new **`ringMode:'ebb'`** — a slow chaosfire ring that ebbs net-outward → pauses at max → thickens/intensifies → dissipates (new branch in `gSpawnFireRing` alongside `breathe`/`settle`, `~index.html:6089–6193`); no permanent ground-circle. (2) **Cinderburst 🔥** leaf `cataclysm` → **`chaosCrown`** ('Chaos Crown'), keep `novaScale` colossal blast + route to settle a chaosfire ground-circle (`_laySettleRing`/`gLayChaosfireRing`). Net effect = the two 🔥 leaves trade Form slots; Cataclysm name retired. **Balance:** Eye of Chaos self-burn must stay a *real but readable* cost (ebb sweeps back over you). Tune ebb curve + thickness live.
   - **⚠ Verification gap:** `node --check` + greps + logic trace done; the **in-browser canary** (`await Sim.batch(3)` + manual pledge→acquire→rank→fork→ascension) is **not yet run** — needs a live browser. Run before tagging.
 
 - ✅ 🔧 **FX asset reorg — update the `.src` paths** (↳ from ART, 2026-06-11 · **done ENG 2026-06-11**) — all 9 `.src`/manifest paths repointed to the foldered structure (`cilia/`, `_shared/`), incl. the dragonfire/chaosfire circles. Verified every path resolves to a real file; zero bare `assets/fx/<file>.png` refs remain; `node --check` clean. **The index.html path fixes are now committed (`331ae61`) alongside the asset moves — both on `main` locally; push together (still unpushed).** Original handoff retained below. `assets/fx/` is now foldered **by owner** (`cilia/` for the fire-god kit, `_shared/` for god-agnostic FX) per `assets/fx/README.md`. Greppable old→new (sprite-var anchor; line numbers drift):

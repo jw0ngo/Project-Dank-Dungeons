@@ -39,6 +39,7 @@ Boreas (item 5) stays parked.
 | **3** | **Wolves stop getting stuck** on their dens + ignore forest slow | ✅ Shipped (v0.5.0) | Quick | Bug fix — unblocks wolf playtesting |
 | **4** | **Wolves hit harder early** | ✅ Shipped (v0.5.0) | Quick | Makes a wolf camp a real risk, not free loot |
 | **5** | **Boreas** — a second god (ice/control) | ⏸️ Held | Multi-session | Parked — the playtest showed we don't need it yet |
+| **6** | **Heavy charge locks out the normal swing** — committing to a heavy means committing | ✅ Approved — cleared for build | Quick | Weighty-combat directive: a committed action must cost you other options |
 
 ---
 
@@ -221,6 +222,9 @@ juiced-up elites — hard, but fair and readable.
 > **Redirect (Josh, 2026-06-11):** skill 1 "Pyre Waltz" → **Burning Body** — refocused on fire's true identity
 > (**AOE burst + burn → explosions**, *not* movement/pull). Base is an ignite-aura; Forms = **Firebloom** (rings)
 > / **Cinderburst** (detonations). Detail in the spec.
+> **Ascension refinement (Josh, playtest 2026-06-11):** Cataclysm → **Eye of Chaos** (a new slow ebbing chaosfire
+> ring) and the two 🔥 chaos leaves **swap Forms** so Firebloom owns two rings, Cinderburst two detonations.
+> Spec'd (rank-10 table) + filed to the engineer lane. Detail in the spec.
 
 **What:** The god's power is no longer welded to your active skills — it's a set of **auto-firing abilities
 (Vampire-Survivors-style)** that play on intervals as you move and fight, sitting on top of *whatever* class
@@ -301,6 +305,26 @@ reads as red).
 <summary>🔧 Build notes (engineering)</summary>
 
 - Pure number tune: `EntityDefs.direwolf` / `.alphawolf` base HP + bite damage (`~2658` / `~2678`).
+</details>
+
+---
+
+### 6. Heavy charge locks out the normal swing
+
+`✅ approved` (Josh, playtest 2026-06-11) · **Size:** quick · **Pillar:** game feel (weighty combat) · **Art:** none
+
+**What:** While you're charging a heavy attack, you can still fire a normal swing. Stop that — charging a heavy
+should **commit** you: no normal swing until the heavy resolves.
+
+**Why:** The standing **weighty-combat directive** (Josh, 2026-06-08) — a committed action must compromise your
+other options, so missing/committing has a real cost. Free-swinging mid-charge makes the heavy weightless.
+
+<details>
+<summary>🔧 Build notes (engineering)</summary>
+
+- Gate the swing trigger on the heavy-charge flag: while `p.heavyWindingUp === true` (`index.html:3327`),
+  suppress the LMB→`gDoSwingAt` dispatch (`~index.html:3517`). Engineer owns drop-vs-queue; product intent =
+  no swing damage/animation while a heavy is winding up. Filed in the Engineer lane of `TASKS.md`.
 </details>
 
 ---

@@ -98,6 +98,11 @@ its full binary tree from the prior design; only the **trigger** changes.
 > tuning is live. Code: `gTickBurningBody` + the `IMBUE_PATHS.cilia.burningBody` registry entry; FX reuse the
 > ring (`gSpawnFireRing`, now with `breathe`/`settle`/`healOwner`/`speed` modes) + the shipped substance grounds.
 
+> **Ascension refinement (Josh, playtest 2026-06-11):** *Cataclysm → **Eye of Chaos**, and **swap** the two 🔥
+> chaos leaves between the Forms* so each Form's ascensions are mechanically coherent (Firebloom = two
+> player-centred **rings**; Cinderburst = two **detonation/ground** payoffs). Eye of Chaos is a **new ring mode**
+> (`ebb`); Chaos Crown moves to Cinderburst and keeps its settle-into-ground payoff. See the rank-10 table below.
+
 **Unlock (rank 1) — the ignite-AURA:** a fixed-radius aura (`AURA_RADIUS`) — enemies within it catch fire and
 take burn DoT each `AURA_TICK`. Standalone damage (`AURA_DMG`/`FR_BASE_DMG`-scaled by `damagePct`), no `wwDamage`.
 
@@ -109,14 +114,24 @@ take burn DoT each `AURA_TICK`. Standalone damage (`AURA_DMG`/`FR_BASE_DMG`-scal
   - **B · Cinderburst** *(burst · stand)* — the aura swells and **detonates a fast fixed-radius nova every ~4s**
     (`BB_BURST_INTERVAL`, `BB_NOVA_SPEED`) centred on you; wade in and cook the pack.
 - **Ranks 6–9:** +emit damage / +radius / +burn (each Form's `formStep`).
-- **Rank 10 — Ascension** (🐉 Dragon = sustain · 🔥 Chaos = power+cost):
-  - **Firebloom →** 🐉 **Dragonbreath** (`ringMode:'breathe'` — dragonfire ring expands then fully contracts,
-    a dragon's-breath tempo; band-contact **heals** you, `healOwner`) · 🔥 **Chaos Crown** (`ringMode:'settle'` —
-    chaosfire ring expands, pauses at peak, then **settles into a burning chaosfire ground-circle** at max
-    radius via `_laySettleRing`).
-  - **Cinderburst →** 🐉 **Dragonheart** (each detonation pools **dragonfire ground at your feet** that heals
-    while you stand in it) · 🔥 **Cataclysm** (`novaScale` — **colossal chaosfire blasts** + chaosfire ground
-    that burns enemies AND you).
+- **Rank 10 — Ascension** (🐉 Dragon = sustain · 🔥 Chaos = power+cost). **The two 🔥 leaves were swapped
+  + Cataclysm renamed to Eye of Chaos (Josh, 2026-06-11)** — each Form now owns two like-shaped ascensions:
+
+  | Form | 🐉 sustain (old-god) | 🔥 power+cost (new-god) |
+  |---|---|---|
+  | **Firebloom** *(rings)* | **Dragonbreath** — `ringMode:'breathe'`: dragonfire ring expands then fully contracts (a dragon's-breath tempo), band-contact **heals** you (`healOwner`) | **Eye of Chaos** *(new — `ringMode:'ebb'`)*: a slow chaosfire ring **emanates from you, ebbing outward** (expands, contracts slightly, nets outward) → **pauses at max range** → **intensifies / thickens** → **dissipates**. No permanent ground-circle — the travelling band IS the chaosfire hazard. |
+  | **Cinderburst** *(novas)* | **Dragonheart** — each detonation pools **dragonfire ground at your feet** that heals while you stand in it | **Chaos Crown** *(moved here from Firebloom)* — a colossal detonation that **settles into a great burning chaosfire ground-circle** (the "crown") via `_laySettleRing`; burns enemies AND you. (Inherits the old Cataclysm's `novaScale` colossal-blast trait + Chaos Crown's settle payoff.) |
+
+  - **Eye of Chaos — the new `ebb` ring mode** (the only genuinely new FX behaviour in this change): distinct
+    from `breathe` (expand→fully contract) and `settle` (expand→pause→lay ground-circle). Net-outward ebbing
+    pulse → pause/hold at max range → band thickens & intensifies → fade out. Chaosfire substance, so contact
+    burns; **self-burn cost (the 🔥 rule):** the ebb's contraction phases sweep the band back across the player,
+    so the cost is real but **readable** — you ride the ebb and stay clear, same "avoidable hazard, not instant
+    death" principle as Chaos Crown's ground-ring. Engineer owns the exact ebb curve + how thick "intensifies" reads.
+  - **Chaos Crown under Cinderburst:** keep its settle-into-chaosfire-ground payoff (`_laySettleRing` /
+    `gLayChaosfireRing`); the Cinderburst form emits a nova, so its ascension reshapes that detonation into the
+    colossal-blast-then-settle "crown" (reuse `novaScale` + the settle). Engineer's call on the cleanest wiring —
+    all three pieces (`novaScale`, `_laySettleRing`, the substance grounds) already exist.
 
 ---
 
