@@ -195,9 +195,8 @@ button{font-family:inherit;cursor:pointer;}
 .imb-dot.fork.filled{ background:#ffcc44; box-shadow:0 0 7px rgba(255,180,60,.95); }
 .stat-card:hover .imb-dot.next{ animation:imbNextFlash .7s ease-in-out infinite; }
 @keyframes imbNextFlash{ 0%,100%{ background:#4a3f22; box-shadow:none; transform:scale(1);} 50%{ background:#ffe0a0; box-shadow:0 0 9px rgba(255,190,70,1); transform:scale(1.35);} }
-/* Skillforge (dev/testing) — Sanctum-only panel to imbue + rank any skill without grinding the wilderness */
-#skillforge-btn{ position:absolute; top:8px; right:8px; z-index:16; background:rgba(30,18,8,.85); border:1px solid #7a4a1a; color:#ffae5a; font:bold 9px monospace; letter-spacing:1px; padding:5px 9px; border-radius:5px; cursor:pointer; }
-#skillforge-btn:hover{ background:rgba(60,36,14,.95); box-shadow:0 0 8px rgba(255,150,40,.5); }
+/* Skillforge (dev/testing) — Sanctum-only panel to acquire + rank god skills without grinding the wilderness.
+   Opened by the in-world forge prop (walk up + E) or the K key — the old corner button was retired. */
 .forge-row{ display:flex; align-items:center; justify-content:space-between; gap:14px; background:linear-gradient(180deg,rgba(28,20,12,.9),rgba(12,9,6,.95)); border:1px solid #5a3a18; border-radius:7px; padding:9px 12px; }
 .forge-left{ text-align:left; }
 .forge-name{ font:bold 11px 'Palatino Linotype',serif; color:#ffd8b8; letter-spacing:1px; }
@@ -820,14 +819,14 @@ function _fbInit() {
       <div style="margin-top:16px;font:7px monospace;color:#553322;letter-spacing:2px;">THIS CHOICE IS PERMANENT FOR THE RUN</div>
     </div>
 
-    <!-- Skillforge (dev/testing) — Sanctum-only. Corner button + overlay to imbue & rank any skill,
-         including driving the Imbue-Path Form fork, without grinding the wilderness. -->
-    <button id="skillforge-btn" style="display:none;" onclick="gOpenSkillforge()">⚒ SKILLFORGE</button>
+    <!-- Skillforge (dev/testing) — Sanctum-only overlay to acquire & rank god skills, including driving
+         the Form/Ascension fork, without grinding the wilderness. Opened by the in-world forge prop
+         (walk up + E) or the K key; the old corner button was retired. -->
     <div id="g-skillforge-overlay" style="display:none;position:absolute;inset:0;z-index:23;background:rgba(0,0,0,0.92);flex-direction:column;align-items:center;justify-content:center;">
       <div style="text-align:center;margin-bottom:16px;">
         <div style="font:bold 9px monospace;letter-spacing:6px;color:#ffae5a;text-transform:uppercase;">&#9874; Skillforge &#9874;</div>
-        <div style="font:bold 18px 'Palatino Linotype',serif;letter-spacing:2px;color:#ffd8b8;text-shadow:0 0 16px rgba(255,140,0,0.7);">Forge a Skill</div>
-        <div style="font:7px monospace;color:#aa6644;letter-spacing:2px;margin-top:5px;">TESTING — IMBUE &amp; RANK ANY SKILL · K or ESC to leave</div>
+        <div style="font:bold 18px 'Palatino Linotype',serif;letter-spacing:2px;color:#ffd8b8;text-shadow:0 0 16px rgba(255,140,0,0.7);">Forge a God Skill</div>
+        <div style="font:7px monospace;color:#aa6644;letter-spacing:2px;margin-top:5px;">TESTING — ACQUIRE &amp; RANK GOD SKILLS · K or ESC to leave</div>
       </div>
       <div id="skillforge-rows" style="display:flex;flex-direction:column;gap:8px;min-width:400px;"></div>
     </div>
@@ -1417,8 +1416,8 @@ function showScreen(name) {
   document.getElementById(name).classList.add('active');
   if (name === 'editor') { document.getElementById('ed-canvas').focus(); }
   if (name === 'game') { startGameLoop(); document.getElementById('gc').focus(); scaleGameToFit(); }
-  // Skillforge dev panel: visible in any active gameplay (town/dungeon/wilderness) on dev builds, hidden on menus + live site.
-  { const sfb = document.getElementById('skillforge-btn'); if(sfb) sfb.style.display = (_DEV && name === 'game') ? 'block' : 'none'; }
+  // (Skillforge dev panel is now opened by the in-world forge prop (walk up + E) or the K key — the
+  //  old corner button was retired, so there's nothing to show/hide here.)
   if (name === 'town') { /* townLoad/startTownLoop called from goTown() directly */ tCanvas && tCanvas.focus(); }
   if (name === 'cc-screen') { ccInit(); }
 }
@@ -2011,6 +2010,7 @@ let gImbuedSkills = {};   // Sanctum/dungeon persist — town imbuing is additiv
 let gBombFireZones=[]; // {wx,wy,radius,life,maxLife,dmgAccum}
 let gShrine = null; // single shrine per wilderness run
 let gTrainingDummy=null; // persistent in Sanctum, null in dungeons
+let gForgeProp=null;     // dev-only Skillforge prop in the Sanctum (walk up + E); null off dev builds / outside town
 let gPlayer=null;
 let gLoopId=null;
 let gLoopGen=0; // incremented each time a new loop starts — stale loops self-terminate
@@ -2228,7 +2228,22 @@ let gBlocked = new Uint8Array(1);
 function gCI(cx,cy){return cy*gMapW+cx;}
 function ghp(h,n){h.push(n);let i=h.length-1;while(i>0){const p=(i-1)>>1;if(h[p].f<=h[i].f)break;const t=h[p];h[p]=h[i];h[i]=t;i=p;}}
 function gpp(h){const top=h[0];const last=h.pop();if(h.length){h[0]=last;let i=0;for(;;){let s=i;const l=2*i+1,r=2*i+2,n=h.length;if(l<n&&h[l].f<h[s].f)s=l;if(r<n&&h[r].f<h[s].f)s=r;if(s===i)break;const t=h[s];h[s]=h[i];h[i]=t;i=s;}}return top;}
-function gRebuildNav(){gBlocked=new Uint8Array(gMapW*gMapH);for(let i=0;i<gMapW*gMapH;i++)gBlocked[i]=(gTiles[i]===TILE_WALL||gTiles[i]===TILE_ROCK||gTiles[i]===TILE_SPIKE||gTiles[i]===TILE_HUT)?1:0;for(const d of gDestructibles){if(!d.broken)gBlocked[Math.floor(d.wy/T)*gMapW+Math.floor(d.wx/T)]=1;}for(const t of gTraps){gBlocked[t.ty*gMapW+t.tx]=1;}for(const k of gRocks){if(k.r>=T*0.4){const _rtx=Math.floor(k.wx/T),_rty=Math.floor(k.wy/T);if(_rtx>=0&&_rty>=0&&_rtx<gMapW&&_rty<gMapH)gBlocked[_rty*gMapW+_rtx]=1;}}}
+function gRebuildNav(){gBlocked=new Uint8Array(gMapW*gMapH);for(let i=0;i<gMapW*gMapH;i++)gBlocked[i]=(gTiles[i]===TILE_WALL||gTiles[i]===TILE_ROCK||gTiles[i]===TILE_SPIKE||gTiles[i]===TILE_HUT)?1:0;for(const d of gDestructibles){if(!d.broken)gBlocked[Math.floor(d.wy/T)*gMapW+Math.floor(d.wx/T)]=1;}for(const t of gTraps){gBlocked[t.ty*gMapW+t.tx]=1;}gBlockRockFootprint();}
+// Block the FULL footprint of each rock in the nav grid — not just its centre tile. gRCRocks pushes
+// enemies out to (k.r + their radius), so a big rock's collision spills into tiles the nav left open and
+// goblins oscillate against it; mark every tile whose centre an enemy couldn't reach (within k.r + pad).
+function gBlockRockFootprint(){
+  const pad = 9;   // ~enemy radius: a tile centre this close to the rock is unstandable → route around it
+  for(const k of gRocks){
+    if(k.r < T*0.3) continue;   // tiny pebbles keep walkable gaps (per the outcrop design)
+    const reach = k.r + pad;
+    const minTX=Math.max(0,Math.floor((k.wx-reach)/T)), maxTX=Math.min(gMapW-1,Math.floor((k.wx+reach)/T));
+    const minTY=Math.max(0,Math.floor((k.wy-reach)/T)), maxTY=Math.min(gMapH-1,Math.floor((k.wy+reach)/T));
+    for(let ty=minTY; ty<=maxTY; ty++) for(let tx=minTX; tx<=maxTX; tx++){
+      if(Math.hypot(tx*T+T/2-k.wx, ty*T+T/2-k.wy) <= reach) gBlocked[ty*gMapW+tx]=1;
+    }
+  }
+}
 function gAstar(sx,sy,gx,gy){
   let scx=Math.max(0,Math.min(gMapW-1,Math.floor(sx/T))),scy=Math.max(0,Math.min(gMapH-1,Math.floor(sy/T)));
   let gcx=Math.max(0,Math.min(gMapW-1,Math.floor(gx/T))),gcy=Math.max(0,Math.min(gMapH-1,Math.floor(gy/T)));
@@ -2673,7 +2688,7 @@ const EntityDefs = {
     favor:          { chance:0.06, min:1, max:1 },
   },
   king: {
-    hp:             500,
+    hp:             3000,     // +500% (was 500) — an epic, long boss fight (Josh playtest 2026-06-11)
     radius:         44,       // body hitbox — just inside the sprite's visible body (33% smaller)
     kbMult:         0.05,     // near-immovable — a boss isn't shoved around by hits (see _enemyKbMult)
     speedMin:       0.13,   // slow and deliberate — Dark Souls boss feel
@@ -2719,13 +2734,13 @@ const EntityDefs = {
     radius:         12,    // body hitbox — kept just inside the quadruped draw box
     speedMin:       0.34,  // fast — clearly quicker than a goblin (0.193); the "flanker" feel
     speedRange:     0.07,
-    meleeDamage:    15,    // the lunge-bite — chunks like a warrior swing; the crouch tell keeps it fair
+    meleeDamage:    9,     // the lunge-bite — eased down for the early game (was 15: killed too fast); the pounce-pause + tell keep it a threat
     meleeCooldown:  70,
     biteReach:      4,     // bite snout reach BEYOND the bodies (added to e.r+target.r) — keeps the
                            // hit on visible sprite contact, slightly inside the silhouette for fairness
     biteArc:        0.50,  // half-angle of the bite cone (rad)
-    biteWindup:     22,    // frames to crouch/tell before the pounce — the dodge window
-    lungeSpeed:     6.8,   // px/frame dash the wolf carries through its strike
+    biteWindup:     28,    // frames to crouch/tell before the pounce — the dodge window (lengthened slightly; was 22)
+    lungeSpeed:     5.5,   // px/frame dash the wolf carries through its strike (slowed for more reaction time; was 6.8)
     lungeRange:     150,   // px — distance at which it commits the lunge
     flankDist:      92,    // px — preferred circling radius when not lunging
     contactDamage:  4,     // chip when the body touches you (anti-facetank)
@@ -2740,13 +2755,13 @@ const EntityDefs = {
     radius:         18,    // larger body — the standout that guards the chest
     speedMin:       0.28,  // still fast, but heavier than a direwolf
     speedRange:     0.05,
-    meleeDamage:    25,    // harder bite — a real chunk; punished by the slower tell
+    meleeDamage:    15,    // harder bite than the direwolf, but eased for the early game (was 25); the slower tell + pounce-pause keep it punishable
     meleeCooldown:  90,
     biteReach:      4,     // snout reach beyond the bodies (see direwolf) — bigger alpha body (r18) already
                            // gives it a longer effective bite via e.r
     biteArc:        0.55,
-    biteWindup:     28,    // a touch slower tell — more punishable, fits the elite
-    lungeSpeed:     6.2,
+    biteWindup:     34,    // a touch slower tell — more punishable, fits the elite (lengthened slightly; was 28)
+    lungeSpeed:     5.0,   // slowed for more reaction time (was 6.2)
     lungeRange:     170,
     flankDist:      74,
     contactDamage:  6,
@@ -3293,6 +3308,9 @@ function makePlayerState(wx, wy) {
     // { rank, form, chaos, mods }. Seeded on imbue (gImbueSelectSkill), reset per run. Read via
     // gImbuePath/gImbueRank + the gFireWaveParams accessor. Local-only like skillMods.
     imbuePaths: {},
+    // God-skill pivot (item 2): the patron pledged at the shrine (e.g. 'cilia'), unlocking that god's
+    // auto-firing god-skill pool in the level-up draft. Per-run; set in gShrineSelectGod, reset on run start.
+    patron: null,
     // Whirlwind — per-player, not global
     wwActive: null, wwCooldown: 0,
     wwLevel: 0,   // whirlwind ability upgrade level
@@ -3440,6 +3458,8 @@ document.addEventListener('keydown', function(e){
     if(inTown && portalNearby){ portalOpenOverlay(); return; }
     if(inTown && wildernessPortalNearby){ goWilderness(); return; }
     if(!gPlayer||gPlayer.dead||exitReached) return;
+    // Skillforge prop (dev): walk up + E to open it (replaces the old corner button).
+    if(inTown && gForgeProp && gForgeInteract()) return;
     // Shrine: in the wilderness the patron menu auto-opens within 2 tiles (see
     // gUpdateShrine), leaving E free for LEAP. In town it still opens on E.
     if(inTown && gShrine && gShrineInteract()) return;
@@ -3481,6 +3501,14 @@ document.addEventListener('keydown', function(e){
 // §6b  SWORD & WHIRLWIND SYSTEM
 //      gReleaseCharge · gDoSwing · gCheckHits · gUpdateWhirlwind
 // ═══════════════════════════════════════════════════════════════
+
+// ── Attack lunge feel (Josh 2026-06-11) — the strike steps you forward (weighty/committed combat). You
+// CANNOT free-move during a normal swing (csm=0 in gUpdatePlayer); the forward step comes from the swing
+// itself (Dark Souls-ish). The heavy's lunge scales with how long it was charged. All tunable knobs. ──
+const SWING_LUNGE_SPEED    = 2.4;  // px/frame forward push at the START of a normal swing (decays over the swing)
+const SWING_LUNGE_FRAC     = 0.45; // fraction of the swing over which the lunge decays to 0
+const HEAVY_LUNGE_FACTOR   = 0.13; // heavy lunge base (× heavyLen) — was 0.11 inline, slightly stronger now
+const HEAVY_LUNGE_CHARGE_K = 1.6;  // heavy lunge ×(1 + chargeRatio·K): a full-charge heavy lunges much further
 
 function gDoSwing(){
   gDoSwingAt(gPlayer?gPlayer.angle:0);
@@ -3615,17 +3643,8 @@ function gUpdateWhirlwind(p, dt){
   const ww = p.wwActive;
   if(!ww) return;
   ww.spinAngle += 0.14 * dt; // orbit speed
-
-  // Cilia's Fire imbue - emit an expanding ring of fire every FR_INTERVAL frames.
-  if(p===gPlayer && gIsImbued(p,'ww','cilia')){
-    ww.fireTimer = (ww.fireTimer||0) - dt;
-    if(ww.fireTimer <= 0){
-      ww.fireTimer = FR_INTERVAL;
-      const ringDmg = Math.round(pSkillStat(p,'wwDamage') * ((p.wildBuffs&&(1+(p.wildBuffs.damagePct||0)/100))||1) * FR_DMG_MULT);
-      gSpawnFireRing(p.wx, p.wy, ringDmg);
-      gShake && gShake(3, 5);
-    }
-  }
+  // (Burning Body's fire rings used to spawn here while imbued — the god-skill pivot moved them into the
+  //  independent auto-fire updater gUpdateGodSkills; the whirlwind is now plain/class-neutral.)
 
   // Orbit particles — throttled to every 3 frames to reduce particle pressure
   const r = pSkillStat(p,'wwRadius');
@@ -3667,6 +3686,98 @@ function gUpdateWhirlwind(p, dt){
   }
 }
 
+// ── §6b-ii  GOD SKILLS — auto-firing patron abilities (item 2 pivot) ──────────────────────────────
+// Class-agnostic abilities granted by the active patron that fire on their own as you move and fight —
+// NOT tied to any active skill. gUpdateGodSkills is ticked once per frame from gUpdatePlayer for the
+// LOCAL player only (each client owns/ticks its own skills; only the FX/damage outcomes sync in MP via
+// the existing _frSeq bump in gSpawnFireRing). Each owned skill dispatches on its registry `fire.kind`.
+function gUpdateGodSkills(p, dt){
+  if(p !== gPlayer || p.dead) return;
+  for(const id of gOwnedGodSkills(p)){
+    const tree = gGodSkillTree(p, id); if(!tree || !tree.fire) continue;
+    switch(tree.fire.kind){
+      case 'burningBody': gTickBurningBody(p, dt, id, tree); break;
+      // 'distance' (Trail of Embers) and 'interval+autotarget' (Pyroclasm) land in the next slice.
+    }
+  }
+}
+
+// Burning Body — the fire god skill. (1) An always-on ignite-AURA: enemies within auraRadius catch fire
+// each AURA_TICK. (2) Once a Form is chosen @5, a periodic emit on its own cadence — Firebloom releases
+// an expanding ring, Cinderburst detonates a fast nova. (3) The rank-10 Ascension reshapes the emit:
+// Dragonbreath = a dragonfire breathing ring that heals on contact; Chaos Crown = a chaosfire ring that
+// settles into a burning ground-circle; Dragonheart/Cataclysm pool dragonfire-heal / chaosfire-self-burn
+// ground at your feet. All damage is standalone (FR_BASE_DMG-scaled), reusing the shipped ring + grounds.
+function gTickBurningBody(p, dt, id, tree){
+  const dbuf = (p.wildBuffs && (1 + (p.wildBuffs.damagePct || 0) / 100)) || 1;
+
+  // (1) Base ignite-aura — runs from rank 1, independent of any Form.
+  p._bbAura = (p._bbAura || 0) - dt;
+  if(p._bbAura <= 0){
+    p._bbAura = AURA_TICK;
+    const radius = gGodFireParam(p, id, 'auraRadius');
+    const admg   = Math.max(1, Math.round(gGodFireParam(p, id, 'auraDmg') * dbuf));
+    const aburn  = gGodFireParam(p, id, 'auraBurn');
+    for(const en of gEnemies){
+      if(en.dead) continue;
+      if(Math.hypot(en.wx - p.wx, en.wy - p.wy) > radius + en.r) continue;
+      gDealEnemyDamage(en, admg, { burn: Math.max(FR_BURN_MIN, Math.round(admg * FR_BURN_RATIO)), burnDur: aburn });
+    }
+    if(inTown && gTrainingDummy && Math.hypot(p.wx - gTrainingDummy.wx, p.wy - gTrainingDummy.wy) <= radius + gTrainingDummy.r)
+      hitTrainingDummy(admg, '#ffaa00', p.wx, p.wy);
+    const a = gFrame * 0.2;                                  // aura shimmer ring
+    spawnGP(p.wx + Math.cos(a) * radius * 0.85, p.wy + Math.sin(a) * radius * 0.85, '#ff7a22', 1, 2);
+  }
+
+  // (2) Form emit — nothing more until a Form is chosen @5.
+  const form = gImbueForm(p, id);
+  if(!form) return;
+  const fdef = tree.forms[form];
+  const e    = gImbuePath(p, id);
+  const asc  = gImbueAscension(p, id);
+  const leaf = (asc && fdef.ascensions[asc]) || null;
+  const ground = (leaf && leaf.ground) || null;
+  const interval = Math.max((tree.fire.floors && tree.fire.floors.emitInterval) || 60,
+                            ((leaf && leaf.interval) || fdef.fire.interval) + ((e.mods && e.mods.emitInterval) || 0));
+  p._bbTimer = (p._bbTimer || 0) - dt;
+  if(p._bbTimer > 0) return;
+  p._bbTimer = interval;
+
+  const novaScale  = (leaf && leaf.novaScale) || 1;
+  const dmg        = Math.max(1, Math.round(gGodFireParam(p, id, 'emitDmg') * FR_DMG_MULT * dbuf * novaScale));
+  const rangeTiles = gGodFireParam(p, id, 'emitRange') * novaScale;
+  const burnFrames = gGodFireParam(p, id, 'burnFrames');
+
+  if(fdef.fire.emit === 'ring'){
+    const mode = leaf && leaf.ringMode;                     // 'breathe' (Dragonbreath) | 'settle' (Chaos Crown)
+    gSpawnFireRing(p.wx, p.wy, dmg, {
+      rangeTiles, burnFrames,
+      speed:     mode === 'breathe' ? BB_BREATH_SPEED : (fdef.fire.speed || FR_SPEED),
+      breathe:   mode === 'breathe',
+      follow:    mode === 'breathe',                         // Dragonbreath emanates from the moving player
+      settle:    mode === 'settle' ? 'chaosfire' : null,
+      healOwner: (mode === 'breathe' && ground === 'dragonfire') ? Math.max(1, Math.round(dmg * DRAGONFIRE_HEAL_RATIO)) : 0,
+      // Ascension reskins the ring to its substance: Dragonbreath → dragonfire circle · Chaos Crown → chaosfire circle.
+      spr:       ground === 'dragonfire' ? DRAGONFIRE_CIRCLE_SPR : ground === 'chaosfire' ? CHAOSFIRE_CIRCLE_SPR : null,
+    });
+    gShake && gShake(3, 5);
+  } else {                                                  // 'nova' — a fast fixed-radius detonation
+    // Ascension reskins the nova to its substance: Dragonheart → dragonfire circle · Cataclysm → chaosfire circle.
+    const novaSpr = ground === 'dragonfire' ? DRAGONFIRE_CIRCLE_SPR : ground === 'chaosfire' ? CHAOSFIRE_CIRCLE_SPR : null;
+    gSpawnFireRing(p.wx, p.wy, dmg, { rangeTiles, burnFrames, speed: fdef.fire.speed || BB_NOVA_SPEED, spr: novaSpr });
+    // Cinderburst Ascension grounds. Dragonheart pools dragonfire HEAL at your feet (stand in it to mend).
+    // Cataclysm lays chaosfire as a RING around you — never under you — so the self-burn is a hazard you
+    // can avoid by holding the safe centre, not instant death (matches Chaos Crown).
+    if(ground === 'dragonfire'){
+      const heal = Math.max(1, Math.round(dmg * DRAGONFIRE_HEAL_RATIO));
+      gSpawnFireTrail(p.wx, p.wy, Math.round(dmg * 0.5), false,
+        { substance:'dragonfire', heal, life: Math.max(120, interval), reach: FT_REACH * 2 });
+    } else if(ground === 'chaosfire'){
+      gLayChaosfireRing(p.wx, p.wy, CATACLYSM_RING_TILES * T, dmg);
+    }
+    gShake && gShake(5, 7);                                 // detonation punch
+  }
+}
 
 // ── §6b-iii  EVASION DASH ─────────────────────────────────────────
 // Spacebar (sword) — short forward dash, invulnerable throughout.
@@ -3719,17 +3830,8 @@ function gUpdateEvasion(p, dt){
   [rx,ry] = gRCEnemies(rx,ry,p.r);
   p.wx = rx; p.wy = ry;
   ev.traveled += step;
-
-  // Cilia's Fire imbue -- drop a trail of burning ground as we dash.
-  if(p===gPlayer && gIsImbued(p,'evasion','cilia')){
-    if(ev._trailLast === undefined) ev._trailLast = -FT_SPACING; // drop one immediately
-    if(ev.traveled - ev._trailLast >= FT_SPACING){
-      ev._trailLast = ev.traveled;
-      const tdmg = Math.round(FT_DMG_BASE * ((p.wildBuffs&&(1+(p.wildBuffs.damagePct||0)/100))||1));
-      gSpawnFireTrail(p.wx, p.wy, tdmg, false);
-    }
-  }
-
+  // (Trail of Embers used to lay its burning ground from here while imbued — the god-skill pivot will
+  //  move it into gUpdateGodSkills as a movement-driven auto-fire skill; the dash is now plain.)
 
   // Slipstream particles trailing behind
   spawnGP(p.wx - Math.cos(ev.angle)*12, p.wy - Math.sin(ev.angle)*12, '#ddeeff', 2, 1.5);
@@ -3927,6 +4029,7 @@ function _fireHeavyAtk(p){
   p.heavyWindingUp  = false;
   p.heavySwinging   = true;
   p.heavyTimer      = 0;
+  p._heavyX0 = p.wx; p._heavyY0 = p.wy;   // lunge START — the hit zone spans from here through the lunge + stab
   p.heavyHitRegistry = new Set();
   p.mp = Math.max(0, p.mp - W().mpCostHeavy); // mana cost on release
   const r = p.heavyChargeRatio;
@@ -3944,13 +4047,8 @@ function _fireHeavyAtk(p){
   };
   gPlaySwish();
   gShake(5 + Math.round(r * 6), 8 + Math.round(r * 8));
-  // Imbued heavy (Cilia's Fire): release erupts a travelling line of fire pillars,
-  // longer with a longer charge. Layered on top of the normal lunge + melee hit.
-  // Pillars only erupt once the heavy is charged to at least 50% (the hitbox
-  // telegraph flashes red while held past this point to signal it's armed).
-  if(gIsImbued(p,'heavy','cilia') && r >= 0.5){
-    gSpawnFirePillars(p.wx, p.wy, p.heavyAngle, chargedDmg, r, chargedLen);
-  }
+  // (Pyroclasm used to erupt its fire pillars from the heavy release while imbued — the god-skill pivot
+  //  will move it into gUpdateGodSkills as an interval + auto-target skill; the heavy is now plain.)
 }
 
 function gUpdateHeavyAtk(p, dt){
@@ -3979,11 +4077,12 @@ function gUpdateHeavyAtk(p, dt){
   p.heavyTimer += dt;
   const ratio = Math.min(1, p.heavyTimer / W().heavyDur);
 
-  // Lunge: push player forward during extend phase (0→0.5). Weighty commit — the longer heavyDur
-  // also means more frames of forward push (the lunge integrates over the extend window), so the
-  // attack carries the player further and leaves them planted in recovery if it whiffs.
+  // Lunge: push player forward during extend phase (0→0.5). Weighty commit — and now the lunge distance
+  // SCALES WITH CHARGE: a barely-tapped heavy steps a little, a full-charge heavy drives the player far
+  // forward (×(1 + chargeRatio·HEAVY_LUNGE_CHARGE_K)). Whiff a committed heavy and you're planted, exposed.
   if(ratio < 0.5){
-    const lungeSpeed = pSkillStat(p,'heavyLen') * 0.11 * (1 - ratio * 2); // decelerates
+    const _chg = 1 + (p.heavyChargeRatio || 0) * HEAVY_LUNGE_CHARGE_K;
+    const lungeSpeed = pSkillStat(p,'heavyLen') * HEAVY_LUNGE_FACTOR * _chg * (1 - ratio * 2); // decelerates
     p.wx += Math.cos(p.heavyAngle) * lungeSpeed * dt;
     p.wy += Math.sin(p.heavyAngle) * lungeSpeed * dt;
     // Clamp to walls
@@ -4018,11 +4117,17 @@ function gUpdateHeavyAtk(p, dt){
     const len = p._heavyChargedLen || pSkillStat(p,'heavyLen');
     const hw  = pSkillStat(p,'heavyWidth');
     const dmg = p._heavyChargedDmg || W().heavyDamage;
+    // Anchor the hit zone at the lunge START (not the moving player) and extend it by the distance lunged,
+    // so the rect spans the WHOLE swept path + the stab reach — a long/fast charged lunge no longer blows
+    // past enemies in its path. (csm=0 during the heavy, so the lunge runs straight along heavyAngle.)
+    const hx0 = (p._heavyX0 != null) ? p._heavyX0 : p.wx;
+    const hy0 = (p._heavyY0 != null) ? p._heavyY0 : p.wy;
+    const hitLen = Math.hypot(p.wx - hx0, p.wy - hy0) + len;
     const pendingHits = [];
     for(const e of gEnemies){
       if(e.dead || p.heavyHitRegistry.has(e)) continue;
       const pts = [[e.wx,e.wy],[e.wx+e.r,e.wy],[e.wx-e.r,e.wy],[e.wx,e.wy+e.r],[e.wx,e.wy-e.r]];
-      if(!pts.some(([ex,ey]) => pInHeavyAtkRect(ex,ey,p.wx,p.wy,p.heavyAngle,len,hw))) continue;
+      if(!pts.some(([ex,ey]) => pInHeavyAtkRect(ex,ey,hx0,hy0,p.heavyAngle,hitLen,hw))) continue;
       p.heavyHitRegistry.add(e);
       const _cr = gCritRoll(dmg);
       gDealEnemyDamage(e, _cr.dmg, { hitFlash: 16, report: pendingHits });
@@ -4037,7 +4142,7 @@ function gUpdateHeavyAtk(p, dt){
     if(inTown && gTrainingDummy){
       const dm = gTrainingDummy;
       const pts = [[dm.wx,dm.wy],[dm.wx+dm.r,dm.wy],[dm.wx-dm.r,dm.wy]];
-      if(!p.heavyHitRegistry.has(dm) && pts.some(([ex,ey]) => pInHeavyAtkRect(ex,ey,p.wx,p.wy,p.heavyAngle,len,hw))){
+      if(!p.heavyHitRegistry.has(dm) && pts.some(([ex,ey]) => pInHeavyAtkRect(ex,ey,hx0,hy0,p.heavyAngle,hitLen,hw))){
         p.heavyHitRegistry.add(dm);
         hitTrainingDummy(dmg, '#ddeeff', p.wx, p.wy);
       }
@@ -4046,7 +4151,7 @@ function gUpdateHeavyAtk(p, dt){
     for(const d of gDestructibles){
       if(d.broken || p.heavyHitRegistry.has(d)) continue;
       const pts = [[d.wx,d.wy],[d.wx+d.r,d.wy],[d.wx-d.r,d.wy],[d.wx,d.wy+d.r],[d.wx,d.wy-d.r]];
-      if(!pts.some(([ex,ey]) => pInHeavyAtkRect(ex,ey,p.wx,p.wy,p.heavyAngle,len,hw))) continue;
+      if(!pts.some(([ex,ey]) => pInHeavyAtkRect(ex,ey,hx0,hy0,p.heavyAngle,hitLen,hw))) continue;
       p.heavyHitRegistry.add(d);
       if(MP.active && !MP.isHost){
         Net.sendHits([{destructIdx: gDestructibles.indexOf(d)}]);
@@ -4131,7 +4236,7 @@ function gUpdatePlayer(dt=1){
   const csm = (p.heavyWindingUp || p.heavySwinging) ? 0   // no movement during heavy windup OR the full swing+recovery commitment (was the never-set p.smashing → movement leaked)
             : p.leapActive ? 0
             : p.wwActive ? 0.3
-            : gActiveWeapon!=='bow' && p.swinging ? 0.4
+            : gActiveWeapon!=='bow' && p.swinging ? 0   // committed: no free movement mid-swing — the lunge carries you
             : isBowCharging ? 0.45
             : isBowCooldown ? 0.70
             : 1.0;
@@ -4139,6 +4244,19 @@ function gUpdatePlayer(dt=1){
   const dsm = ((p.wildBuffs&&(1+(p.wildBuffs.speedPct||0)/100))||1);  // obelisk + card speed
   p.wx+=dx*p.speed*csm*tsm*dsm*dt;p.wy+=dy*p.speed*csm*tsm*dsm*dt;
   let[rx,ry]=gRC(p.wx,p.wy,p.r);[rx,ry]=gRCDestructibles(rx,ry,p.r);[rx,ry]=gRCRocks(rx,ry,p.r);[rx,ry]=gRCTraps(rx,ry,p.r);[rx,ry]=gRCEnemies(rx,ry,p.r);p.wx=rx;p.wy=ry;
+  gUpdateGodSkills(p,dt);  // patron auto-fire abilities (Burning Body etc.) — after move so position is current
+  // Swing lunge: a normal swing steps the player forward in the committed aim direction. Free movement is
+  // off during the swing (csm=0), so this push is the only motion — the strike carries you (weighty combat).
+  if(p.swinging){
+    const _sp = p.swingTimer / pSkillSpeed(p,'swingDur','swingSpdPct');     // 0→1 swing progress
+    if(_sp < SWING_LUNGE_FRAC){
+      const _ls = SWING_LUNGE_SPEED * (1 - _sp / SWING_LUNGE_FRAC);         // decelerating forward push
+      let lx = p.wx + Math.cos(p.swingAimAngle) * _ls * dt;
+      let ly = p.wy + Math.sin(p.swingAimAngle) * _ls * dt;
+      [lx,ly]=gRC(lx,ly,p.r);[lx,ly]=gRCDestructibles(lx,ly,p.r);[lx,ly]=gRCRocks(lx,ly,p.r);[lx,ly]=gRCTraps(lx,ly,p.r);[lx,ly]=gRCEnemies(lx,ly,p.r);
+      p.wx=lx; p.wy=ly;
+    }
+  }
   if(p.moving){p.walkTimer+=dt;if(p.walkTimer>=8){p.walkTimer=0;p.walkFrame=(p.walkFrame+1)%4;if(p.walkFrame===1||p.walkFrame===3)gPlayStep();}p.stepTimer+=dt;}else{p.walkFrame=0;p.walkTimer=0;}
   if(p.swinging){p.swingTimer+=dt;if(p.smear){p.smear.cx=p.wx;p.smear.cy=p.wy;p.smear.sweepEnd=p.swingStartAngle+(p.swingEndAngle-p.swingStartAngle)*easeSwing(p.swingTimer/pSkillSpeed(p,'swingDur','swingSpdPct'));}gCheckHits(p);if(p.swingTimer>=pSkillSpeed(p,'swingDur','swingSpdPct')){p.swinging=false;p.swingCooldown=Math.round(W().swingCd*wildDexCdMult());if(p.smear)p.smear.fading=true;p._chargeDmg=null;}}
   if(p.smear&&p.smear.fading){p.smear.life-=0.1*dt;if(p.smear.life<=0)p.smear=null;}
@@ -4612,6 +4730,60 @@ function drawTrainingDummy(){
   gctx.restore();
 }
 
+// ── Skillforge prop (dev/testing) — an interactable anvil in the Sanctum ──────────────────────────
+// Replaces the old corner button: walk up to it and press E to open the Skillforge. Dev-only —
+// initForgeProp no-ops off dev builds, so the prop never renders or interacts for real players.
+// Placeholder procedural art (an anvil on a glowing base); a real sprite is an Artist handoff.
+const FORGE_TX = 32, FORGE_TY = 5;   // upper-right of the Sanctum, mirroring the shrine on the left
+function initForgeProp(){
+  gForgeProp = _DEV ? { wx: FORGE_TX*T+T/2, wy: FORGE_TY*T+T/2, r: 14, promptRange: 2*T } : null;
+}
+function gForgeInteract(){
+  if(!gForgeProp || !gPlayer || gPlayer.dead) return false;
+  if(Math.hypot(gPlayer.wx-gForgeProp.wx, gPlayer.wy-gForgeProp.wy) > gForgeProp.promptRange) return false;
+  gOpenSkillforge();
+  return true;
+}
+function drawForgeProp(){
+  const f = gForgeProp;
+  if(!f) return;
+  const sx = f.wx-camX, sy = f.wy-camY;
+  if(sx<-40||sx>VW+40||sy<-40||sy>VH+40) return;
+  const near = gPlayer && Math.hypot(gPlayer.wx-f.wx, gPlayer.wy-f.wy) <= f.promptRange;
+  const t = gFrame*0.08;
+  gctx.save();
+  gctx.translate(sx, sy);
+  // ember glow under the anvil
+  gctx.globalAlpha = 0.5 + 0.2*Math.sin(t);
+  const grad = gctx.createRadialGradient(0,4,2,0,4,22);
+  grad.addColorStop(0,'rgba(255,150,40,0.7)'); grad.addColorStop(1,'rgba(255,80,0,0)');
+  gctx.fillStyle = grad; gctx.beginPath(); gctx.arc(0,4,22,0,Math.PI*2); gctx.fill();
+  gctx.globalAlpha = 1;
+  // stone base
+  gctx.fillStyle = '#3a3340'; gctx.fillRect(-10, 6, 20, 8);
+  gctx.fillStyle = '#2a2530'; gctx.fillRect(-10, 12, 20, 3);
+  // anvil body + top face + horn
+  gctx.fillStyle = '#6a6470'; gctx.fillRect(-8, -2, 16, 8);
+  gctx.fillStyle = '#8a8490'; gctx.fillRect(-9, -6, 18, 5);
+  gctx.beginPath(); gctx.moveTo(9,-6); gctx.lineTo(15,-4); gctx.lineTo(9,-1); gctx.closePath(); gctx.fill();
+  gctx.fillStyle = '#4a4450'; gctx.fillRect(-6, 1, 4, 5);   // shadow
+  gctx.strokeStyle='#1a1620'; gctx.lineWidth=1.5;
+  gctx.strokeRect(-9,-6,18,5); gctx.strokeRect(-8,-2,16,8); gctx.strokeRect(-10,6,20,8);
+  if((gFrame % 40) < 6){ gctx.fillStyle='#ffe08a'; gctx.fillRect(-1,-9,2,3); }   // spark
+  gctx.restore();
+  // label + proximity prompt
+  gctx.save();
+  gctx.textAlign='center';
+  gctx.globalAlpha=0.6; gctx.fillStyle='#ffae5a'; gctx.font='7px monospace';
+  gctx.fillText('SKILLFORGE', sx, sy+28);
+  if(near){
+    gctx.globalAlpha=0.85+0.15*Math.sin(t*2);
+    gctx.fillStyle='#ffd27a'; gctx.font='bold 9px monospace';
+    gctx.fillText('[E] FORGE', sx, sy-18);
+  }
+  gctx.restore();
+}
+
 // Check if a point/circle hits the training dummy
 function checkDummyHit(wx, wy, r, dmg, col){
   const d=gTrainingDummy;
@@ -4633,7 +4805,7 @@ function checkDummyHit(wx, wy, r, dmg, col){
 //  enemy melee gates via gHitPlayer's guard below; burn DoT ignores i-frames).
 // opts: { iframes, shake:[a,b], particle:{col,n,spd}, number:{val,col,y}, sounds:[fn] }
 function gDamagePlayer(dmg, opts){
-  if(!gPlayer || gPlayer.dead) return false;
+  if(!gPlayer || gPlayer.dead || gPaused) return false;   // no damage while a modal is open (level-up/evolution/shrine/pause)
   opts = opts || {};
   // Threat damage curve (item 1): the night number scales what enemies hit for. Applied here at
   // the single chokepoint so every source (melee, arrows, bombs, fireballs, the MP client-side
@@ -4840,7 +5012,8 @@ function _aiGoblin(e, dt){
 // NATIVE TO THE LAND: wolves climb over rocks (gIsWalkWolf — incl. their own den arcs, the
 // old stuck-on-the-den bug) and destructibles, and take no forest tree-slow. Nothing stops them.
 const WOLF_LEASH_R = 22.6*T;   // px from the camp centre before the pack gives up and heals (+33% chase range)
-const WOLF_LEAP_MAX = 22;      // cap on the pounce impulse (px/frame) — the bite leaps the gap to contact, capped so it reads as a leap not a teleport
+const WOLF_LEAP_MAX = 16;      // cap on the pounce impulse (px/frame) — lowered so the lunge is slower/more readable (was 22)
+const WOLF_LUNGE_RECOVER = 42; // frames the wolf is EXPOSED after a lunge — it coasts the pounce, then plants fully (a clear retaliation window for the player; was 32)
 // Pack attack token — only ONE wolf per pack commits a lunge at a time, so a pack pressures in turns
 // instead of all charging at once (the early-game "instant death" cause). Keyed by camp/home; the
 // value is the frame the slot frees (set on commit; auto-expires so a dead/leashed wolf can't hold it).
@@ -4896,11 +5069,11 @@ function _aiWolf(e, dt){
     // tail), capped at WOLF_LEAP_MAX so it reads as a leap. This is what makes the wolf actually reach
     // a standing target — orbiting at flankDist, a fixed short dash fell well short of the tight reach.
     const _gap = Math.max(0, dist - (e.r + (tgt.r||11)));
-    const _leap = Math.min(WOLF_LEAP_MAX, _gap*0.26 + d.lungeSpeed*0.4);
+    const _leap = Math.min(WOLF_LEAP_MAX, _gap*0.20 + d.lungeSpeed*0.35);   // slower pounce — more time to react
     e.vx += Math.cos(e.biteAngle)*_leap;
     e.vy += Math.sin(e.biteAngle)*_leap;
     e.attackCooldown=d.meleeCooldown;
-    e.lungeTimer=18;                       // committed/exposed recovery — the punish window
+    e.lungeTimer=WOLF_LUNGE_RECOVER;       // committed/exposed recovery — the punish window
     e._biteConnect=16;                     // the pounce can land over the next ~16f of the leap
   }
   // Land the bite the FIRST frame the lunging wolf is actually within reach — the pounce-leap closes
@@ -4924,7 +5097,7 @@ function _aiWolf(e, dt){
   if(!e._bitePending && e.biteWindup<=0 && e.lungeTimer<=0 && e.attackCooldown<=0
      && dist<=d.lungeRange && _slotFree && !gPlayer.dead){
     e.biteWindup=d.biteWindup; e.biteMax=d.biteWindup; e.biteAngle=e.angle; e._bitePending=true;
-    gWolfPackTokens[_pk] = gFrame + d.biteWindup + 20;   // hold the slot through windup + lunge recovery
+    gWolfPackTokens[_pk] = gFrame + d.biteWindup + WOLF_LUNGE_RECOVER + 6;   // hold the slot through windup + the full lunge recovery
   }
 
   if(e._bitePending){
@@ -4933,7 +5106,9 @@ function _aiWolf(e, dt){
     // a stop). Pause length = biteWindup: 22f ≈ 0.37s (direwolf) / 28f ≈ 0.47s (alpha) — both ≥ 0.3s.
     e.vx=0; e.vy=0;
   } else if(e.lungeTimer>0){
-    // mid-lunge / recovery — coast along the dash, exposed (no steering)
+    // Post-lunge PAUSE — coast the pounce until it resolves, then PLANT fully (vx/vy=0) for the rest of
+    // the recovery: the wolf stands exposed and unsteering, a clear window to retaliate before it circles again.
+    if(e._biteConnect<=0){ e.vx=0; e.vy=0; }
   } else {
     // Circle the player at flank distance — tangential-dominant so the pack orbits and surrounds
     // rather than charging straight in. A gentle radial term holds the orbit radius (close if too far,
@@ -5868,34 +6043,64 @@ function gUpdateEnemyBurn(dt){
 // PNG blitted additively (see gDrawFireWaves) so the black drops out and the flames
 // glow over the scene — same approach as the fire-pillar sprite.
 const FW_SPR = new Image();
-FW_SPR.src = 'assets/fx/fw.png';
+FW_SPR.src = 'assets/fx/cilia/wave.png';
 // ── Cilia's Fire — imbued WHIRLWIND: expanding rings of fire ──────────
 // While the whirlwind is channelled with a Cilia (fire) imbue, gUpdateWhirlwind
 // emits a fire ring every FR_INTERVAL frames. Each ring expands outward from its
 // emit point and ignites every enemy its leading edge crosses (once each) — a 360°
 // cousin of the fire wave. Damage routes through gDealEnemyDamage (MP-safe); the
 // ring visual is local-only (no remote-peer replay yet).
-const FR_INTERVAL    = 120;   // frames between rings while channelling (2s @ 60fps)
+const FR_INTERVAL    = 120;   // frames between auto-fired rings (2s @ 60fps) — legacy base cadence
 const FR_RANGE_TILES = 6;     // how far a ring expands (tiles)
 const FR_SPEED       = 4.5;   // px/frame expansion
-const FR_DMG_MULT    = 1.5;   // ring impact = this x the whirlwind's per-hit damage
+const FR_DMG_MULT    = 1.5;   // ring impact = this x the standalone base (FR_BASE_DMG)
+const FR_BASE_DMG    = 20;    // Burning Body standalone per-emit base damage (ring/nova), grows via the
+                              // emitDmg rank mods, scaled by the global damagePct buff.
 const FR_BURN_FRAMES = 180;   // 3s burn @ 60fps
 const FR_BURN_RATIO  = 0.6;   // burn total = this x impact damage
 const FR_BURN_MIN    = 5;
-const FR_RING_FRAC   = 0.59;  // sprite's bright-ring radius as a fraction of its half-width
+// ── Burning Body (god skill) — base ignite-aura + form-emit feel knobs ────────────────────────────
+const AURA_RADIUS       = 64;   // base ignite-aura radius (px ~2 tiles): enemies inside catch fire
+const AURA_DMG          = 4;    // aura contact damage per tick
+const AURA_TICK         = 24;   // frames between aura ticks (~0.4s)
+const AURA_BURN_FRAMES  = 120;  // burn duration the aura applies (2s)
+const BB_RING_INTERVAL  = 300;  // Firebloom: an expanding ring every 5s
+const BB_BURST_INTERVAL = 240;  // Cinderburst: a detonation nova every 4s
+const BB_NOVA_SPEED     = 13;   // Cinderburst nova expansion (fast = a detonation read, not a slow sweep)
+const BB_BREATH_SPEED   = 3.2;  // Dragonbreath breathing ring (slower, so the expand→contract reads)
+const CHAOS_CROWN_LIFE  = 240;  // Chaos Crown: chaosfire ground-circle lifetime (frames)
+const CATACLYSM_RING_TILES = 3; // Cataclysm: chaosfire ground laid as a ring THIS many tiles out (a real,
+                                // navigable danger ring with a safe centre — not at the far nova edge)
+const FR_RING_FRAC   = 0.76;  // sprite's bright-ring radius as a fraction of its half-width (new ring art: band at 0.759)
 const FR_SPR = new Image();
-FR_SPR.src = 'assets/fx/fr.png';
+FR_SPR.src = 'assets/fx/cilia/ring.png';
+// Burning Body aura skins for the rank-10 Ascension paths (same matched-set geometry as fr.png → share
+// FR_RING_FRAC). 🐉 dragon leaves (Dragonbreath/Dragonheart) → iridescent dragonfire; 🔥 chaos leaves
+// (Chaos Crown/Cataclysm) → crimson chaosfire. Selected in gDrawBurningBodyAura by the leaf's `ground`.
+const DRAGONFIRE_CIRCLE_SPR = new Image(); DRAGONFIRE_CIRCLE_SPR.src = 'assets/fx/cilia/dragonfire-circle.png';
+const CHAOSFIRE_CIRCLE_SPR  = new Image(); CHAOSFIRE_CIRCLE_SPR.src  = 'assets/fx/cilia/chaosfire-circle.png';
 
-// opts (optional): { rangeTiles, burnFrames } — Cinder Ring (item 2) widens the ring + threads its
-// burn duration; the whirlwind caller passes none and gets the FR_* defaults.
+// opts (optional): { rangeTiles, burnFrames, speed, invert, breathe, settle, healOwner } — Burning Body
+// threads its rank-modified range/burn/damage. Modes: `invert` collapses inward; `breathe` expands to
+// max then fully contracts (Dragonbreath); `settle` (a substance) lays a ground-circle of it at max
+// range then ends (Chaos Crown); `healOwner` (amount) heals the local player when the band crosses them.
 function gSpawnFireRing(x, y, dmg, opts){
   opts = opts || {};
+  const range = (opts.rangeTiles || FR_RANGE_TILES) * T;
+  const invert = !!opts.invert;
   gFireRings.push({
-    x, y, traveled: 6, prevTraveled: 0,
-    range: (opts.rangeTiles || FR_RANGE_TILES) * T, speed: FR_SPEED, dmg,
+    x, y,
+    traveled:     invert ? range : 6,
+    prevTraveled: invert ? range : 0,
+    range, speed: (opts.speed != null ? opts.speed : FR_SPEED), invert, dmg,
     burnTotal: Math.max(FR_BURN_MIN, Math.round(dmg * FR_BURN_RATIO)),
     _hit: new Set(),
     _burnFrames: opts.burnFrames || FR_BURN_FRAMES,
+    breathe: !!opts.breathe, _exhaling: false,   // breathe: expand to max, then contract back to centre
+    settle: opts.settle || null,                 // on reaching max, lay a ground-circle of this substance
+    healOwner: opts.healOwner || 0,              // heal the local player when the ring band crosses them
+    follow: !!opts.follow,                       // re-centre on the local player each frame (Dragonbreath emanates from you)
+    spr: opts.spr || null,                       // optional sprite override (e.g. Dragonbreath → dragonfire circle)
   });
   spawnGP(x, y, '#ff7a22', 10, 3);
   // MP: bump a monotonic signal so other peers replay the ring (see sendState/_onPlayerChanged)
@@ -5915,20 +6120,24 @@ function gUpdateFireRings(dt){
   if(!gFireRings.length) return;
   for(let i=gFireRings.length-1; i>=0; i--){
     const w = gFireRings[i];
+    if(w.follow && gPlayer && !gPlayer.dead){ w.x = gPlayer.wx; w.y = gPlayer.wy; }  // emanate from the moving player
     w.prevTraveled = w.traveled;
-    w.traveled += w.speed * dt;
+    const _dir = (w.invert || w._exhaling) ? -1 : 1;        // invert collapses; breathe contracts past its peak
+    w.traveled += _dir * w.speed * dt;
+    // The swept band is [lo,hi] this frame — works for both an expanding and a contracting ring.
+    const lo = Math.min(w.prevTraveled, w.traveled), hi = Math.max(w.prevTraveled, w.traveled);
     // _visual rings are remote players' casts — render only, never damage (the
     // owner already dealt/reported it). Iterating nothing keeps them expanding.
     for(const en of (w._visual ? [] : gEnemies)){
       if(en.dead || w._hit.has(en)) continue;
       if(!Number.isFinite(en.wx) || !Number.isFinite(en.wy)) continue;
       const dist = Math.hypot(en.wx - w.x, en.wy - w.y);
-      if(dist < w.prevTraveled - en.r) continue;   // ring already passed it
-      if(dist > w.traveled + en.r) continue;        // ring hasn't reached it
+      if(dist + en.r < lo || dist - en.r > hi) continue;    // band hasn't crossed this enemy
       w._hit.add(en);
       gDealEnemyDamage(en, w.dmg, {
         burn: w.burnTotal, burnDur: w._burnFrames || FR_BURN_FRAMES,
-        kbAngle: Math.atan2(en.wy - w.y, en.wx - w.x), kbMag: 6,
+        // outward push normally; inward (toward the centre) for the collapsing vortex — it drags the pack in.
+        kbAngle: Math.atan2(en.wy - w.y, en.wx - w.x) + (w.invert ? Math.PI : 0), kbMag: w.invert ? 9 : 6,
       });
       spawnGP(en.wx, en.wy, '#ff6622', 8, 3.2);
       addGDmg(en.wx, en.wy - 16, w.dmg, '#ff9a3a');
@@ -5937,18 +6146,88 @@ function gUpdateFireRings(dt){
     if(!w._visual && inTown && gTrainingDummy && !w._hit.has(gTrainingDummy)){
       const dm = gTrainingDummy;
       const dist = Math.hypot(dm.wx - w.x, dm.wy - w.y);
-      if(dist >= w.prevTraveled - dm.r && dist <= w.traveled + dm.r){
+      if(dist + dm.r >= lo && dist - dm.r <= hi){
         w._hit.add(dm); hitTrainingDummy(w.dmg, '#ffaa00', w.x, w.y);
       }
     }
-    if(w.traveled >= w.range) gFireRings.splice(i, 1);
+    // Owner heal (Dragonbreath): standing in your own dragonfire breath mends you as the band sweeps past.
+    if(w.healOwner && gPlayer && !gPlayer.dead && !w._visual){
+      const pd = Math.hypot(gPlayer.wx - w.x, gPlayer.wy - w.y);
+      if(pd + gPlayer.r >= lo && pd - gPlayer.r <= hi && (gPlayer._ringHealFrame || 0) <= gFrame){
+        gPlayer._ringHealFrame = gFrame + 18;
+        gPlayer.hp = Math.min(gPlayer.maxHp, gPlayer.hp + w.healOwner);
+        addGDmg(gPlayer.wx, gPlayer.wy - 22, '+' + w.healOwner, '#7CFC9E');
+      }
+    }
+    // Lifecycle: breathe reverses at its peak then dies at the centre; settle lays a ground-ring at the
+    // peak; invert dies at the centre; a plain ring dies at the peak.
+    if(w.breathe){
+      if(!w._exhaling && w.traveled >= w.range){ w._exhaling = true; w._hit = new Set(); }   // reverse + re-arm hits
+      else if(w._exhaling && w.traveled <= 6){ gFireRings.splice(i, 1); }
+    } else if(w.invert){
+      if(w.traveled <= 6) gFireRings.splice(i, 1);
+    } else if(w.traveled >= w.range){
+      if(w.settle) _laySettleRing(w);
+      gFireRings.splice(i, 1);
+    }
+  }
+}
+
+// Lay a ground-RING of chaosfire patches of `radius` around (x,y) — a burning zone that scorches enemies
+// (and the player only if they step INTO the ring; chaosfire is never laid on the player's own position).
+// Used by Chaos Crown (settle at the ring's peak) and Cataclysm (a ring around the detonation centre).
+function gLayChaosfireRing(x, y, radius, dmg){
+  const n = Math.max(8, Math.round(radius / 26));
+  const selfDmg = Math.max(1, Math.round(dmg * CHAOSFIRE_SELF_RATIO));
+  const burn    = Math.max(1, Math.round(dmg * 0.4));
+  for(let k = 0; k < n; k++){
+    const a = (k / n) * Math.PI * 2;
+    gSpawnFireTrail(x + Math.cos(a) * radius, y + Math.sin(a) * radius, burn, false,
+      { substance:'chaosfire', selfDmg, life: CHAOS_CROWN_LIFE, reach: FT_REACH * 1.5 });
+  }
+}
+function _laySettleRing(w){ gLayChaosfireRing(w.x, w.y, w.range, w.dmg); }   // Chaos Crown peak → settle
+
+// Burning Body's base ignite-AURA, drawn as the fr.png fire-ring sprite around the player so the always-on
+// AOE is visible — a slow-churning additive ring sized to the live aura radius (what you see is what burns).
+// Floor decal: called before the character draw so the player stands inside their own fire.
+function gDrawBurningBodyAura(){
+  const p = gPlayer;
+  if(!p || p.dead || !gOwnsGodSkill(p, 'burningBody')) return;
+  const radius = gGodFireParam(p, 'burningBody', 'auraRadius');
+  if(!(radius > 0)) return;
+  // Pick the aura skin: once a rank-10 Ascension is chosen, the leaf's substance reskins the aura —
+  // 🐉 dragonfire → the dragonfire circle, 🔥 chaosfire → the chaosfire circle; otherwise the base fire ring.
+  let spr = FR_SPR;
+  const ascId = gImbueAscension(p, 'burningBody');
+  if(ascId){
+    const tree = gGodSkillTree(p, 'burningBody'), form = gImbueForm(p, 'burningBody');
+    const leaf = tree && form && tree.forms[form] && tree.forms[form].ascensions[ascId];
+    if(leaf && leaf.ground === 'dragonfire') spr = DRAGONFIRE_CIRCLE_SPR;
+    else if(leaf && leaf.ground === 'chaosfire') spr = CHAOSFIRE_CIRCLE_SPR;
+  }
+  const ox = p.wx - camX, oy = p.wy - camY;
+  if(spr.complete && spr.naturalWidth){
+    const D = 2 * radius / FR_RING_FRAC;                       // sprite's bright ring sits at the aura edge
+    gctx.save();
+    gctx.globalCompositeOperation = 'lighter';                // additive — the sprite's black drops out
+    gctx.globalAlpha = 0.40 + 0.10 * Math.sin(gFrame * 0.10); // gentle breathing pulse
+    gctx.imageSmoothingEnabled = true;
+    gctx.translate(ox, oy);
+    gctx.rotate(gFrame * 0.012);                              // slow churn so it reads as living fire
+    gctx.drawImage(spr, -D/2, -D/2, D, D);
+    gctx.restore();
+  } else {
+    gctx.save(); gctx.globalAlpha = 0.3; gctx.strokeStyle = '#ff7a22'; gctx.lineWidth = 4;
+    gctx.beginPath(); gctx.arc(ox, oy, radius, 0, Math.PI*2); gctx.stroke(); gctx.restore();
   }
 }
 
 function gDrawFireRings(){
   if(!gFireRings.length) return;
-  const haveSpr = FR_SPR.complete && FR_SPR.naturalWidth;
   for(const w of gFireRings){
+    const sprite = w.spr || FR_SPR;                 // per-ring skin (Dragonbreath → dragonfire circle), else the base ring
+    const haveSpr = sprite.complete && sprite.naturalWidth;
     const ox = w.x - camX, oy = w.y - camY;
     const fade = Math.max(0, 1 - (w.traveled / w.range) * 0.55);
     if(haveSpr){
@@ -5957,7 +6236,7 @@ function gDrawFireRings(){
       gctx.globalCompositeOperation = 'lighter';
       gctx.globalAlpha = (0.8 + 0.2 * Math.sin(gFrame * 0.5)) * fade;
       gctx.imageSmoothingEnabled = true;
-      gctx.drawImage(FR_SPR, ox - D/2, oy - D/2, D, D);
+      gctx.drawImage(sprite, ox - D/2, oy - D/2, D, D);
       gctx.restore();
     } else {
       gctx.save(); gctx.globalAlpha = 0.5 * fade; gctx.strokeStyle = '#ff7a22'; gctx.lineWidth = 6;
@@ -5982,7 +6261,7 @@ const FC_BURN_FRAMES = 180;   // 3s burn @ 60fps
 const FC_BURN_RATIO  = 0.5;   // burn total = this x per-tick damage
 const FC_BURN_MIN    = 5;
 const FC_SPR = new Image();
-FC_SPR.src = 'assets/fx/fc.png';
+FC_SPR.src = 'assets/fx/cilia/cross.png';
 
 function gSpawnFireCross(x, y, leapDmg){
   const dmg  = Math.max(1, Math.round((leapDmg||0) * FC_DMG_RATIO));
@@ -6084,7 +6363,7 @@ const FT_BURN_FRAMES = 180;   // 3s burn @ 60fps
 const FT_BURN_RATIO  = 0.6;   // burn total = this x per-tick damage
 const FT_BURN_MIN    = 4;
 const FT_SPR = new Image();
-FT_SPR.src = 'assets/fx/ft.png';
+FT_SPR.src = 'assets/fx/cilia/ground-trail.png';
 // ── Dance of Fire — rank-10 ascension (Slice C): the 3-hit combo + two fire-substance grounds ─────
 // Tunable feel knobs. dragonfire ground heals the owner who stands in it (sustain pole); chaosfire
 // ground burns the owner AND enemies (power+cost pole — the self-burn IS the balance cost).
@@ -6093,7 +6372,8 @@ const DANCE_COMBO_WINDOW    = 150;  // frames to continue the LMB chain before i
                                     // or the chain resets every swing and the 3rd-hit climax never lands.
 const DANCE_GROUND_LIFE     = 150;  // climax ground lifetime (frames) ~2.5s — longer than a dash patch
 const DRAGONFIRE_HEAL_RATIO = 0.18; // dragonfire per-tick HEAL to owner   = this × climax damage
-const CHAOSFIRE_SELF_RATIO  = 0.35; // chaosfire  per-tick SELF-DAMAGE      = this × climax damage
+const CHAOSFIRE_SELF_RATIO  = 0.07; // chaosfire  per-tick SELF-DAMAGE      = this × emit damage (was 0.35 —
+                                    // lethal once Burning Body's emit damage scaled up; the cost stays real, not instant death)
 // Flame of Chaos (Emberfan 🔥 leaf) — the massive slow ball that lays a chaosfire wake the whole way.
 const FLAMEOFCHAOS_TILES    = 20;   // how far the chaos ball travels (tiles) — a long lane of fire
 const FLAMEOFCHAOS_SPEED    = 4.5;  // px/frame — deliberately slow & lumbering (~3.6s to cross 20 tiles)
@@ -6293,7 +6573,7 @@ const FP_BURN_MIN    = 5;
 const FP_SPRITE_H    = 5.0 * PSCALE; // 5× the player's on-screen height (2× the original pillar size)
 const FP_SPRITE_AR   = 0.438;        // sprite width / height (cropped flame aspect)
 const FP_SPR = new Image();
-FP_SPR.src = 'assets/fx/fp.png';
+FP_SPR.src = 'assets/fx/cilia/pillar.png';
 
 function gSpawnFirePillars(x, y, angle, heavyDmg, chargeRatio, heavyRange){
   const n    = Math.round(FP_MIN + (FP_MAX - FP_MIN) * Math.min(1, Math.max(0, chargeRatio||0)));
@@ -7308,8 +7588,8 @@ function gDrawSmear(){
 //    char.<id>                   e.g. 'char.goblin','char.player'
 // ═══════════════════════════════════════════════════════════════
 const ART_MANIFEST = {
-  'fx.thrust':'assets/fx/thrust.png',
-  'fx.slash':'assets/fx/slash.png',
+  'fx.thrust':'assets/fx/_shared/thrust.png',
+  'fx.slash':'assets/fx/_shared/slash.png',
   'char.archer.nw':'assets/char/archer-nw.png',
   'char.archer.n':'assets/char/archer-n.png',
   'char.archer.ne':'assets/char/archer-ne.png',
@@ -8616,10 +8896,12 @@ function gRender(){
   gDrawBombFireZones(); // fire zones under bombs and entities
   gDrawFireTrails(); // imbued-dash flame trail (floor decal, under characters)
   gDrawFireCrosses(); // imbued-leap burning crosses — floor decal, under characters
+  gDrawBurningBodyAura(); // Burning Body base ignite-aura — fr.png ring under the player (god skill, item 2)
   gDrawBombs(); // impact circles drawn first (under everything)
   const drawables=[{y:gPlayer.dead?-999:gPlayer.wy,draw:gDrawPlayer,arg:gPlayer}];
   for(const e of gEnemies){ if(!e.dead) drawables.push({y:e.wy,draw:e.isArcher?gDrawArcher:e.isWarrior?gDrawWarrior:e.isBomber?gDrawBomber:e.isKing?gDrawKing:e.isShaman?gDrawShaman:gDrawEnemy,arg:e}); }
   if(inTown&&gTrainingDummy) drawables.push({y:gTrainingDummy.wy,draw:drawTrainingDummy,arg:gTrainingDummy});
+  if(inTown&&gForgeProp) drawables.push({y:gForgeProp.wy,draw:drawForgeProp,arg:gForgeProp});
   // Rock entities depth-sort with characters (foot y) so tall boulders occlude and tuck correctly.
   for(const k of gRocks){ const sx=k.wx-camX, sy=k.wy-camY; if(sx<-90||sx>VW+90||sy<-160||sy>VH+90) continue; drawables.push({y:k.wy,draw:gDrawRock,arg:k}); }
   gDrawArrows();
@@ -9197,10 +9479,14 @@ function startGameLoop(){
 // Keep this in sync if you add new per-frame update systems to the loop.
 function gSimUpdate(dt){
     gLastDt = dt;
-    gFrame++;
-    // Restore dungeon canvas/dims (base/town loops reassign these)
+    // Restore dungeon canvas/dims (base/town loops reassign these) — set even while paused so gRender draws.
     gctx = gc.getContext('2d');
     VW = gViewW; VH = gViewH;
+    // Fully freeze the sim while a modal is open (level-up draft, evolution, shrine, pause) — nothing moves
+    // or deals damage behind it. In MP the shared world can't freeze (the host drives it for everyone), so
+    // there the paused player is instead made untouchable via gDamagePlayer's gPaused guard.
+    if(gPaused && !MP.active) return;
+    gFrame++;
     // Per-player freeze (hit-stop) only pauses that player — never the whole loop
     if(gPlayer)gUpdatePlayer(dt);
     if(gPlayer&&!gPlayer.dead&&(!MP.active||MP.isHost)){gUpdateEnemies(dt);gUpdatePlayerArrows(dt);}
@@ -11551,6 +11837,41 @@ function gImbueRank(p, skill){ const e = p && p.imbuePaths && p.imbuePaths[skill
 function gImbueForm(p, skill){ const e = p && p.imbuePaths && p.imbuePaths[skill]; return (e && e.form) || null; }
 function gImbueAscension(p, skill){ const e = p && p.imbuePaths && p.imbuePaths[skill]; return (e && e.chaos) || null; }  // rank-10 leaf id
 function _addImbuePathMod(p, skill, key, v){ const e = gImbuePath(p, skill); e.mods[key] = (e.mods[key]||0) + v; }
+// ── God Skills (item 2 pivot) — the active patron's auto-firing abilities ────────────────────────
+// A god skill reuses the imbuePaths mastery shape ({rank,form,chaos,mods}) but is keyed by the SKILL's
+// own id (e.g. 'burningBody'), not an active skill. rank>=1 = owned & auto-firing. The patron's pool is
+// IMBUE_PATHS[patron]; each entry carries a `fire` block (the auto-fire contract) read by gUpdateGodSkills.
+function gGodPool(p){ const g = gActivePatron(p); return (g && IMBUE_PATHS[g]) || null; }
+function gGodSkillTree(p, id){ const pool = gGodPool(p); return pool ? pool[id] : null; }
+// A pool entry is an actual GOD SKILL (vs the parked Dance-of-Fire `swing` tree) iff it carries a `fire`
+// block — the auto-fire contract. Everything below filters on this so the parked tree is never offered.
+function gIsGodSkill(tree){ return !!(tree && tree.fire); }
+function gOwnsGodSkill(p, id){ const e = p && p.imbuePaths && p.imbuePaths[id]; return !!(e && e.rank >= 1); }
+function gOwnedGodSkills(p){
+  const pool = gGodPool(p); if(!pool || !p || !p.imbuePaths) return [];
+  return Object.keys(pool).filter(id => gIsGodSkill(pool[id]) && gOwnsGodSkill(p, id));
+}
+// Effective magnitude of a god skill's `fire` param: base + this player's rank mods, floored/capped.
+// (Mirrors gFireWaveParams' base+mods+clamp pattern; the only place the updater reads tuned numbers.)
+function gGodFireParam(p, id, key){
+  const tree = gGodSkillTree(p, id); if(!tree || !tree.fire) return 0;
+  const e = p && p.imbuePaths && p.imbuePaths[id];
+  let v = (tree.fire.base[key] || 0) + ((e && e.mods && e.mods[key]) || 0);
+  const fl = tree.fire.floors && tree.fire.floors[key]; if(fl != null) v = Math.max(fl, v);
+  const cp = tree.fire.caps   && tree.fire.caps[key];   if(cp != null) v = Math.min(cp, v);
+  return v;
+}
+// Which numeric rank-up window the named GOD SKILL is offering (generalises gImbueCardWindow):
+//   'pre'  → ranks 1..(formRank-1), before the Form fork   (applies waveStep to the base nova)
+//   'post' → ranks formRank..(chaosRank-1), after a Form    (applies that Form's formStep)
+//   null   → unowned, at a fork threshold, or maxed — no rank-up card (the fork event takes over).
+function gGodSkillWindow(p, id){
+  const s = gGodSkillTree(p, id);
+  if(!s || !gOwnsGodSkill(p, id)) return null;
+  const r = gImbueRank(p, id), f = gImbueForm(p, id);
+  if(f == null) return r < s.formRank - 1 ? 'pre' : null;          // ranks 1..4 offered; 4→Form fork pending
+  return (r >= s.formRank && r < s.chaosRank - 1) ? 'post' : null; // ranks 5..8 offered; 9→Ascension fork pending
+}
 // Effective Dance-of-Fire wave params = FW_* base const + this player's imbuePaths.swing.mods, clamped
 // (mirrors SKILL_STAT_FLOOR's defensive intent; spec balance §: cap every numeric rank). rank 0 ⇒ base.
 function gFireWaveParams(p){
@@ -11572,12 +11893,12 @@ function gSkillImbuePatron(skillId){
 // (one patron per run today; returns the first if somehow multiple). Drives PATRON_CARDS gating.
 function gActivePatron(p){
   p = p || gPlayer;
-  const vals = (p && p.imbues) ? Object.values(p.imbues) : [];
+  if(p && p.patron) return p.patron;                  // god-skill pivot: pledged at the shrine, no skill imbue
+  const vals = (p && p.imbues) ? Object.values(p.imbues) : [];  // legacy fallback (parked Dance-of-Fire imbues)
   return vals.length ? vals[0] : null;
 }
 function gIsPatronActive(p, god){
-  p = p || gPlayer;
-  return !!(p && p.imbues && Object.values(p.imbues).includes(god));
+  return gActivePatron(p || gPlayer) === god;
 }
 function gImbueEffectText(skillId, god){
   const eff = IMBUE_EFFECTS[god] && IMBUE_EFFECTS[god][skillId];
@@ -11870,6 +12191,7 @@ let hubPresenceRef = null;
 // ── Enter / leave town ────────────────────────────────────────────
 function goTown() {
   initTrainingDummy();
+  initForgeProp();
   inTown = true;
   inWilderness = false;
   const map = JSON.parse(JSON.stringify(HUB_MAP));
@@ -11888,6 +12210,7 @@ function goTown() {
 
 function leaveTown() {
   gTrainingDummy=null;
+  gForgeProp=null;
   gShrine=null;
   if(_skillforgeOpen) gCloseSkillforge();
   if (!inTown) return;
@@ -13123,7 +13446,9 @@ const GRIT_CARDS = [
 // first — the burn set. Uncapped (per 0b's pool-wide removal); gated in gDrawCards by
 // gIsPatronActive and injected at PATRON_CARD_CHANCE per draft. These write the wildBuffs burn mods
 // read by gApplyEnemyBurn (duration/tick) and gUpdateEnemyBurn (the Conflagration detonation roll).
-const PATRON_CARD_CHANCE = 0.25;   // chance a draft swaps one fill slot for a patron card (when active)
+const PATRON_CARD_CHANCE = 0.25;   // chance a draft swaps one fill slot for a patron (burn) card (when active)
+const GODSKILL_CARD_CHANCE = 0.6;  // chance a draft offers a god-skill card (acquire/rank-up) once you own one —
+                                   // the pledged patron should keep tempting you with her blessing (Josh 2026-06-11)
 const PATRON_CARDS = [
   // Conflagration: +chance per burn tick to detonate (AoE that re-ignites — chains the burn). Clamps at 100%.
   { id:'cil-conflag', cat:'patron', patron:'cilia', icon:'🔥', name:'Conflagration', base:6, frac:false,
@@ -13181,6 +13506,52 @@ const IMBUE_PATHS = {
               desc:'LMB becomes a 3-hit combo of growing fire rings; the climax lays dragonfire around you that HEALS while you fight surrounded.' },
             helldance:   { name:'Helldance',   icon:'🔥', age:'new', tag:'NEW · CHAOS · POWER+COST', ground:'chaosfire',
               desc:'LMB becomes a 3-hit combo of growing chaosfire rings; the ground burns enemies AND you. Maximum AOE, maximum risk.' },
+          },
+        },
+      },
+    },
+    // ── God Skill: Burning Body (item 2) ── AOE burst-fire. NOT tied to an active skill: gTickBurningBody
+    // ticks it from gUpdatePlayer. Base = an always-on ignite-AURA (enemies near you catch fire). The Form
+    // @5 adds a periodic emit — Firebloom releases an expanding ring; Cinderburst detonates a nova — and
+    // the rank-10 Ascension reshapes it (🐉 dragonfire sustain · 🔥 chaosfire power+cost). waveStep/formStep
+    // pour ×rarity into imbuePaths.burningBody.mods; gGodFireParam(p,'burningBody',key)=base[key]+mods[key].
+    burningBody: {
+      art:'Burning Body', icon:'🔥', maxRank:10, formRank:5, chaosRank:10,
+      acquireDesc:'Your body burns — enemies that come near catch fire and take damage over time.',
+      fire: {
+        kind:'burningBody', timerKey:'_bbTimer',
+        base:   { auraRadius:AURA_RADIUS, auraDmg:AURA_DMG, auraBurn:AURA_BURN_FRAMES,
+                  emitDmg:FR_BASE_DMG, emitRange:FR_RANGE_TILES, burnFrames:FR_BURN_FRAMES },
+        floors: { auraRadius:40, emitInterval:90 },
+        caps:   { emitRange:12 },
+      },
+      // ranks 1–4: grow the base aura (bigger / hotter / longer ignite) + seed the emit's damage.
+      waveStep: { auraRadius:6, auraDmg:2, auraBurn:12, emitDmg:4 },
+      forms: {
+        firebloom: {
+          name:'Firebloom', tag:'RHYTHM · REACH', icon:'🔥',
+          desc:'Releases an expanding ring of fire every few seconds — timed waves sweep outward and ignite all they cross.',
+          // ranks 6–9: harder / wider / longer-burning rings (+ a touch of aura).
+          formStep: { emitDmg:5, emitRange:0.6, burnFrames:18, auraDmg:1 },
+          fire: { emit:'ring', interval:BB_RING_INTERVAL, speed:FR_SPEED },
+          ascensions: {
+            dragonbreath: { name:'Dragonbreath', icon:'🐉', age:'old', tag:'OLD · DRAGON · SUSTAIN', ground:'dragonfire', ringMode:'breathe', interval:130,
+              desc:'A dragonfire ring breathes out and back from you, following as you move — a dragon’s breath. Contact heals you.' },
+            chaosCrown:   { name:'Chaos Crown',  icon:'🔥', age:'new', tag:'NEW · CHAOS · POWER+COST', ground:'chaosfire', ringMode:'settle',
+              desc:'A ring of chaosfire expands, pauses at its peak, then settles into a great burning circle of chaosfire around you.' },
+          },
+        },
+        cinderburst: {
+          name:'Cinderburst', tag:'BURST · STAND', icon:'🔥',
+          desc:'The burning aura swells and detonates every few seconds — a fixed-radius nova centred on you that erupts and ignites the pack.',
+          // ranks 6–9: bigger / harder / longer-burning detonations.
+          formStep: { emitDmg:7, emitRange:0.5, burnFrames:18, auraDmg:1 },
+          fire: { emit:'nova', interval:BB_BURST_INTERVAL, speed:BB_NOVA_SPEED },
+          ascensions: {
+            dragonheart: { name:'Dragonheart', icon:'🐉', age:'old', tag:'OLD · DRAGON · SUSTAIN', ground:'dragonfire',
+              desc:'Each detonation blooms dragonfire at your feet that HEALS while you stand in it — your burning core mends as it erupts.' },
+            cataclysm:   { name:'Cataclysm',   icon:'🔥', age:'new', tag:'NEW · CHAOS · POWER+COST', ground:'chaosfire', novaScale:1.7,
+              desc:'Detonations become colossal chaosfire blasts — huge radius, devastating, leaving chaosfire that burns enemies AND you.' },
           },
         },
       },
@@ -13247,11 +13618,57 @@ function gCardAvailable(c){
   return picks < (c.cap || 99);
 }
 
+// ── God-skill draft cards (item 2 pivot) — generated from the active patron's pool ──────────────
+// Replaces the static single-skill IMBUE_CARDS: one card per god skill, its TYPE decided by live state
+// so "add a god skill = add a registry entry" (no card list to maintain). Per skill:
+//   • unowned        → ACQUIRE card (cap 1; apply seeds rank 1 → auto-fires next tick)
+//   • owned + window  → RANK-UP card (godSkill drives the 10-dot track; pours waveStep/formStep into mods)
+//   • owned at a fork → no card (gPendingEvolution intercepts the level-up with the Form/Ascension overlay)
+function gGodSkillCards(p){
+  const pool = gGodPool(p); if(!pool) return [];
+  const god = gActivePatron(p);
+  const cards = [];
+  for(const id of Object.keys(pool)){
+    const tree = pool[id];
+    if(!gIsGodSkill(tree)) continue;     // skip the parked Dance-of-Fire swing tree (no `fire` block)
+    if(!gOwnsGodSkill(p, id)){
+      cards.push({
+        id:'acq-'+god+'-'+id, cat:'skill', icon:tree.icon||'🔥', name:tree.art, base:1, frac:false, cap:1, godAcquire:id,
+        req:()=> gIsPatronActive(gPlayer, god) && !gOwnsGodSkill(gPlayer, id),
+        fmt:()=> `NEW — ${tree.acquireDesc || (tree.art+': a new god skill.')}`,
+        apply(pp){ gImbuePath(pp, id).rank = 1; },        // owned & auto-firing from the next gUpdateGodSkills tick
+      });
+    } else if(gGodSkillWindow(p, id)){
+      cards.push({
+        id:'rk-'+god+'-'+id, cat:'skill', icon:tree.icon||'🔥', name:tree.art, base:1, frac:false, godSkill:id,
+        req:()=> gGodSkillWindow(gPlayer, id) != null,
+        fmt:()=>{
+          const f = gImbueForm(gPlayer, id), nm = f ? tree.forms[f].name : tree.art;
+          return `${nm} — Rank ${gImbueRank(gPlayer,id)+1}: ${f ? 'deepen your Form' : 'fiercer, faster, wider'}`;
+        },
+        apply(pp, v){
+          const win = gGodSkillWindow(pp, id), e = gImbuePath(pp, id);
+          if(win === 'post'){
+            const step = (tree.forms[gImbueForm(pp,id)] || {}).formStep || {};
+            for(const k in step) _addImbuePathMod(pp, id, k, step[k] * v);
+            e.rank = Math.min(tree.chaosRank - 1, e.rank + 1);
+          } else {
+            const step = tree.waveStep || {};
+            for(const k in step) _addImbuePathMod(pp, id, k, step[k] * v);
+            e.rank = Math.min(tree.formRank - 1, e.rank + 1);
+          }
+        },
+      });
+    }
+  }
+  return cards;
+}
+
 // Draw N cards: guaranteed mix (≥1 passive AND ≥1 skill/Grit when each is available), de-duped
 // by id, each with an independently-rolled rarity. Falls back gracefully when a pool is empty.
 function gDrawCards(n){
   const passives = PASSIVE_CARDS.filter(gCardAvailable);
-  const actives  = SKILL_CARDS.concat(GRIT_CARDS).concat(IMBUE_CARDS).filter(gCardAvailable);
+  const actives  = SKILL_CARDS.concat(GRIT_CARDS).concat(gGodSkillCards(gPlayer)).filter(gCardAvailable);
   const out = [], used = new Set();
   const take = (pool) => {
     const pick = pool.filter(c => !used.has(c.id));
@@ -13266,15 +13683,30 @@ function gDrawCards(n){
   if(actives.length)  take(actives);               // guarantee a skill/Grit card
   const all = passives.concat(actives);
   while(out.length < n && take(all)) { /* fill the rest from the combined pool */ }
-  // Patron-card injection (item 0c): when a patron is active, ~PATRON_CARD_CHANCE of drafts swap a
-  // single FILL slot (never the guaranteed passive[0]/skill[1]) for a patron-gated card.
-  if(out.length > 2 && gActivePatron(gPlayer) && Math.random() < PATRON_CARD_CHANCE){
+  // God-skill injection (item 2) — PRIORITY: the pledged patron should keep tempting you with her blessing.
+  // If you own NO god skill yet, GUARANTEE the acquire card (the auto-fire layer must appear, not hide behind
+  // RNG); once you own one, inject a god-skill card (acquire/rank-up) into the fill slot at GODSKILL_CARD_CHANCE.
+  let _gsInjected = false;
+  if(out.length > 1 && gGodPool(gPlayer)){
+    const gs = gGodSkillCards(gPlayer).filter(c => gCardAvailable(c) && !used.has(c.id));
+    const ownsNone = gOwnedGodSkills(gPlayer).length === 0;
+    if(gs.length && (ownsNone || Math.random() < GODSKILL_CARD_CHANCE)){
+      const card   = gs[Math.floor(Math.random()*gs.length)];
+      const rarity = rollCardRarity();
+      used.add(card.id);
+      out[out.length-1] = { card, rarity, value: _cardValue(card, rarity.mult) };  // replace the last fill slot
+      _gsInjected = true;
+    }
+  }
+  // Patron-card injection (item 0c): only if a god-skill card didn't already claim the slot — when a patron
+  // is active, ~PATRON_CARD_CHANCE of the remaining drafts swap the fill slot for a patron (burn) card.
+  if(!_gsInjected && out.length > 2 && gActivePatron(gPlayer) && Math.random() < PATRON_CARD_CHANCE){
     const patrons = PATRON_CARDS.filter(c => gIsPatronActive(gPlayer, c.patron) && gCardAvailable(c) && !used.has(c.id));
     if(patrons.length){
       const card   = patrons[Math.floor(Math.random()*patrons.length)];
       const rarity = rollCardRarity();
       used.add(card.id);
-      out[out.length-1] = { card, rarity, value: _cardValue(card, rarity.mult) };  // replace the last fill slot
+      out[out.length-1] = { card, rarity, value: _cardValue(card, rarity.mult) };
     }
   }
   return out;
@@ -13367,8 +13799,14 @@ function gWildShowStatPick(){
   const REROLL_COSTS = [3, 5, 8];             // within one level-up; beyond the table, +3 each
   const _rerollCost = () => REROLL_COSTS[Math.min(_rerollCount, REROLL_COSTS.length-1)]
                             + Math.max(0, _rerollCount - (REROLL_COSTS.length-1)) * 3;
-  // Rarity-upgrade cost indexed by TARGET tier (1=Rare, 2=Epic, 3=Legendary); index 0 unused.
-  const UPGRADE_COSTS = [0, 4, 8, 16];
+  // Rarity-upgrade cost indexed by TARGET tier (1=Rare, 2=Epic, 3=Legendary); index 0 unused. Steep so
+  // upgrading one card all the way (or repeatedly across drafts) is a real Favor sink (Josh 2026-06-11).
+  const UPGRADE_COSTS = [0, 8, 20, 44];
+  // God-skill rank-BUY (item 2): spend Favor to pour extra ranks into a god skill right on its card. Cost
+  // scales with the skill's CURRENT rank — and rank is PERSISTENT across level-ups — so buying a skill toward
+  // max is a large, steadily-escalating investment, not a couple of cheap level-ups (Josh playtest 2026-06-11).
+  const RANK_BUY_BASE = 10, RANK_BUY_STEP = 10;
+  const _rankBuyCost = (skillId) => RANK_BUY_BASE + gImbueRank(p, skillId) * RANK_BUY_STEP;
   function _updateReroll(){
     if(!rerollBtn) return;
     const cost = _rerollCost();
@@ -13408,6 +13846,22 @@ function gWildShowStatPick(){
     _paintDraft();                                               // re-render cards + spend affordances
     return true;
   }
+  // Sink C — spend Favor to rank up a god skill straight from its rank-up card (one rank per buy, escalating
+  // cost). Applies immediately (the skill ranks now); the card's own pick still grants its rank on top.
+  function _buyRank(idx){
+    if(!_canSpend()) return false;
+    const o = _draftOpts[idx];
+    if(!o || !o.card.godSkill) return false;
+    if(!gGodSkillWindow(p, o.card.godSkill)) return false;       // at a fork / maxed → can't buy past it
+    const cost = _rankBuyCost(o.card.godSkill);
+    if(gFavor < cost) return false;
+    gFavor -= cost;
+    o.card.apply(p, o.value);                                    // advance one rank + its mods (same as a pick)
+    spawnGP(gPlayer.wx, gPlayer.wy, '#ff8a2a', 18, 4.5);
+    gWildUpdateHUD();
+    _paintDraft();
+    return true;
+  }
   // Paint the current _draftOpts (no re-draw) — used after an upgrade and by _renderDraft.
   function _paintDraft(){
     cards.innerHTML = '';
@@ -13423,8 +13877,9 @@ function gWildShowStatPick(){
       // Imbue-Path rank track (item 2): 10 dots = the named skill's level (filled to current rank);
       // the 5th/10th are larger (Form/Chaos evolution levels); the next-level dot flashes on hover.
       let track = '';
-      if(card.imbueSkill){
-        const rank = gImbueRank(p, card.imbueSkill);   // 0..10
+      const _trackSkill = card.godSkill || card.imbueSkill;
+      if(_trackSkill){
+        const rank = gImbueRank(p, _trackSkill);   // 0..10
         const next = rank + 1;                          // the level this pick would grant
         let dots = '';
         for(let lv=1; lv<=10; lv++){
@@ -13436,20 +13891,34 @@ function gWildShowStatPick(){
         }
         track = `<div class="imb-track" title="Level ${rank} / 10 — larger dots are evolution levels">${dots}</div>`;
       }
-      // Frame is themed (CSS); rarity reads on the icon-ring + label. ▲ = Favor rarity-upgrade.
+      // Favor spend button: god-skill rank-up cards get a "RANK UP" buy (pour Favor into more ranks now);
+      // acquire cards get none (a one-time grant); everything else gets the rarity ▲ upgrade.
+      const _isRankBuy = !!(card.godSkill && gGodSkillWindow(p, card.godSkill));
+      const _isAcquire = !!card.godAcquire;
+      const rkCost   = _isRankBuy ? _rankBuyCost(card.godSkill) : 0;
+      const rkAfford = _isRankBuy && _canSpend() && gFavor >= rkCost;
+      let favorBtn = '';
+      if(_isRankBuy){
+        favorBtn = `<div class="sc-rankbuy" style="margin-top:6px;font:bold 10px monospace;letter-spacing:1px;color:${rkAfford?'#ff9a3a':'#7a5a30'};border:1px solid ${rkAfford?'#ff9a3a':'#5a432a'};border-radius:4px;padding:2px 6px;display:inline-block;cursor:${rkAfford?'pointer':'not-allowed'};opacity:${rkAfford?1:0.6};" title="Spend ${rkCost} Favor to rank up ${card.name} now (one more rank on top of taking the card)">⬆ RANK ✦${rkCost}</div>`;
+      } else if(!_isAcquire && canUp){
+        favorBtn = `<div class="sc-upgrade" style="margin-top:6px;font:bold 10px monospace;letter-spacing:1px;color:${upAfford?'#ffd040':'#7a6a30'};border:1px solid ${upAfford?'#ffd040':'#5a4f28'};border-radius:4px;padding:2px 6px;display:inline-block;cursor:${upAfford?'pointer':'not-allowed'};opacity:${upAfford?1:0.6};" title="Upgrade to ${CARD_RARITIES[ri+1].name} for ${upCost} Favor">▲ ✦${upCost}</div>`;
+      }
+      // Frame is themed (CSS); rarity reads on the icon-ring + label.
       el.innerHTML = `
         <div class="sc-rarity" style="color:${rarity.color}">${rarity.name.toUpperCase()}</div>
         <div class="sc-ring" style="border-color:${rarity.color};box-shadow:0 0 12px ${rarity.glow}, inset 0 0 10px ${rarity.glow};"><span class="sc-icon" style="color:${rarity.color}">${card.icon}</span></div>
         <div class="sc-name">${card.name}</div>
         <div class="sc-bonuses">${card.fmt(value)}</div>
         ${track}
-        ${canUp ? `<div class="sc-upgrade" style="margin-top:6px;font:bold 10px monospace;letter-spacing:1px;color:${upAfford?'#ffd040':'#7a6a30'};border:1px solid ${upAfford?'#ffd040':'#5a4f28'};border-radius:4px;padding:2px 6px;display:inline-block;cursor:${upAfford?'pointer':'not-allowed'};opacity:${upAfford?1:0.6};" title="Upgrade to ${CARD_RARITIES[ri+1].name} for ${upCost} Favor">▲ ✦${upCost}</div>` : ''}
+        ${favorBtn}
       `;
       el.onclick = () => _selectStat(() => {
         o.card.apply(p, o.value);                                  // read current (maybe upgraded) value
         p.cardPicks = p.cardPicks || {};
         p.cardPicks[o.card.id] = (p.cardPicks[o.card.id]||0) + 1;  // per-run pick count (drives caps)
       }, `${card.name} (${o.rarity.name})`, 0, o.rarity.color, el);
+      const rkEl = el.querySelector('.sc-rankbuy');
+      if(rkEl && rkAfford) rkEl.onclick = (ev) => { ev.stopPropagation(); _buyRank(idx); };
       const upEl = el.querySelector('.sc-upgrade');
       if(upEl && upAfford) upEl.onclick = (ev) => { ev.stopPropagation(); _upgradeCard(idx); };
       cards.appendChild(el);
@@ -13470,6 +13939,7 @@ function gWildShowStatPick(){
       },
       reroll(){ return window.gWildReroll(); },
       upgrade(i){ return _upgradeCard(Math.max(0, Math.min(_draftOpts.length-1, i|0))); },
+      buyRank(i){ return _buyRank(Math.max(0, Math.min(_draftOpts.length-1, i|0))); },   // god-skill rank buy (item 2)
       rerollCost(){ return _rerollCost(); },
       upgradeCost(i){ const o=_draftOpts[i]; if(!o) return 0; const ri=CARD_RARITIES.indexOf(o.rarity); return (ri>=0&&ri<CARD_RARITIES.length-1)?UPGRADE_COSTS[ri+1]:0; },
     };
@@ -13562,9 +14032,9 @@ function gWildLevelUp(){
   gWildSyncUnlocks(true);   // auto-unlock dash@2 / whirlwind@3 / leap@4 / Grit@5
   // (Reroll is now Favor-priced on the card screen — the old +1-charge-per-5-levels grant retired.)
   gWildShowStatPick();
-  // Every 5 levels the shrine re-arms with a new imbue to claim — nudge the player toward it.
+  // Nudge an un-pledged player toward the shrine — her god skills only unlock once you pledge.
   if(wildLevel % 5 === 0 && gShrineHasUnclaimed()){
-    addGDmg(gPlayer.wx, gPlayer.wy - 48, '✦ THE SHRINE GLOWS — A NEW IMBUE AWAITS', '#cc88ff');
+    addGDmg(gPlayer.wx, gPlayer.wy - 48, '✦ THE SHRINE GLOWS — PLEDGE TO A GOD', '#cc88ff');
   }
 }
 
@@ -13938,7 +14408,8 @@ function gWildReset(){
     gPlayer.wwLevel = 0; gPlayer.leapLevel = 0;
     gPlayer.heavyLevel = 0; gPlayer.dashLevel = 0;
     gPlayer.skillMods = {}; gPlayer.gritMods = {}; gPlayer.cardPicks = {};  // per-run card state
-    gPlayer.imbuePaths = {};  // per-run imbue-path mastery state (item 2) — forks re-chosen each run
+    gPlayer.imbuePaths = {};  // per-run imbue-path / god-skill mastery state (item 2) — forks re-chosen each run
+    gPlayer.patron = null;    // per-run patron pledge — re-chosen at the shrine each run
     gPlayer.wildBuffs = { hpBonus:0, mpBonus:0, hpRegenAdd:0, mpRegenAdd:0,
                           speedPct:0, damagePct:0, cdPct:0, spawnPct:0,
                           xpPct:0, pickupRange:0, critChance:0, critDamage:0,
@@ -14777,14 +15248,14 @@ function gUpdateShrine(){
   if(!gShrine || !gPlayer || gPlayer.dead) return;
   if(!inWilderness) return;                       // auto-open is a wilderness feature
   if(gPaused || _shrineOpen || _imbueOpen) return;
-  const dist      = Math.hypot(gPlayer.wx-gShrine.wx, gPlayer.wy-gShrine.wy);
-  const offerable = gShrineHasUnclaimed() && dist <= 2*T;   // an imbue is waiting & in range
-  // Edge-trigger: open as the offer first becomes available — on walking in, OR when a new
-  // 5-level milestone re-arms the shrine while standing here. Esc-leaving won't reopen until
-  // you re-enter range or earn another imbue.
+  const dist = Math.hypot(gPlayer.wx-gShrine.wx, gPlayer.wy-gShrine.wy);
+  // God-skill pivot: the shrine's only ritual is the one-time patron PLEDGE. Once pledged, that god's
+  // auto-firing skills flow through the level-up draft — there's nothing more to claim here.
+  const offerable = !gPlayer.patron && dist <= 2*T;
+  // Edge-trigger: open the god-choice menu as the player first walks into range (un-pledged).
+  // Esc-leaving won't reopen until you re-enter range.
   if(offerable && !gShrine._offerable){
-    if(gShrine.patron) gOpenImbueMenu();   // patron already chosen this run — straight to skills
-    else               gOpenShrineMenu();  // first imbue — choose a god, which chains to skills
+    gOpenShrineMenu();
   }
   gShrine._offerable = offerable;
 }
@@ -14844,9 +15315,11 @@ function gImbueAllowance(){
   const avail = gImbuableSkills().length;
   return inWilderness ? Math.min(Math.floor(wildLevel / 5), avail) : avail;
 }
-// An unclaimed wilderness imbue is waiting — this drives the shrine's glow.
+// The shrine glows while its ritual is still available. God-skill pivot: that ritual is the one-time
+// patron pledge, so the shrine glows in the wilderness until the player has pledged to a god.
+// (gImbuableSkills/gImbuedCount/gImbueAllowance below are parked with the old skill-imbue flow.)
 function gShrineHasUnclaimed(){
-  return inWilderness && gImbuedCount() < gImbueAllowance();
+  return inWilderness && gPlayer && !gPlayer.patron;
 }
 
 function gOpenImbueMenu(){
@@ -14910,20 +15383,21 @@ function gCloseImbueMenu(){
 // Slice B implements the Form fork @5; the Chaos fork @10 (Slice C) is detected but not yet offered.
 let _evolutionOpen = false;
 function gPendingEvolution(p){
-  if(!p) return null;
-  const s = IMBUE_PATHS.cilia.swing;
-  if(!gIsImbued(p,'swing','cilia')) return null;
-  const e = p.imbuePaths && p.imbuePaths.swing;
-  if(!e) return null;
-  if(e.form == null && e.rank >= s.formRank - 1) return { skill:'swing', kind:'form' };
-  // Ascension fork (Slice C): Form chosen, post-form ranks maxed, no leaf chosen yet → the two-age fork.
-  if(e.form != null && e.chaos == null && e.rank >= s.chaosRank - 1) return { skill:'swing', kind:'ascension' };
+  if(!p || !p.imbuePaths) return null;
+  // Scan the active patron's owned god skills; return the first one sitting at a fork threshold.
+  for(const id of gOwnedGodSkills(p)){
+    const s = gGodSkillTree(p, id); if(!s) continue;
+    const e = p.imbuePaths[id]; if(!e) continue;
+    if(e.form == null && e.rank >= s.formRank - 1) return { skill:id, kind:'form' };
+    // Ascension fork: Form chosen, post-form ranks maxed, no leaf yet → the two-age (Dragon/Chaos) fork.
+    if(e.form != null && e.chaos == null && e.rank >= s.chaosRank - 1) return { skill:id, kind:'ascension' };
+  }
   return null;
 }
 function _evolutionOptions(evo){
-  const s = IMBUE_PATHS.cilia.swing;
+  const s = gGodSkillTree(gPlayer, evo.skill); if(!s) return [];
   if(evo.kind === 'form'){
-    return ['emberlance','cinderRing'].map(id => Object.assign({ id }, s.forms[id]));
+    return Object.keys(s.forms).map(id => Object.assign({ id }, s.forms[id]));
   }
   // Ascension: the chosen Form's two age-leaves (🐉 Dragon sustain · 🔥 Chaos power+cost).
   const form = gImbueForm(gPlayer, evo.skill);
@@ -14933,10 +15407,11 @@ function _evolutionOptions(evo){
 function _chooseEvolution(evo, idx){
   const opts = _evolutionOptions(evo);
   const choice = opts[Math.max(0, Math.min(opts.length - 1, idx|0))];
+  const s = gGodSkillTree(gPlayer, evo.skill);
   const e = gImbuePath(gPlayer, evo.skill);
-  if(choice){
-    if(evo.kind === 'form'){ e.form = choice.id; e.rank = IMBUE_PATHS.cilia.swing.formRank; }
-    else { e.chaos = choice.id; e.rank = IMBUE_PATHS.cilia.swing.chaosRank; }
+  if(choice && s){
+    if(evo.kind === 'form'){ e.form = choice.id; e.rank = s.formRank; }
+    else { e.chaos = choice.id; e.rank = s.chaosRank; }
     addGDmg(gPlayer.wx, gPlayer.wy - 32, choice.name.toUpperCase() + ' AWAKENS', '#ff9a3a');
     spawnGP(gPlayer.wx, gPlayer.wy, '#ff6622', 28, 6);
     spawnGP(gPlayer.wx, gPlayer.wy, '#ffcc44', 16, 5);
@@ -14948,7 +15423,7 @@ function _renderEvolutionCards(evo){
   const wrap  = document.getElementById('g-evo-cards');
   const title = document.getElementById('g-evo-title');
   const sub   = document.getElementById('g-evo-sub');
-  if(title) title.textContent = IMBUE_PATHS.cilia.swing.art;
+  if(title) title.textContent = (gGodSkillTree(gPlayer, evo.skill) || {}).art || '';
   if(sub)   sub.textContent   = evo.kind === 'form' ? 'CHOOSE A FORM' : 'ASCENSION — THE TURNING OF THE AGE';
   if(!wrap) return;
   wrap.innerHTML = '';
@@ -14988,38 +15463,58 @@ function gCloseEvolutionMenu(){
   if(typeof gWildUpdateHUD === 'function') gWildUpdateHUD();
 }
 
-// ── Skillforge (dev/testing) — Sanctum-only panel to imbue + rank any skill ──────────────────────
-// Drives the real systems (gImbueSelectSkill's state, the IMBUE_CARDS rank-up apply, the Form fork)
-// so you can reach any tree state without grinding the wilderness. Cilia-only for now (the only god
-// with effects); skills without a mastery tree yet (Phases 2–5) can still be imbued to test base FX.
-const SKILLFORGE_SKILLS = [
-  { id:'swing',   name:'Dance of Fire', sub:'Swing · LMB' },
-  { id:'heavy',   name:'Heavy',         sub:'RMB' },
-  { id:'ww',      name:'Whirlwind',     sub:'Q' },
-  { id:'leap',    name:'Leap',          sub:'E' },
-  { id:'evasion', name:'Dash',          sub:'Space' },
-];
+// ── Skillforge (dev/testing) — Sanctum-only panel to acquire + rank any GOD SKILL ────────────────
+// Re-pointed to the god-skill pivot (item 2): it drives the REAL systems — `gImbuePath` rank state,
+// the registry-driven rank-up apply (`gGodSkillCards`), and the Form/Ascension fork (`gPendingEvolution`
+// → `gOpenEvolutionMenu`) — so you can reach any tree state without grinding the wilderness. It auto-
+// pledges the patron so the skills are reachable in any mode (town/dungeon/wilderness), which means a
+// forged skill auto-fires immediately (e.g. on the town training dummy). Rows are derived from the
+// registry, so new god skills (Trail of Embers, Pyroclasm) appear here automatically.
+const SKILLFORGE_GOD = 'cilia';
 let _skillforgeOpen = false;
-function _forgeImbue(skill, on){
-  if(!gPlayer) return;
-  gPlayer.imbues = gPlayer.imbues || {};
-  if(on){ gPlayer.imbues[skill] = 'cilia'; gImbuePath(gPlayer, skill); if(!inWilderness) gImbuedSkills[skill] = 'cilia'; }
-  else  { delete gPlayer.imbues[skill]; if(gPlayer.imbuePaths) delete gPlayer.imbuePaths[skill]; if(gImbuedSkills) delete gImbuedSkills[skill]; }
+// The patron's god skills (registry entries carrying a `fire` block — excludes the parked swing tree).
+function gForgeGodSkills(){
+  const pool = IMBUE_PATHS[SKILLFORGE_GOD] || {};
+  return Object.keys(pool).filter(id => gIsGodSkill(pool[id])).map(id => ({ id, tree: pool[id] }));
 }
-function gForgeToggleImbue(skill){ _forgeImbue(skill, !gIsImbued(gPlayer, skill)); gRenderSkillforge(); if(typeof initSkillBar==='function') initSkillBar(); }
-function gForgeReset(skill){ _forgeImbue(skill, false); gRenderSkillforge(); if(typeof initSkillBar==='function') initSkillBar(); }
-function gForgeRankSkill(skill){
+// Pledge the forge's patron so god skills are in the active pool (and auto-fire) in any mode.
+function _forgeEnsurePatron(){ if(gPlayer && gPlayer.patron !== SKILLFORGE_GOD) gPlayer.patron = SKILLFORGE_GOD; }
+function gForgeAcquire(id, on){
   if(!gPlayer) return;
-  if(!gIsImbued(gPlayer, skill, 'cilia')) _forgeImbue(skill, true);   // auto-imbue with Cilia
-  // At a fork rank, hand off to the real Form/Chaos chooser (close the forge so it shows on top).
+  if(on){ _forgeEnsurePatron(); const e = gImbuePath(gPlayer, id); if(e.rank < 1) e.rank = 1; spawnGP(gPlayer.wx, gPlayer.wy, '#ff8a2a', 14, 4); }
+  else if(gPlayer.imbuePaths){ delete gPlayer.imbuePaths[id]; }   // Reset → un-acquire (back to nothing)
+  gRenderSkillforge(); if(typeof initSkillBar==='function') initSkillBar();
+}
+// Advance one rank. First press on an unowned skill acquires it; at a fork rank it hands off to the
+// real Form/Ascension chooser (closing the forge so the overlay shows on top); otherwise it applies the
+// same rank-up the draft card would (single source of truth via gGodSkillCards).
+function gForgeRankSkill(id){
+  if(!gPlayer) return;
+  _forgeEnsurePatron();
+  if(!gOwnsGodSkill(gPlayer, id)){ gImbuePath(gPlayer, id).rank = 1; spawnGP(gPlayer.wx, gPlayer.wy, '#ff8a2a', 14, 4); gRenderSkillforge(); if(typeof initSkillBar==='function') initSkillBar(); return; }
   const evo = gPendingEvolution(gPlayer);
-  if(evo && evo.skill === skill){ gCloseSkillforge(); gOpenEvolutionMenu(evo); return; }
-  const card = IMBUE_CARDS.find(c => c.imbueSkill === skill);
-  if(card && card.req && card.req()){ card.apply(gPlayer, 1); spawnGP(gPlayer.wx, gPlayer.wy, '#ff8a2a', 12, 4); }
-  else if(!card) addGDmg(gPlayer.wx, gPlayer.wy - 24, 'NO MASTERY TREE YET (PHASE 2–5)', '#ffaa44');
-  else addGDmg(gPlayer.wx, gPlayer.wy - 24, 'MAX — CHAOS FORK @10 (SLICE C)', '#ffaa44');
-  gRenderSkillforge();
-  if(typeof initSkillBar==='function') initSkillBar();
+  if(evo && evo.skill === id){ gCloseSkillforge(); gOpenEvolutionMenu(evo); return; }
+  const card = gGodSkillCards(gPlayer).find(c => c.godSkill === id);
+  if(card){ card.apply(gPlayer, 1); spawnGP(gPlayer.wx, gPlayer.wy, '#ff8a2a', 12, 4); }
+  else addGDmg(gPlayer.wx, gPlayer.wy - 24, 'MAXED (rank 10)', '#ffaa44');
+  gRenderSkillforge(); if(typeof initSkillBar==='function') initSkillBar();
+}
+// Jump straight to rank 10, auto-picking the first Form + Ascension leaf (use Rank +1 to choose the
+// other branch interactively). Forks resolve through the real _chooseEvolution, so state stays honest.
+function gForgeMaxSkill(id){
+  if(!gPlayer) return;
+  _forgeEnsurePatron();
+  if(!gOwnsGodSkill(gPlayer, id)) gImbuePath(gPlayer, id).rank = 1;
+  let guard = 0;
+  while(guard++ < 40){
+    const evo = gPendingEvolution(gPlayer);
+    if(evo && evo.skill === id){ _chooseEvolution(evo, 0); continue; }   // auto-pick branch 0
+    const card = gGodSkillCards(gPlayer).find(c => c.godSkill === id);
+    if(!card) break;                                                     // maxed
+    card.apply(gPlayer, 1);
+  }
+  spawnGP(gPlayer.wx, gPlayer.wy, '#ffcc44', 20, 5);
+  gRenderSkillforge(); if(typeof initSkillBar==='function') initSkillBar();
 }
 function gRenderSkillforge(){
   const wrap = document.getElementById('skillforge-rows');
@@ -15032,25 +15527,33 @@ function gRenderSkillforge(){
     b.addEventListener('click', ev => { ev.stopPropagation(); fn(); });
     return b;
   };
-  SKILLFORGE_SKILLS.forEach(s => {
-    const imbued   = gIsImbued(gPlayer, s.id);
-    const path     = IMBUE_PATHS.cilia[s.id];
-    const e        = gPlayer.imbuePaths && gPlayer.imbuePaths[s.id];
+  const skills = gForgeGodSkills();
+  if(!skills.length){
+    wrap.innerHTML = '<div style="color:#caa; font:11px monospace;">No god skills registered.</div>';
+    return;
+  }
+  skills.forEach(({ id, tree }) => {
+    const owned    = gOwnsGodSkill(gPlayer, id);
+    const e        = gPlayer.imbuePaths && gPlayer.imbuePaths[id];
     const rank     = (e && e.rank) || 0;
-    const formName = (e && e.form && path) ? path.forms[e.form].name : null;
-    const leafName = (e && e.form && e.chaos && path && path.forms[e.form].ascensions) ? path.forms[e.form].ascensions[e.chaos].name : null;
+    const formName = (e && e.form) ? (tree.forms[e.form] || {}).name : null;
+    const leafName = (e && e.form && e.chaos && tree.forms[e.form] && tree.forms[e.form].ascensions) ? (tree.forms[e.form].ascensions[e.chaos] || {}).name : null;
+    const atFork   = owned && gPendingEvolution(gPlayer) && gPendingEvolution(gPlayer).skill === id;
     const row  = document.createElement('div'); row.className = 'forge-row';
     const left = document.createElement('div'); left.className = 'forge-left';
-    left.innerHTML = `<div class="forge-name">${s.name}</div><div class="forge-sub">${s.sub}</div>`;
+    left.innerHTML = `<div class="forge-name">${tree.art}</div><div class="forge-sub">${SKILLFORGE_GOD} · auto-fire</div>`;
     const state = document.createElement('div'); state.className = 'forge-state';
-    state.textContent = !imbued ? '— not imbued —'
-      : path ? `Rank ${rank}/10${formName ? ' · ' + formName : ''}${leafName ? ' · ' + leafName : ''}`
-             : 'imbued · tree in Phase 2–5';
+    state.textContent = !owned ? '— not acquired —'
+      : `Rank ${rank}/10${formName ? ' · ' + formName : ''}${leafName ? ' · ' + leafName : ''}${atFork ? '  ⚑ EVOLUTION READY' : ''}`;
     left.appendChild(state);
     const btns = document.createElement('div'); btns.className = 'forge-btns';
-    btns.appendChild(mkBtn(imbued ? 'Unimbue' : 'Imbue', () => gForgeToggleImbue(s.id)));
-    if(path) btns.appendChild(mkBtn('Rank +1', () => gForgeRankSkill(s.id)));
-    btns.appendChild(mkBtn('Reset', () => gForgeReset(s.id), !imbued));
+    if(!owned){
+      btns.appendChild(mkBtn('Acquire', () => gForgeAcquire(id, true)));
+    } else {
+      btns.appendChild(mkBtn(atFork ? 'Choose ▸' : 'Rank +1', () => gForgeRankSkill(id)));
+      btns.appendChild(mkBtn('Max (10)', () => gForgeMaxSkill(id)));
+      btns.appendChild(mkBtn('Reset', () => gForgeAcquire(id, false)));
+    }
     row.appendChild(left); row.appendChild(btns);
     wrap.appendChild(row);
   });
@@ -15153,11 +15656,13 @@ function gShrineSelectGod(god){
   // Confirm after brief delay so the selection animation shows
   setTimeout(()=>{
     if(gShrine){ gShrine.patron = god; gShrine.activated = true; }
+    if(gPlayer) gPlayer.patron = god;   // god-skill pivot: pledging unlocks this god's auto-firing skills in the draft
     addGDmg(gShrine ? gShrine.wx : 0, gShrine ? gShrine.wy-40 : 0, god.toUpperCase()+' BLESSES YOU', '#ddaaff');
+    addGDmg(gShrine ? gShrine.wx : 0, gShrine ? gShrine.wy-22 : 0, 'HER SKILLS NOW RISE IN YOUR LEVEL-UPS', '#ff9a3a');
     spawnGP(gShrine ? gShrine.wx : 0, gShrine ? gShrine.wy : 0, '#cc88ff', 25, 5);
     gCloseShrineMenu();
-    // Chain straight into the skill-imbue menu.
-    gOpenImbueMenu();
+    // No skill-imbue step in the god-skill model — the pledge alone unlocks the pool; the level-up draft
+    // now offers her god skills to ACQUIRE and rank up. (The old #g-imbue-overlay flow is parked.)
   }, 350);
 }
 
@@ -15303,8 +15808,13 @@ const Sim = (function(){
         cd:{ swing:+(p.swingCooldown||0).toFixed(1), dash:+(p.evasionCooldown||0).toFixed(1),
              leap:+(p.leapCooldown||0).toFixed(1), heavy:+(p.heavyCooldown||0).toFixed(1),
              ww:+(p.wwCooldown||0).toFixed(1) },
-        // Imbue Paths (item 2): per-imbued-skill mastery rank + chosen Form + rank-10 ascension leaf.
-        imbue:{ swing:{ rank:gImbueRank(p,'swing'), form:gImbueForm(p,'swing'), ascension:gImbueAscension(p,'swing') } },
+        // God Skills (item 2 pivot): the active patron + each owned auto-firing skill's rank / Form /
+        // rank-10 ascension leaf, plus any pending evolution fork the agent must resolve.
+        patron: gActivePatron(p) || null,
+        godSkills: gOwnedGodSkills(p).reduce((m,id)=>{
+          m[id] = { rank:gImbueRank(p,id), form:gImbueForm(p,id), ascension:gImbueAscension(p,id) }; return m;
+        }, {}),
+        pendingEvolution: (()=>{ const e = gPendingEvolution(p); return e ? { skill:e.skill, kind:e.kind } : null; })(),
       };
       const list=[];
       for(const e of gEnemies){
@@ -15347,6 +15857,7 @@ const Sim = (function(){
   Sim.pickEvolution = function(i){ if(gSimEvolution) gSimEvolution.pick(i|0); };   // resolve a Form/Chaos fork (item 2)
   Sim.reroll = function(){ return gSimDraft && gSimDraft.reroll ? gSimDraft.reroll() : false; };      // Favor reroll
   Sim.upgradeCard = function(i){ return gSimDraft && gSimDraft.upgrade ? gSimDraft.upgrade(i|0) : false; }; // Favor rarity-upgrade
+  Sim.buyRank     = function(i){ return gSimDraft && gSimDraft.buyRank ? gSimDraft.buyRank(i|0) : false; }; // Favor god-skill rank buy
   // Convenience: one call applying an intent object.
   Sim.act = function(c){
     if(!c) return;

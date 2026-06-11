@@ -240,10 +240,37 @@ checks are untouched (so MP semantics hold). The old `skillPoints` currency / CT
 - **STR/DEX/INT removed** — the scaling helpers (`weaponScalingMult`/`wildDex*`/…) are neutral shims.
 - Left panel: patron god portrait, src pulled from the shrine card img tag.
 
-### Imbues (multi-imbue, level-gated shrine)
-`gPlayer.imbues` is a `skillId → patron` map (was a single field). The wilderness shrine re-arms every
-5 levels (`gShrineHasUnclaimed` / `gImbueAllowance` = `⌊level/5⌋`) to imbue another skill; town
-meditation is ungated. All combat/UI reads go through the null-safe `gIsImbued(p, skill[, patron])`.
+### God Skills (item 2 pivot — auto-firing patron abilities) — spec `docs/specs/god-skills.md`
+The god layer no longer imbues active skills; it grants **class-agnostic auto-firing god skills** (VS-style).
+- **Pledge:** the wilderness shrine sets `gPlayer.patron` (e.g. `'cilia'`) — one step, no skill-picking.
+  `gActivePatron(p)` returns `p.patron` (falling back to the legacy `imbues` values). The pledge unlocks that
+  god's pool (`IMBUE_PATHS[patron]`) in the level-up draft. `gShrineHasUnclaimed()` now means "un-pledged."
+- **State:** reuses the imbue-path mastery shape `p.imbuePaths[skillId] = {rank,form,chaos,mods}` but **keyed by
+  the god-skill's own id** (`'burningBody'`), not an active skill. `rank>=1` = owned & auto-firing. Helpers:
+  `gGodPool`/`gGodSkillTree`/`gOwnsGodSkill`/`gOwnedGodSkills`/`gGodFireParam` (base+mods, floored/capped).
+- **Registry:** each `IMBUE_PATHS[patron][id]` entry carries the tree (`waveStep`/`forms`/`formStep`/`ascensions`,
+  Form @5 / Ascension @10) **plus** a `fire` block (the auto-fire contract: `kind`, `timerKey`, `base`/`floors`/`caps`).
+- **Draft:** `gGodSkillCards(p)` generates acquire + rank-up cards from the pool (replaces the static `IMBUE_CARDS`);
+  ranks 5/10 fork through the existing `#g-evolution-overlay` (`gPendingEvolution`/`_evolutionOptions`/
+  `_chooseEvolution`, now generalized to any god-skill id). First-acquire is guaranteed in the draft for discoverability.
+- **Auto-fire:** `gUpdateGodSkills(p,dt)` ticks the local player's owned skills from `gUpdatePlayer` (after move).
+  **Burning Body** (`gTickBurningBody`): a base **ignite-aura** every `AURA_TICK` + a Form emit — Firebloom rings
+  / Cinderburst novas (`gSpawnFireRing`, `p._bbTimer`). Ascension modes on the ring: `breathe` (Dragonbreath,
+  `healOwner`), `settle` (Chaos Crown, `_laySettleRing` chaosfire circle), and at-feet `gSpawnFireTrail` substance
+  grounds (Dragonheart heal / Cataclysm self-burn). All standalone-damage (`FR_BASE_DMG`), reusing shipped FX.
+- **MP:** per-skill timers are local-only (each client ticks its own); only FX/damage outcomes sync (the existing
+  `_frSeq` bump in `gSpawnFireRing`). **Sim:** `Sim.observe().godSkills` + `.pendingEvolution`; forks resolve via
+  `gSimEvolution`/`Sim.pickEvolution`.
+- **Parked:** **Dance of Fire** (the swing imbue tree, `IMBUE_PATHS.cilia.swing` + `gFireWaveParams` + wave FX) and
+  the skill-imbue overlay (`gOpenImbueMenu`/`gImbueSelectSkill`/`#g-imbue-overlay`) are kept but **unreachable** in
+  play — nothing writes `imbues['swing']`, so all `gIsImbued(p,'swing'/'ww'/'evasion'/'heavy',…)` reads are now
+  always-false (the actives are plain).
+- **Skillforge (dev):** re-pointed to god skills — opened by an in-world **forge prop** in the Sanctum
+  (walk up + `E`, `initForgeProp`/`gForgeInteract`/`drawForgeProp`, dev-only, replaces the old corner
+  button) or the `K` key. Rows are derived from the registry (`gForgeGodSkills`, filtered by `gIsGodSkill`),
+  with **Acquire / Rank +1 / Max (10) / Reset** per skill; it auto-pledges the patron and reuses the real
+  apply paths (`gGodSkillCards`, `_chooseEvolution`), so a forged skill auto-fires immediately (e.g. on the
+  town training dummy). New god skills appear here automatically.
 
 ---
 

@@ -90,34 +90,33 @@ its full binary tree from the prior design; only the **trigger** changes.
 
 ---
 
-### 1. Pyre Waltz — *centered pulsing nova* (the cleanest conversion)
+### 1. Burning Body — *AOE burst-fire around you* (SHIPPED — slice 1) ⟵ **redirect (Josh, 2026-06-11)**
 
-**Base today:** `gFireRings` (~L3603, params `FR_*`). A ring spawns **every 2s (120f) while whirlwind is
-channelled**, expands to 6 tiles, deals `wwDamage ×1.5`, applies 3s burn, knocks back 6 outward.
+> **Direction change (Josh, 2026-06-11):** *renamed from "Pyre Waltz"; refocused.* Fire's identity is **large
+> AOE damage + burn (→ explosions)**, **not** movement/pulling. The old "Flame Vortex" pull Form is **cut**; the
+> base is now an **ignite-aura**, and both Forms are pure AOE-burst-fire. This is built and verified (logic);
+> tuning is live. Code: `gTickBurningBody` + the `IMBUE_PATHS.cilia.burningBody` registry entry; FX reuse the
+> ring (`gSpawnFireRing`, now with `breathe`/`settle`/`healOwner`/`speed` modes) + the shipped substance grounds.
 
-**Auto-fire conversion (the key change):**
-- **Remove the whirlwind-channel gate.** Once acquired, a ring auto-spawns centered on the player every
-  `FR_INTERVAL` (start ~120f), driven by a per-skill cooldown timer on the player — **the timing loop already
-  exists; just decouple the trigger from `whirlwind-active`.** This is the lowest-risk conversion and the one
-  to build first to prove the pattern.
-- **Damage no longer keys off `wwDamage`** (whirlwind is the class's now, neutral). Give it a standalone base
-  `FR_BASE_DMG` scaled by player level / global `damagePct` like other sources.
+**Unlock (rank 1) — the ignite-AURA:** a fixed-radius aura (`AURA_RADIUS`) — enemies within it catch fire and
+take burn DoT each `AURA_TICK`. Standalone damage (`AURA_DMG`/`FR_BASE_DMG`-scaled by `damagePct`), no `wwDamage`.
 
-- **Ranks 1–4:** +ring damage (`FR_DMG_MULT`) · +ring range (`FR_RANGE_TILES`) · faster cadence (`FR_INTERVAL`↓,
-  **floored**) · +burn duration (`FR_BURN_FRAMES`).
-- **Rank 5 — Form:**
-  - **A · Wildfire Bloom** *(zone denial)* — rings expand slow, huge, persistent, leaving a charred burning-ground
-    arc as they pass. Hold ground.
-  - **B · Flame Vortex** *(melee setup)* — rings **collapse inward**, dragging + burning enemies toward you
-    (invert ring direction), bunching the pack.
-- **Ranks 6–9:** Bloom → +max radius / +linger / +concurrent rings · Vortex → +pull strength / +cadence /
-  +bunched-target damage.
-- **Rank 10 — Ascension** *(the rings become a **sustained, self-cycling field** — formerly "while channelling,"
-  now on its own breathing cycle):*
-  - **Bloom →** 🐉 **Solar Mandala** (dragonfire ring-band heals you per tick anchored in it) · 🔥 **Cinderstorm**
-    (rings implode into an uncontrolled chaosfire nova on your position).
-  - **Vortex →** 🐉 **Sun's Embrace** (dragonfire pull; heals per enemy dragged & burned) · 🔥 **Devouring Pyre**
-    (vortex implodes into a self-consuming chaosfire well at your feet).
+- **Ranks 1–4:** grow the aura — +radius (`auraRadius`) · +contact damage (`auraDmg`) · +burn duration
+  (`auraBurn`) · seed the Form emit's damage (`emitDmg`).
+- **Rank 5 — Form (two ways the body burns; both pure AOE burst, no pull):**
+  - **A · Firebloom** *(rhythm · reach)* — releases an **expanding fire ring every ~5s** (`BB_RING_INTERVAL`);
+    timed waves sweep outward and ignite all they cross.
+  - **B · Cinderburst** *(burst · stand)* — the aura swells and **detonates a fast fixed-radius nova every ~4s**
+    (`BB_BURST_INTERVAL`, `BB_NOVA_SPEED`) centred on you; wade in and cook the pack.
+- **Ranks 6–9:** +emit damage / +radius / +burn (each Form's `formStep`).
+- **Rank 10 — Ascension** (🐉 Dragon = sustain · 🔥 Chaos = power+cost):
+  - **Firebloom →** 🐉 **Dragonbreath** (`ringMode:'breathe'` — dragonfire ring expands then fully contracts,
+    a dragon's-breath tempo; band-contact **heals** you, `healOwner`) · 🔥 **Chaos Crown** (`ringMode:'settle'` —
+    chaosfire ring expands, pauses at peak, then **settles into a burning chaosfire ground-circle** at max
+    radius via `_laySettleRing`).
+  - **Cinderburst →** 🐉 **Dragonheart** (each detonation pools **dragonfire ground at your feet** that heals
+    while you stand in it) · 🔥 **Cataclysm** (`novaScale` — **colossal chaosfire blasts** + chaosfire ground
+    that burns enemies AND you).
 
 ---
 
