@@ -11,6 +11,35 @@ Each entry captures: what was built, what broke badly, and what the root cause t
 > so a session loads the running context without the full back-catalogue. Archive older sessions here as it grows.
 
 ---
+## Session 15 — Asset reorg (by owner/faction), Burning Body consolidation, atomic single-file migration
+*June 11 2026 | artist → engineer (role-switched mid-session); parallel sessions sharing the tree*
+
+### Built / Done
+- **`assets/` reorganized for long-term health.** `fx/` → `_shared/` + per-god (`cilia/`…); `char/` → faction
+  folders (`player`/`goblins`/`wolves` — 248 files, 200 manifest paths). New `tools/fold-assets.py` does the
+  `git mv` **and** the `ART_MANIFEST` path-rewrite atomically + self-verifies. `assets/README.md` records the
+  durable scheme: **top level by asset-kind; fold within a kind on *its own* axis** (char=faction, fx=owner,
+  tile=type) — not "by god everywhere". `art/fx/` masters mirrored. New FX (Burning Body ring + heat-fill,
+  dragonfire/chaosfire ground-circles) cleaned to true-black via `tools/fx-ring-heatfill.py`.
+- **Burning Body (god-skill item 2) build consolidated + deployed** — ignite-aura + Firebloom/Cinderburst +
+  Dragon/Chaos ascensions; ground-circle sprites + ring upgrade (`FR_RING_FRAC` 0.76) wired. Verified `node
+  --check` + the AI-native invariants statically (`gUpdateGodSkills` is in the `gSimUpdate` chain via
+  `gUpdatePlayer`; the ascension fork sets `gSimEvolution`, so headless runs resolve it). **Browser
+  `Sim.batch` canary still owed** (no headless browser this session).
+- Spec'd (Artist→Engineer handoffs, in `docs/TASKS.md` + `docs/specs/levelup-screen.md`): level-up screen
+  art pass + 27-icon generation batch; enemy hurt poses; threat-tier eye glow.
+
+### Lessons
+- **Code-referenced asset paths migrate atomically — script the move + the manifest rewrite as ONE op.** In a
+  single-file game, ~200 `ART_MANIFEST` strings point at files; a half-done fold (files moved, paths stale)
+  404s every sprite into the procedural fallback, which `node --check` never catches. `fold-assets.py --apply`
+  does both in one self-verifying commit; the engineer (sole `index.html` editor) runs it so the halves are
+  inseparable. (Crystallized in `agents/engineer/memory.md`.)
+- **The shared-tree auto-sweep trap** (reinforces Session 14): a "stage everything" moment bundled cross-role
+  WIP (`index.html`, PM's `ROADMAP`) into an *art* commit. Fix: `git reset --soft` + restage **explicit
+  paths**. Reconcile a diverged `origin` with `--force-with-lease` **only after** diffing that nothing unique
+  to origin is lost (here only PM's `ROADMAP`, preserved uncommitted in the working tree).
+
 ## Session 14 — Image-Art Combat Pass, Card Pool Expansion, Weighty Heavy, Level-Up Redesign
 *June 2026 | engineer (+ a parallel playtest session sharing the tree)*
 

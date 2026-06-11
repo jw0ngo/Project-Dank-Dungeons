@@ -18,6 +18,15 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 
 ---
 
+### 2026-06-11 — Code-referenced asset paths migrate atomically: script move + manifest-rewrite as one op
+- **Principle:** Reorganizing assets referenced by explicit path strings (~200 `ART_MANIFEST` entries) is a
+  move **plus** a synchronized path-rewrite — inseparable. A half-migration (files moved, paths stale) 404s
+  every asset to its procedural fallback, invisible to `node --check`. Do both by **script, never by hand**,
+  in one self-verifying commit (`tools/fold-assets.py --apply` = `git mv` + rewrite + assert each path resolves).
+- **How to apply:** dry-run first (prove 0 unmapped + the rewrite count); the `index.html` owner runs `--apply`
+  so both halves land in ONE commit. Organize on the **durable axis** — top-level by asset-kind, fold within on
+  the kind's own axis (char=faction, fx=owner, tile=type; `assets/README.md`), never a volatile one (skill names).
+
 ### 2026-06-11 — Syntax-pass ≠ behavior-pass; when no browser, extract-and-eval the real logic
 
 - **Principle:** Verifying *syntax* is not verifying *behavior*. A change can be syntactically perfect and

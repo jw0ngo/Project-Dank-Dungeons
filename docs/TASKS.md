@@ -126,7 +126,7 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 - ⛔ 🟢 **Custom sprite invisible to self in singleplayer** (design-gated) — your custom sprite broadcasts to other players (live in MP via `df_player_sprite` + `ccPixelsToCanvas`) but your own local render + char/inventory previews still draw the knight. Cosmetic, not a bug. **Blocked on a PM/CD design call:** should the local hero reflect the custom sprite (route local draw + previews through `ccPixelsToCanvas(...)`, knight as fallback), or is the knight canonical (demote the creator to MP-cosmetic-only / cut it)? Not an engineer drive-by.
 
-- ◻️ 🔧 **CHANGELOG housekeeping** (↳ from PM, 2026-06-10) — (a) `docs/archive/changelog-dungeon-forge.md` (pre-rename v0.9–v0.11 era) is still **untracked** — fold into a `docs:` commit; pointer already left in `CHANGELOG.md`. (b) Fold the shipped items (0, 0b, 0c, 1, 3, 4) into the next tag. Going forward, sweep the changelog by era/half-year, not per release.
+- ◻️ 🔧 **CHANGELOG housekeeping** (↳ from PM, 2026-06-10) — (a) ✅ `docs/archive/changelog-dungeon-forge.md` now tracked (Session 15). (b) Fold the shipped items (0, 0b, 0c, 1, 3, 4) into the next tag. Going forward, sweep the changelog by era/half-year, not per release.
 
 ---
 
