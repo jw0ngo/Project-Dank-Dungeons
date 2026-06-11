@@ -68,13 +68,13 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
     wilderness, variants mix, feet sit on the ground, canopies composite cleanly over grass (no white halo).
   </details>
 
-- ◻️ ✨ **Heavy charge locks out the normal swing** (↳ from PM playtest, 2026-06-11 · roadmap #6 `approved`) —
-  while the heavy attack is charging (`p.heavyWindingUp === true`, `index.html:3327`) the player can still fire a
-  normal swing; gate it out. Suppress the swing trigger (LMB→`gDoSwingAt`, dispatch `~index.html:3517`) whenever
-  `heavyWindingUp` is set, so committing to a heavy means committing — no free swing mid-charge. **Why:**
-  weighty-combat directive (Josh, standing) — a committed action must compromise other options; charging heavy
-  shouldn't let you also poke. Engineer owns whether to drop the input or queue it; product intent = no swing
-  damage/animation while winding up a heavy.
+- ✅ **Heavy charge locks out the normal swing** (↳ from PM playtest, 2026-06-11 · roadmap #6 `approved`) —
+  **done 2026-06-11.** Added one guard at the `gDoSwingAt` chokepoint (`index.html:3545`): early-return while
+  `heavyWindingUp || heavySwinging`. All three swing-trigger paths (mousedown, LMB-held repeat, pending buffer)
+  funnel through `gDoSwingAt`, so the single guard covers the whole "until the heavy resolves" window (charge →
+  swing → recovery), not just the windup. **Drop, not queue:** a click mid-heavy is eaten; the LMB-held repeat
+  naturally resumes once the heavy clears, so holding through a heavy still feels right. **Why:** weighty-combat
+  directive (Josh, standing) — a committed action must compromise other options.
 
 - ◻️ ✨ **Item 7 — Mana economy & skill management** (↳ from PM playtest, 2026-06-11 · roadmap #7 `approved` ·
   spec [`specs/mana-economy.md`](specs/mana-economy.md)) — make mana a real, shared resource. Phased:

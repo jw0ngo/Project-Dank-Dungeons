@@ -3542,6 +3542,7 @@ function gDoSwing(){
 // Fire a normal swing at a specific aim angle (used by input buffer to preserve click direction)
 function gDoSwingAt(aimAngle){
   if(!gPlayer||gPlayer.swinging||gPlayer.swingCooldown>0||gPlayer.wwActive||gPlayer.dead)return;
+  if(gPlayer.heavyWindingUp||gPlayer.heavySwinging)return; // committing to a heavy locks out the normal swing until it resolves (weighty combat, roadmap #6)
   const _dbuf = (gPlayer.wildBuffs && (1+(gPlayer.wildBuffs.damagePct||0)/100))||1;
   const dmg   = Math.round(W().baseDamage * _dbuf * (1 + pSkillStat(gPlayer,'swingDmgPct')/100));
   gPlayer._chargeDmg=dmg;
