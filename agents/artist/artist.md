@@ -302,10 +302,12 @@ describe the intent, don't rewrite systems.
 - **Keep the docs honest.** `tools/doc-drift-check.ps1` (Stop hook) nudges when `index.html` changed but
   the tracking docs didn't. Log art-pipeline lessons in `docs/SESSION_JOURNAL.md` (the cutout edge cases
   came from there); update this file when the pipeline changes.
-- **Cut releases like the engineer.** Art is part of the build. You commit the `assets/`/`art/` files,
-  the slice tool, and docs; the engineer commits the `index.html` wiring (often you'll hand off and they
-  cut the release). Commit to `main`, then `.\tools\release.ps1 <X.Y.Z>`; pushing `main` deploys via
-  GitHub Pages, so commit deliberately. Note the KB each asset file adds — art files live under `assets/`
+- **Commit your art; don't push or release.** Art is part of the build. You **commit** the `assets/`/`art/`
+  files, the slice tool, and docs (stage only your own paths); the engineer commits the `index.html` wiring
+  (often you'll hand off and they cut the release). **Pushing `main` and cutting a release (`release.ps1`,
+  which pushes) require Josh's explicit authorization** — studio-wide, no agent auto-pushes (see CLAUDE.md).
+  Commit deliberately and locally; leave the push/deploy to Josh (the engineer runs `release.ps1` only on his
+  go-ahead). Note the KB each asset file adds — art files live under `assets/`
   (no longer inlined), but they still ship in the repo and load over the wire. Optimize PNGs (the script
   already passes `optimize=True`); prefer the smallest source that holds up at display size.
 

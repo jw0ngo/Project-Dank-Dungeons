@@ -153,17 +153,17 @@ Other paths are historical/parallel and are NOT the live game:
 The project root is a git repository (GitHub remote `jw0ngo/Project-Dank-Dungeons`, branch `main`). **Versioning is git history + tags, not duplicated files** — do NOT create `_v2` / `_refactored` copies of `index.html`; edit it in place and commit.
 
 - Releases get a `docs/CHANGELOG.md` entry and an annotated tag (`git tag -a vX.Y.Z`). Pre-1.0: minor = features, patch = fixes.
-- Pushing `main` deploys the latest `index.html` via GitHub Pages, so commit deliberately.
+- Pushing `main` deploys the latest `index.html` via GitHub Pages — so **pushing requires Josh's explicit authorization, every time** (studio-wide: no agent auto-pushes — see CLAUDE.md). Commit deliberately and locally; leave the push (and the deploy decision) to Josh.
 
 **Where previous builds live**
 - **`main` history + annotated tags** — every commit's `index.html` is recoverable (`git show vX.Y.Z:index.html` or `git checkout vX.Y.Z`). Named releases are the tags (`v0.9.0`, `v0.10.0`, …).
 - **`origin/archive/legacy-builds`** — the old pre-consolidation filename-versioned snapshots (`dungeon_forge_MP_v2.html`, `build_47.html`, etc.), quarantined off `main`.
 - GitHub Pages does **not** keep old deploys — it only serves current `main`. Old builds survive only via git history / tags / the archive branch.
 
-**Cutting a release (the habit)** — every deploy to `main` should become a **named version**, not just a loose commit:
-1. Commit (and push) your build to `main` as usual.
-2. Run **`.\tools\release.ps1 <X.Y.Z> ["message"]`** — it promotes the `CHANGELOG.md` `[Unreleased]` section to `## [X.Y.Z] - <date>` (leaving a fresh empty `[Unreleased]`), commits that, creates the annotated `vX.Y.Z` tag, and pushes `main` + the tag. It refuses to run off `main`, on a duplicate tag, with an empty `[Unreleased]`, or with other uncommitted tracked changes (so a tag always points at a committed build).
-   - Manual equivalent: edit `CHANGELOG.md`, then `git tag -a vX.Y.Z -m "…" && git push origin main vX.Y.Z`.
+**Cutting a release (the habit)** — every deploy to `main` should become a **named version**, not just a loose commit. **A release pushes, so it only happens on Josh's explicit go-ahead** — never cut/deploy a release unprompted:
+1. Commit your build to `main` locally. Don't push yet — the push is part of the release/deploy, which is gated on Josh's authorization.
+2. **Once Josh authorizes the deploy,** run **`.\tools\release.ps1 <X.Y.Z> ["message"]`** — it promotes the `CHANGELOG.md` `[Unreleased]` section to `## [X.Y.Z] - <date>` (leaving a fresh empty `[Unreleased]`), commits that, creates the annotated `vX.Y.Z` tag, and **pushes `main` + the tag** (this is the authorized push — don't run it without his go-ahead). It refuses to run off `main`, on a duplicate tag, with an empty `[Unreleased]`, or with other uncommitted tracked changes (so a tag always points at a committed build).
+   - Manual equivalent: edit `CHANGELOG.md`, then `git tag -a vX.Y.Z -m "…" && git push origin main vX.Y.Z` (again, only once authorized).
 
 > A modular split of `index.html` is on the table (an earlier doc called the single-file form a hard constraint — it is not). If asked to refactor toward modules, the stale `dungeon-forge-project/` Vite scaffold is the reference for the intended structure.
 
@@ -217,7 +217,7 @@ Keep the repo-reality sections of this file honest and current. `tools/doc-drift
 
 ### Releases are deliberate
 
-Pushing `main` deploys the latest `index.html` via GitHub Pages, so commit deliberately. Every deploy to `main` should become a **named version** via `tools/release.ps1` (see *Versioning*), not just a loose commit.
+Pushing `main` deploys the latest `index.html` via GitHub Pages, so commit deliberately — and **only push/release on Josh's explicit authorization** (studio-wide: no agent auto-pushes). Every *authorized* deploy to `main` should become a **named version** via `tools/release.ps1` (see *Versioning*), not just a loose commit.
 
 ### AI-native — keep the game agent-playable
 

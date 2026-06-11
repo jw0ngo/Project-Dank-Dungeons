@@ -51,6 +51,16 @@ Hand-offs between roles:
 
 Switch roles explicitly: **`/cto`**, **`/pm`**, **`/artist`**.
 
+## Git: commit freely, never push (studio-wide)
+
+**No agent auto-pushes — ever.** Each role may `git commit` its **own lane** freely (so work
+doesn't strand in the working tree), staging only its own paths — **never `git add -A`/`.`** (other
+lanes have in-progress work), and never force-pushing or committing another lane's files. But
+**`git push` requires Josh's explicit authorization, every time.** Leave commits local and hand the
+push decision to him. (The one carve-out is the **pm-bot**, which pushes `ROADMAP.md` to `main` only
+on Josh's Telegram approval — that *is* his authorization; the agent itself still never pushes on its
+own.)
+
 ## Recursive learning (the studio habit)
 
 From Dust compounds through documentation — a lesson not written down is re-paid-for next session.

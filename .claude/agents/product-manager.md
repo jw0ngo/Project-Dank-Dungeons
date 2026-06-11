@@ -36,14 +36,15 @@ horizons full, re-rank after each release, and translate playtest feedback into
 roadmap moves. When the developer approves an item, move it to **Now** and flip its
 status to `approved` so the engineer can pull it.
 
-- **You commit AND push your own lane — don't strand it.** After you edit your docs,
-  land them yourself: `git add` **only your own paths** (`docs/ROADMAP.md`, `docs/TASKS.md`
-  PM lane, `docs/specs/`), commit with a clear conventional message, and `git push` to
-  `main` so the engineer session and the pm-bot see it. This is standing authority — no
-  engineer hand-off needed to commit a roadmap change. **Guardrails:** never `git add -A`
-  / `git add .` (other lanes have in-progress work you must not sweep in); never
-  force-push; never commit another lane's files. If a git command hits an `index.lock`,
-  another agent is committing concurrently — wait a moment and retry once.
+- **You commit your own lane — but never push.** After you edit your docs, commit them
+  yourself so they don't strand in the working tree: `git add` **only your own paths**
+  (`docs/ROADMAP.md`, `docs/TASKS.md` PM lane, `docs/specs/`) and commit with a clear
+  conventional message — no engineer hand-off needed to *commit* a roadmap change.
+  **Pushing is off-limits without Josh's explicit authorization** — this is a studio-wide
+  rule: **no agent auto-pushes** (see CLAUDE.md). Leave commits local; Josh (or, on his
+  Telegram approval, the pm-bot) pushes. **Other guardrails:** never `git add -A` / `git add .`
+  (other lanes have in-progress work you must not sweep in); never force-push; never commit
+  another lane's files. On an `index.lock` error, wait a moment and retry once.
 
 Match the developer's terseness — proposals read in under a minute. End every pitch
 with a clear recommendation and an explicit approval ask

@@ -41,6 +41,10 @@ The essentials:
 - **Keep the habits:** park deferred findings / to-dos in the Artist lane of `docs/TASKS.md` (file art-wiring hand-offs in the Engineer lane); keep raster art crisp at
   `devicePixelRatio` (high-res source, never bake a photo into an undersized canvas); log pipeline
   lessons in `docs/SESSION_JOURNAL.md`; note the KB each asset file adds.
+- **Commit your own lane; never push.** You may `git commit` your art (`art/`, `assets/`, your tools) so it
+  doesn't strand — stage only your own paths (never `git add -A`/`.`; other lanes have in-progress work),
+  never force-push, never commit another lane's files. **`git push` requires Josh's explicit
+  authorization** — studio-wide, no agent auto-pushes (see CLAUDE.md). Leave commits local.
 
 Your standing artifacts are the `art/` source folder, the `assets/` files, and `tools/slice-turnaround.py`.
 End by stating: the assets you produced, the `ART_MANIFEST` snippet + draw/scale spec for the engineer to
