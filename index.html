@@ -4289,9 +4289,11 @@ function gUpdatePlayer(dt=1){
   if(p.freezeUntil>0&&performance.now()<p.freezeUntil){}
   else p.freezeUntil=0;
   // Sidebar open: pan so the player sits in the centre of the UNBLOCKED area (right of the level-up
-  // dock) rather than behind it. Eased, so opening/closing the panel slides the camera smoothly.
+  // dock) rather than behind it. Eased; the RETRACT (easing back toward centre on close) runs at half
+  // speed — the faster snap-back felt jarring — so it glides back in step with the panel sliding out.
   const _camTarget = gDraftCamShift();
-  gDraft.camShift += (_camTarget - gDraft.camShift) * Math.min(1, 0.15*dt);
+  const _camK = (_camTarget < gDraft.camShift) ? 0.075 : 0.15;
+  gDraft.camShift += (_camTarget - gDraft.camShift) * Math.min(1, _camK*dt);
   camX = p.wx - VW/2 - gDraft.camShift;
   camY = p.wy - VH/2;
   const etx=Math.floor(p.wx/T),ety=Math.floor(p.wy/T);
@@ -14032,6 +14034,7 @@ function gDraftSetupTheme(){
 
 // Open / close the sidebar. Opening is on demand (the FAB) — never automatic; closing keeps any pending
 // level-ups queued (the FAB keeps flashing) so the player picks on their own time.
+const DRAFT_RETRACT_MS = 600;   // slow, gentle slide-out on close (paired with the half-speed camera ease-back)
 function gDraftOpen(){
   if(!gDraft.opts.length){ if(gDraft.pending > 0) gDraftGenerate(); else return; }
   gDraft.open = true;
@@ -14039,12 +14042,27 @@ function gDraftOpen(){
   gDraftPaint();
   const overlay = document.getElementById('g-stat-pick');
   if(overlay) overlay.style.display = 'flex';
+  const dock = overlay && overlay.querySelector('.lvl-dock');
+  if(dock){
+    gDraft._slideTok = (gDraft._slideTok||0) + 1;   // cancel any in-flight retract-hide
+    dock.style.transition = 'none';
+    dock.style.transform = 'none';                  // appear in place (no open animation)
+  }
   gDraftUpdateFab();
 }
 function gDraftClose(){
+  if(!gDraft.open) return;
   gDraft.open = false;
   const overlay = document.getElementById('g-stat-pick');
-  if(overlay) overlay.style.display = 'none';
+  const dock = overlay && overlay.querySelector('.lvl-dock');
+  if(dock){
+    const tok = gDraft._slideTok = (gDraft._slideTok||0) + 1;
+    dock.style.transition = 'transform ' + DRAFT_RETRACT_MS + 'ms cubic-bezier(.4,0,.2,1)';
+    dock.style.transform = 'translateX(-103%)';     // slide out left, in step with the camera re-centre
+    setTimeout(()=>{ if(!gDraft.open && gDraft._slideTok === tok && overlay) overlay.style.display = 'none'; }, DRAFT_RETRACT_MS);
+  } else if(overlay){
+    overlay.style.display = 'none';
+  }
   gDraftUpdateFab();
 }
 
@@ -14120,9 +14138,12 @@ function gDraftConfirm(){
 // Reset all draft state (called when a wilderness run ends).
 function gDraftReset(){
   gDraft.pending = 0; gDraft.opts = []; gDraft.sel = -1; gDraft.evo = null; gDraft.open = false; gDraft.camShift = 0;
+  gDraft._slideTok = (gDraft._slideTok||0) + 1;   // cancel any in-flight retract-hide
   gSimDraft = null; gSimEvolution = null;
   const overlay = document.getElementById('g-stat-pick');
   if(overlay) overlay.style.display = 'none';
+  const dock = overlay && overlay.querySelector('.lvl-dock');
+  if(dock){ dock.style.transition = 'none'; dock.style.transform = 'none'; }
   const fab = document.getElementById('g-levelup-fab');
   if(fab) fab.style.display = 'none';
 }
