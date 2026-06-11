@@ -69,6 +69,20 @@ The rank-10 fork is the *turning of the age* myth made playable (Creative Manife
 - **🔥 New-god leaf (Chaos) → POWER + COST.** Massive AOE, but the **chaosfire ground burns you too** and
   spreads/re-triggers past your aim. The self-burn *is* the cost. Tone: dread, sinisterness.
 
+> **🔥 Chaosfire identity & the footprint rule (Josh, 2026-06-12) — applies to EVERY chaos ascension, all gods:**
+> Chaosfire's fantasy is **root yourself and devastate the area *around* you** — it rewards standing still /
+> minimal movement, not kiting. So two hard rules on every 🔥 leaf:
+> 1. **No chaosfire ground spawns directly under the player on activation.** The player always retains a **clear
+>    safe footprint** at the instant the ascension fires — the field blooms *around* them (a donut / clear-center
+>    bloom anchored on the player), never planted on their feet. Reuse the existing 38px bare-center safe zone,
+>    anchored on the player's position.
+> 2. **The self-burn cost is positional commitment, not a kite-check.** You're safe while you hold your spot;
+>    the cost is paid when you must *relocate* — moving out of your pocket crosses your own chaosfire. "Avoidable
+>    hazard you choose to enter (by moving), not instant death planted under you."
+>
+> This reframes the cost from "keep moving to dodge the hazard" → "you're committed to your ground; leaving it
+> burns you." See the per-leaf reconciliation notes (some currently-spec'd leaves conflict with this — flagged).
+
 **Both grounds already exist and are tuned in the shipped build** (Slice C): dragonfire heals the owner
 **0.18× the climax damage per tick**; chaosfire hurts the owner **0.35× per tick** (outside a 38px bare-center
 safe zone) and burns enemies. There is **no generic lifesteal** — all healing routes through standing in your
@@ -120,7 +134,7 @@ take burn DoT each `AURA_TICK`. Standalone damage (`AURA_DMG`/`FR_BASE_DMG`-scal
   | Form | 🐉 sustain (old-god) | 🔥 power+cost (new-god) |
   |---|---|---|
   | **Firebloom** *(rings)* | **Dragonbreath** — `ringMode:'breathe'`: dragonfire ring expands then fully contracts (a dragon's-breath tempo), band-contact **heals** you (`healOwner`) | **Eye of Chaos** *(new — `ringMode:'ebb'`)*: a slow chaosfire ring **emanates from you, ebbing outward** (expands, contracts slightly, nets outward) → **pauses at max range** → **intensifies / thickens** → **dissipates**. No permanent ground-circle — the travelling band IS the chaosfire hazard. |
-  | **Cinderburst** *(novas)* | **Dragonheart** — each detonation pools **dragonfire ground at your feet** that heals while you stand in it | **Chaos Crown** *(moved here from Firebloom)* — a colossal detonation that **settles into a great burning chaosfire ground-circle** (the "crown") via `_laySettleRing`; burns enemies AND you. (Inherits the old Cataclysm's `novaScale` colossal-blast trait + Chaos Crown's settle payoff.) |
+  | **Cinderburst** *(novas)* | **Dragonheart** — each detonation pools **dragonfire ground at your feet** that heals while you stand in it | **Chaos Crown** *(moved here from Firebloom)* — a colossal detonation that **settles into a great burning chaosfire ground-circle** (the "crown") via `_laySettleRing`; burns enemies AND you. (Inherits the old Cataclysm's `novaScale` colossal-blast trait + Chaos Crown's settle payoff.) **⟵ footprint rule (2026-06-12):** the crown settles as a ring **around** the player with a clear bare center on their footprint — never under their feet. This is the canonical "stand still, devastate around you" chaos leaf; it already fits (the ring/donut shape + the 38px safe center anchored on the player). |
 
   - **Eye of Chaos — the new `ebb` ring mode** (the only genuinely new FX behaviour in this change): distinct
     from `breathe` (expand→fully contract) and `settle` (expand→pause→lay ground-circle). Net-outward ebbing
@@ -128,6 +142,14 @@ take burn DoT each `AURA_TICK`. Standalone damage (`AURA_DMG`/`FR_BASE_DMG`-scal
     burns; **self-burn cost (the 🔥 rule):** the ebb's contraction phases sweep the band back across the player,
     so the cost is real but **readable** — you ride the ebb and stay clear, same "avoidable hazard, not instant
     death" principle as Chaos Crown's ground-ring. Engineer owns the exact ebb curve + how thick "intensifies" reads.
+    - **⚠ Conflict with the footprint rule (2026-06-12) — needs Josh's call.** As spec'd, the ebb band *sweeps
+      back across the player* (the cost is paid by riding it). The new chaosfire identity says the opposite —
+      hold still, stay safe in a clear center. Reconcile one of two ways: **(a)** the ebb leaves a **clear inner
+      safe radius** around the player (band oscillates between an inner radius and max range, never collapsing onto
+      the footprint — the cost becomes "don't drift outward into it"), or **(b)** Eye of Chaos keeps its
+      sweep-over-you cost as a deliberate exception (it's a travelling *band*, not settled *ground* — the footprint
+      rule is about ground). Default recommendation: **(a)**, to keep all chaos leaves on one coherent "safe pocket"
+      philosophy. Flagged for decision.
   - **Chaos Crown under Cinderburst:** keep its settle-into-chaosfire-ground payoff (`_laySettleRing` /
     `gLayChaosfireRing`); the Cinderburst form emits a nova, so its ascension reshapes that detonation into the
     colossal-blast-then-settle "crown" (reuse `novaScale` + the settle). Engineer's call on the cleanest wiring —
@@ -159,6 +181,17 @@ take burn DoT each `AURA_TICK`. Standalone damage (`AURA_DMG`/`FR_BASE_DMG`-scal
     Earth** (trail spreads sideways as chaosfire walls that catch you if you backtrack).
   - **Shroud →** 🐉 **Phoenix Mantle** (persistent dragonfire aura heals you continuously) · 🔥 **Immolation**
     (permanent self-immolation aura: huge constant AOE that drains your own HP).
+  - **⚠ Conflict with the chaosfire identity (2026-06-12) — needs Josh's call.** Trail of Embers is the
+    **movement-as-weapon** skill, so its 🔥 leaves are designed around *moving*, which is the opposite of the new
+    chaosfire fantasy (root yourself, devastate around you, clear footprint). Two clashes: **Scorched Earth**'s
+    "catch you if you backtrack" is movement-keyed (fine vs. the footprint rule — nothing spawns under you on
+    activation — but off-philosophy), and **Immolation** is a *self-burn aura centered on you* — directly violates
+    the footprint rule (burns under your feet by design). Options: **(a)** redesign Trail's chaos leaves toward the
+    "around-you, clear-center" model (Immolation → a chaosfire bloom that rings you, not an under-feet drain); or
+    **(b)** accept that Trail's element is *movement*, so its chaos cost is movement-keyed (backtrack/relocate
+    penalties) and exempt it from the stand-still footprint rule — Trail is the one skill where chaosfire means
+    "burn the path," not "anchor and devastate." Default recommendation: **(b)** — let Trail keep its movement
+    identity, and confine the stand-still footprint rule to the *area/burst* skills (Burning Body, Pyroclasm). Flagged for decision.
 
 ---
 
@@ -191,7 +224,9 @@ eruption, 22px radius.
     *already an interval-based, VS-perfect peak*) · 🔥 **Riftmaw** (a run-long chaosfire fissure erupting
     erratically past your aim, burning you when near).
   - **Firewall →** 🐉 **Dragonmarch** (walls turn to dragonfire and lay a healing carpet in their wake) ·
-    🔥 **Hellfront** (walls break loose omnidirectionally, blanketing a chaosfire field including under you).
+    🔥 **Hellfront** (walls break loose omnidirectionally, blanketing a chaosfire field **around** you —
+    **footprint rule (2026-06-12): leave a clear bare pocket on the player's position; the field blankets
+    around them, never under their feet.** Was "including under you" — changed).
 
 ---
 
