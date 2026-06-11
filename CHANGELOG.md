@@ -18,9 +18,9 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
     it** — damage per hit `22→30` and hit radius `36→44`. Net benchmark: **1 leap + ~3 s of whirlwind ≈ empties
     a fresh 100 pool.** (Swing stays free; dash/heavy cooldowns left as-is pending playtest.)
   - **Phase 2 — God Skills drain mana dynamically, tracking what's on screen — and you must afford it.** Two
-    gated charges: a **base-aura chunk** (Burning Body = **5 MP / 3 s**) **plus a per-emit chunk** the instant a
+    gated charges: a **base-aura chunk** (Burning Body = **10 MP / 3 s**) **plus a per-emit chunk** the instant a
     discrete effect fires, so mana drops in step with the action. **Both are hard-gated** — if you can't afford
-    a charge, that effect simply does not happen: below 5 MP the whole skill goes **dormant** (no aura, no
+    a charge, that effect simply does not happen: below the base cost the whole skill goes **dormant** (no aura, no
     emit); and an individual burst you can't pay for is **skipped** (you miss that beat) while the aura keeps
     running. Emit costs: Cinderburst nova **+10 MP**, Firebloom ring **+8**, scaling up for the Ascensions
     (Dragonbreath +6 · Chaos Crown +14 · Dragonheart +12 · Cataclysm +16). **Passive regen is cut to a tight

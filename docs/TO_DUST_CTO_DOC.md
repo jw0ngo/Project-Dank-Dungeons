@@ -275,6 +275,7 @@ The god layer no longer imbues active skills; it grants **class-agnostic auto-fi
     a registry **`mpCost` (mp/sec)** in `fire.base` (Burning Body `5/3`, *flat* across ranks) is charged as a
     lump of `mpCost × BB_AURA_INTERVAL/60` = **5 MP every 3 s** (`p._bbCostTimer`); if `mp < chunk` the WHOLE
     skill goes **dormant** (no aura, no emit) and the timer holds so it charges the instant mana returns.
+    (Burning Body base `mpCost 10/3` → a 10-MP lump every 3 s.)
     **Per-emit:** **`mpEmit`** on each Form's `fire` block (Firebloom ring 8 · Cinderburst nova 10), overridable
     per Ascension leaf (Dragonbreath 6 · Chaos Crown 14 · Dragonheart 12 · Cataclysm 16), charged when an emit
     fires — **gated**: `if(mp < emitCost) return` skips the emit (the already-paid aura keeps running).

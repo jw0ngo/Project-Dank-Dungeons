@@ -13903,7 +13903,7 @@ const IMBUE_PATHS = {
         kind:'burningBody', timerKey:'_bbTimer',
         base:   { auraRadius:AURA_RADIUS, auraDmg:AURA_DMG, auraBurn:AURA_BURN_FRAMES,
                   emitDmg:FR_BASE_DMG, emitRange:FR_RANGE_TILES, burnFrames:FR_BURN_FRAMES,
-                  mpCost:5/3 },   // item 7: base aura cost = 5 MP / 3s. mp/SEC (=5/3) for HUD display; the actual charge is a GATED 5-MP chunk every BB_AURA_INTERVAL (won't run without 5 MP). Flat across ranks — dynamism is in per-emit mpEmit (below).
+                  mpCost:10/3 },  // item 7: base aura cost = 10 MP / 3s. mp/SEC (=10/3) for HUD display; the actual charge is a GATED 10-MP chunk every BB_AURA_INTERVAL (won't run without 10 MP). Flat across ranks — dynamism is in per-emit mpEmit (below).
         floors: { auraRadius:40, emitInterval:90 },
         caps:   { emitRange:12 },
       },
