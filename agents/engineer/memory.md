@@ -18,6 +18,23 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 
 ---
 
+### 2026-06-12 — A designer's quantitative benchmark is a TUNING TARGET, not a mechanic spec — don't re-architect to hit a number
+
+- **Principle:** When the designer hands a number ("rank-10 ≈ 80–100 MP/s"), it sizes a *parameter*, not the
+  *mechanic*. I burned ~5 rounds converting a discrete per-rank chunk cost → a smooth drain → frequency-scaling
+  → a cost cap, all to make one average "come out right" — and the designer walked **every** one back ("keep
+  the dynamic system", "keep the interval", "no cap"). The right move: build the simplest mechanic that honors
+  the *stated knobs* (chunk every 3 s, grows per level, per-emit on evolves), expose the numbers as live consts,
+  and let the benchmark drive **one** increment. Iterate numbers, not architecture. The tell you've gone wrong:
+  you're changing the mechanic's *shape* (discrete↔continuous, adding a cap/clamp/new scaling axis) to hit a
+  target — that's re-architecting, not tuning. Re-read the directive for the *mechanic* words and treat the
+  number as the dial.
+- **When two stated constraints look impossible, SURFACE the conflict — don't silently clamp it away.** "~90/s
+  average" + "castable on a base pool" can't both hold at a fixed interval + 100 pool; I nearly shipped a cost
+  cap to force castability, but the designer's resolution was the opposite ("not enough Max-MP → you literally
+  can't cast it — that gate IS the design"). A cap/clamp that makes the impossible look possible erases the
+  decision the designer wanted. Present the conflict + the tradeoff; let them choose.
+
 ### 2026-06-12 — A phased/multi-site mechanic belongs at the site that enforces the HARDEST constraint; and a run-start reset block is a second source of truth
 
 - **Principle:** When a spec splits a mechanic across two code sites, don't implement each phase where the
@@ -36,12 +53,10 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   reverts at the next run start.** Any value that is both registry-defined AND reset-seeded must change in
   **both** places — grep the reset block for the symbol before trusting the definition-site edit. (Same
   family as the duplicate-`function` shadow trap: "looks wired, does nothing.")
-- **How to apply:** for a phased feature, sketch the data-flow once and locate the single chokepoint that can
-  satisfy *every* constraint before writing a line; for a number tune, grep for a reset/re-seed of the symbol
-  first. New rank-scaling params come free when the rank-up apply pours **every** key of the step object
-  (`for(const k in step)`) — add the key to base/step, no apply-site edit (sibling: registries are the
-  extension point). Verified the new dispatcher by **extracting the real functions and driving the state
-  machine in Node** (the no-browser canary from the syntax-pass-≠-behavior-pass lesson).
+- **How to apply:** for a phased feature, locate the single chokepoint that satisfies *every* constraint
+  before writing; for a number tune, grep for a reset/re-seed of the symbol first. New rank-scaling params come
+  free when the rank-up apply pours **every** key of the step object (`for(const k in step)`). Verified the
+  dispatcher by **extracting the real functions and driving the state machine in Node** (no-browser canary).
 
 ### 2026-06-12 — Occluding environment sprites: a reusable system + three rules (cull by extents · fade tracks the occluded · hitbox matches the art)
 
@@ -142,27 +157,17 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   draw-CONSTRUCTED key resolves to a manifest entry *and* a real file. Full entry:
   `agents/engineer/archive/2026-06-11-pages-stale-cache-and-rename-by-layer.md`.
 
-### 2026-06-11 — A feel/visual feature's spec converges through user iteration; localize with the "what already works" diagnostic, and decouple before you resize
-- **Principle:** For a *feel/visual* feature (fog of war, juice, game feel) the real spec emerges over several
-  fast rounds with the user — don't try to nail it in one shot, and don't over-plan the first cut. But DO
-  pull the consequential **visual forks** out of the user *before a big rewrite*, not after: shape (circle vs
-  screen-shaped), persistence (does it stay revealed?), what hides (terrain vs entities). I rewrote the fog
-  render ~4 times because I implemented each new clue instead of asking "circle or screen-shaped? persistent
-  or spotlight?" up front once the direction was clear.
-- **The sharpest diagnostic was the user's:** *"it works at night but not during the day."* A same-feature
-  works-in-regime-A-not-B report is a **parameter-regime bug, not a render bug** — localize by the parameter
-  that differs (day vision 30 tiles ≥ screen vs night 12 < screen). Render code was correct; only the radius
-  was wrong. Cheaper than any code reading.
-- **Decouple shared knobs before you retune one.** `fogVisRadius()` drove *both* the visual circle *and*
-  enemy aggro/spawn distances; shrinking it for looks would have silently changed combat. Split gameplay
-  ranges onto their own constants (`ENEMY_DEAGGRO_TILES`) **first**, then the visual radius is free to move.
-  Generalises the "hidden input to every census" lesson: one number feeding two systems is a trap when you
-  tune it for one.
-- **How to apply:** Two standard canvas tricks worth reaching for — composite the effect on an **offscreen
-  layer** then blit (so `destination-out` punches/erases hit only the effect, never the game canvas), and
-  **bilinear-upscale a low-res (1px/tile) mask** for smooth sub-tile fields instead of per-tile `fillRect`
-  (kills blocky reveal). Both are render-only ⇒ MP/Sim-safe by construction. When a feature is "tune it live,"
-  expose every magnitude as a named const and say so — the user iterates on numbers, not geometry.
+### 2026-06-11 — A feel/visual feature's spec converges through user iteration; localize by the differing parameter, decouple shared knobs first
+- For a *feel/visual* feature (fog, juice, a HUD bar) the real spec emerges over several fast user rounds —
+  don't over-plan the first cut, but DO pull the consequential **visual forks** out of the user *before a big
+  rewrite* (shape · persistence · what-hides), not after (I rewrote fog ~4× by implementing each clue instead of
+  asking up front). A **"works in regime A, not B"** report ("works at night, not day") is a **parameter-regime
+  bug, not a render bug** — localize by the parameter that differs (vision radius vs screen), cheaper than
+  reading code. **Decouple a shared knob before retuning it for one use:** `fogVisRadius()` drove the visual
+  circle AND enemy aggro — split gameplay onto its own const *first* (one number feeding two systems is a trap).
+  Canvas tricks: composite on a **reused offscreen** then blit (so `destination-out` hits only the effect), and
+  **bilinear-upscale a low-res 1px/tile mask** for smooth sub-tile fields; both render-only ⇒ MP/Sim-safe.
+  "Tune it live" = every magnitude a named const (the user iterates on numbers, not geometry).
 
 ### 2026-06-11 — Documentation is a system: tier by load-cost, key shared artifacts to self-order, write every altitude — archived
 - Docs are engineered artifacts with failure modes: (1) **tier always-on context by load-frequency, not topic** —
