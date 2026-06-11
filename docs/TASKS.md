@@ -37,40 +37,38 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 ## 🟧 Engineer / CTO lane
 
-- ◻️ 🔧 **Apply the `assets/world` + `assets/tile` fold (atomic move + manifest rewrite)** (↳ from ART,
-  2026-06-12 · Josh-approved scheme) — `assets/world/` and `assets/tile/` are flat and filling up (one area's
-  worth so far). New standing scheme (`assets/README.md`): **`world/` by AREA + `_shared/`**, **`tile/` by
-  terrain TYPE**. Tooling done & dry-run CLEAN (every file maps, no unmapped). **You run `--apply`** (sole
-  `index.html` editor); it does `git mv` + `ART_MANIFEST` path rewrite in one commit per domain — keys
-  unchanged, paths only.
+- ◻️ 🔧 **Apply the `assets/world` fold (atomic move + manifest rewrite)** (↳ from ART, 2026-06-12 ·
+  Josh-approved) — `assets/world/` is flat and filling up (one area's set-dressing so far). Scheme
+  (`assets/README.md`): **`world/` by AREA + `_shared/`**. **`tile/` stays FLAT** — decided, not foldered (spec
+  [`specs/asset-area-namespace.md`](specs/asset-area-namespace.md); type is already in the id). Tooling done &
+  dry-run CLEAN (44 files, every one mapped). **You run `--apply`** (sole `index.html` editor); it does `git mv`
+  + `ART_MANIFEST` path rewrite in one commit — keys unchanged, paths only.
   ```
   python tools/fold-assets.py --domain world --apply   # 44 files -> _shared/ goblin-forest/ sanctum/  (22 manifest paths rewritten, 22 unwired just moved)
-  python tools/fold-assets.py --domain tile  --apply   # 48 files -> floor/ cobble/ dirt/ grass/ forestgrass/ rock/ spike/  (35 rewritten, 13 moved)
   ```
-  Self-verifies every `assets/<domain>/` path resolves post-rewrite; then `node --check` the extracted
-  `<script>` + `python dev.py` → all tiles/props still render (a missed path 404s → silent procedural
-  fallback). **Do this BEFORE wiring the new forest assets below** (their snippets now cite the foldered
-  paths). Two separate commits (one per domain) keep each diff a clean path-rewrite. Deploy-affecting → push
-  with Josh's auth. *`world.tree.*`/`treesmall.*`/`foresttree.*` all move under `world/goblin-forest/`;
-  `grass`/`forestgrass` etc. under their `tile/<type>/`.*
-  **⚠ `--domain world` is good to go; `--domain tile` is PENDING the asset-area-namespace decision** (spec
-  [`specs/asset-area-namespace.md`](specs/asset-area-namespace.md) recommends keeping `tile/` **flat** — the type
-  is already in the id, so the fold is redundant for machines). Apply `world` now (it's also the data source for
-  the B+ runtime area-map); hold `tile` until Josh rules on the spec.
+  Self-verifies every `assets/world/` path resolves post-rewrite; then `node --check` the extracted `<script>`
+  + `python dev.py` → all world props still render (a missed path 404s → silent procedural fallback).
+  **Do this BEFORE wiring the new forest assets below** (the `world.*` snippets cite the foldered paths; the
+  `tile.forestgrass.*` snippet stays flat). Deploy-affecting → push with Josh's auth. *`world.tree.*`/
+  `treesmall.*`/`foresttree.*` move under `world/goblin-forest/`; barrel/crate/chest/favorcoin under
+  `world/_shared/`.* **Pairs with the B+ task below** — this fold is B+'s data source (gInitArt reads the
+  `world/<area>/` path segment), so land it first.
 
-- ◻️ 🔧 **Asset-area namespace — decision + B+ impl** (↳ from ART, 2026-06-12 · spec
-  [`specs/asset-area-namespace.md`](specs/asset-area-namespace.md)) — make *area* a machine-queryable dimension,
-  not just a folder (answers Josh's "does the fold help the AI?" — honestly only ~20% today). **Recommended (B+):**
-  in `gInitArt` (`~index.html:8034`) parse each entry's `assets/world/<area>/` path into runtime maps
-  `gAssetArea[key]=area` + `gAreaAssets[area]=[keys]` (~5–8 lines, pure addition, no key/draw changes) → area
-  queryable at runtime + unlocks per-area asset load/unload (the payoff when a 2nd area ships). Companion: **keep
-  `tile/` flat** (drop the tile fold). Option A (area *in* the key) is speced + **not** recommended (whole-`world.*`
-  rename for little gain over B+). **Awaiting Josh's go/no-go on the spec** before impl.
+- ◻️ 🔧 **Asset-area namespace — B+ impl** (↳ from ART, 2026-06-12 · **APPROVED by Josh 2026-06-12** · spec
+  [`specs/asset-area-namespace.md`](specs/asset-area-namespace.md)) — make *area* a machine-queryable + runtime
+  dimension, not just a folder. **B+:** in `gInitArt` (`~index.html:8034`), after resolving each entry's path,
+  parse the `assets/world/<area>/` segment into runtime maps `gAssetArea[key]=area` + `gAreaAssets[area]=[keys]`
+  (~5–8 lines, **pure addition — no key or draw-site changes**); entries not under a `world/<area>/` folder →
+  `'shared'`/skip. That makes area queryable at runtime and sets up **per-area asset load/unload** (`gLoadArea`/
+  `gUnloadArea`, gated so only the active area + `shared` load at boot — **defer the loader until a 2nd area
+  exists**; land the map now). Depends on the `world` fold above (the path segment is the data source). Options
+  A (area-in-key) and C (generated `AREA_MANIFEST`) are speced + parked — A rejected, C revisit at area #2.
 
 - ◻️ 🎨 **Wire forest-tree set + forest-grass tiles + barrel/crate props** (↳ from ART, 2026-06-12) — four new
   asset families sliced & committed under `assets/`. All **new ids** (non-destructive — Josh's call: add, don't
-  replace the existing `tree-*`/`grass-*` sets). **Snippets below use the POST-FOLD foldered paths** (do the fold
-  task above first; if you wire before folding, drop the `<area>/`/`<type>/` segment and the fold will rewrite it).
+  replace the existing `tree-*`/`grass-*` sets). **The `world.*` snippets use POST-FOLD foldered paths** (do the
+  `world` fold task above first; if you wire before folding, drop the `<area>/` segment and the fold rewrites it).
+  **The `tile.forestgrass.*` snippet is FLAT** (tiles aren't foldered — decided).
   <details><summary>detail (render spec)</summary>
 
   **1. Forest trees — `world.foresttree.0..8`** (9 files, ~605 KB, `assets/world/foresttree-<n>.png`). A 3rd tree
@@ -97,11 +95,11 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
   **96² RGB full-bleed** (matches the live `grass-*` treatment exactly — grass edge-to-edge, verified tiles
   seamlessly with no dark-edge grid). A darker, lusher forest-floor grass (flowers, dirt patches, rocks). Paste:
   ```
-  'tile.forestgrass.0':'assets/tile/forestgrass/forestgrass-0.png', 'tile.forestgrass.1':'assets/tile/forestgrass/forestgrass-1.png',
-  'tile.forestgrass.2':'assets/tile/forestgrass/forestgrass-2.png', 'tile.forestgrass.3':'assets/tile/forestgrass/forestgrass-3.png',
-  'tile.forestgrass.4':'assets/tile/forestgrass/forestgrass-4.png', 'tile.forestgrass.5':'assets/tile/forestgrass/forestgrass-5.png',
-  'tile.forestgrass.6':'assets/tile/forestgrass/forestgrass-6.png', 'tile.forestgrass.7':'assets/tile/forestgrass/forestgrass-7.png',
-  'tile.forestgrass.8':'assets/tile/forestgrass/forestgrass-8.png',
+  'tile.forestgrass.0':'assets/tile/forestgrass-0.png', 'tile.forestgrass.1':'assets/tile/forestgrass-1.png',
+  'tile.forestgrass.2':'assets/tile/forestgrass-2.png', 'tile.forestgrass.3':'assets/tile/forestgrass-3.png',
+  'tile.forestgrass.4':'assets/tile/forestgrass-4.png', 'tile.forestgrass.5':'assets/tile/forestgrass-5.png',
+  'tile.forestgrass.6':'assets/tile/forestgrass-6.png', 'tile.forestgrass.7':'assets/tile/forestgrass-7.png',
+  'tile.forestgrass.8':'assets/tile/forestgrass-8.png',
   ```
   - **⚠ NOT auto-wired.** `gTileArt` only maps `TILE_FLOOR→'floor'`, `TILE_DIRT→'dirt'`, `TILE_GRASS→'grass'`. A new
     `forestgrass` family needs a `gTileArt` mapping for whatever tile id should use it (a new `TILE_FORESTGRASS`
@@ -342,8 +340,9 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 - **2026-06-12 — Asset-folder stewardship: scheme set, fold tooling ready** (Artist, ↳ from Josh — new standing
   responsibility) — Josh assigned the Artist ongoing **upkeep of `assets/`** as the game scales across areas
   (`world/` was filling from one area's set-dressing). Decided axis (Josh-approved): **`world/` folds by AREA**
-  (`goblin-forest/` · `sanctum/` · `_shared/` for cross-area props) — a new area = a new folder; **`tile/` folds
-  by TERRAIN TYPE** (tiles recur across biomes). Recorded the responsibility in `agents/artist/artist.md`
+  (`goblin-forest/` · `sanctum/` · `_shared/` for cross-area props) — a new area = a new folder. **`tile/` stays
+  FLAT** (decided via the follow-up spec — type is already in the id; area, the only new fact, isn't a tile
+  property). Recorded the responsibility in `agents/artist/artist.md`
   (+ scope), rewrote `assets/README.md` with the decided per-kind taxonomy, extended `fold-assets.py` `FAMILIES`
   (world + tile), and **taught `slice-variants.py` to auto-route** tile/world outputs into their family folder +
   emit the foldered manifest path (so new slices don't re-flatten — the "migrate the tool with the pipeline"

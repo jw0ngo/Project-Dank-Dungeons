@@ -44,12 +44,11 @@ FAMILIES = {
                           'target-stand', 'todust-sign', 'dungeon-gate', 'shrine'],
         '_shared':       ['barrel', 'crate', 'chest', 'favorcoin'],        # interactables used across areas
     },
-    # tile/ folds by TERRAIN TYPE (tiles recur across areas — dirt/grass aren't owned by one biome).
-    'tile': {
-        'floor': ['floor'], 'cobble': ['cobble'], 'dirt': ['dirt'],
-        'grass': ['grass'], 'forestgrass': ['forestgrass'],
-        'rock':  ['rock'],  'spike': ['spike'],
-    },
+    # tile/ deliberately stays FLAT — NOT foldered. The terrain type is already in the id
+    # (tile.grass.*, tile.rock.*) so a type folder just restates the filename: redundant for
+    # machines, and gInitArt already reads the type via key.split('.')[1]. Decided in
+    # docs/specs/asset-area-namespace.md (area is the only NEW fact, and it lives in world/).
+    # Do not re-add 'tile' here without revisiting that spec.
 }
 
 
