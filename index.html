@@ -8996,7 +8996,10 @@ function gRender(){
   // Rock entities depth-sort with characters (foot y) so tall boulders occlude and tuck correctly.
   for(const k of gRocks){ const sx=k.wx-camX, sy=k.wy-camY; if(sx<-90||sx>VW+90||sy<-160||sy>VH+90) continue; drawables.push({y:k.wy,draw:gDrawRock,arg:k}); }
   // Tree props depth-sort the same way — taller than rocks, so a wider top cull margin.
-  for(const t of gWildTrees){ const sx=t.wx-camX, sy=t.wy-camY; if(sx<-120||sx>VW+120||sy<-220||sy>VH+120) continue; drawables.push({y:t.wy,draw:gDrawTree,arg:t}); }
+  // Cull by the DRAWN extents, not the foot: a tree's canopy reaches ~0.93·h ABOVE its foot (h ≈ TREE_BASE·
+  // scale), so a tree whose foot is well below the screen can still show its canopy. Margins are generous
+  // (max scale ≈1.1); too-tight bottom margin was the bottom-edge "pop". sx margin covers half the width.
+  for(const t of gWildTrees){ const sx=t.wx-camX, sy=t.wy-camY; if(sx<-TREE_BASE*0.6||sx>VW+TREE_BASE*0.6||sy<-TREE_BASE*0.2||sy>VH+TREE_BASE*1.1) continue; drawables.push({y:t.wy,draw:gDrawTree,arg:t}); }
   gDrawArrows();
   drawables.sort((a,b)=>a.y-b.y);
   for(const d of drawables){ d.draw(d.arg); if(d.arg&&d.arg.threatTier&&!d.arg.dead) gDrawThreatGlow(d.arg); }
