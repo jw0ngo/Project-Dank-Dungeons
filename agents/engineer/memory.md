@@ -45,10 +45,30 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   `TREE_BASE_RX/RY_FRAC`, `TREE_FADE_ALPHA/BLEND`, `PLAYER_VIS_H`) is a **named knob** — the feature
   converged over ~7 one-number user iterations (sibling of the visual-feature-converges-on-the-user's-eye
   lesson).
-- **How to apply (next session — smaller tree sprites):** the system is built; a new tree set = new
-  `world.tree.*` art reusing `gWildTrees`/`gDrawTree`/`gRCTrees` as-is, then tune the knobs. **Re-measure the
-  new art's foot + base footprint** (alpha bbox via PIL, as done for the 256² set) if its proportions differ,
-  and reset `TREE_FOOT`/`TREE_BASE_RY_FRAC` accordingly.
+- **Applied + extended (2026-06-12, shipped v0.12.0):** added a `world.treesmall.*` set (foot re-measured →
+  `TREE_FOOT` 0.94; both sets fill the canvas, so "small" reads smaller only via a smaller *draw scale*) and
+  rebuilt placement as weighted **formations** — the hard tuning lived in the spacing rule directly below.
+
+### 2026-06-12 — A many-round spacing/feel knob converges to one physical rule, not stacked per-category constants
+
+- **Principle:** When a placement/spacing feature is tuned over many one-number rounds, the convergent form is
+  usually **one constraint derived from the real geometry**, not a pile of per-category constants. Tree spacing
+  churned small-min-sep → +large-min-sep → +cross-set, and each *new category* exposed a gap the prior constants
+  couldn't see (small-vs-large could still wall the player even with both per-set seps "right"). The move that
+  ended it: derive the rule from the actual hitboxes — **any two trees keep centre-distance ≥
+  `rxOf(a)+rxOf(b)+TREE_WALK_GAP`** (one player-width clearance), which subsumes *all* pair types at once and
+  self-tunes when scales or trunk-width change. Stacked constants also breed brittle hand-coupling (I kept
+  re-deriving `RX_FRAC`↔`MIN_SEP` in comments).
+- **Why:** a per-category knob encodes the *symptom* (this pair too close), not the *cause* (trunk geometry vs
+  player width). Symptoms are unbounded; the geometry is finite — so the physical rule is both shorter and
+  complete.
+- **How to apply:** the moment a spacing/feel knob needs a *second* per-category exception, stop adding
+  constants — ask "what physical quantity is this approximating?" and compute the constraint from it, enforced
+  O(1) via a spatial hash, seeded for MP-determinism; expose just the one comfort term (`TREE_WALK_GAP`) for
+  live taste. Direct sibling of the *visual-feature-converges-on-the-user's-eye* lesson below: iteration is how
+  you find the right **abstraction**, not an excuse to keep stacking parameters. (Also: lushness-vs-walkability
+  was a real tension resolved by *thinning the collision* `TREE_BASE_RX_FRAC` 0.30→0.22, not by spacing — when
+  two goals fight over one knob, look for the *other* knob that lets both win.)
 
 ### 2026-06-11 — An art handoff's "new prop" framing can really be a "replace the placeholder" job — reconcile the spec against what's already on screen
 
@@ -79,31 +99,23 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   guess. Sibling of the 2026-06-11 fog lesson (pull the visual forks before a big rewrite) and the
   display-text-vs-frozen-token rename split.
 
-### 2026-06-11 — To make a modal MP-seamless, separate "UI is open" from "the world is frozen" — they were one overloaded flag
+### 2026-06-11 — To make a modal MP-seamless, separate "UI is open" from "the world is frozen" — archived
+- `gPaused` had accreted four meanings (UI-open, sim-freeze, input-lock, immunity); a non-blocking modal needs
+  only the first, so the fix is to **stop the modal setting the shared flag at all**, not pause-then-exempt each
+  consumer. Lift modal logic out of engine-capturing closures to module scope so *panel visibility* (`gDraft.open`)
+  decouples from *pending state* (`gSimDraft`, which the headless bot resolves without UI). Before making any modal
+  "not pause," grep every reader of the pause flag and give the new modal its own boolean. (Mechanics: structural
+  region-replace = splice by line-range with boundary assertions; DOM↔canvas units = measure the panel live as a
+  ratio of canvas width × VW.) Full entry: `agents/engineer/archive/2026-06-11-mp-seamless-modal-decouple-pause-flag.md`.
 
-- **Principle:** `gPaused` had quietly accreted *four* meanings: UI-open, sim-freeze, input-lock, and
-  damage-immunity. The no-pause level-up only needed the first. The fix wasn't to special-case the modal
-  inside each consumer — it was to **stop the modal from setting the shared flag at all** and let the world
-  keep running. A modal is non-blocking by *not pausing*, not by pausing-then-exempting. (Bonus: the engine
-  already ran the sim during a draft in MP — so "no-pause SP" just meant making SP behave like MP, the
-  cheaper of the two consistencies.)
-- **Why:** the draft logic lived as closures inside `gWildShowStatPick`, rebuilt each call and welded to
-  `gPaused`. Lifting it to module scope (a `gDraft` state object + free functions) decoupled *panel
-  visibility* (`gDraft.open`) from *draft existence* (`gSimDraft`/`gSimEvolution` set whenever a level-up is
-  pending) — so the headless bot resolves drafts without ever opening UI, and the human opens on demand via
-  a queued-count FAB. Closures that capture engine state are the thing that forces a "modal = pause" coupling.
-- **Two mechanics worth reusing:** (1) **large structural region-replace** = write the new block to a temp
-  file and **splice by line range with boundary assertions** (`node` reads lines, asserts the first/last
-  match expectations, replaces), not a 270-line exact-match Edit that one whitespace char defeats. (2)
-  **DOM-overlay ↔ canvas-world unit conversion:** to center the player in the *unblocked* area, measure the
-  panel live (`dock.getBoundingClientRect().width / canvas.getBoundingClientRect().width * VW`) — the ratio
-  survives devicePixelRatio/`gRenderS`/letterboxing that a hardcoded px offset wouldn't.
-- **How to apply:** before making any modal "not pause," grep every reader of the pause flag and list what
-  each *actually* needs (freeze? lock input? immunity? just "a panel is up"?); give the new modal its own
-  boolean and leave the heavy flag for the things that truly stop the world. When a draft/choice must also
-  work headlessly, keep its `gSim*` hook populated by *pending state*, not by *UI being open* — visibility
-  and resolvability are different axes. Ease asymmetrically where it reads as motion (retract at half the
-  open speed felt right; a symmetric snap-back felt jarring).
+### 2026-06-11 — A Pages-only 404 with a case-correct commit is a STALE CACHE; rename only the layer that's the art — archived
+- Art that loads locally but 404s on Pages: **prove case against the committed git tree, not the working disk**
+  (`core.ignorecase` hides it locally; the index is what deploys). Every manifest path ∈ `git ls-tree -r HEAD`
+  (case-sensitive set test) → the commit is innocent, the 404 is a **stale Pages/CDN build**; a fresh asset path
+  sidesteps it next deploy. For an entangled identity rename (`player` = art class **and** frozen game-logic
+  token), **split by layer**: rename only the art layer, leave logic tokens frozen, and verify every
+  draw-CONSTRUCTED key resolves to a manifest entry *and* a real file. Full entry:
+  `agents/engineer/archive/2026-06-11-pages-stale-cache-and-rename-by-layer.md`.
 
 ### 2026-06-11 — A Pages-only asset 404 with a case-correct commit is a STALE CACHE, not a path bug; and rename only the layer that's actually the art
 
@@ -153,36 +165,14 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   (kills blocky reveal). Both are render-only ⇒ MP/Sim-safe by construction. When a feature is "tune it live,"
   expose every magnitude as a named const and say so — the user iterates on numbers, not geometry.
 
-### 2026-06-11 — Documentation is a system: tier by load-cost, key shared artifacts to self-order, write every altitude (consolidated)
-
-- **Principle:** The repo is the shared brain, so its docs are engineered artifacts with their own failure
-  modes. Four standing rules, each from a real miss:
-  1. **Tier always-on context by load-frequency, not topic.** Anything that auto-loads (`CLAUDE.md`/`AGENTS.md`,
-     a journal two roles skim) is taxed on *every* session, including the ones that never use it — keep it a thin
-     **router** (map + where-to-find-X) and push depth behind role/task-gated files. The engineer manual living in
-     the root `CLAUDE.md` made PM/Artist sessions pay ~194 lines they never touched; splitting it dropped the
-     universal load 194→60. Per-tool entrypoints must be thin pointers over ONE deep-doc set, never duplicated
-     depth (a hand-maintained duplicate `AGENTS.md` rotted into a *contradicting* second source of truth).
-  2. **Key a multi-writer append-only log on a self-ordering, collision-proof primary — not a hand-incremented
-     counter.** Manual `## Session N` numbering produced a duplicate "Session 15" prepended into the wrong slot;
-     re-keying on **date** (`## YYYY-MM-DD — title [roles] · sN`, newest-first) makes ordering automatic and
-     collisions impossible. Keep the old sequence id only as a stable cross-reference (other docs cite it) and a
-     same-day tiebreak.
-  3. **Don't fragment a shared cross-role artifact per-role when a keying/tagging change fixes the real problem.**
-     Splitting the journal into per-agent files (the tempting structural fix) would have shattered single
-     cross-role sessions and duplicated the `agents/<role>/memory.md` layer; a `[roles]` **tag** gives per-role
-     *filtering* on a unified timeline instead. Reach for the mechanical fix before the structural one.
-  4. **When docs route content by altitude, each altitude is a separate, deliberate write.** Crystallizing a
-     principle (`memory.md`/`LEARNINGS.md`) does NOT capture the tactic (the `SESSION_JOURNAL` lookup table) or
-     vice-versa — the handoff between a working session and the framework is exactly where a tactic silently
-     vanishes. Log both; the lean home for a one-liner tactic is the existing table, not a new narrative.
-- **Corollary — restructure before you rewire.** References are a function of structure: when a change reshapes
-  *where things live*, lock the target shape FIRST, then rewire inbound references in one pass. Sweeping
-  `../docs`→`../../docs` mid-restructure was pure waste when the structure changed again two messages later.
-  Scouting/folding content parallelizes early; the inbound-reference rewrite is the *last* step. Encode recurring
-  maintenance as a data-driven hook reading declared frontmatter (`memory_compact_at`), not a hardcoded map.
-- *(Consolidates the four 2026-06-10/06-11 doc-system entries; raw originals in
-  `agents/engineer/archive/2026-06-10-doc-system-lessons.md`.)*
+### 2026-06-11 — Documentation is a system: tier by load-cost, key shared artifacts to self-order, write every altitude — archived
+- Docs are engineered artifacts with failure modes: (1) **tier always-on context by load-frequency, not topic** —
+  keep auto-loaded files thin routers, push depth behind role/task gates (root `CLAUDE.md` split dropped universal
+  load 194→60); (2) **key a multi-writer log on a self-ordering primary** (date, newest-first), not a hand-counter
+  that collides; (3) **prefer a tagging/keying fix over fragmenting** a shared cross-role artifact per-role; (4)
+  **each altitude is a separate write** — a crystallized principle doesn't capture the tactic, log both. Corollary:
+  **restructure before you rewire** (lock target shape, then rewire refs in one pass). Full entry:
+  `agents/engineer/archive/2026-06-11-doc-system-tiers-keys-altitudes.md`.
 
 ### 2026-06-11 — Code-referenced asset paths migrate atomically: script move + manifest-rewrite as one op
 - **Principle:** Reorganizing assets referenced by explicit path strings (~200 `ART_MANIFEST` entries) is a
@@ -193,36 +183,16 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   so both halves land in ONE commit. Organize on the **durable axis** — top-level by asset-kind, fold within on
   the kind's own axis (char=faction, fx=owner, tile=type; `assets/README.md`), never a volatile one (skill names).
 
-### 2026-06-11 — Syntax-pass ≠ behavior-pass; when no browser, extract-and-eval the real logic
-
-- **Principle:** Verifying *syntax* is not verifying *behavior*. A change can be syntactically perfect and
-  still inert or wrong — a duplicate `function` shadows the real one, a per-frame system sits outside
-  `gSimUpdate`, a sprite scale moves without its hitbox, **or a parked sibling leaks into a generalized
-  loop**. Always run a *targeted proof it took effect* (grep the new key, `grep -c "function name("`,
-  `await Sim.batch(3)`); "it parses" is step one of three.
-- **Three sharp instances:**
-  - *Generalizing a hardcoded system in place* (imbue-paths `'swing'` → any god-skill id): a **parked
-    sibling in the same registry** (`IMBUE_PATHS.cilia.swing`) got swept up when the new code iterated
-    `Object.keys(pool)` — it would have offered "acquire Dance of Fire" as a god skill. Discriminate by a
-    **structural marker of the new capability** (here a `fire` block, `gIsGodSkill = !!tree.fire`), not by
-    name. Park ≠ inert: it still sits in the collection the new loop walks.
-  - *The Sim canary is browser-side* (`document`/Canvas), so with no headless browser you can still
-    unit-test the **real** pure logic: regex-extract the actual `function`/`const` declarations from
-    `index.html` (brace-match to balance), `eval` them in Node behind ~5 stubs (`gPlayer`,
-    `rollCardRarity`), and drive the state machine. This caught the parked-sibling bug that `node --check`
-    + greps both missed. Watch const ordering (TDZ) and that `eval`-scope `const`s don't leak to the driver.
-  - *A hook script that parses and exits 0 can still never do its job.* A PowerShell `[string]`-typed
-    param **defaults to `''`, not `$null`** (`[string]$P = $null` → `''`), so a `if ($null -eq $Porcelain)`
-    guard is always false and the real-`git` branch never runs. A new SessionEnd commit-reminder *and* the
-    existing `doc-drift-check.ps1` were both silently dead this way (the latter for who-knows-how-long —
-    "silent by design when nothing to report" hid the failure). Fix: gate on
-    `$PSBoundParameters.ContainsKey('Porcelain')`. Silent automation is the worst kind — a hook that does
-    nothing reads identical to one with nothing to do.
-- **How to apply:** After a non-trivial change, prove it *behaves* — and when the in-engine harness needs a
-  browser you don't have, lift the pure functions out and assert against them directly. It's the
-  "test that would have caught it," achievable in ~40 lines without a framework. **For automation/hooks,
-  the proof is observing the side effect fire** (pipe a synthetic payload in; watch it actually act), never
-  "the script looks right" — and copy-pasting a buggy guard propagates the silent failure to the next script.
+### 2026-06-11 — Syntax-pass ≠ behavior-pass; when no browser, extract-and-eval the real logic — archived
+- "It parses" is step one of three: a change can be syntactically perfect yet inert/wrong (a duplicate `function`
+  shadows the real one, a per-frame system sits outside `gSimUpdate`, a **parked sibling leaks into a generalized
+  loop**). Always run a *targeted proof it took effect* (grep the new key, `grep -c "function name("`,
+  `await Sim.batch(3)`). When the in-engine canary needs a browser you lack, **regex-extract the real pure
+  functions from `index.html` and `eval` them in Node behind a few stubs** to drive the state machine (~40 lines,
+  no framework) — caught a parked-sibling bug `node --check`+greps both missed. Generalizing in place? discriminate
+  by a **structural marker** of the new capability, not by name. For hooks, the proof is **observing the side
+  effect fire**, not reading the script (a `[string]$P=$null` PowerShell param silently becomes `''`). Full entry:
+  `agents/engineer/archive/2026-06-11-syntax-pass-not-behavior-pass.md`.
 
 ### 2026-06-10 — De-risk a large spec'd feature: sub-slice on rails, dev harness, named knobs — archived
 - Land a big spec'd feature as independently-verified **sub-slices on rails built once**, plus a `_DEV`-gated
@@ -233,30 +203,14 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   boot-path TDZ — declare cross-cutting flags early, verify behavior. Full entry:
   `agents/engineer/archive/2026-06-10-de-risk-spec-feature-rails-harness-knobs.md`.
 
-### 2026-06-10 — Measure sprite scale & art quality; never trust a handoff figure or an eyeball (consolidated)
-
-- **Principle:** Sprite-art numbers — a pose's draw-mult, a cutout's edge quality, a facing's scale — are
-  **measured against a known-good reference**, never trusted from a handoff or judged by eye. (1) **Draw-mult:**
-  before wiring any action-pose sheet, run `python tools/check-pose-scale.py <prefix> --mult M --plant P` to
-  exit 0; match idle *apparent* size by the **mean of head- and shoulder-width ratios** (pose-invariant) — never
-  bbox/`bodyH`/body-fill, which a different silhouette distorts. Each pose gets its own named const; coiled
-  stances also need a plant offset (= idle feetY − pose feetY). (2) **Cutout quality:** measure the alpha-fringe
-  (8<α<200 band brightness) against a clean sibling — a wide mid-gray band (~55) vs a tight dark one (~14) is a
-  keying halo, an *art* defect, not a render one. (3) **Role boundary:** slicing is the Artist's craft; the
-  engineer wires a **data-driven map** (`PLAYER_WALK_OCT`{octant→dir} + `char.<id>.<dir>` keys) so each variant
-  is a one-line wire and the Artist commits `assets/` independently of your `index.html`.
-- **Why:** the heavy wind-up shipped at `1.3` (copied from the swing on a bbox-fill parity in the handoff) and
-  rendered ~30% too big; I once *eyeballed* an overlay and grew+clipped a helmet — both "trusted a number I didn't
-  measure." The estimator validates against known-good art (the in-game-correct dash measures head/shoulder mean
-  1.00), and the metric can itself be noisy (an extended sword inflates shoulder width → per-facing 0.77..1.94).
-  **Gotcha:** `gDrawSprite` maps the WHOLE canvas to `PSCALE*mult`, so the mult is coupled to cell size — re-cut a
-  sheet to a new cell (192→208 to recover a foot) and the mult must re-scale `new/old`; re-run the tool.
-- **How to apply:** treat every scale/quality figure in a handoff as a hypothesis; verify with the tool before
-  wiring. **When a shaky metric and the user's eyeball disagree, let the user's reports set the bracket and the
-  metric interpolate within it** — two contradictory-sounding reports ("too big" then "too small") are a binary
-  search, take the midpoint; reserve metric-over-eyeball for trustworthy stable stances. When a recurring
-  art-wiring judgment keeps biting, encode it as a pass/fail measuring tool (normalised by the unit it compares
-  in) so the next session can't trust-the-eyeball back in. (Memories `sprite-size-consistency`, `sprite-pipeline-role-boundary`; raw originals in `archive/`.)
+### 2026-06-10 — Measure sprite scale & art quality; never trust a handoff figure or an eyeball — archived
+- Sprite-art numbers (draw-mult, edge quality, facing scale) are **measured against known-good art**, never
+  trusted from a handoff or eyeballed: match idle *apparent* size by the **head/shoulder-width ratio mean**
+  (pose-invariant) via `tools/check-pose-scale.py`, not bbox/body-fill; gauge cutout keying by the alpha-fringe
+  brightness vs a clean sibling. `gDrawSprite` couples the mult to cell size (re-cut cell → rescale mult
+  `new/old`). When a shaky metric and the user's eye disagree, **let the user's reports bracket and the metric
+  interpolate** (two opposite reports = binary search → midpoint). Full entry:
+  `agents/engineer/archive/2026-06-10-measure-sprite-scale-and-quality.md`.
 
 ### 2026-06-10 — A user blaming a visual bug on your edits is a hypothesis to test, not a fact to accept — archived
 - Prove causation with two cheap checks before accepting/denying: (1) `git diff <session-base>..HEAD -- <artifact>`
