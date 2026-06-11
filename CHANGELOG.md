@@ -7,6 +7,11 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+### Added
+- **"Not Enough Mana!" feedback.** Trying to cast a class skill (heavy/dash/leap/whirlwind) without the mana now
+  floats a red **"Not Enough Mana!"** over your head and **flashes the MP bar outline red**, instead of silently
+  doing nothing. (Throttled so holding a key doesn't spam it.)
+
 ### Changed
 - **Heavy attack mana cost lowered 30 → 10.** Under the tighter mana economy the heavy was starving (you'd run
   dry and it silently wouldn't fire even with the cooldown ready); 10 keeps it usable as a staple.

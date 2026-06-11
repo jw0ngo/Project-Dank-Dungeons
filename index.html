@@ -242,6 +242,9 @@ button{font-family:inherit;cursor:pointer;}
 .gsb-key{ position:absolute; top:-3px; left:1px; font:bold 6px monospace; color:#dde; text-shadow:0 0 3px #000,0 1px 2px #000; }
 .gsb-cost{ position:absolute; bottom:-3px; right:0; font:bold 6px monospace; color:#9cc6ff; text-shadow:0 0 3px #000,0 1px 2px #000; }
 .gsb-badge{ position:absolute; top:-5px; right:-4px; font-size:9px; text-shadow:0 0 3px #000; }
+/* Not-enough-mana tell — flash the MP bar's outline red (gNotEnoughMana adds .gmp-flash, reflow restarts it) */
+@keyframes gmpFlash { 0%{ box-shadow:0 0 0 2px #ff3030, 0 0 10px 1px #ff3030; } 100%{ box-shadow:0 0 0 0 rgba(255,48,48,0); } }
+#g-mp-bar.gmp-flash{ animation: gmpFlash .5s ease-out; }
 /* CSS-built framed portrait — the figure is an image cutout; the frame, glow and name are all CSS */
 /* Fills the full left panel; ornate metallic gradient border + inner hairline + corner studs + glow */
 .lvl-portrait{ position:absolute; inset:0; overflow:hidden; background:#08070c;
@@ -897,7 +900,7 @@ function _fbInit() {
       </div>
       <div class="ghud-hp">
         <span class="ghud-lbl" style="color:#55aaff;">MP</span>
-        <div class="ghud-bar" style="background:#0a1428;"><div class="ghud-fill" id="gmp" style="background:#2266cc;"></div></div>
+        <div class="ghud-bar" id="g-mp-bar" style="background:#0a1428;"><div class="ghud-fill" id="gmp" style="background:#2266cc;"></div></div>
       </div>
       <!-- God-skill toggle row (item 7 Phase 3) — one chip per owned auto-fire skill: hotkey, icon,
            per-second mp cost, lit/dormant/off state. Populated each frame by gUpdateGodSkillHud. -->
@@ -2661,6 +2664,16 @@ function spawnGPCustom(x,y,col,vx,vy,life){if(!Number.isFinite(x)||!Number.isFin
 function addGDmg(x,y,v,col,big){if(!Number.isFinite(x)||!Number.isFinite(y))return;if(gDmgNums.length>=20)return; // cap damage numbers to avoid flooding
 gDmgNums.push({x,y,val:v,col:col||'#fff',life:1,vy:-1.4,vx:(Math.random()-.5)*1.5,big:!!big});}
 function gShake(m,d){gShakeMag=m;gShakeDur=d;}
+// Feedback when a skill can't fire for lack of mana: "Not Enough Mana!" floats over the player + the MP bar
+// outline flashes red. Throttled so holding a key / mashing doesn't spam it.
+let _noManaFxAt = -999;
+function gNotEnoughMana(){
+  if(!gPlayer || gFrame - _noManaFxAt < 40) return;   // ~0.7s throttle
+  _noManaFxAt = gFrame;
+  addGDmg(gPlayer.wx, gPlayer.wy - 30, 'Not Enough Mana!', '#ff6b6b', true);
+  const bar = document.getElementById('g-mp-bar');
+  if(bar){ bar.classList.remove('gmp-flash'); void bar.offsetWidth; bar.classList.add('gmp-flash'); }  // reflow → restart the flash on repeats
+}
 function pInArc(s,px,py){const dx=px-s.cx,dy=py-s.cy,d=Math.hypot(dx,dy);if(d<s.innerR||d>s.outerR)return false;function ad(a,b){return((a-b)%(Math.PI*2)+Math.PI*3)%(Math.PI*2)-Math.PI;}const sw=s.sweepEnd-s.startAngle;if(Math.abs(sw)<.001)return false;return Math.abs(ad(Math.atan2(dy,dx),s.startAngle+sw/2))<=Math.abs(sw)/2+.05;}
 // ── Entity registry & factories ─────────────────────────────────
 // Define enemy stats here. Factory functions read from EntityDefs.
@@ -3744,7 +3757,7 @@ function gToggleWhirlwind(){
   } else {
     // Activate — block if on cooldown or other skills running
     if(p.wwCooldown>0||p.heavyWindingUp||p.heavySwinging||p.evasionActive||p.leapActive)return;
-    if(p.mp < 10) return; // need at least a small amount to start
+    if(p.mp < 10){ gNotEnoughMana(); return; } // need at least a small amount to start
     p.wwActive = { spinAngle: 0, hitTimers: new WeakMap() };
     gGritGain(); // Grit
     p.swinging = false; p.smear = null;
@@ -4074,7 +4087,7 @@ function gDoEvasion(){
   if(!p||p.dead||p.evasionActive||p.evasionCooldown>0)return;
   if(p.wwActive||p.heavyWindingUp||p.heavySwinging)return;
   if(inWilderness && (p.dashLevel||0) < 1) return; // locked
-  if(p.mp < W().mpCostEvasion) return; // not enough mana
+  if(p.mp < W().mpCostEvasion){ gNotEnoughMana(); return; } // not enough mana
   gGritGain(); // Grit
   // Dash in the direction the player is moving (from held keys),
   // fall back to mouse angle if no movement keys are held
@@ -4183,7 +4196,7 @@ function gToggleLeap(){
 function gFireLeap(){
   const p = gPlayer;
   if(!p||!p.leapTargeting||p.leapActive)return;
-  if(p.mp < pSkillStat(p,'mpCostLeap')) return; // not enough mana
+  if(p.mp < pSkillStat(p,'mpCostLeap')){ gNotEnoughMana(); return; } // not enough mana
   const tgt = _leapClampedTarget();
   const dx = tgt.wx - p.wx, dy = tgt.wy - p.wy;
   const dist = Math.hypot(dx, dy);
@@ -4294,7 +4307,7 @@ function gDoHeavyAtk(){
   if(!p||p.dead||p.heavySwinging||p.heavyWindingUp||p.heavyCooldown>0)return;
   if(p.swinging||p.wwActive)return;
   if(inWilderness && (p.heavyLevel||0) < 1) return; // locked
-  if(p.mp < W().mpCostHeavy) return; // not enough mana
+  if(p.mp < W().mpCostHeavy){ gNotEnoughMana(); return; } // not enough mana
   p.heavyWindingUp   = true;
   gGritGain(); // Grit
   p.heavyWindupTimer = 0;
