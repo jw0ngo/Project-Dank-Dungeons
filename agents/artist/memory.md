@@ -3,7 +3,39 @@
 
 ---
 
-### 2026-06-11 — Prototype in the deliverable's medium: a runtime draw-effect is NOT an art-asset job, and an offline raster mock lies about it
+### 2026-06-12 — Feet-anchored variant props (trees/bushes): recover cell overflow AND share one foot baseline — in the tool, not a one-off
+
+- **Principle:** A 3×3 *variant* sheet of tall feet-anchored props (trees, bushes) has two failure modes the
+  default `slice-variants.py --frame cell` path can't handle, and both must be fixed **in the slicer**:
+  (1) **Canopy overflow** — bottom/middle-row figures are drawn taller than their cell and bleed *up* into the
+  cell above; `slice-variants` crops to the *exact* cell **before** cutting, so the overflow is gone before
+  `cut_cell` ever sees it → flat-topped sprites. Recovery needs the expanded-window + `keep_owner` pattern
+  (cut a window N px past the cell, keep only the component owning the cell, discard the neighbour pulled in)
+  — which lived only in `slice-turnaround.py`. I **ported it as `slice-variants.py --bleed`** (+ imported
+  `keep_owner`). (2) **Inconsistent feet** — `--frame cell` leaves each figure's feet wherever the art sat in
+  its cell, and `--frame square` *vertically centres* (feet at different heights). A feet-anchored prop drawn
+  by one engine foot fraction (`TREE_FOOT`) needs **every variant on one foot baseline** → I added
+  `--anchor bottom`/`--foot-pad`: shared square sized to the largest figure, each placed feet-on-a-line a
+  fixed pad above the bottom, so foot fraction = `1 - foot_pad` is identical across all variants (and relative
+  scale is preserved — no per-figure resize).
+- **Why — diagnose overflow vs. flush before reaching for `--bleed`, because the obvious metric lies:** a
+  "non-white pixels in the band *above* the cell top" count is **confounded by the adjacent cell's content**
+  (the tree above's base/roots sit in that band). The clean diagnosis: per cell, scan **upward from the cell
+  top to the first near-white separator row** (that distance = this figure's true overflow, ~33px for the
+  worst trees here), and **crop the boundary strip with the cell line drawn on it and eyeball it** — you can
+  see the lower canopy cross the line with a clean white gap to the upper base (→ recoverable, figures don't
+  touch → `keep_owner` is unambiguous). top_gap=0 on the cutout = touches the edge; combined with measured
+  overflow = clipped, not merely flush.
+- **How to apply:** (a) for any tall variant-prop sheet, slice with `--bleed N` (N a bit above the worst
+  measured overflow) — it implies bottom-anchoring; QA the magenta contact for full crowns + a common foot
+  line + no neighbour fragments (the `comps=N` print shows how many blobs `keep_owner` weighed). (b) **Report
+  the foot fraction as size-coupling** in the engineer handoff: bottom-anchored framing fixes the foot at
+  `1 - foot_pad` (~0.94 here), so `TREE_FOOT` must match; and because the canvas now holds the *full taller*
+  tree, the body is a smaller fraction of the canvas → at the same draw size it renders ~8–10% smaller, so
+  `TREE_BASE` may need a bump (name both, engineer moves them together). (c) Same-keys re-slice = **drop-in**
+  (no manifest/draw change); a genuinely new variety gets a new id/keyspace (`world.treesmall.*`) + a wiring +
+  placement handoff. (d) Sibling to the 2026-06-10 "encode a recurring defect class as a slicer flag" lesson —
+  overflow recovery for variant sheets now *is* `--bleed`, so the next tall-prop sheet just works.
 
 - **Principle:** When a task produces **no new sprite** — a glow, tint, shader-like tell, anything composited per-frame over a moving sprite — it is a **draw-layer effect, not an art asset**, and it is **engineer-owned** (it lives in `index.html`'s draw loop). The Artist's whole job is the **look direction** (palette, subtlety, behaviour: "eyes-only, subtle, yellow→red") handed off as a spec — *not* a simulated render. Recognize the "no new sprites / lives in the draw loop / must read in motion at game zoom" signature early and hand off; don't escalate with art tools.
 - **Why — the tool/medium mismatch that produced bad work:** asked for a subtle enemy-difficulty *eye glow*, I prototyped it in **Pillow** (a static raster lib) and it failed three ways, each a symptom of one root cause — *wrong medium*: (1) Pillow's `GaussianBlur` is isotropic, so an eye bloom bled straight onto the archer's **nose** — an artifact of the offline approximation that the canvas `'lighter'` composite wouldn't produce; (2) my mechanism was **per-pixel eye detection**, which the runtime **can't afford** across >100 night sprites, so I was tuning a pipeline the real renderer would never use; (3) a **3× static crop** misrepresented the only thing that matters — does a *subtle* tell read on tiny, moving, pulsing eyes at game zoom. Josh rejected it twice ("looks terrible… perhaps you aren't cut out for this"). The right tool shares the deliverable's medium: **canvas/JS — a standalone harness using the same `gctx` compositing, or the engineer wiring it in-game behind a dev knob** — never offline raster.
