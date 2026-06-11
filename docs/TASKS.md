@@ -37,21 +37,6 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 ## 🟧 Engineer / CTO lane
 
-- ⛔ 🎨 **Reclass `char/` into per-type folders + player→knight class** (↳ from ART, 2026-06-11 · tool ready, dry-run verified) — **atomic `--apply` migration** (file moves + manifest rewrite in ONE commit; deploy-affecting → needs Josh's push auth). **⏸ SEQUENCING (Josh, 2026-06-11): land AFTER the parallel gameplay-feel-fix session pushes** — that session has live `index.html` WIP (swing-timing + fog-edge) that this migration also rewrites; doing it first collides. When unblocked: pull their push, then **re-run the dry-run** before `--apply` (the tool keys off manifest strings + a file scan so `--apply` stays correct, but the line-number hints in the recipe below will have drifted). Tool: **`tools/reclass-char.py`** (Artist-built; you run `--apply`). Target tree: `char/<group>/<type>/` (`player/knight/` · `goblins/{goblin,archer,warrior,shaman,bomber,king}/` · `wolves/{direwolf,alphawolf,wolfmother}/`); slash/thrust → `fx/knight/`. **Why:** each type owns its anim set (idle+atk+hurt+future walk) instead of a flat faction dump; slash/thrust were mis-filed as `_shared` "god-agnostic" — they're the **knight class's** attack FX. Dry-run plan: 248 files moved, 200 paths + 72 keys rewritten, 2 FX moved, 48 unwired sprites relocated too. Manifest-rewrite logic Artist-validated (0 stale `char.player.*`, 72 `char.knight.*`, 2 `fx.knight.*`).
-  <details><summary>recipe (the draw-code edits the tool does NOT auto-apply)</summary>
-
-  **Boundary — rename the ART layer only; LEAVE the game-logic `'player'` identity.** The `player` *entity* wears a `knight` *class*. So `char.player.* → char.knight.*` but `kind:'player'`, `SpriteRegistry.register/get('player')` (pixel-art fallback ~2105/8109), the map editor, and `gEntsRaw` 'player' lookups all **stay `player`**.
-  1. `python tools/reclass-char.py` (dry-run) → re-read the plan + the printed DRAW-CODE EDITS list.
-  2. `python tools/reclass-char.py --apply` → git mv (char + fx) + rewrite manifest paths + keys. (Stage the risk if you like: `--only goblins,wolves` is path-only/keys-stable/zero-code first, then a second commit for `--only player`.)
-  3. Apply the **draw-code edits** (the tool can't — they'd collide with the logic `'player'`), all in `drawAnyPlayer` (~8103–8141) + FX sites:
-     - `_bodyId` default + pose strings: `'player'→'knight'`, `'playerdash'→'knightdash'`, `'playerheavywindup'→'knightheavywindup'`, `'playerheavy'→'knightheavy'`, `'playeratk'→'knightatk'`.
-     - walk gate/key (~8117/8120): `_bodyId==='player'→'knight'`; `'char.playerwalk'+…→'char.knightwalk'+…`.
-     - pose-mult compares (~8134–8141): `_bodyId==='playerheavy'/'playerheavywindup'` → `knight*`.
-     - FX lookups: `gArtReg['fx.slash']` (×3: `_slashTintCanvas` ~7542, whirlwind ~8203) + `gArtReg['fx.thrust']` (~7466) → `'fx.knight.slash'` / `'fx.knight.thrust'`.
-     - optional cosmetic: `PLAYER_WALK_OCT`→`KNIGHT_WALK_OCT`, `PSCALE` (just const names; no behavior).
-  4. **Verify:** the tool self-checks every `assets/char|fx` path resolves; then `node --check` the extracted `<script>`, grep a `char.knight.*` + `fx.knight.*` key, `python dev.py` → confirm the player (idle/walk/swing/heavy/windup/dash) **and** every enemy render in all 8 facings; whirlwind + Cilia-tint slash still draw. Commit atomically; README scheme docs already updated (Artist).
-  </details>
-
 - 🔄 ✨ **Item 2 — God Skills** (roadmap #2 `approved` · spec [`specs/god-skills.md`](specs/god-skills.md)) —
   phased trigger-swap, 3/5 done:
   - [x] **Architecture generalization** (2026-06-11) — imbue-path mastery machinery generalized from
@@ -154,6 +139,8 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 ---
 
 ## ✅ Done (recent track record — prune to git history as it grows)
+
+- **2026-06-11 — `char/` reclassed into per-type folders + player→knight class** (Engineer, ↳ from ART) — atomic `reclass-char.py --apply` (250 files moved, 200 paths + 72 keys rewritten, slash/thrust → `fx/knight/`); 16 draw-code edit-groups applied (art layer → `knight`; game-logic `kind:'player'` / `SpriteRegistry('player')` fallback preserved). Verified: all 74 draw-constructed keys resolve to a manifest entry + real file, staged tree case-exact for Pages, `node --check` clean. **Diagnosed Josh's Pages atk/heavy 404 along the way: committed HEAD was already case-correct → stale Pages/CDN cache; the fresh knight paths sidestep it.** Committed atomically (deploy-affecting — awaiting Josh push auth).
 
 - **2026-06-11 — Threat-tier glow look decided** (Artist) — eyes-only, subtle, yellow→red. A full-body tint was prototyped and rejected ("looks terrible"); the eyes-only direction is set and handed to Engineer (lane). *Process lesson: a runtime draw-effect is engineer-owned and must be prototyped in-canvas/in-game, not in an offline raster mock — the Artist sets the look direction + palette, not a simulated render.*
 - **2026-06-11 — Item 0 Player animation pass closed** (walk · dash · heavy windup all wired + playtested OK).

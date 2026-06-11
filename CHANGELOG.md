@@ -59,8 +59,22 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 - **Heavy attack no longer blows past enemies in its lunge path.** The hit zone is now anchored at the
   lunge's start and extends the full distance lunged + the charged stab reach, so a long/fast charged heavy
   hits everything in its corridor instead of skipping enemies it passed (playtest #1).
+- **Normal-attack & heavy-attack sprites render on GitHub Pages.** The swing/heavy pose art could fall back to
+  the procedural sprite on the live (case-sensitive, Linux) deploy. The char reclass below moves these to fresh
+  paths (`assets/char/player/knight/knightatk-*`, `knightheavy-*`) with the staged tree verified case-exact, so
+  the next deploy serves them clean — past any stale Pages/CDN-cached 404.
 
 ### Changed
+- **`assets/char/` reorganized into per-type folders; the player's visual class is now `knight`.** Each
+  character type owns a folder for its whole animation set (`char/<faction>/<type>/` — e.g.
+  `goblins/goblin/`, `wolves/alphawolf/`, `player/knight/`) instead of being dumped flat into a faction
+  bucket, so growing anim sets stay self-contained. The player's **art class** was renamed `player → knight`
+  (manifest keys `char.player.* → char.knight.*`, draw selectors in `drawAnyPlayer`), kept **distinct from the
+  game-logic hero identity** — the entity `kind:'player'` and the `SpriteRegistry('player')` pixel-art fallback
+  are unchanged (the `player` entity *wears* a class). The player's swing/heavy **attack FX** moved from the
+  mislabeled `fx/_shared` ("god-agnostic") to the class owner `fx/knight/` (`fx.knight.slash`/`fx.knight.thrust`).
+  Migrated atomically (move + manifest path/key rewrite in one commit) via `tools/reclass-char.py`; no gameplay
+  change. Adding a second class is now `char/player/<class>/` + `char.<class>.*`.
 - **Playtest tuning (Josh, full-run 2026-06-11):**
   - **Burning Body cards appear far more often** once you've pledged — the patron keeps tempting you with her
     blessing (`GODSKILL_CARD_CHANCE` 0.6, prioritized over patron burn-card injection).
