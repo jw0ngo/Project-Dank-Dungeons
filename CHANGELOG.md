@@ -30,9 +30,10 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
     A toggled god skill is **one evolving ability**: toggling it (or it going dormant) hides the **whole** skill,
     and the HUD chip shows the **current evolution** name/icon plus its base chunk cost — turning **red ⛔ when
     your Max-MP can't cover it** (Burning Body → Firebloom → Dragonbreath…).
-  - **Phase 3 — toggle your auto-casts on hotkeys 1–9** (in the order you acquire them; default ON), shown on a
-    **God-Skill Action Bar** by the MP bar — a row of **slotted icons** (WoW-style), each with its hotkey, skill
-    icon, and live per-second cost. The slot's **border is the patron's signature colour** when the skill is
+  - **Phase 3 — toggle your auto-casts on hotkeys 1–9 (and 0)** (in the order you acquire them; default ON),
+    shown on a **God-Skill Action Bar** — a **10-slot bar** (WoW-style) parked just to the right of the active
+    skill toolbar; owned skills fill the first slots, the rest show as empty placeholders. Each filled slot has
+    its hotkey, skill icon, and live per-second cost. The slot's **border is the patron's signature colour** when the skill is
     **active**, dims/greys with a ⚠ when **dormant** (toggled on but starved — auto-resumes when regen catches
     up), greys with a ✕ when **toggled off**, and turns **red ⛔ when your Max-MP can't cover the cost** (your
     cue to go build mana). When mana can't cover everything, skills **starve lowest-key-last** — your core (key 1)

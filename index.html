@@ -228,18 +228,19 @@ button{font-family:inherit;cursor:pointer;}
 .forge-btn.dim{ opacity:.4; }
 /* God-Skill Action Bar (item 7 Phase 3) — WoW-style slotted icons by the MP bar. --gcol = the active
    patron's signature colour (IMBUE_GODS[god].col), so the border treatment is generic across gods. */
-#g-godskills{ display:flex; gap:5px; align-items:flex-end; }
-.gsb-slot{ position:relative; width:34px; height:34px; border-radius:6px; background:rgba(10,10,22,.78);
+#g-godskills{ display:flex; gap:4px; align-items:flex-end; }
+.gsb-slot{ position:relative; width:24px; height:24px; border-radius:5px; background:rgba(10,10,22,.78);
   border:2px solid #2c2c40; display:flex; align-items:center; justify-content:center; transition:border-color .15s, box-shadow .15s, opacity .15s, filter .15s; }
-.gsb-slot.gsb-active{ border-color:var(--gcol,#ff7a22); box-shadow:0 0 9px -1px var(--gcol,#ff7a22), inset 0 0 7px -3px var(--gcol,#ff7a22); }
+.gsb-slot.gsb-active{ border-color:var(--gcol,#ff7a22); box-shadow:0 0 8px -1px var(--gcol,#ff7a22), inset 0 0 6px -3px var(--gcol,#ff7a22); }
 .gsb-slot.gsb-dormant{ border-color:#6a5640; opacity:.62; filter:grayscale(.45); }
 .gsb-slot.gsb-off{ border-color:#3a4150; opacity:.42; filter:grayscale(1); }
-.gsb-slot.gsb-poor{ border-color:#ff4444; box-shadow:0 0 9px -1px #ff4444; }   /* Max-MP can't cover the cost — grow your mana */
-.gsb-icon{ font-size:18px; line-height:1; }
-.gsb-icon-art{ width:27px; height:27px; image-rendering:auto; }
-.gsb-key{ position:absolute; top:-2px; left:2px; font:bold 7px monospace; color:#dde; text-shadow:0 0 3px #000,0 1px 2px #000; }
-.gsb-cost{ position:absolute; bottom:-2px; right:1px; font:bold 6px monospace; color:#9cc6ff; text-shadow:0 0 3px #000,0 1px 2px #000; }
-.gsb-badge{ position:absolute; top:-5px; right:-4px; font-size:10px; text-shadow:0 0 3px #000; }
+.gsb-slot.gsb-poor{ border-color:#ff4444; box-shadow:0 0 8px -1px #ff4444; }   /* Max-MP can't cover the cost — grow your mana */
+.gsb-slot.gsb-empty{ border-color:#222637; background:rgba(10,10,22,.45); opacity:.5; }   /* unowned auto-cast slot — placeholder */
+.gsb-icon{ font-size:13px; line-height:1; }
+.gsb-icon-art{ width:19px; height:19px; image-rendering:auto; }
+.gsb-key{ position:absolute; top:-3px; left:1px; font:bold 6px monospace; color:#dde; text-shadow:0 0 3px #000,0 1px 2px #000; }
+.gsb-cost{ position:absolute; bottom:-3px; right:0; font:bold 6px monospace; color:#9cc6ff; text-shadow:0 0 3px #000,0 1px 2px #000; }
+.gsb-badge{ position:absolute; top:-5px; right:-4px; font-size:9px; text-shadow:0 0 3px #000; }
 /* CSS-built framed portrait — the figure is an image cutout; the frame, glow and name are all CSS */
 /* Fills the full left panel; ornate metallic gradient border + inner hairline + corner studs + glow */
 .lvl-portrait{ position:absolute; inset:0; overflow:hidden; background:#08070c;
@@ -884,6 +885,10 @@ function _fbInit() {
       z-index:8; pointer-events:auto;">
     </div>
 
+    <!-- God-Skill Action Bar (item 7 Phase 3) — a full 10-slot auto-cast bar, positioned (in JS) just to the
+         right of the active #skill-bar. Owned skills fill the first slots; the rest show as empty placeholders. -->
+    <div id="g-godskills" style="display:none;position:absolute;bottom:30px;z-index:8;pointer-events:none;"></div>
+
     <div class="game-hud">
       <div class="ghud-hp">
         <span class="ghud-lbl">HP</span>
@@ -895,7 +900,6 @@ function _fbInit() {
       </div>
       <!-- God-skill toggle row (item 7 Phase 3) — one chip per owned auto-fire skill: hotkey, icon,
            per-second mp cost, lit/dormant/off state. Populated each frame by gUpdateGodSkillHud. -->
-      <div id="g-godskills" style="display:none;"></div>
       <div class="ghud-hp" id="g-xp-wrap" style="display:none;">
         <span class="ghud-lbl" id="g-lvl" style="color:#ffd040;min-width:28px;">Lv1</span>
         <div class="ghud-bar" style="background:#1a1400;width:70px;"><div class="ghud-fill" id="gxp" style="background:#ccaa00;"></div></div>
@@ -3584,12 +3588,13 @@ document.addEventListener('keydown', function(e){
     return;
   }
 
-  // ── Number keys 1–9 ──────────────────────────────────────────
-  // Toggle the owned God Skill bound to that hotkey (acquisition order, item 7 Phase 3). Mana still
-  // gates output — a toggled-on but starved skill goes dormant and auto-resumes when mana recovers.
-  if(key >= '1' && key <= '9'){
+  // ── Number keys 1–9, 0 ───────────────────────────────────────
+  // Toggle the owned God Skill bound to that hotkey (acquisition order, item 7 Phase 3; 0 = the 10th slot).
+  // Mana still gates output — a toggled-on but starved skill goes dormant and auto-resumes when mana recovers.
+  if(key >= '0' && key <= '9'){
     if(!gPlayer||gPlayer.dead||exitReached) return;
-    if(gToggleGodSkillByKey(gPlayer, +key)) e.preventDefault();
+    const slot = key === '0' ? 10 : +key;
+    if(gToggleGodSkillByKey(gPlayer, slot)) e.preventDefault();
     return;
   }
 });
@@ -3814,7 +3819,7 @@ function gGodSkillHud(p){
   p = p || gPlayer; if(!p) return [];
   const order = gSyncGodSkillOrder(p), off = p.godSkillOff || {}, dorm = p.godSkillDormant || {}, out = [];
   const sig = (IMBUE_GODS[gActivePatron(p)] || {}).col || '#ff7a22';   // active patron's signature colour (generic — future gods inherit)
-  for(let i = 0; i < order.length && i < 9; i++){
+  for(let i = 0; i < order.length && i < 10; i++){
     const id = order[i]; if(!gOwnsGodSkill(p, id)) continue;
     const tree = gGodSkillTree(p, id); if(!tree) continue;
     const d = gGodSkillDisplay(p, id);   // show the CURRENT evolution (Firebloom/Dragonbreath…), not the base
@@ -3902,6 +3907,8 @@ function gGodSkillDrainPerSec(p, id){
 //   off     → greyed + ✕ (toggled off)
 //   poor    → red border + ⛔ (Max-MP can't cover the cost — grow your mana)
 let _godHudSig = '';
+const GSB_SLOTS = 10;                                  // full action bar = 10 buttons (keys 1–9, then 0)
+const _gsbKeyLabel = i => i === 10 ? '0' : String(i);  // slot index (1-based) → hotkey label
 function gUpdateGodSkillHud(){
   const el = document.getElementById('g-godskills'); if(!el) return;
   // Show wherever god skills are actually owned (gGodSkillHud is [] otherwise) — so it appears in the
@@ -3910,22 +3917,33 @@ function gUpdateGodSkillHud(){
   if(!list.length){ if(el.style.display !== 'none'){ el.style.display = 'none'; el.innerHTML = ''; } _godHudSig = ''; return; }
   const haveArt = typeof CARD_ICON_ART !== 'undefined';
   const sig = list.map(s => s.key + s.id + (!s.active ? 'off' : s.poolTooSmall ? 'poor' : s.dormant ? 'd' : 'on') + s.mpCostPerSec.toFixed(0) + s.col).join('|');
-  if(sig === _godHudSig) return;
-  _godHudSig = sig;
-  el.style.display = 'flex';
-  el.innerHTML = list.map(s => {
-    const stCls = !s.active ? 'gsb-off' : s.poolTooSmall ? 'gsb-poor' : s.dormant ? 'gsb-dormant' : 'gsb-active';
-    const badge = !s.active ? '✕' : s.poolTooSmall ? '⛔' : s.dormant ? '⚠' : '';
-    const artSrc = haveArt && CARD_ICON_ART[s.iconKey];   // shared with the draft card; emoji is the fallback
-    const iconEl = artSrc ? `<img class="gsb-icon-art" src="${artSrc}" alt="">` : `<span class="gsb-icon">${s.icon}</span>`;
-    const title = `${s.name} — base ${s.mpChunk} MP / 3s${s.mpEmit>0?` + ${s.mpEmit}/emit`:''} ≈ ${s.mpCostPerSec.toFixed(0)} mp/s`
-      + `${s.poolTooSmall?' · NOT ENOUGH MAX MP':''} · press ${s.key} to toggle`;
-    return `<div class="gsb-slot ${stCls}" style="--gcol:${s.col};" title="${title}">`
-      + `<div class="gsb-key">${s.key}</div>${iconEl}`
-      + `<div class="gsb-cost">${s.mpCostPerSec.toFixed(0)}</div>`
-      + (badge ? `<div class="gsb-badge">${badge}</div>` : '')
-      + `</div>`;
-  }).join('');
+  if(sig !== _godHudSig){
+    _godHudSig = sig;
+    el.style.display = 'flex';
+    const byKey = {}; list.forEach(s => byKey[s.key] = s);
+    let html = '';
+    for(let i = 1; i <= GSB_SLOTS; i++){
+      const k = _gsbKeyLabel(i), s = byKey[i];
+      if(!s){ html += `<div class="gsb-slot gsb-empty" title="empty auto-cast slot (${k})"><div class="gsb-key">${k}</div></div>`; continue; }
+      const stCls = !s.active ? 'gsb-off' : s.poolTooSmall ? 'gsb-poor' : s.dormant ? 'gsb-dormant' : 'gsb-active';
+      const badge = !s.active ? '✕' : s.poolTooSmall ? '⛔' : s.dormant ? '⚠' : '';
+      const artSrc = haveArt && CARD_ICON_ART[s.iconKey];   // shared with the draft card; emoji is the fallback
+      const iconEl = artSrc ? `<img class="gsb-icon-art" src="${artSrc}" alt="">` : `<span class="gsb-icon">${s.icon}</span>`;
+      const title = `${s.name} — base ${s.mpChunk} MP / 3s${s.mpEmit>0?` + ${s.mpEmit}/emit`:''} ≈ ${s.mpCostPerSec.toFixed(0)} mp/s`
+        + `${s.poolTooSmall?' · NOT ENOUGH MAX MP':''} · press ${k} to toggle`;
+      html += `<div class="gsb-slot ${stCls}" style="--gcol:${s.col};" title="${title}">`
+        + `<div class="gsb-key">${k}</div>${iconEl}`
+        + `<div class="gsb-cost">${s.mpCostPerSec.toFixed(0)}</div>`
+        + (badge ? `<div class="gsb-badge">${badge}</div>` : '')
+        + `</div>`;
+    }
+    el.innerHTML = html;
+  }
+  // Park the bar just to the RIGHT of the active skill bar (measured each frame → robust to its width).
+  // #skill-bar is centre-anchored (left:50% + translateX(-50%)), so its rendered right edge sits at
+  // offsetLeft + offsetWidth/2; both share the same offset parent, so this left is in the same space.
+  const sk = document.getElementById('skill-bar');
+  if(sk && sk.offsetWidth) el.style.left = Math.round(sk.offsetLeft + sk.offsetWidth / 2 + 10) + 'px';
 }
 
 // Dispatch the patron's owned auto-fire abilities — ticked once per frame from gUpdatePlayer for the LOCAL
