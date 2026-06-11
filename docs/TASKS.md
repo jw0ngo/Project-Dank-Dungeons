@@ -53,6 +53,19 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
   paths). Two separate commits (one per domain) keep each diff a clean path-rewrite. Deploy-affecting → push
   with Josh's auth. *`world.tree.*`/`treesmall.*`/`foresttree.*` all move under `world/goblin-forest/`;
   `grass`/`forestgrass` etc. under their `tile/<type>/`.*
+  **⚠ `--domain world` is good to go; `--domain tile` is PENDING the asset-area-namespace decision** (spec
+  [`specs/asset-area-namespace.md`](specs/asset-area-namespace.md) recommends keeping `tile/` **flat** — the type
+  is already in the id, so the fold is redundant for machines). Apply `world` now (it's also the data source for
+  the B+ runtime area-map); hold `tile` until Josh rules on the spec.
+
+- ◻️ 🔧 **Asset-area namespace — decision + B+ impl** (↳ from ART, 2026-06-12 · spec
+  [`specs/asset-area-namespace.md`](specs/asset-area-namespace.md)) — make *area* a machine-queryable dimension,
+  not just a folder (answers Josh's "does the fold help the AI?" — honestly only ~20% today). **Recommended (B+):**
+  in `gInitArt` (`~index.html:8034`) parse each entry's `assets/world/<area>/` path into runtime maps
+  `gAssetArea[key]=area` + `gAreaAssets[area]=[keys]` (~5–8 lines, pure addition, no key/draw changes) → area
+  queryable at runtime + unlocks per-area asset load/unload (the payoff when a 2nd area ships). Companion: **keep
+  `tile/` flat** (drop the tile fold). Option A (area *in* the key) is speced + **not** recommended (whole-`world.*`
+  rename for little gain over B+). **Awaiting Josh's go/no-go on the spec** before impl.
 
 - ◻️ 🎨 **Wire forest-tree set + forest-grass tiles + barrel/crate props** (↳ from ART, 2026-06-12) — four new
   asset families sliced & committed under `assets/`. All **new ids** (non-destructive — Josh's call: add, don't
