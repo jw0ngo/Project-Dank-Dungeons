@@ -17,21 +17,62 @@ survive (see SESSION_JOURNAL "Cutting character sprites from a turnaround
 sheet"). For a black sheet a pixel is background if max(R,G,B) <= --thresh;
 for a white sheet if min(R,G,B) >= 255 - --thresh.
 
-Outputs (post-externalization pipeline — paths, not base64): 8 PNG cutouts
-written straight into assets/char/ as <id>-<dir>.png, plus a magenta QA
-contact sheet and a path-based ART_MANIFEST snippet into a QA dir
-(default: <tempdir>/slice_<id>). Paste the snippet into ART_MANIFEST as-is —
-the values are 'assets/char/<id>-<dir>.png' paths the loader reads directly.
+Outputs (post-externalization + per-type-folder pipeline — paths, not base64): 8
+PNG cutouts **auto-routed into assets/char/<group>/<type>/** (e.g.
+assets/char/goblins/goblin/goblinatk-<dir>.png), plus a magenta QA contact sheet
+and a path-based ART_MANIFEST snippet into a QA dir (default: <tempdir>/slice_<id>).
+The group/type folder + the player->knight class rename are driven by
+reclass-char.py's TYPE_GROUP/TYPE_RENAME (one source of truth), so slicing `player`
+emits 'char.knight.<dir>' under player/knight/. An id matching no known type warns
+and falls back to flat assets/char/. Pass --assets-dir to override the destination
+verbatim (manual mode, no routing/rename). Paste the snippet into ART_MANIFEST as-is.
 
 Usage:
   python tools/slice-turnaround.py "art/enemies/goblin-warrior.png" warrior --bg black
 """
-import os, argparse, tempfile
+import os, argparse, tempfile, importlib.util
 from collections import deque
 from PIL import Image, ImageFilter
 
 DIRS = ['nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se']
 CELLS = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 2), (2, 0), (2, 1), (2, 2)]  # (row,col), centre skipped
+
+# ── Per-type folder routing (single source of truth: reclass-char.py) ────────────────────────
+# The char tree is reclassed into assets/char/<group>/<type>/ (e.g. goblins/goblin/, player/knight/);
+# the player's VISUAL CLASS is renamed player->knight (path AND manifest key). Rather than duplicate
+# the type->folder maps here (which would drift the moment a new enemy is added — the "migrate the
+# tool when you migrate the pipeline" tax), import reclass-char.py's classify()/TYPE_GROUP/TYPE_RENAME
+# by path (same importlib idiom slice-variants.py uses to load THIS file). Side-effect-free: its
+# main() is __main__-guarded. If it ever can't load, _classify stays None and we fall back to flat.
+_classify = _TYPE_GROUP = _TYPE_RENAME = None
+try:
+    _rc_spec = importlib.util.spec_from_file_location(
+        'reclass_char', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'reclass-char.py'))
+    _rc = importlib.util.module_from_spec(_rc_spec)
+    _rc_spec.loader.exec_module(_rc)
+    _classify, _TYPE_GROUP, _TYPE_RENAME = _rc.classify, _rc.TYPE_GROUP, _rc.TYPE_RENAME
+except Exception as _e:                                  # missing/unloadable -> flat-write fallback
+    print(f"  [routing] reclass-char.py not loaded ({_e}); slicing flat to assets/char/")
+
+# already-renamed type values -> group (e.g. {'knight': 'player'}), so an id passed as the post-rename
+# class name ('knight'/'knightatk') routes correctly without double-renaming.
+_RENAMED = ({v: _TYPE_GROUP[k] for k, v in _TYPE_RENAME.items()} if _TYPE_RENAME and _TYPE_GROUP else {})
+_RENAMED_LONGEST = sorted(_RENAMED, key=len, reverse=True)
+
+
+def route(cid):
+    """Map a slice id -> (group, type_dir, out_stem) for assets/char/<group>/<type_dir>/<out_stem>-*.png,
+    or None if the id matches no known type. out_stem carries the player->knight rename (and the pose
+    suffix); for every enemy out_stem == cid. Driven by reclass-char.py's TYPE_GROUP/TYPE_RENAME."""
+    if _classify is not None:
+        c = _classify(cid)                              # (group, new_stem, type_dir) or None
+        if c:
+            group, new_stem, type_dir = c
+            return group, type_dir, new_stem
+    for t in _RENAMED_LONGEST:                           # id already given as the renamed class name
+        if cid == t or cid.startswith(t):
+            return _RENAMED[t], t, cid
+    return None
 
 
 def is_bg(px, x, y, bg, thresh):
@@ -247,7 +288,7 @@ def main():
                     help='output square px; 0 = native resolution (no resample) for animation source')
     ap.add_argument('--frame', choices=['square', 'cell'], default='square',
                     help="'square' = uniform bbox-centered square (game sprites). "
-                         "'cell' = keep each pose on its native cell canvas → exact in-sheet "
+                         "'cell' = keep each pose on its native cell canvas -> exact in-sheet "
                          "registration, one shared canvas across sheets (best for animation).")
     ap.add_argument('--global', dest='glob', action='store_true',
                     help='cut ALL bg-coloured pixels incl. enclosed pockets (closed shapes: bows, pillars)')
@@ -261,10 +302,11 @@ def main():
                          'into the empty centre and get sliced flat at the cell border. Cut on a window '
                          'expanded N px past each cell, then keep only the component that owns the cell '
                          '(neighbours pulled in are discarded). Set N a bit above the worst overflow.')
-    ap.add_argument('--assets-dir', default=os.path.join('assets', 'char'),
-                    help='where the final cutout PNGs are written (default assets/char). '
-                         'The manifest snippet points here. The dir is git-tracked, so a bad '
-                         'slice is recoverable via git checkout.')
+    ap.add_argument('--assets-dir', default=None,
+                    help='override the cutout destination VERBATIM (manual mode: no per-type routing, '
+                         'no player->knight rename — id is used as-is). Default = auto-route into '
+                         'assets/char/<group>/<type>/ via reclass-char.py. The dir is git-tracked, so '
+                         'a bad slice is recoverable via git checkout.')
     ap.add_argument('--out', default=None,
                     help='QA dir for the contact sheet + manifest snippet (default <tempdir>/slice_<id>)')
     args = ap.parse_args()
@@ -312,10 +354,25 @@ def main():
     else:
         side = int(max(max(f.size) for f in figs.values()) * 1.04)
     S = side if args.size == 0 else args.size
-    assets_dir = args.assets_dir
+    # Resolve destination + output stem. --assets-dir = manual override (verbatim path, id as-is).
+    # Otherwise auto-route into assets/char/<group>/<type>/ and apply the player->knight rename;
+    # an unknown id warns and falls back to flat assets/char/.
+    if args.assets_dir is not None:
+        assets_dir, out_stem = args.assets_dir, args.id
+    else:
+        r = route(args.id)
+        if r:
+            group, type_dir, out_stem = r
+            assets_dir = os.path.join('assets', 'char', group, type_dir)
+            if out_stem != args.id:
+                print(f"  [routing] id '{args.id}' -> class '{out_stem}' (renamed); keys become char.{out_stem}.*")
+        else:
+            assets_dir, out_stem = os.path.join('assets', 'char'), args.id
+            print(f"  WARN: id '{args.id}' matches no type in reclass-char.py TYPE_GROUP — writing FLAT to "
+                  f"assets/char/. Add it to TYPE_GROUP to route it, or pass --assets-dir to place it.")
     os.makedirs(assets_dir, exist_ok=True)
     rel = assets_dir.replace('\\', '/').rstrip('/')    # forward-slash path for the JS manifest (web/relative)
-    framed = {}                                        # in-memory cutouts → contact sheet (no re-open)
+    framed = {}                                        # in-memory cutouts -> contact sheet (no re-open)
     paths = {}                                         # manifest value per direction
     sizes_kb = {}
     for d, fig in figs.items():
@@ -327,10 +384,10 @@ def main():
         if sq.size != (S, S):
             sq = sq.resize((S, S), Image.LANCZOS)
         framed[d] = sq
-        png = os.path.join(assets_dir, f'{args.id}-{d}.png')   # hyphen name = ART_MANIFEST convention (goblin-n.png)
+        png = os.path.join(assets_dir, f'{out_stem}-{d}.png')   # hyphen name = ART_MANIFEST convention (goblin-n.png)
         sq.save(png, optimize=True)
         sizes_kb[d] = os.path.getsize(png) / 1024
-        paths[d] = f'{rel}/{args.id}-{d}.png'
+        paths[d] = f'{rel}/{out_stem}-{d}.png'
 
     # QA contact sheet over MAGENTA — any leftover white/dark halo or enclosed bg pocket shows
     # up instantly against magenta. Eyeball this every time a new sprite is added.
@@ -354,10 +411,10 @@ def main():
     with open(snippet, 'w', encoding='utf-8') as f:
         for d in DIRS:
             if d in paths:
-                f.write(f"'char.{args.id}.{d}':'{paths[d]}',\n")
+                f.write(f"'char.{out_stem}.{d}':'{paths[d]}',\n")
 
     total = sum(sizes_kb.values())
-    print(f"\nassets:   {os.path.join(assets_dir, args.id + '-<dir>.png')}  ({len(paths)} files, ~{total:.0f} KB total)")
+    print(f"\nassets:   {os.path.join(assets_dir, out_stem + '-<dir>.png')}  ({len(paths)} files, ~{total:.0f} KB total)")
     print(f"contact:  {contact_path}")
     print(f"snippet:  {snippet}  (path-based ART_MANIFEST entries - paste as-is)")
     if args.sever:

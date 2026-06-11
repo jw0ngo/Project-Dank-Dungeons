@@ -132,8 +132,6 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 ## 🟨 Artist lane
 
-- ◻️ 🔧 **After the per-type reclass lands: teach the slice tool to emit per-type foldered paths** — once `reclass-char.py --apply` lands (Engineer lane), update `tools/slice-turnaround.py` to write cutouts into `assets/char/<group>/<type>/` and emit the two-level manifest paths (route by id via `reclass-char.py`'s `TYPE_GROUP`/`TYPE_RENAME` maps — import or mirror them; honor `player→knight`). Otherwise every future char slice re-introduces a flat file in the wrong place — the "migrate the tool when you migrate the pipeline" tax. **Depends on** the reclass being applied first. (Supersedes the old one-level `fold-assets` version of this task.)
-
 - *(eye-glow look **decided & handed to Engineer** 2026-06-11: eyes-only, subtle, yellow→red; full-body tint tried & rejected. See the Engineer-lane handoff + Done.)*
 
 ---
@@ -148,6 +146,7 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 - **2026-06-11 — Player WALK cutout halo + boot loss RESOLVED** (Artist) — defringe-v2 (full antialiased ramp to `α<245`) + `--shadow-bg`/`--shadow-lum 13 --shadow-band 0.90` boot-protected re-cut of E/NE/SE (+mirrors). All 8 dirs full-ring fringe ~12–17 (idle 18–22), boots intact, registration unchanged → no `index.html`/manifest change. Lessons crystallized in `agents/artist/memory.md`. *(Verify in-game with a hard-refresh; reopen here if a halo persists.)*
 - **2026-06-10 — Rock + spike-fence tiles wired** (`gTileProp` overlay path — cutouts, not opaque ground).
 - **2026-06-10 — Wolf camps stream packs by player proximity** (no more ~160 always-live wolves; per-camp clear/respawn survives unload).
+- **2026-06-11 — `slice-turnaround.py` per-type-folder native** (Artist) — the slicer now auto-routes its 8 cutouts into `assets/char/<group>/<type>/` and emits the two-level manifest paths + the `player→knight` key rename, driven by importing `reclass-char.py`'s `classify`/`TYPE_GROUP`/`TYPE_RENAME` (single source of truth — adding a new enemy stays one line there). Unknown id → loud WARN + flat `assets/char/` fallback; `--assets-dir` is the manual escape hatch (verbatim, no routing/rename). Verified: `route()` correct for all enemy/player/knight/unmapped cases, real goblin re-slice landed in `goblins/goblin/` with `char.goblin.*` keys (QA CLEAN, reverted), `slice-variants.py` import chain intact, `--help` fixed on cp1252 (two pre-existing `→`→`->`). Tooling-only, not deploy-affecting. *Closes the "migrate the tool when you migrate the pipeline" debt from the per-type reclass.*
 - **2026-06-09 — `slice-turnaround.py` path-native** (writes `assets/char/<id>-<dir>.png` + path snippet; base64 step removed).
 - **2026-06-09 — Wolf lunge-bite pose reads** (`_biteHold` 24f draw-only dwell).
 - **2026-06-09 — Inert STR/DEX/INT scaling shims removed**; `wildDmgMult` removed; %damage flows uniformly through `wildBuffs.damagePct`.
