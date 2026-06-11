@@ -17,7 +17,9 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
   cards are now stacked **card-rows** (icon · rarity · name · description · Favor chip). The Lv 5/10
   **Form / Ascension fork** shows its two options as rows **in the same sidebar** (replacing the 3 cards
   that level) — also no pause. Favor reroll / rarity-upgrade / rank-buy all carry over unchanged. Because
-  nothing pauses, one player's level-up never freezes the shared world in multiplayer. *(Art: functional
+  nothing pauses, one player's level-up never freezes the shared world in multiplayer. While the sidebar
+  is open the camera **eases over to keep your character centred in the visible (unblocked) area** to the
+  right of the panel, then slides back when you close it. *(Art: functional
   CSS frame + existing Cilia portrait now; a painted frame / card icons pass is queued for the Artist.)*
 - **Favor coins and treasure chests now use their painted art** (was procedural shapes). Dropped Favor
   surfaces as the gold-coin sprite (with a soft pickup glow + gentle hover); wolf-camp and village chests

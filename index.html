@@ -4288,7 +4288,11 @@ function gUpdatePlayer(dt=1){
   // Per-player freeze (hit-stop) — only pauses THIS player's frame, not the whole loop
   if(p.freezeUntil>0&&performance.now()<p.freezeUntil){}
   else p.freezeUntil=0;
-  camX = p.wx - VW/2;
+  // Sidebar open: pan so the player sits in the centre of the UNBLOCKED area (right of the level-up
+  // dock) rather than behind it. Eased, so opening/closing the panel slides the camera smoothly.
+  const _camTarget = gDraftCamShift();
+  gDraft.camShift += (_camTarget - gDraft.camShift) * Math.min(1, 0.15*dt);
+  camX = p.wx - VW/2 - gDraft.camShift;
   camY = p.wy - VH/2;
   const etx=Math.floor(p.wx/T),ety=Math.floor(p.wy/T);
   if(!exitReached&&(gTileAt(etx,ety)===TILE_EXIT||gTileAt(etx+1,ety)===TILE_EXIT||gTileAt(etx-1,ety)===TILE_EXIT||gTileAt(etx,ety+1)===TILE_EXIT)){
@@ -13777,7 +13781,7 @@ const KNIGHT_FIG_IMG = 'assets/portraits/knight.jpg';   // nameless-knight portr
 // is identical in single-player and multiplayer. Clicking the FAB opens the left-docked sidebar; CONFIRM
 // applies the pick and drains one pending level-up. The draft options persist while the panel is closed so
 // the §8 bot can resolve them headlessly (gSimDraft / gSimEvolution) without ever opening the UI.
-const gDraft = { opts:[], pending:0, sel:-1, rerollCount:0, open:false, evo:null };
+const gDraft = { opts:[], pending:0, sel:-1, rerollCount:0, open:false, evo:null, camShift:0 };
 
 // Favor spend tables (specs/favor.md). Reroll cost escalates within the *current* draft (resets on
 // generate); rarity-upgrade indexed by TARGET tier; god-skill rank-buy scales with the skill's live rank.
@@ -14057,6 +14061,19 @@ function gDraftUpdateFab(){
   }
 }
 
+// Camera shift (canvas units) so the player centers in the UNBLOCKED area while the sidebar is open —
+// half the dock's on-screen width, measured live so it tracks the responsive panel + any canvas scaling.
+// Returns 0 when closed (the camera eases back). Headless/bot never opens the panel → always 0.
+function gDraftCamShift(){
+  if(!gDraft.open) return 0;
+  const dock = document.querySelector('#g-stat-pick .lvl-dock');
+  if(!dock || typeof gc === 'undefined' || !gc) return 0;
+  const dw = dock.getBoundingClientRect().width;
+  const cw = gc.getBoundingClientRect().width;
+  if(!(dw > 0) || !(cw > 0)) return 0;
+  return (dw / cw) * VW / 2;
+}
+
 // Apply the selected card / evolution, then drain one pending level-up. If more remain, regenerate in place
 // (panel stays open if it was open; otherwise the FAB keeps flashing); else close. Funnels both the DOM
 // CONFIRM and the §8 harness pick. Never touches gPaused — the world keeps running throughout.
@@ -14102,7 +14119,7 @@ function gDraftConfirm(){
 
 // Reset all draft state (called when a wilderness run ends).
 function gDraftReset(){
-  gDraft.pending = 0; gDraft.opts = []; gDraft.sel = -1; gDraft.evo = null; gDraft.open = false;
+  gDraft.pending = 0; gDraft.opts = []; gDraft.sel = -1; gDraft.evo = null; gDraft.open = false; gDraft.camShift = 0;
   gSimDraft = null; gSimEvolution = null;
   const overlay = document.getElementById('g-stat-pick');
   if(overlay) overlay.style.display = 'none';
