@@ -131,8 +131,23 @@ cards push on either:
     current mp **in key order (1→9)**; skills that can't be covered this frame go dormant. So when over-committed,
     your **last-toggled skills cut out first** and your core ones keep running — only the marginal skill flickers,
     not all of them.
-- **HUD:** a small skill row near the MP bar (`#gmp`, drawn `:4233`) — each owned god skill as an icon + its
-  number key + active/dormant state + its current per-second cost. Mirror the existing skill-cd HUD chips.
+- **HUD — the God-Skill Action Bar (upgraded; Josh-approved 2026-06-12, WoW-style):** a horizontal **action bar**
+  near the MP bar (`#gmp`, drawn `:4233`) — each owned god skill is a **slotted icon** in hotkey order (1–9), with
+  its number key, current per-second mana cost, and a clear **active/dormant state**.
+  - **Icons are real art, SHARED with the draft cards (decided):** one icon per god skill serves **both** the
+    level-up draft card **and** this HUD slot — author one set, not two. Plugs into the existing `CARD_ICON_ART`
+    keying from the level-up art pass (`specs/levelup-screen.md`). Cilia launch = 3 icons (Burning Body, Trail of
+    Embers, Pyroclasm); +1 per future god skill. Emoji glyph stays the fallback until the art lands.
+  - **Active/dormant tell = a god-colored particle border (CORE state, particle juice is stretch):**
+    - **Core (ships with Phase 3):** the slot reads **active** (lit) vs **dormant** (dimmed) unambiguously — at
+      minimum a static god-colored border when active, greyed when dormant. This is the functional requirement of
+      the toggle, so it ships with Phase 3.
+    - **Stretch (fast-follow juice):** the border **lights up with particles of the skill's god** (Cilia =
+      fire-red embers); animated. Pure feel polish on top of the core state — may slip a beat without blocking Phase 3.
+  - **Per-god signature colour as data:** add a signature colour per god (Cilia = fire-red) as a small registry
+    datum, so the border/particle treatment is generic and future gods (Boreas = ice-blue, etc.) inherit it free.
+  - **Scope now = the god-skill bar only.** A *unified* bar folding in the class kit's CD chips is a later vision
+    (Josh: "god-skill bar now, unify later") — out of scope for this phase. Mirror the existing skill-cd HUD chips' styling.
 
 ---
 
