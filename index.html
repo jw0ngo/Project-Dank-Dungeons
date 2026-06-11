@@ -3784,7 +3784,8 @@ function gGodSkillHud(p){
     const tree = gGodSkillTree(p, id); if(!tree) continue;
     const d = gGodSkillDisplay(p, id);   // show the CURRENT evolution (Firebloom/Dragonbreath…), not the base
     out.push({ id, key: i + 1, icon: d.icon, name: d.name,
-               active: !off[id], dormant: !!dorm[id], mpCostPerSec: gGodFireParam(p, id, 'mpCost') });
+               active: !off[id], dormant: !!dorm[id],
+               mpCostPerSec: gGodFireParam(p, id, 'mpCost'), mpEmit: gGodSkillEmitCost(p, id) });
   }
   return out;
 }
@@ -3818,6 +3819,16 @@ function gGodSkillDisplay(p, id){
   }
   return { name: tree.art || id, icon: tree.icon || '✦' };
 }
+// The CURRENT per-emit mana cost (item 7) — the chunk charged each time this skill's discrete effect fires
+// (0 before a Form is chosen). Leaf overrides its Form's emit cost. Mirrors the lookup in gTickBurningBody.
+function gGodSkillEmitCost(p, id){
+  const tree = gGodSkillTree(p, id); if(!tree) return 0;
+  const form = gImbueForm(p, id), fdef = form && tree.forms && tree.forms[form];
+  if(!fdef) return 0;
+  const asc = gImbueAscension(p, id), leaf = asc && fdef.ascensions && fdef.ascensions[asc];
+  if(leaf && leaf.mpEmit != null) return leaf.mpEmit;
+  return (fdef.fire && fdef.fire.mpEmit) || 0;
+}
 // Render the god-skill toggle row by the MP bar — one chip per owned skill (hotkey · icon · mp/s · state).
 // Rebuilds innerHTML only when the chip set/state changes (signature-gated), not every frame; hidden when
 // no god skills are owned. lit=amber, dormant=dim amber + ⚠, toggled-off=grey + ✕.
@@ -3826,7 +3837,7 @@ function gUpdateGodSkillHud(){
   const el = document.getElementById('g-godskills'); if(!el) return;
   const list = (inWilderness && gPlayer && !gPlayer.dead) ? gGodSkillHud(gPlayer) : [];
   if(!list.length){ if(el.style.display !== 'none'){ el.style.display = 'none'; el.innerHTML = ''; } _godHudSig = ''; return; }
-  const sig = list.map(s => s.key + s.id + (s.active ? (s.dormant ? 'd' : 'on') : 'off') + s.mpCostPerSec.toFixed(1)).join('|');
+  const sig = list.map(s => s.key + s.id + (s.active ? (s.dormant ? 'd' : 'on') : 'off') + s.mpCostPerSec.toFixed(1) + 'e' + s.mpEmit).join('|');
   if(sig === _godHudSig) return;
   _godHudSig = sig;
   el.style.display = 'flex';
@@ -3834,10 +3845,12 @@ function gUpdateGodSkillHud(){
     const st  = !s.active ? 'off' : s.dormant ? 'dormant' : 'on';
     const col = st === 'on' ? '#ff9a3a' : st === 'dormant' ? '#9c6a3a' : '#556677';
     const op  = st === 'on' ? '1' : st === 'dormant' ? '0.75' : '0.4';
-    return `<span title="${s.name} — ${s.mpCostPerSec.toFixed(1)} mp/s · press ${s.key} to toggle" `
+    const emit = s.mpEmit > 0 ? `+${s.mpEmit}` : '';            // per-emit chunk (item 7) — drain you see when it fires
+    const cost = `${s.mpCostPerSec.toFixed(1)}${emit}`;
+    return `<span title="${s.name} — ${s.mpCostPerSec.toFixed(1)} mp/s${s.mpEmit>0?` + ${s.mpEmit}/emit`:''} · press ${s.key} to toggle" `
       + `style="display:inline-flex;align-items:center;gap:3px;padding:1px 5px;border:1px solid ${col};border-radius:4px;opacity:${op};background:rgba(8,8,20,.6);">`
       + `<b style="color:#8aa;font-size:7px;">${s.key}</b><span style="font-size:11px;line-height:1;">${s.icon}</span>`
-      + `<span style="color:${col};font-size:7px;">${s.mpCostPerSec.toFixed(1)}${s.dormant ? '⚠' : st === 'off' ? '✕' : ''}</span></span>`;
+      + `<span style="color:${col};font-size:7px;">${cost}${s.dormant ? '⚠' : st === 'off' ? '✕' : ''}</span></span>`;
   }).join('');
 }
 
@@ -3908,6 +3921,14 @@ function gTickBurningBody(p, dt, id, tree){
   p._bbTimer = (p._bbTimer || 0) - dt;
   if(p._bbTimer > 0) return;
   p._bbTimer = interval;
+
+  // Per-emit mana cost (item 7) — each discrete burst/ring costs a chunk ON TOP of the continuous aura
+  // drain, so mana visibly drops in step with the effect on screen (Cinderburst nova = 10 MP/detonation).
+  // The Ascension leaf overrides its Form's emit cost (a colossal Cataclysm costs more than base Cinderburst).
+  // Floors at 0; sustained inability to pay the per-second base then takes the WHOLE skill dormant next
+  // frame (gUpdateGodSkills) — so a costly emit that empties you also silences the aura until mana recovers.
+  const emitCost = (leaf && leaf.mpEmit != null) ? leaf.mpEmit : (fdef.fire.mpEmit || 0);
+  if(emitCost > 0) p.mp = Math.max(0, p.mp - emitCost);
 
   const novaScale  = (leaf && leaf.novaScale) || 1;
   const dmg        = Math.max(1, Math.round(gGodFireParam(p, id, 'emitDmg') * FR_DMG_MULT * dbuf * novaScale));
@@ -13872,23 +13893,23 @@ const IMBUE_PATHS = {
         kind:'burningBody', timerKey:'_bbTimer',
         base:   { auraRadius:AURA_RADIUS, auraDmg:AURA_DMG, auraBurn:AURA_BURN_FRAMES,
                   emitDmg:FR_BASE_DMG, emitRange:FR_RANGE_TILES, burnFrames:FR_BURN_FRAMES,
-                  mpCost:1.67 },  // item-7 Phase 2: mp/SEC drain while active (≈5mp/3s at rank 1; /60 per frame at the drain site)
+                  mpCost:1.67 },  // item 7: FLAT continuous aura drain = 5mp/3s (mp/SEC; /60 per frame). Stays flat across ranks — the DYNAMIC drain lives in per-emit mpEmit (below), so mana tracks on-screen effects.
         floors: { auraRadius:40, emitInterval:90 },
         caps:   { emitRange:12 },
       },
       // ranks 1–4: grow the base aura (bigger / hotter / longer ignite) + seed the emit's damage.
-      waveStep: { auraRadius:6, auraDmg:2, auraBurn:12, emitDmg:4, mpCost:0.15 },  // +0.15 mp/s per pre-Form rank (stronger = costlier)
+      waveStep: { auraRadius:6, auraDmg:2, auraBurn:12, emitDmg:4 },  // (no mpCost step — base aura drain is flat; dynamism is in mpEmit)
       forms: {
         firebloom: {
           name:'Firebloom', tag:'RHYTHM · REACH', icon:'🔥',
           desc:'Releases an expanding ring of fire every few seconds — timed waves sweep outward and ignite all they cross.',
           // ranks 6–9: harder / wider / longer-burning rings (+ a touch of aura).
-          formStep: { emitDmg:5, emitRange:0.6, burnFrames:18, auraDmg:1, mpCost:0.2 },  // +0.2 mp/s per post-Form rank → maxed ≈3 mp/s
-          fire: { emit:'ring', interval:BB_RING_INTERVAL, speed:FR_SPEED },
+          formStep: { emitDmg:5, emitRange:0.6, burnFrames:18, auraDmg:1 },  // ranks 6–9: harder/wider/longer rings
+          fire: { emit:'ring', interval:BB_RING_INTERVAL, speed:FR_SPEED, mpEmit:8 },  // item 7: +8 MP per ring emit — the chunk you SEE drain when a wave fires
           ascensions: {
-            dragonbreath: { name:'Dragonbreath', icon:'🐉', age:'old', tag:'OLD · DRAGON · SUSTAIN', ground:'dragonfire', ringMode:'breathe', interval:130,
+            dragonbreath: { name:'Dragonbreath', icon:'🐉', age:'old', tag:'OLD · DRAGON · SUSTAIN', ground:'dragonfire', ringMode:'breathe', interval:130, mpEmit:6,
               desc:'A dragonfire ring breathes out and back from you, following as you move — a dragon’s breath. Contact heals you.' },
-            chaosCrown:   { name:'Chaos Crown',  icon:'🔥', age:'new', tag:'NEW · CHAOS · POWER+COST', ground:'chaosfire', ringMode:'settle',
+            chaosCrown:   { name:'Chaos Crown',  icon:'🔥', age:'new', tag:'NEW · CHAOS · POWER+COST', ground:'chaosfire', ringMode:'settle', mpEmit:14,
               desc:'A ring of chaosfire expands, pauses at its peak, then settles into a great burning circle of chaosfire around you.' },
           },
         },
@@ -13896,12 +13917,12 @@ const IMBUE_PATHS = {
           name:'Cinderburst', tag:'BURST · STAND', icon:'🔥',
           desc:'The burning aura swells and detonates every few seconds — a fixed-radius nova centred on you that erupts and ignites the pack.',
           // ranks 6–9: bigger / harder / longer-burning detonations.
-          formStep: { emitDmg:7, emitRange:0.5, burnFrames:18, auraDmg:1, mpCost:0.2 },  // +0.2 mp/s per post-Form rank → maxed ≈3 mp/s
-          fire: { emit:'nova', interval:BB_BURST_INTERVAL, speed:BB_NOVA_SPEED },
+          formStep: { emitDmg:7, emitRange:0.5, burnFrames:18, auraDmg:1 },  // ranks 6–9: bigger/harder detonations
+          fire: { emit:'nova', interval:BB_BURST_INTERVAL, speed:BB_NOVA_SPEED, mpEmit:10 },  // item 7: +10 MP per nova detonation (Josh's anchor — the burst you SEE drain)
           ascensions: {
-            dragonheart: { name:'Dragonheart', icon:'🐉', age:'old', tag:'OLD · DRAGON · SUSTAIN', ground:'dragonfire',
+            dragonheart: { name:'Dragonheart', icon:'🐉', age:'old', tag:'OLD · DRAGON · SUSTAIN', ground:'dragonfire', mpEmit:12,
               desc:'Each detonation blooms dragonfire at your feet that HEALS while you stand in it — your burning core mends as it erupts.' },
-            cataclysm:   { name:'Cataclysm',   icon:'🔥', age:'new', tag:'NEW · CHAOS · POWER+COST', ground:'chaosfire', novaScale:1.7,
+            cataclysm:   { name:'Cataclysm',   icon:'🔥', age:'new', tag:'NEW · CHAOS · POWER+COST', ground:'chaosfire', novaScale:1.7, mpEmit:16,
               desc:'Detonations become colossal chaosfire blasts — huge radius, devastating, leaving chaosfire that burns enemies AND you.' },
           },
         },
@@ -16357,7 +16378,8 @@ const Sim = (function(){
         godSkills: (gSyncGodSkillOrder(p), gOwnedGodSkills(p).reduce((m,id)=>{
           m[id] = { rank:gImbueRank(p,id), form:gImbueForm(p,id), ascension:gImbueAscension(p,id),
                     key:((p.godSkillOrder||[]).indexOf(id)+1)||null, active:!(p.godSkillOff&&p.godSkillOff[id]),
-                    dormant:!!(p.godSkillDormant&&p.godSkillDormant[id]), mpCostPerSec:+gGodFireParam(p,id,'mpCost').toFixed(2) };
+                    dormant:!!(p.godSkillDormant&&p.godSkillDormant[id]), mpCostPerSec:+gGodFireParam(p,id,'mpCost').toFixed(2),
+                    mpEmitCost:gGodSkillEmitCost(p,id) };
           return m;
         }, {})),
         pendingEvolution: (()=>{ const e = gPendingEvolution(p); return e ? { skill:e.skill, kind:e.kind } : null; })(),

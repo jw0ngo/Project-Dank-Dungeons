@@ -17,14 +17,17 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
     sustains only ~5.5 s of spin. To keep the rarer, costlier spin worth committing to, its **payoff rose with
     it** — damage per hit `22→30` and hit radius `36→44`. Net benchmark: **1 leap + ~3 s of whirlwind ≈ empties
     a fresh 100 pool.** (Swing stays free; dash/heavy cooldowns left as-is pending playtest.)
-  - **Phase 2 — God Skills drain mana per second while active**, rank-scaled. Burning Body costs **5 mp / 3 s
-    (≈1.67 mp/s)** at rank 1 and climbs to **≈3 mp/s** maxed, through the *same* rank machinery as its
-    damage/radius (a new `mpCost` key on the skill registry's base/per-rank steps). **Passive regen is also
-    cut to a tight 1 MP/s starting rate** (was ~9/s), so even a single aura now **net-drains** the pool —
-    keeping a god skill lit visibly costs you, and `+MP regen` cards become the deliberate way to afford more.
-    A toggled god skill is **one evolving ability**: toggling it (or it going dormant on starvation) hides the
-    **whole** skill — base aura *and* its current emit — and the HUD chip shows the skill's **current
-    evolution** name/icon (Burning Body → Firebloom → Dragonbreath…), since an evolution replaces the base.
+  - **Phase 2 — God Skills drain mana dynamically, tracking what's on screen.** Two layers: a **flat
+    continuous aura drain** (Burning Body = **5 mp / 3 s**, steady while lit) **plus a per-emit chunk** charged
+    the instant a discrete effect fires — so mana visibly drops in step with the action. Cinderburst's nova
+    costs **+10 MP/detonation**, Firebloom's ring **+8/wave**, scaling up for the rank-10 Ascensions
+    (Dragonbreath +6 · Chaos Crown +14 · Dragonheart +12 · Cataclysm +16). A costly emit that empties you also
+    silences the aura (the whole skill goes dormant until mana recovers). **Passive regen is cut to a tight
+    1 MP/s starting rate** (was ~9/s) so even the base aura net-drains; `+MP regen` cards loosen it over a run.
+    A toggled god skill is **one evolving ability**: toggling it (or it going dormant) hides the **whole**
+    skill — base aura *and* its current emit — and the HUD chip shows the skill's **current evolution**
+    name/icon and live cost (`1.7/s +10`), since an evolution replaces the base (Burning Body → Firebloom →
+    Dragonbreath…).
   - **Phase 3 — toggle your auto-casts on hotkeys 1–9** (in the order you acquire them; default ON). A small
     **chip row by the MP bar** shows each owned god skill: its key, icon, live mp/s cost, and state. When mana
     can't cover everything, skills **starve lowest-key-last** — your core (key 1) keeps running while the

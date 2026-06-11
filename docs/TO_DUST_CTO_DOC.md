@@ -270,9 +270,13 @@ The god layer no longer imbues active skills; it grants **class-agnostic auto-fi
     so even one god-skill aura (~1.67/s) net-drains the pool. `wildBuffs.mpRegenAdd` cards loosen it over a run.
     Regen is suppressed while whirlwind is active (it drains instead); god-skill drain is *layered* on regen
     (not suppressed) — net = regen − Σ(active drains).
-  - *God-skill drain:* each owned skill has an **`mpCost` (mp/sec)** key in its registry `base`/`waveStep`/
-    `formStep`, so it rank-scales through the *same* `gGodFireParam` path as damage (the rank-up card pours
-    every step key — no apply-site change for a new param). Burning Body = 5 mp/3 s (~1.67/s) base → ~2.92/s maxed.
+  - *God-skill drain — hybrid (drain tracks on-screen effects):* a **flat continuous aura drain** + a
+    **per-emit chunk**. The continuous part is a registry **`mpCost` (mp/sec)** in `fire.base` (Burning Body
+    `1.67` = 5 mp/3 s, *flat* across ranks), read by `gGodFireParam` and paid per-frame in the dispatcher.
+    The per-emit part is **`mpEmit`** on each Form's `fire` block (Firebloom ring 8 · Cinderburst nova 10),
+    overridable per Ascension leaf (Dragonbreath 6 · Chaos Crown 14 · Dragonheart 12 · Cataclysm 16), charged
+    as a flat chunk in `gTickBurningBody` the frame an emit fires (`gGodSkillEmitCost(p,id)` mirrors the lookup
+    for HUD/Sim). A big emit can empty you → the per-second base then can't be paid → whole skill dormant.
   - *Payment + toggles:* `gUpdateGodSkills` is the **central pay-then-fire** site — it pays each owned skill's
     `mpCost*dt/60` **in hotkey order (1→9)** before dispatching its tick, so on starvation the **last-toggled**
     skills go **dormant** (skip fire+drain, `p.godSkillDormant[id]`) and **auto-resume** when mana recovers; the

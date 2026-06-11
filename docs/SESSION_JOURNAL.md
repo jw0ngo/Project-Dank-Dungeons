@@ -44,6 +44,12 @@ Each entry captures: what was built, what broke badly, and what the root cause t
   base aura glow churned on. Added `gGodSkillRunning(p,id)` (owned ∧ on ∧ not-dormant) as the one predicate the
   fire/drain AND the draw share. (3) **Chip always said "Burning Body"** — added `gGodSkillDisplay` so the label
   shows the *current evolution* (Ascension ▸ Form ▸ base), since an evolution replaces what it grew from.
+  (4) **Drain should track on-screen effects, not be a flat per-second number** (Josh) — reworked to a
+  **hybrid**: flat continuous aura `mpCost` (5 mp/3 s, now *flat* across ranks — dropped the per-rank mpCost
+  scaling) **+ a per-emit `mpEmit` chunk** charged in `gTickBurningBody` when a burst/ring fires (Cinderburst
+  +10/nova, etc.; leaf overrides Form). So mana visibly chunks down with the effect. *Lesson: when a cost
+  should "feel" like the action, split it into a continuous floor + a per-event charge at the event's
+  commit point, and surface both on the HUD (`1.7/s +10`) so the number reads as the thing you see.*
 
 ### Decisions / lessons
 - **Where to put a per-second drain: pay centrally in the dispatcher, not inside each skill's tick.** The
