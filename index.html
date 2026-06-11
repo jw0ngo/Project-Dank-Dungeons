@@ -8884,6 +8884,8 @@ function gDrawRock(k){
 const TREE_BASE = 300;        // px draw-width at scale 1.0 (visible tree ≈ 0.93× this tall — see TREE_FOOT)
 const TREE_FOOT = 0.93;       // share of drawn height ABOVE the foot line (measured: opaque base sits ~0.93 down)
 const TREE_FADE_ALPHA = 0.3;  // canopy alpha when it's occluding the player (so it never hides them) — knob
+const TREE_FADE_BLEND = 0.24; // height fraction over which opaque base → faded canopy blends on a gradient (knob)
+let _treeFadeCv = null, _treeFadeCx = null;  // reused offscreen for the canopy-fade gradient mask
 function gDrawTree(t){
   const sx=t.wx-camX, sy=t.wy-camY;
   const rec = gArtReg['world.tree.'+t.variant];
@@ -8901,28 +8903,36 @@ function gDrawTree(t){
   t._a = (t._a==null ? 1 : t._a) + (want - (t._a==null ? 1 : t._a))*0.18;  // ease toward target alpha
   const prevA = gctx.globalAlpha;
   const dx = sx-w/2, dy = sy-h*TREE_FOOT;
-  const drawBody = (alpha)=>{
-    gctx.globalAlpha = prevA * alpha;
-    if(ready){
-      gctx.imageSmoothingEnabled=true;
-      gctx.drawImage(rec.img, dx, dy, w, h);
-    } else {
-      // Procedural fallback — a green canopy blob on a trunk, foot-anchored at sy
-      gctx.fillStyle='#3a2a12'; gctx.fillRect(sx-w*0.05, sy-w*0.45, w*0.1, w*0.45);
-      gctx.fillStyle='#2a5810'; gctx.beginPath(); gctx.ellipse(sx, sy-w*0.6, w*0.4, w*0.45, 0, 0, Math.PI*2); gctx.fill();
-    }
-  };
-  drawBody(t._a);
-  // When faded for occlusion, keep the BASE BAND (the roots/rocks where the hitbox lives) fully opaque, so the
-  // player can still see exactly where the collision is. The band height matches the gRCTrees ellipse extent.
-  if(t._a < 0.98){
-    const band = w*TREE_BASE_RY_FRAC*2;   // = collision ellipse vertical span (foot up by 2·ry)
-    gctx.save();
-    gctx.beginPath();
-    gctx.rect(dx, sy - band, w, band + h*(1-TREE_FOOT) + 2);   // base band from above the foot down past it
-    gctx.clip();
-    drawBody(1);
-    gctx.restore();
+  if(ready && t._a < 0.985){
+    // Faded: bake a VERTICAL alpha gradient on an offscreen so opaque base → translucent canopy blends
+    // smoothly (no hard seam). destination-in multiplies the art's alpha by the gradient. The opaque zone
+    // is the base band (where the hitbox is); it ramps up to the faded canopy over TREE_FADE_BLEND.
+    const iw=rec.img.width, ih=rec.img.height;
+    if(!_treeFadeCv){ _treeFadeCv=document.createElement('canvas'); _treeFadeCx=_treeFadeCv.getContext('2d'); }
+    if(_treeFadeCv.width!==iw||_treeFadeCv.height!==ih){ _treeFadeCv.width=iw; _treeFadeCv.height=ih; }
+    const cx=_treeFadeCx;
+    cx.setTransform(1,0,0,1,0,0); cx.globalCompositeOperation='source-over'; cx.globalAlpha=1;
+    cx.clearRect(0,0,iw,ih); cx.drawImage(rec.img,0,0);
+    cx.globalCompositeOperation='destination-in';
+    const baseTop = TREE_FOOT - TREE_BASE_RY_FRAC*2;            // top of the opaque base band (height fraction)
+    const fadeEnd = Math.max(0, baseTop - TREE_FADE_BLEND);     // above here → fully faded
+    const g=cx.createLinearGradient(0,0,0,ih);
+    g.addColorStop(0, `rgba(0,0,0,${t._a})`);
+    g.addColorStop(fadeEnd, `rgba(0,0,0,${t._a})`);
+    g.addColorStop(Math.min(1,baseTop), 'rgba(0,0,0,1)');
+    g.addColorStop(1, 'rgba(0,0,0,1)');
+    cx.fillStyle=g; cx.fillRect(0,0,iw,ih);
+    cx.globalCompositeOperation='source-over';
+    gctx.globalAlpha=prevA; gctx.imageSmoothingEnabled=true;
+    gctx.drawImage(_treeFadeCv, dx, dy, w, h);
+  } else if(ready){
+    gctx.globalAlpha=prevA; gctx.imageSmoothingEnabled=true;
+    gctx.drawImage(rec.img, dx, dy, w, h);
+  } else {
+    // Procedural fallback (art not loaded yet) — simple faded blob, no gradient
+    gctx.globalAlpha=prevA*t._a;
+    gctx.fillStyle='#3a2a12'; gctx.fillRect(sx-w*0.05, sy-w*0.45, w*0.1, w*0.45);
+    gctx.fillStyle='#2a5810'; gctx.beginPath(); gctx.ellipse(sx, sy-w*0.6, w*0.4, w*0.45, 0, 0, Math.PI*2); gctx.fill();
   }
   gctx.globalAlpha = prevA;
 }
