@@ -113,10 +113,10 @@ def main():
             i = j + 4 if j != -1 else i + 1
     print(f'\nAPPLIED: moved {len(moves)} files, rewrote {len(rewrites)} manifest paths.')
     if bad:
-        print(f'  ⚠ {len(bad)} manifest path(s) DO NOT resolve to a file:')
+        print(f'  [WARN] {len(bad)} manifest path(s) DO NOT resolve to a file:')
         for b in sorted(set(bad))[:20]: print('     ', b)
         sys.exit(2)
-    print('  ✓ every assets/' + args.domain + '/ path in index.html resolves to a real file.')
+    print('  [OK] every assets/' + args.domain + '/ path in index.html resolves to a real file.')
     print('  Next: node --check the extracted <script>, then python dev.py → confirm sprites render.')
 
 
