@@ -49,9 +49,15 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
   separate open-field scatter — placement now samples FOREST tiles (`TREE_DENSITY=0.10` per forest tile,
   seeded), and the `TILE_TREE` tile draw became **shaded forest floor** (procedural canopies + the
   `_TC_TREE_*` palettes deleted). Slow-zone/walkability unchanged (still keyed off the tile id). **Live knobs
-  for Josh to tune:** `TREE_DENSITY` (forest density), `TREE_BASE` (150px draw size), per-tree `scale`
-  0.7–1.1. **Follow-up available:** trunk-base collision via a `gRC`-style pass. Visual tuning pending Josh's
-  eyeball in `python dev.py`. Browser canary (`Sim.batch`) not run (render/gen-only, no sim-step change).
+  for Josh to tune:** `TREE_DENSITY` (forest density), `TREE_BASE` (draw size), per-tree `scale` 0.7–1.1.
+  **Follow-ups now done (Josh, 2026-06-12):** (1) **trunk collision** — `gRCTrees` (mirrors `gRCRocks`) with a
+  player-sized trunk circle (radius = `TREE_BASE·scale·TREE_TRUNK_FRAC`, so it tracks draw size), wired into
+  all 4 player collision paths (walk/dash/heavy-lunge/swing-lunge); player-only (enemies still pass through —
+  available extension). (2) **canopy fade** — in `gDrawTree`, a tree that draws in front of the player and
+  whose canopy box covers the player's foot eases to `TREE_FADE_ALPHA` (0.3) so it never hides the hero
+  (eased per-tree via `t._a`; render-only). (3) **2× size** — `TREE_BASE` 150→300 (density left at 0.10; the
+  small/sparse trunks keep it walkable — drop `TREE_DENSITY` if the canopy reads too thick). Browser canary
+  (`Sim.batch`) not run (render + player-collision only, no sim-step coupling).
   <details><summary>detail (render spec)</summary>
 
   Art committed: `assets/world/tree-0..8.png` (9 interchangeable tree variants — oaks, a willow (#3),
