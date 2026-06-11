@@ -41,11 +41,7 @@ Phased trigger-swap; build order proves the pattern cheapest-first.
 - [ ] **Migration** — `queued` `[ENG]` · whirlwind/dash/heavy revert to plain; **Dance of Fire retire-and-park** (decided, no flag).
 - **No open questions** — spec is zero-question as of 2026-06-11.
 
-### Item 0 — Player animation pass *(roadmap #0, pre-greenlit)*
-- [x] **Walk** — `done` `[ART]/[ENG]` · 8 facings shipped v0.4.0.
-- [x] **Dash** — `done` `[ENG]` · 8-dir cutouts wired (`char.playerdash.<dir>`, commit `adf291d`).
-- [x] **Heavy windup** — `done` `[ENG]` · 8-dir telegraph wired (`char.playerheavywindup.<dir>`, commit `adf291d`).
-- **→ [PM] all three legs shipped — re-status the roadmap item (close item 0 / fold to changelog).**
+*Item 0 (player animation pass — walk · dash · heavy windup) closed `shipped` 2026-06-11 (playtested OK).*
 
 ---
 

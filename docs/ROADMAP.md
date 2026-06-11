@@ -31,7 +31,7 @@ Boreas (item 5) stays parked.
 
 | # | What we're building | Status | Size | Why it matters |
 |---|---|---|---|---|
-| **0** | **Player animation pass** — directional walk, dash poses, heavy-attack windup | 🔧 In progress (pre-greenlit) | Ongoing | Game feel + the *weighty-combat* directive made visible; runs alongside the queue |
+| **0** | **Player animation pass** — directional walk, dash poses, heavy-attack windup | ✅ Shipped (2026-06-11 — playtested OK) | Ongoing | Game feel + the *weighty-combat* directive made visible |
 | **0b** | **Combat card pass** — per-skill dmg cards (Swing/Heavy) + Heavy: Reach + **pool-wide cap removal** | ✅ Shipped (v0.5.0) | Quick | Build identity in the draft + lucky-run variance; RNG governs (caps removed) |
 | **0c** | **Patron Cards** — patron-gated draft cards (Cilia burn set: explode / duration / tick dmg) | ✅ Shipped (Unreleased) | Session | Your god choice reshapes your draft; reusable per-god system serving god-identity |
 | **1** | **Make late-game dangerous** — enemies scale harder + glow yellow→red as they get deadly | ✅ Shipped (Unreleased) — playtested OK | Multi-session | Fixes the flat difficulty curve (playtest weak point #1) |
@@ -43,37 +43,6 @@ Boreas (item 5) stays parked.
 ---
 
 ## Now — what engineering builds next (in this order)
-
-### 0. Player animation pass — walk · dash · heavy-attack windup
-
-`🔧 in-progress` (pre-greenlit game-feel polish; no formal gate) · **Size:** ongoing, ships incrementally · **Pillars:** game feel, mastery · **Art:** player pose/anim sheets (Artist-owned)
-
-**What:** A hand-drawn animation pass on the player's core movement and committed actions —
-directional **walk cycles** (✅ all 8 facings, shipped v0.4.0), a **dash pose** sheet, and a
-**heavy-attack windup** telegraph. Animation on already-shipped skills, so it's polish — not a new
-system, no approval gate.
-
-**Why:** Serves pillar #1 directly, and the heavy-windup is the **weighty-combat standing directive**
-(Josh, 2026-06-08) made *visible* — a committed swing should *look* committed before it lands, so
-whiffing reads as the exposed, planted moment it's meant to be. This runs **alongside** the 1–4 queue
-(Artist + wiring), not ahead of it — the approved systemic work below is unchanged.
-
-<details>
-<summary>🔧 Build notes (engineering)</summary>
-
-- **Walk:** ✅ shipped v0.4.0 — `char.playerwalk{1..4}.<dir>`, gated by `PLAYER_WALK_OCT`, driven by
-  `p.walkFrame` (network-synced). `tools/slice-walk-cycle.py` is the slicer.
-- **Dash:** ✅ shipped — 8-dir cutouts wired (`char.playerdash.<dir>`, commit `adf291d`), selected on the
-  dash state in `gDirBody`.
-- **Heavy windup:** ✅ shipped — 8-dir telegraph poses wired (`char.playerheavywindup.<dir>`, commit
-  `adf291d`), selected on `p.heavyWindingUp`, scaled by `WINDUP_DRAW_MULT` (1.07) / `WINDUP_PLANT` (0.14)
-  from `tools/check-pose-scale.py`. The committed-swing telegraph is now visible per the weighty-combat
-  directive. **All three legs of item 0 (walk · dash · windup) are now shipped — PM to formally re-status.**
-- **Handoff rule:** Artist delivers sheets + `ART_MANIFEST` snippet; engineer is sole editor of
-  `index.html` and owns the wiring (per `CLAUDE.md` role boundary).
-</details>
-
----
 
 ### 0b. Combat card pass — per-skill damage cards + Heavy: Reach retarget
 
