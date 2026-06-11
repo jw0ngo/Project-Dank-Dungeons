@@ -47,9 +47,14 @@ Each entry captures: what was built, what broke badly, and what the root cause t
   (4) **Drain should track on-screen effects, not be a flat per-second number** (Josh) — reworked to a
   **hybrid**: flat continuous aura `mpCost` (5 mp/3 s, now *flat* across ranks — dropped the per-rank mpCost
   scaling) **+ a per-emit `mpEmit` chunk** charged in `gTickBurningBody` when a burst/ring fires (Cinderburst
-  +10/nova, etc.; leaf overrides Form). So mana visibly chunks down with the effect. *Lesson: when a cost
-  should "feel" like the action, split it into a continuous floor + a per-event charge at the event's
-  commit point, and surface both on the HUD (`1.7/s +10`) so the number reads as the thing you see.*
+  +10/nova, etc.; leaf overrides Form). So mana visibly chunks down with the effect. (5) **Hard-gate it**
+  (Josh) — emits were firing for free at empty mana. Moved from a smooth per-frame drain to **discrete,
+  affordability-gated charges**: the base is a **5-MP lump every 3 s** (`p._bbCostTimer`, `BB_AURA_INTERVAL`)
+  that, if unaffordable, takes the whole skill dormant; each emit is gated `if(mp<emitCost) return` (skip the
+  beat, aura keeps running). The dispatcher stopped doing per-frame payment — charges now live in the tick,
+  still in key order. *Lesson: when a cost should "feel" like the action, charge it as a discrete lump at the
+  event's commit point AND gate the event on affording it (no effect ⇒ no drain ⇒ no effect), rather than a
+  smooth drain that floors at 0 and lets the effect fire for free; surface both on the HUD (`1.7/s +10`).*
 
 ### Decisions / lessons
 - **Where to put a per-second drain: pay centrally in the dispatcher, not inside each skill's tick.** The

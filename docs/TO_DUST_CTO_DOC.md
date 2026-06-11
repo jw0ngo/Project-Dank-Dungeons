@@ -270,17 +270,20 @@ The god layer no longer imbues active skills; it grants **class-agnostic auto-fi
     so even one god-skill aura (~1.67/s) net-drains the pool. `wildBuffs.mpRegenAdd` cards loosen it over a run.
     Regen is suppressed while whirlwind is active (it drains instead); god-skill drain is *layered* on regen
     (not suppressed) — net = regen − Σ(active drains).
-  - *God-skill drain — hybrid (drain tracks on-screen effects):* a **flat continuous aura drain** + a
-    **per-emit chunk**. The continuous part is a registry **`mpCost` (mp/sec)** in `fire.base` (Burning Body
-    `1.67` = 5 mp/3 s, *flat* across ranks), read by `gGodFireParam` and paid per-frame in the dispatcher.
-    The per-emit part is **`mpEmit`** on each Form's `fire` block (Firebloom ring 8 · Cinderburst nova 10),
-    overridable per Ascension leaf (Dragonbreath 6 · Chaos Crown 14 · Dragonheart 12 · Cataclysm 16), charged
-    as a flat chunk in `gTickBurningBody` the frame an emit fires (`gGodSkillEmitCost(p,id)` mirrors the lookup
-    for HUD/Sim). A big emit can empty you → the per-second base then can't be paid → whole skill dormant.
-  - *Payment + toggles:* `gUpdateGodSkills` is the **central pay-then-fire** site — it pays each owned skill's
-    `mpCost*dt/60` **in hotkey order (1→9)** before dispatching its tick, so on starvation the **last-toggled**
-    skills go **dormant** (skip fire+drain, `p.godSkillDormant[id]`) and **auto-resume** when mana recovers; the
-    core (key 1) keeps running. A god skill is **one evolving ability** — `gGodSkillRunning(p,id)` (owned ∧ on ∧
+  - *God-skill drain — gated discrete chunks (drain tracks on-screen effects, and you must afford each):*
+    charges happen **inside the tick** as affordability-gated lumps, not a smooth per-frame drain. **Base aura:**
+    a registry **`mpCost` (mp/sec)** in `fire.base` (Burning Body `5/3`, *flat* across ranks) is charged as a
+    lump of `mpCost × BB_AURA_INTERVAL/60` = **5 MP every 3 s** (`p._bbCostTimer`); if `mp < chunk` the WHOLE
+    skill goes **dormant** (no aura, no emit) and the timer holds so it charges the instant mana returns.
+    **Per-emit:** **`mpEmit`** on each Form's `fire` block (Firebloom ring 8 · Cinderburst nova 10), overridable
+    per Ascension leaf (Dragonbreath 6 · Chaos Crown 14 · Dragonheart 12 · Cataclysm 16), charged when an emit
+    fires — **gated**: `if(mp < emitCost) return` skips the emit (the already-paid aura keeps running).
+    `gGodSkillEmitCost(p,id)` mirrors the lookup for HUD/Sim. `mpCost` is mp/sec only for the HUD's per-second
+    display (the real charge is the 5-MP lump).
+  - *Dispatch + toggles:* `gUpdateGodSkills` runs owned, toggled-on skills **in hotkey order (1→9)** and lets
+    each tick charge its own gated chunks — so lower-key skills charge first and, under pressure, the
+    **last-toggled** starve first (`p.godSkillDormant[id]`, defaulted false in the dispatcher, set true by a
+    tick that can't pay its base). A god skill is **one evolving ability** — `gGodSkillRunning(p,id)` (owned ∧ on ∧
     not-dormant) is the single predicate the fire/drain AND the aura draw (`gDrawBurningBodyAura`) share, so a
     toggle/starve hides the **whole** skill (base aura + emit), not half. `gGodSkillDisplay(p,id)` returns the
     **current evolution's** name/icon (Ascension ▸ Form ▸ base) for the HUD. Per-player state: `godSkillOrder`

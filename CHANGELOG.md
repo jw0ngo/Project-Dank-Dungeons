@@ -17,13 +17,14 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
     sustains only ~5.5 s of spin. To keep the rarer, costlier spin worth committing to, its **payoff rose with
     it** — damage per hit `22→30` and hit radius `36→44`. Net benchmark: **1 leap + ~3 s of whirlwind ≈ empties
     a fresh 100 pool.** (Swing stays free; dash/heavy cooldowns left as-is pending playtest.)
-  - **Phase 2 — God Skills drain mana dynamically, tracking what's on screen.** Two layers: a **flat
-    continuous aura drain** (Burning Body = **5 mp / 3 s**, steady while lit) **plus a per-emit chunk** charged
-    the instant a discrete effect fires — so mana visibly drops in step with the action. Cinderburst's nova
-    costs **+10 MP/detonation**, Firebloom's ring **+8/wave**, scaling up for the rank-10 Ascensions
-    (Dragonbreath +6 · Chaos Crown +14 · Dragonheart +12 · Cataclysm +16). A costly emit that empties you also
-    silences the aura (the whole skill goes dormant until mana recovers). **Passive regen is cut to a tight
-    1 MP/s starting rate** (was ~9/s) so even the base aura net-drains; `+MP regen` cards loosen it over a run.
+  - **Phase 2 — God Skills drain mana dynamically, tracking what's on screen — and you must afford it.** Two
+    gated charges: a **base-aura chunk** (Burning Body = **5 MP / 3 s**) **plus a per-emit chunk** the instant a
+    discrete effect fires, so mana drops in step with the action. **Both are hard-gated** — if you can't afford
+    a charge, that effect simply does not happen: below 5 MP the whole skill goes **dormant** (no aura, no
+    emit); and an individual burst you can't pay for is **skipped** (you miss that beat) while the aura keeps
+    running. Emit costs: Cinderburst nova **+10 MP**, Firebloom ring **+8**, scaling up for the Ascensions
+    (Dragonbreath +6 · Chaos Crown +14 · Dragonheart +12 · Cataclysm +16). **Passive regen is cut to a tight
+    1 MP/s starting rate** (was ~9/s); `+MP regen` cards loosen it over a run.
     A toggled god skill is **one evolving ability**: toggling it (or it going dormant) hides the **whole**
     skill — base aura *and* its current emit — and the HUD chip shows the skill's **current evolution**
     name/icon and live cost (`1.7/s +10`), since an evolution replaces the base (Burning Body → Firebloom →

@@ -3854,13 +3854,12 @@ function gUpdateGodSkillHud(){
   }).join('');
 }
 
-// Dispatch + PAY the patron's owned auto-fire abilities — ticked once per frame from gUpdatePlayer for
-// the LOCAL player only (each client owns/ticks its own; FX/damage outcomes sync via _frSeq). Item 7:
-// each skill drains its per-second mpCost (rank-scaled via gGodFireParam) BEFORE it fires, paid in KEY
-// ORDER (1→9), so when mana can't cover everything the LAST-toggled skills go dormant first and the core
-// ones keep running. A skill that's toggled off — or can't be paid this frame — is skipped (no fire, no
-// drain) and auto-resumes once regen restores enough mana. Net passive = regen − Σ(active drains), so
-// over-committing bleeds the pool even while idle: the pressure that makes the toggle a real decision.
+// Dispatch the patron's owned auto-fire abilities — ticked once per frame from gUpdatePlayer for the LOCAL
+// player only (each client owns/ticks its own; FX/damage outcomes sync via _frSeq). Item 7: mana costs are
+// now charged INSIDE each tick as discrete, affordability-GATED chunks (a base-aura chunk + a per-emit
+// chunk) — if you can't afford a chunk, the effect doesn't happen (the tick sets godSkillDormant). The
+// dispatcher just runs owned, toggled-on skills in KEY ORDER (1→9), so lower-key skills charge first and,
+// under mana pressure, the LAST-toggled ones starve first. Toggled-off → skipped (not running, not dormant).
 function gUpdateGodSkills(p, dt){
   if(p !== gPlayer || p.dead) return;
   const order = gSyncGodSkillOrder(p), off = p.godSkillOff || {};
@@ -3869,14 +3868,11 @@ function gUpdateGodSkills(p, dt){
     if(!gOwnsGodSkill(p, id)) continue;
     const tree = gGodSkillTree(p, id); if(!tree || !tree.fire) continue;
     if(off[id]){ p.godSkillDormant[id] = false; continue; }   // toggled OFF → not running (distinct from dormant)
-    const cost = gGodFireParam(p, id, 'mpCost') * dt / 60;     // registry mpCost is mp/SEC → this frame's spend
-    if(p.mp < cost){ p.godSkillDormant[id] = true; continue; } // starved → dormant; resumes when mana recovers
-    p.mp -= cost;
-    p.godSkillDormant[id] = false;
+    p.godSkillDormant[id] = false;                            // default running; the tick flips it true if it can't pay its base
     switch(tree.fire.kind){
       case 'burningBody': gTickBurningBody(p, dt, id, tree); break;
       // 'distance' (Trail of Embers) and 'interval+autotarget' (Pyroclasm) land in the next slice — each
-      // carries an mpCost in its registry entry, so this pay-then-fire gate covers them with no new code.
+      // charges its own gated chunks the same way, so this dispatcher needs no per-skill change.
     }
   }
 }
@@ -3889,6 +3885,19 @@ function gUpdateGodSkills(p, dt){
 // ground at your feet. All damage is standalone (FR_BASE_DMG-scaled), reusing the shipped ring + grounds.
 function gTickBurningBody(p, dt, id, tree){
   const dbuf = (p.wildBuffs && (1 + (p.wildBuffs.damagePct || 0) / 100)) || 1;
+
+  // (0) Base mana cost — a GATED chunk: Burning Body charges its base aura cost (mpCost mp/s × the
+  //     BB_AURA_INTERVAL window = 5 MP per 3s) as one lump when the cost timer comes due. If you can't
+  //     afford the chunk, the WHOLE skill goes dormant — no aura, no emit — until mana recovers (Josh:
+  //     "if you don't have 5mp, Burning Body shouldn't run"). The timer isn't reset until you can pay, so
+  //     it charges the instant mana returns.
+  const baseCost = gGodFireParam(p, id, 'mpCost') * BB_AURA_INTERVAL / 60;   // 5/3 mp/s × 3s = 5 MP
+  p._bbCostTimer = (p._bbCostTimer || 0) - dt;
+  if(p._bbCostTimer <= 0){
+    if(p.mp < baseCost){ if(p.godSkillDormant) p.godSkillDormant[id] = true; return; }   // can't afford base → dormant, do nothing
+    p.mp -= baseCost;
+    p._bbCostTimer = BB_AURA_INTERVAL;
+  }
 
   // (1) Base ignite-aura — runs from rank 1, independent of any Form.
   p._bbAura = (p._bbAura || 0) - dt;
@@ -3922,13 +3931,13 @@ function gTickBurningBody(p, dt, id, tree){
   if(p._bbTimer > 0) return;
   p._bbTimer = interval;
 
-  // Per-emit mana cost (item 7) — each discrete burst/ring costs a chunk ON TOP of the continuous aura
-  // drain, so mana visibly drops in step with the effect on screen (Cinderburst nova = 10 MP/detonation).
-  // The Ascension leaf overrides its Form's emit cost (a colossal Cataclysm costs more than base Cinderburst).
-  // Floors at 0; sustained inability to pay the per-second base then takes the WHOLE skill dormant next
-  // frame (gUpdateGodSkills) — so a costly emit that empties you also silences the aura until mana recovers.
+  // Per-emit mana cost (item 7) — each discrete burst/ring costs a chunk ON TOP of the base aura, so mana
+  // drops in step with the effect on screen (Cinderburst nova = 10 MP/detonation; leaf overrides its Form).
+  // GATED: if you can't afford the chunk, the emit does NOT fire (you just miss this beat — the base aura,
+  // already paid above, keeps running). The emit timer was reset above, so the next attempt is one interval out.
   const emitCost = (leaf && leaf.mpEmit != null) ? leaf.mpEmit : (fdef.fire.mpEmit || 0);
-  if(emitCost > 0) p.mp = Math.max(0, p.mp - emitCost);
+  if(p.mp < emitCost) return;       // can't afford the emit → skip it (no fire, no charge)
+  if(emitCost > 0) p.mp -= emitCost;
 
   const novaScale  = (leaf && leaf.novaScale) || 1;
   const dmg        = Math.max(1, Math.round(gGodFireParam(p, id, 'emitDmg') * FR_DMG_MULT * dbuf * novaScale));
@@ -6258,6 +6267,7 @@ const AURA_RADIUS       = 64;   // base ignite-aura radius (px ~2 tiles): enemie
 const AURA_DMG          = 4;    // aura contact damage per tick
 const AURA_TICK         = 24;   // frames between aura ticks (~0.4s)
 const AURA_BURN_FRAMES  = 120;  // burn duration the aura applies (2s)
+const BB_AURA_INTERVAL  = 180;  // item 7: frames between Burning Body's base-aura mana charges (3s) — the "5mp/3s" base, charged as a gated chunk
 const BB_RING_INTERVAL  = 300;  // Firebloom: an expanding ring every 5s
 const BB_BURST_INTERVAL = 240;  // Cinderburst: a detonation nova every 4s
 const BB_NOVA_SPEED     = 13;   // Cinderburst nova expansion (fast = a detonation read, not a slow sweep)
@@ -13893,7 +13903,7 @@ const IMBUE_PATHS = {
         kind:'burningBody', timerKey:'_bbTimer',
         base:   { auraRadius:AURA_RADIUS, auraDmg:AURA_DMG, auraBurn:AURA_BURN_FRAMES,
                   emitDmg:FR_BASE_DMG, emitRange:FR_RANGE_TILES, burnFrames:FR_BURN_FRAMES,
-                  mpCost:1.67 },  // item 7: FLAT continuous aura drain = 5mp/3s (mp/SEC; /60 per frame). Stays flat across ranks — the DYNAMIC drain lives in per-emit mpEmit (below), so mana tracks on-screen effects.
+                  mpCost:5/3 },   // item 7: base aura cost = 5 MP / 3s. mp/SEC (=5/3) for HUD display; the actual charge is a GATED 5-MP chunk every BB_AURA_INTERVAL (won't run without 5 MP). Flat across ranks — dynamism is in per-emit mpEmit (below).
         floors: { auraRadius:40, emitInterval:90 },
         caps:   { emitRange:12 },
       },
