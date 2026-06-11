@@ -352,8 +352,8 @@ It's a deliberate, intentional divergence from pure VS auto-fire (re-adds the ag
 **Phase 2** (god-skill per-second drain, rank-scaled) → **Phase 3** (toggle/hotkey + HUD + Sim hooks). Detail,
 starting numbers, and the engineering grounding are in the spec.
 
-**Open forks (Josh's call — flagged in the spec, defaults chosen so engineering isn't blocked):** starvation
-behaviour (dormant-resume *[rec]* vs hard auto-off) and starve order (priority-by-key *[rec]* vs all-equal).
+**Resolved (Josh, 2026-06-11):** mana-starved auto-casts go **dormant + auto-resume** (not hard-off), and
+starve **lowest-key-first** (your core skills keep running, marginal ones cut out first). No open forks.
 
 > **Note vs item 2:** Phases 2–3 layer onto the live God-Skill system (item 2); the toggle re-introduces an
 > input hook that item 2's pure auto-fire had dropped — the spec updates the AI-native contract accordingly.

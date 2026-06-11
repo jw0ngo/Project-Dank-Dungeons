@@ -88,8 +88,8 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
     regen (net = regen − Σdrains), so over-committing bleeds the pool even idle.
   - [ ] **Phase 3 — toggle/hotkey + HUD + Sim hooks** — per-player toggle state (acquisition-order key 1–9, default
     ON, assign at acquire `:13691`); `keydown` 1–9 branch; gate `gUpdateGodSkills` (`:3719`) on active/not-dormant;
-    HUD row near the MP bar (`:4233`). **Starvation = dormant-resume, pay in key order** (spec; fork flagged for
-    Josh). **AI-native (required):** add `Sim.toggleGodSkill(n)` + expose per-skill `{key,active,dormant,mpCostPerSec}`
+    HUD row near the MP bar (`:4233`). **Starvation = dormant-resume, pay in key order 1→9** (DECIDED Josh
+    2026-06-11 — no fork). **AI-native (required):** add `Sim.toggleGodSkill(n)` + expose per-skill `{key,active,dormant,mpCostPerSec}`
     + `mp` in `Sim.observe()` — toggles re-add the input hook item 2 had dropped.
 
 - 🔄 ✨ **Item 2 — God Skills** (roadmap #2 `approved` · spec [`specs/god-skills.md`](specs/god-skills.md)) —

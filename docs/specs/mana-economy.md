@@ -95,14 +95,13 @@ progression. Starting numbers (tune by feel):
 
 - **Bind owned God Skills to keys 1–9 in acquisition order.** Key N toggles skill N on/off.
 - **Default on acquire: ON** (no regression — it starts firing immediately, as today) but now toggleable off.
-- **Starvation model (recommended — flag for Josh):** a toggled-on skill that can't be paid this frame goes
-  **dormant** — stops firing + draining, FX fades, its hotkey greys/dims — and **auto-resumes** when regen
-  restores enough mana. The skill stays *toggled-on* (preserves player intent); mana gates actual output.
-  - **Pay in acquisition order (priority):** each frame, subtract drains from current mp **in key order (1→9)**;
-    skills that can't be covered this frame go dormant. So when over-committed, your **last-toggled skills cut out
-    first** and your core ones keep running — intuitive, and only the marginal skill flickers, not all of them.
-  - *Forks (Josh's call):* (a) **dormant-resume** [rec] vs **hard auto-off** (must re-press — fiddly) vs
-    **stutter-all** (everything dies at 0, worst feel). (b) priority-by-key [rec] vs all-equal.
+- **Starvation model (DECIDED, Josh 2026-06-11 — dormant + auto-resume):** a toggled-on skill that can't be paid
+  this frame goes **dormant** — stops firing + draining, FX fades, its hotkey greys/dims — and **auto-resumes**
+  when regen restores enough mana. The skill stays *toggled-on* (preserves player intent); mana gates actual output.
+  - **Pay in acquisition order (DECIDED, Josh 2026-06-11 — lowest key stays):** each frame, subtract drains from
+    current mp **in key order (1→9)**; skills that can't be covered this frame go dormant. So when over-committed,
+    your **last-toggled skills cut out first** and your core ones keep running — only the marginal skill flickers,
+    not all of them.
 - **HUD:** a small skill row near the MP bar (`#gmp`, drawn `:4233`) — each owned god skill as an icon + its
   number key + active/dormant state + its current per-second cost. Mirror the existing skill-cd HUD chips.
 
