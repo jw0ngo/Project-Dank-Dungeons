@@ -18,6 +18,32 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 
 ---
 
+### 2026-06-11 — To make a modal MP-seamless, separate "UI is open" from "the world is frozen" — they were one overloaded flag
+
+- **Principle:** `gPaused` had quietly accreted *four* meanings: UI-open, sim-freeze, input-lock, and
+  damage-immunity. The no-pause level-up only needed the first. The fix wasn't to special-case the modal
+  inside each consumer — it was to **stop the modal from setting the shared flag at all** and let the world
+  keep running. A modal is non-blocking by *not pausing*, not by pausing-then-exempting. (Bonus: the engine
+  already ran the sim during a draft in MP — so "no-pause SP" just meant making SP behave like MP, the
+  cheaper of the two consistencies.)
+- **Why:** the draft logic lived as closures inside `gWildShowStatPick`, rebuilt each call and welded to
+  `gPaused`. Lifting it to module scope (a `gDraft` state object + free functions) decoupled *panel
+  visibility* (`gDraft.open`) from *draft existence* (`gSimDraft`/`gSimEvolution` set whenever a level-up is
+  pending) — so the headless bot resolves drafts without ever opening UI, and the human opens on demand via
+  a queued-count FAB. Closures that capture engine state are the thing that forces a "modal = pause" coupling.
+- **Two mechanics worth reusing:** (1) **large structural region-replace** = write the new block to a temp
+  file and **splice by line range with boundary assertions** (`node` reads lines, asserts the first/last
+  match expectations, replaces), not a 270-line exact-match Edit that one whitespace char defeats. (2)
+  **DOM-overlay ↔ canvas-world unit conversion:** to center the player in the *unblocked* area, measure the
+  panel live (`dock.getBoundingClientRect().width / canvas.getBoundingClientRect().width * VW`) — the ratio
+  survives devicePixelRatio/`gRenderS`/letterboxing that a hardcoded px offset wouldn't.
+- **How to apply:** before making any modal "not pause," grep every reader of the pause flag and list what
+  each *actually* needs (freeze? lock input? immunity? just "a panel is up"?); give the new modal its own
+  boolean and leave the heavy flag for the things that truly stop the world. When a draft/choice must also
+  work headlessly, keep its `gSim*` hook populated by *pending state*, not by *UI being open* — visibility
+  and resolvability are different axes. Ease asymmetrically where it reads as motion (retract at half the
+  open speed felt right; a symmetric snap-back felt jarring).
+
 ### 2026-06-11 — A Pages-only asset 404 with a case-correct commit is a STALE CACHE, not a path bug; and rename only the layer that's actually the art
 
 - **Principle:** When art loads locally but 404s on GitHub Pages (Linux, case-sensitive) while Windows
@@ -237,22 +263,11 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   harness as production code: it mutates shared globals (`_SIM`, the clock, hooks), so its mode toggles
   need the same restore discipline — a harness that dirties the default play state is a real player bug.
 
-### 2026-06-09 — A new standing entity population is a hidden input to every global census
-
-- **Principle:** When you add a large, *persistent* cohort to a shared collection (`gEnemies`), audit
-  every system that does an unfiltered scan/count over that collection. A budget or cap that counts
-  "all of them" will silently misbehave the moment your cohort exists — the bug surfaces in an
-  unrelated subsystem, not in your new code.
-- **Why:** 40 wolf camps spawned ~160 persistent neutral wolves into `gEnemies` at run start. Each
-  wolf was correct in isolation, but the night-siege stream's live-cap census
-  (`for(const e of gEnemies){ if(!e.dead) live++; }`) counted them, pinning `live ≥ cap` so `room`
-  was always 0 — the opening horde dropped, then *zero* stream followed. The regression was emergent:
-  a subsystem that quietly assumed `gEnemies ≈ siege enemies`.
-- **How to apply:** Before shipping a persistent cohort, grep every `for(...of gEnemies)` (and any
-  global counter) and ask at each site, "should my new cohort count here?" Give cohorts a
-  discriminator (`campId`, `isHeld`, `isNeutral`, `isAmbient`) and make each census express *intent*
-  ("siege/threat-relevant"), not mere liveness. The same audit applies to separation grids, despawn
-  sweeps, and any O(n) pass keyed on the shared array.
+### 2026-06-09 — A new standing entity population is a hidden input to every global census — archived
+- Adding a large *persistent* cohort to a shared collection (`gEnemies`) silently breaks any unfiltered
+  scan/count over it (the ~160 neutral wolves pinned the night-siege live-cap). Give cohorts a
+  discriminator and make each census express *intent* ("threat-relevant"), not mere liveness. Full entry:
+  `agents/engineer/archive/2026-06-09-standing-population-global-census.md`.
 
 ### 2026-06-09 — A repo-wide rename is two categories (display text vs frozen compat tokens) — archived
 - Split occurrences into rename-freely **display text** vs **never-touch frozen tokens** (seed prefix `DF1`,
