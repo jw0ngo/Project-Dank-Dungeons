@@ -18,7 +18,26 @@ lesson: **the principle → why → how to apply.** Quality over volume.
 
 ---
 
-### 2026-06-12 — Design for build *potential*, not prescribed builds: freeze the mechanic, put the variety in the content layer
+### 2026-06-12 — The engineer session builds from your spec in near-real-time; encode directives the moment they land, and expect to re-rank when eng ships ahead of the roadmap
+
+- **Principle:** the PM and engineer sessions run **concurrently and out of sync**, with the spec/tasks as the
+  live contract — so a verbal directive from Josh isn't "captured for later," it's a **near-real-time hand-off**.
+  This session every design call (chaosfire footprint rule, Chaos Steps, the Dragon–Chaos synergy, the locked mana
+  cost model, the action bar) went chat → spec/TASKS → **engineer-built the same day**: item 7 (all 3 phases) *and*
+  the God-Skill Action Bar I'd approved minutes earlier both shipped before I next looked. The corollary: the
+  roadmap **drifts behind reality fast** (it still said "item 7 approved — cleared for build" after item 7 had
+  shipped), so "read the commits → re-rank" is a recurring, real duty, not housekeeping.
+- **Why:** with two reset-between-session agents sharing one repo, the doc *is* the wire. A directive left only in
+  chat never reaches the engineer; one encoded into the spec with the givens/forks separated (and the cheap-reuse
+  framing surfaced) gets built almost immediately and correctly. And because eng moves fast, a stale roadmap
+  silently mis-points the *next* pull.
+- **How to apply:** (1) When Josh directs something, **write it into the spec/TASKS in the same turn** — don't
+  batch it to session end; the engineer may pull it within minutes. (2) Keep the spec the source of truth and the
+  roadmap a thin pointer, so a fast ship only requires flipping a status, not rewriting detail. (3) **Open every
+  session by reading the commit log**, not just the docs — the docs lag the build; reconcile (mark shipped,
+  re-sequence, surface newly-unblocked work) before proposing. (4) When you approve art-cost work, file the
+  Artist + Engineer hand-offs immediately — this session the engineer wired the action-bar's real-icon *hook*
+  before the icons existed, because the hand-off named the exact `CARD_ICON_ART` contract.
 
 - **Principle (Josh, foundational — "this is how I want you to think of our game systems"):** in a roguelite,
   long-run playability comes from the **breadth of viable builds**, so every system is judged by one question —

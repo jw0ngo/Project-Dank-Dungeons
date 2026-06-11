@@ -7,11 +7,18 @@ engineering builds **approved** items from *Now*, top-down ([`agents/engineer/en
 
 ---
 
-## 📍 Where we are (June 10, 2026)
+## 📍 Where we are (June 12, 2026)
 
 **v0.5.0 is live; a large `[Unreleased]` block is staged** (fix it into the next tag). Both weak points
 the first slice playtest surfaced now have their fixes in the build (item 1 difficulty curve **playtested
 OK**; item 0b/0c level-up depth shipped).
+
+**✅ Shipped 2026-06-12: item 7 (mana economy, all 3 phases) + the God-Skill Action Bar.** Mana is now a real
+shared resource — class costs/CDs rebalanced (run dry early), God Skills drain mana/sec (cost scales with rank,
+no cap → "grow into your power"), and toggleable auto-casts on keys 1–9 with a **WoW-style action bar** (god-coloured
+border state tell, real-icon hook wired). The cost model + the **build-potential north star** (freeze the mechanic,
+put build variety in the card pool — sustain *and* burst both viable) are locked in [`specs/mana-economy.md`](specs/mana-economy.md).
+**Item 6 (heavy-charge lockout) also shipped.** So the active work is now **item 2's remaining God Skills.**
 
 **🔀 Major direction change (Josh, 2026-06-10) — the god layer pivots to auto-firing God Skills.** The
 action-combat system is a **reusable platform** and *To Dust* is **mode one** (MOBA/MMORPG are future modes;
@@ -27,8 +34,11 @@ so gods can no longer imbue active skills. Instead each god grants **class-agnos
 **🔝 Priority re-rank (Josh, 2026-06-11): the mana rework (item 7) goes FIRST, ahead of the new skills.** And
 **the new skills take direction from the mana rework** — Trail of Embers / Pyroclasm get designed + built *after*
 item 7 lands, so they're authored with their per-second `mpCost` + toggle behaviour from the start (not retrofitted).
-So the live build order is: **item 7 (mana) → item 6 (heavy-charge lockout, quick) → item 2 Trail/Pyroclasm.**
-Boreas (item 5) stays parked.
+~~So the live build order is: item 7 (mana) → item 6 → item 2 Trail/Pyroclasm.~~ **DONE — items 6 & 7 shipped
+2026-06-12.** Live build order is now: **item 2 — Trail of Embers → Pyroclasm** (both unblocked; authored with
+their `mpCost` + toggle from the start, as planned) **+ the queued Burning Body enhancements** (Ascension
+refinement: Eye of Chaos + Chaos Steps + Chaos Crown footprint fix; Dragon–Chaos synergy tune). Boreas (item 5)
+stays parked — its unhold trigger ("once God Skills proves out in playtest") nears once item 2 completes + plays well.
 
 ## ⚡ At a glance
 
@@ -38,12 +48,12 @@ Boreas (item 5) stays parked.
 | **0b** | **Combat card pass** — per-skill dmg cards (Swing/Heavy) + Heavy: Reach + **pool-wide cap removal** | ✅ Shipped (v0.5.0) | Quick | Build identity in the draft + lucky-run variance; RNG governs (caps removed) |
 | **0c** | **Patron Cards** — patron-gated draft cards (Cilia burn set: explode / duration / tick dmg) | ✅ Shipped (Unreleased) | Session | Your god choice reshapes your draft; reusable per-god system serving god-identity |
 | **1** | **Make late-game dangerous** — enemies scale harder + glow yellow→red as they get deadly | ✅ Shipped (Unreleased) — playtested OK | Multi-session | Fixes the flat difficulty curve (playtest weak point #1) |
-| **2** | **God Skills** — Cilia's 3 best fire skills become **auto-firing (VS-style)** abilities, class-agnostic, keeping the 10-rank binary-tree evolution | ✅ Approved — cleared for build (**supersedes old Imbue Paths**) | Large, phased | The build-craft spine, now portable across platform modes; fixes boring level-ups (#2) |
+| **2** | **God Skills** — Cilia's 3 best fire skills become **auto-firing (VS-style)** abilities, class-agnostic, keeping the 10-rank binary-tree evolution | 🔄 In-progress — **Burning Body + action bar shipped; Trail of Embers · Pyroclasm + ascension refinements remain** | Large, phased | The build-craft spine, now portable across platform modes; fixes boring level-ups (#2) |
 | **3** | **Wolves stop getting stuck** on their dens + ignore forest slow | ✅ Shipped (v0.5.0) | Quick | Bug fix — unblocks wolf playtesting |
 | **4** | **Wolves hit harder early** | ✅ Shipped (v0.5.0) | Quick | Makes a wolf camp a real risk, not free loot |
 | **5** | **Boreas** — a second god (ice/control) | ⏸️ Held | Multi-session | Parked — the playtest showed we don't need it yet |
 | **6** | **Heavy charge locks out the normal swing** — committing to a heavy means committing | ✅ Shipped (2026-06-11) | Quick | Weighty-combat directive: a committed action must cost you other options |
-| **7** | **Mana economy & skill management** — costs/cooldowns rework so you run dry early; God Skills drain mana/sec; toggle auto-casts to keys 1–9 | ✅ Approved — cleared for build | Multi-session, phased | Makes mana a real resource + a live build-management decision (weighty combat + build depth) |
+| **7** | **Mana economy & skill management** — costs/cooldowns rework so you run dry early; God Skills drain mana/sec; toggle auto-casts to keys 1–9 + WoW-style action bar | ✅ Shipped (2026-06-12, all 3 phases + action bar) | Multi-session, phased | Makes mana a real resource + a live build-management decision (weighty combat + build depth) |
 
 ---
 
@@ -221,10 +231,10 @@ juiced-up elites — hard, but fair and readable.
 
 ### 2. God Skills — Cilia's fire skills become auto-firing abilities
 
-`🔄 in-progress — slice 1 shipped (Unreleased)` (Josh-directed pivot 2026-06-10; **supersedes old "Imbue Paths" active-skill model**) · **Size:** large, phased · **Pillars:** build-craft depth, game feel, mastery
-**Source of truth:** [`specs/god-skills.md`](specs/god-skills.md). (Old active-skill design archived in [`specs/imbue-paths.md`](specs/imbue-paths.md).) **Build order:** ✅ **Burning Body** (slice 1, shipped+feel-tuning) → **Trail of Embers** (movement-emit) → **Pyroclasm** (interval + auto-target).
-> **⏸ Sequenced AFTER item 7 (Josh, 2026-06-11):** the remaining two skills are de-prioritized below the **mana
-> rework (item 7)** and **take direction from it** — design + build Trail/Pyroclasm once mana lands, so each is
+`🔄 in-progress — Burning Body + action bar shipped; Trail/Pyroclasm + refinements remain` (Josh-directed pivot 2026-06-10; **supersedes old "Imbue Paths" active-skill model**) · **Size:** large, phased · **Pillars:** build-craft depth, game feel, mastery
+**Source of truth:** [`specs/god-skills.md`](specs/god-skills.md). (Old active-skill design archived in [`specs/imbue-paths.md`](specs/imbue-paths.md).) **Build order:** ✅ **Burning Body** (slice 1, shipped) → **🔜 Trail of Embers** (movement-emit; Inferno Wake 🔥 = **Chaos Steps**) → **Pyroclasm** (interval + auto-target) → **queued refinements** (Burning Body Ascension: Eye of Chaos + Chaos Crown footprint fix; Dragon–Chaos synergy tune). **Item 7 has shipped — Trail/Pyroclasm are now UNBLOCKED and the live next build.**
+> **✅ Unblocked (was: sequenced AFTER item 7, Josh 2026-06-11):** item 7 (mana) shipped 2026-06-12, so the remaining
+> two skills are **cleared to build now** — authored with their per-second `mpCost` + toggle from the start, as planned. Each is
 > authored with its `mpCost` + toggle from the start rather than retrofitted. Burning Body's mana cost is item 7 Phase 2.
 > **Redirect (Josh, 2026-06-11):** skill 1 "Pyre Waltz" → **Burning Body** — refocused on fire's true identity
 > (**AOE burst + burn → explosions**, *not* movement/pull). Base is an ignite-aura; Forms = **Firebloom** (rings)
@@ -338,8 +348,8 @@ other options, so missing/committing has a real cost. Free-swinging mid-charge m
 
 ### 7. Mana economy & skill management
 
-`✅ approved` (Josh-directed, 2026-06-11) · **Size:** multi-session, phased · **Pillars:** game feel (weighty combat), build-craft depth · **Art:** none (HUD chips reuse existing styling; icon polish is a later Artist follow-up)
-**Source of truth:** [`specs/mana-economy.md`](specs/mana-economy.md).
+`✅ shipped` (2026-06-12 — all 3 phases + the WoW-style God-Skill Action Bar; PM may fold to changelog at next tag) · **Size:** multi-session, phased · **Pillars:** game feel (weighty combat), build-craft depth · **Art:** 3 shared Cilia skill icons pending (Artist; emoji fallback live)
+**Source of truth:** [`specs/mana-economy.md`](specs/mana-economy.md). **Cost model + the build-potential north star (freeze the mechanic, vary via the card pool — sustain & burst both viable) are locked in the spec.** Follow-on (own surface): the **mana-build card expansion** (regen/pool archetypes + a UNIQUE build-defining card class) — PM-lane proposal, sequenced after.
 
 **What:** Mana is a non-issue today — skills cast over and over, and the auto-firing God Skills cost nothing
 and run forever. Make mana a **real, shared resource** that funds both the class kit and the god layer:
