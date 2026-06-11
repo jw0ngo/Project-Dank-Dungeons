@@ -7,6 +7,13 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+### Changed
+- **Favor coins and treasure chests now use their painted art** (was procedural shapes). Dropped Favor
+  surfaces as the gold-coin sprite (with a soft pickup glow + gentle hover); wolf-camp and village chests
+  render as a real chest that swaps **closed → open** when looted, and a still-guarded camp chest reads
+  dim/in-shadow until you clear the pack. Pure render swap — the Favor pickup and chest-loot logic are
+  unchanged.
+
 ## [0.6.0] - 2026-06-11
 
 ### Added

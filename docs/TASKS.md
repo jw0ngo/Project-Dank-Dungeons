@@ -103,15 +103,6 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
   - **Verify:** `node --check` + grep each key + `python dev.py`, all 8 facings, hard-refresh.
   </details>
 
-- ◻️ 🎨 **Wire world props — favor coin + treasure chests** (↳ from ART, 2026-06-10) — new world OBJECTS, no draw hook/entity kind yet (systems work, not just a manifest paste). *(De-dups the old "Favor-coin art" hand-off — the art is committed; this is the wiring + the HUD glyph for the placeholder `✦` in `gDrawFavorOrbs`.)*
-  <details><summary>detail</summary>
-
-  Art committed: `assets/world/favorcoin.png`, `chest-closed.png`, `chest-open.png` (transparent cutouts).
-  Coin = a Favor-currency pickup drop; chest = an interactable that swaps closed→open on open.
-  - **Manifest keys:** `'world.favorcoin':…`, `'world.chest-closed':…`, `'world.chest-open':…` (most town props load via a separate pipeline; only `world.shrine` is a manifest entry today — confirm the load path).
-  - **Raster art:** draw at `devicePixelRatio` (`_prepHiDPICanvas`/`<img>`, not an undersized backing store). Size from the longest side (coin 190×192, chests ~224–256 tall); masters scale up.
-  </details>
-
 - ◻️ 🟢 **Unwired art inventory — cobble tiles + Sanctum props** (audit 2026-06-10) — prepped art committed to `assets/`, zero refs in `index.html`.
   <details><summary>detail</summary>
 
@@ -149,6 +140,7 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 ## ✅ Done (recent track record — prune to git history as it grows)
 
+- **2026-06-11 — World props wired: favor coin + treasure chests** (Engineer, ↳ from ART) — 3 manifest entries (`world.favorcoin`/`chest-closed`/`chest-open`) auto-load via `gInitArt`; `gDrawFavorOrbs` draws the coin sprite (gold pickup glow + gentle bob kept, procedural disc as fallback); both chest draw sites (village `~15159` + wolf-camp `~15204`) route through a shared `_drawChestSprite()` helper (open art once `looted`, else closed; feet-anchored; guarded camp chest dims via reduced alpha; procedural box fallback retained). Pure render-only (gated `inWilderness`, no logic/state) → Sim/MP-safe. `node --check` clean + greps confirm wiring. *Sizing knobs: `FAVORCOIN_PX 22`, `CHEST_PX 30`. **Verify in-game with a hard-refresh** (browser eyeball pending) — reopen if coin/chest scale or anchor reads off.*
 - **2026-06-11 — `char/` reclassed into per-type folders + player→knight class** (Engineer, ↳ from ART) — atomic `reclass-char.py --apply` (250 files moved, 200 paths + 72 keys rewritten, slash/thrust → `fx/knight/`); 16 draw-code edit-groups applied (art layer → `knight`; game-logic `kind:'player'` / `SpriteRegistry('player')` fallback preserved). Verified: all 74 draw-constructed keys resolve to a manifest entry + real file, staged tree case-exact for Pages, `node --check` clean. **Diagnosed Josh's Pages atk/heavy 404 along the way: committed HEAD was already case-correct → stale Pages/CDN cache; the fresh knight paths sidestep it.** Committed atomically (deploy-affecting — awaiting Josh push auth).
 
 - **2026-06-11 — Threat-tier glow look decided** (Artist) — eyes-only, subtle, yellow→red. A full-body tint was prototyped and rejected ("looks terrible"); the eyes-only direction is set and handed to Engineer (lane). *Process lesson: a runtime draw-effect is engineer-owned and must be prototyped in-canvas/in-game, not in an offline raster mock — the Artist sets the look direction + palette, not a simulated render.*

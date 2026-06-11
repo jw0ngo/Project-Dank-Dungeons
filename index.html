@@ -7836,6 +7836,9 @@ const ART_MANIFEST = {
   'char.direwolfatk.s':'assets/char/wolves/direwolf/direwolfatk-s.png',
   'char.direwolfatk.se':'assets/char/wolves/direwolf/direwolfatk-se.png',
   'world.shrine':'assets/world/shrine.png',
+  'world.favorcoin':'assets/world/favorcoin.png',
+  'world.chest-closed':'assets/world/chest-closed.png',
+  'world.chest-open':'assets/world/chest-open.png',
 };
 const gArtReg = Object.create(null);   // key → { img, baked, ready }
 const gTileVarCount = Object.create(null); // tile type name → number of art variants in the manifest
@@ -13282,27 +13285,39 @@ function gUpdateFavorOrbs(dt){
   }
 }
 
+const FAVORCOIN_PX = 22;   // on-ground coin width (px); height from art aspect
 function gDrawFavorOrbs(){
   if(!inWilderness || !gFavorOrbs.length) return;
-  const pulse = 0.7 + 0.3 * Math.sin(Date.now() * 0.005);
+  const t = Date.now();
+  const pulse = 0.7 + 0.3 * Math.sin(t * 0.005);
+  const coin = gArtReg['world.favorcoin'];
+  const haveSpr = coin && coin.ready && coin.img;
   gctx.save();
   for(const orb of gFavorOrbs){
     const sx = orb.wx - camX, sy = orb.wy - camY;
     if(sx < -20 || sx > VW+20 || sy < -20 || sy > VH+20) continue;
     if(gHiddenByFog(orb.wx, orb.wy)) continue;  // hidden in shroud/black
-    // Outer glow
-    gctx.globalAlpha = pulse * 0.5;
+    const bob = Math.sin(t*0.004 + orb.wx)*1.5;   // gentle hover
+    // Soft gold pickup glow (reads as "collect me", kept from the placeholder)
+    gctx.globalCompositeOperation = 'lighter';
+    gctx.globalAlpha = pulse * 0.45;
     gctx.fillStyle = '#ffcc33';
-    gctx.beginPath(); gctx.arc(sx, sy, 8, 0, Math.PI*2); gctx.fill();
-    // Coin disc + rim (reads as a gold coin, vs the XP orb's orange spark)
+    gctx.beginPath(); gctx.arc(sx, sy+bob, 9, 0, Math.PI*2); gctx.fill();
+    gctx.globalCompositeOperation = 'source-over';
     gctx.globalAlpha = 1;
-    gctx.fillStyle = '#b8860b';
-    gctx.beginPath(); gctx.arc(sx, sy, 5, 0, Math.PI*2); gctx.fill();
-    gctx.fillStyle = '#ffd040';
-    gctx.beginPath(); gctx.arc(sx, sy, 3.6, 0, Math.PI*2); gctx.fill();
-    // Specular
-    gctx.fillStyle = '#fff6cc';
-    gctx.beginPath(); gctx.arc(sx-1.2, sy-1.2, 1.3, 0, Math.PI*2); gctx.fill();
+    if(haveSpr){
+      gctx.imageSmoothingEnabled = true;
+      const w = FAVORCOIN_PX, h = w * (coin.img.height/coin.img.width);
+      gctx.drawImage(coin.img, sx - w/2, sy+bob - h/2, w, h);
+    } else {
+      // Procedural fallback: gold coin disc + rim (vs the XP orb's orange spark)
+      gctx.fillStyle = '#b8860b';
+      gctx.beginPath(); gctx.arc(sx, sy+bob, 5, 0, Math.PI*2); gctx.fill();
+      gctx.fillStyle = '#ffd040';
+      gctx.beginPath(); gctx.arc(sx, sy+bob, 3.6, 0, Math.PI*2); gctx.fill();
+      gctx.fillStyle = '#fff6cc';
+      gctx.beginPath(); gctx.arc(sx-1.2, sy+bob-1.2, 1.3, 0, Math.PI*2); gctx.fill();
+    }
   }
   gctx.restore();
 }
@@ -15164,13 +15179,13 @@ function gDrawVillages(){
       const sink=(1-a)*5;
       gctx.save();
       gctx.globalAlpha=a;
-      // Chest body
-      gctx.fillStyle='#6b3a12'; gctx.fillRect(sx-8,sy-5+sink,16,10);
-      gctx.fillStyle='#8a4e1a'; gctx.fillRect(sx-8,sy-5+sink,16,5);
-      // Lid
-      gctx.fillStyle='#7a4418'; gctx.fillRect(sx-8,sy-7+sink,16,4);
-      // Latch
-      gctx.fillStyle='#ffd040'; gctx.fillRect(sx-2,sy-6+sink,4,3);
+      if(!_drawChestSprite(sx,sy,sink,ch.looted)){
+        // Procedural fallback
+        gctx.fillStyle='#6b3a12'; gctx.fillRect(sx-8,sy-5+sink,16,10);
+        gctx.fillStyle='#8a4e1a'; gctx.fillRect(sx-8,sy-5+sink,16,5);
+        gctx.fillStyle='#7a4418'; gctx.fillRect(sx-8,sy-7+sink,16,4);
+        gctx.fillStyle='#ffd040'; gctx.fillRect(sx-2,sy-6+sink,4,3);
+      }
       // Glow — only the unopened "loot me" pulse
       if(!ch.looted){
         const pulse=0.3+0.2*Math.sin(now*0.004+ch.wx);
@@ -15193,6 +15208,19 @@ function _chestDrawAlpha(ch){
   return 1 - (wildRunTimer - ch.lootedAt) / CHEST_FADE_SECS;
 }
 
+// Draw a chest sprite (open art once looted, else closed), feet-anchored so the base
+// rests at the world point (sx,sy) and the open lid grows upward. Caller sets globalAlpha
+// (fade + any guarded-chest dimming). Returns false if the art hasn't loaded → procedural fallback.
+const CHEST_PX = 30;   // on-ground chest width (px); height from art aspect
+function _drawChestSprite(sx, sy, sink, opened){
+  const rec = gArtReg[opened ? 'world.chest-open' : 'world.chest-closed'];
+  if(!rec || !rec.ready || !rec.img) return false;
+  gctx.imageSmoothingEnabled = true;
+  const w = CHEST_PX, h = w * (rec.img.height/rec.img.width);
+  gctx.drawImage(rec.img, sx - w/2, (sy + 6 + sink) - h, w, h);
+  return true;
+}
+
 // Draw the wolf-camp chests. The crescent rock arc renders from the tile layer for free; the
 // chest is the only per-camp overlay — dim/closed while the pack guards it, glowing gold once
 // the den is cleared (the reward beckons). After looting it fades out + despawns (one-time —
@@ -15209,13 +15237,16 @@ function gDrawWolfCamps(){
     const revealed = camp.cleared && !ch.locked;   // bright look (accessible, or just-looted & fading)
     const sink=(1-a)*5;
     gctx.save();
-    gctx.globalAlpha=a;
-    // Chest body
-    gctx.fillStyle = revealed ? '#6b3a12' : '#4a3018'; gctx.fillRect(sx-8,sy-5+sink,16,10);
-    gctx.fillStyle = revealed ? '#8a4e1a' : '#5c3c1e'; gctx.fillRect(sx-8,sy-5+sink,16,5);
-    gctx.fillStyle = revealed ? '#7a4418' : '#523418'; gctx.fillRect(sx-8,sy-7+sink,16,4);
-    // Latch
-    gctx.fillStyle = revealed ? '#ffd040' : '#8a7030'; gctx.fillRect(sx-2,sy-6+sink,4,3);
+    // A still-guarded chest reads dim/in-shadow (reduced alpha); revealed = full bright.
+    gctx.globalAlpha = a * (revealed ? 1 : 0.5);
+    if(!_drawChestSprite(sx,sy,sink,ch.looted)){
+      // Procedural fallback (color-dimmed instead of alpha-dimmed)
+      gctx.globalAlpha = a;
+      gctx.fillStyle = revealed ? '#6b3a12' : '#4a3018'; gctx.fillRect(sx-8,sy-5+sink,16,10);
+      gctx.fillStyle = revealed ? '#8a4e1a' : '#5c3c1e'; gctx.fillRect(sx-8,sy-5+sink,16,5);
+      gctx.fillStyle = revealed ? '#7a4418' : '#523418'; gctx.fillRect(sx-8,sy-7+sink,16,4);
+      gctx.fillStyle = revealed ? '#ffd040' : '#8a7030'; gctx.fillRect(sx-2,sy-6+sink,4,3);
+    }
     // Glow — only the unopened "loot me" pulse on a cleared, un-looted chest
     if(revealed && !ch.looted){
       const pulse=0.35+0.2*Math.sin(now*0.004+ch.wx);
