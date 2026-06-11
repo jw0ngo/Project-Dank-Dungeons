@@ -42,7 +42,7 @@ Boreas (item 5) stays parked.
 | **3** | **Wolves stop getting stuck** on their dens + ignore forest slow | ✅ Shipped (v0.5.0) | Quick | Bug fix — unblocks wolf playtesting |
 | **4** | **Wolves hit harder early** | ✅ Shipped (v0.5.0) | Quick | Makes a wolf camp a real risk, not free loot |
 | **5** | **Boreas** — a second god (ice/control) | ⏸️ Held | Multi-session | Parked — the playtest showed we don't need it yet |
-| **6** | **Heavy charge locks out the normal swing** — committing to a heavy means committing | ✅ Approved — cleared for build | Quick | Weighty-combat directive: a committed action must cost you other options |
+| **6** | **Heavy charge locks out the normal swing** — committing to a heavy means committing | ✅ Shipped (2026-06-11) | Quick | Weighty-combat directive: a committed action must cost you other options |
 | **7** | **Mana economy & skill management** — costs/cooldowns rework so you run dry early; God Skills drain mana/sec; toggle auto-casts to keys 1–9 | ✅ Approved — cleared for build | Multi-session, phased | Makes mana a real resource + a live build-management decision (weighty combat + build depth) |
 
 ---
@@ -318,7 +318,7 @@ reads as red).
 
 ### 6. Heavy charge locks out the normal swing
 
-`✅ approved` (Josh, playtest 2026-06-11) · **Size:** quick · **Pillar:** game feel (weighty combat) · **Art:** none
+`✅ shipped` (2026-06-11 — one guard at the `gDoSwingAt` chokepoint; covers charge→swing→recovery) · **Size:** quick · **Pillar:** game feel (weighty combat) · **Art:** none
 
 **What:** While you're charging a heavy attack, you can still fire a normal swing. Stop that — charging a heavy
 should **commit** you: no normal swing until the heavy resolves.

@@ -18,7 +18,35 @@ lesson: **the principle → why → how to apply.** Quality over volume.
 
 ---
 
-### 2026-06-11 — When you split a doc to separate concerns, split on the axis that genuinely differs; and don't be precious about a structure you just shipped
+### 2026-06-11 — When productionizing a directive, separate the *given* from your *inferred design philosophy* — and sequence the foundational system before the features that must inherit it
+
+- **Principle:** Two moves from a mana-rework handoff. (1) Josh gave concrete *givens* (benchmark: "leap + ~3s
+  whirlwind empties the early pool"; "Burning Body ≈ 5mp/3s"; "toggle auto-casts to 1–9"). I correctly grounded in
+  the engine first (found the full mana economy: pool 100, ~9/s regen, per-skill costs/CDs) and wrote a spec — but
+  I also baked in an *inferred philosophy* ("mana is the primary gate, so **trim** cooldowns") and asserted it as
+  the obvious default. Josh wanted the opposite (CDs are too short → **lengthen** them; leap ≥15s, WW 5s). Both are
+  valid designs; the failure was presenting an inferred feel-philosophy as a settled default instead of flagging it
+  as a *choice*. **On feel levers where Josh has strong taste, state your inferred design stance explicitly as a
+  fork, the same way you'd flag an open question — don't smuggle it in as the neutral default.** (2) The right
+  reflex I *did* hit: when a feel complaint rode along with a number ("WW feels underpowered" + "set CD to 5s"), I
+  translated it into a **required power pass paired with the CD**, not just the literal number — a longer CD on a
+  weak skill is a double-nerf. (3) Sequencing: Josh then said "prioritize the mana rework over the new skills; the
+  new skills take direction from it." → **a cross-cutting system that will reshape how pending features must work
+  should be built first, so those features are *authored into* it, not retrofitted** (Trail/Pyroclasm now get their
+  `mpCost`+toggle from the start). I re-ranked Now and recorded the dependency in roadmap + spec + tasks.
+- **Why:** Pre-1.0, the human is the only persistent taste-holder and his feel intuitions are the product. A spec
+  that hard-codes my inferred philosophy reads as "decided," so he has to *notice and reverse* it (costs a turn and
+  risks it shipping silently) — whereas an explicitly-flagged stance costs him one glance to confirm/redirect. And
+  building a dependent feature before its governing system means paying to retrofit (or worse, locking the system's
+  shape to fit what was already built).
+- **How to apply:** When turning a directive into a spec: (1) **List the givens verbatim** (benchmarks, names,
+  numbers he stated) and keep them distinct from **your design inferences** (which lever leads, what to trim/grow,
+  default behaviours). Flag every inference as a fork with a recommendation — *especially* combat-feel/pacing knobs,
+  where his taste is strong and yours is a guess. (2) Translate any "feels weak/bad" rider into the **systemic
+  change it implies** (a power pass, not just the literal number), and say so. (3) Before sequencing, ask "does a
+  system in this batch reshape how another pending item must be built?" — if yes, **build the system first and mark
+  the dependent items to inherit it** (don't let them ship in a pre-system shape). (4) Grounding-in-the-engine-first
+  still paid off (it always does) — the miss was purely in how I *presented* the derived design, not the research.
 
 - **Principle:** Two doc-architecture moves, one right and one wrong, in one session. The **right** split is
   by *altitude/concern that actually differs*: I made `ROADMAP.md` product-pure (strategy: what/why/priority,
