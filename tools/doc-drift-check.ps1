@@ -15,7 +15,9 @@ $ErrorActionPreference = 'SilentlyContinue'
 $root = Split-Path -Parent $PSScriptRoot          # tools/ -> repo root
 
 # Read the working-tree status (real git unless a test override was passed).
-if ($null -eq $Porcelain) {
+# NB: check whether -Porcelain was actually bound, not `$null -eq` — a [string]
+# param defaults to '' (empty), not $null, so a null-guard would skip git entirely.
+if (-not $PSBoundParameters.ContainsKey('Porcelain')) {
     $Porcelain = (& git -C $root status --porcelain) -join "`n"
     if (-not $?) { exit 0 }                         # not a git repo / git missing
 }
