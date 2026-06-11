@@ -4307,7 +4307,8 @@ function gDoHeavyAtk(){
   if(!p||p.dead||p.heavySwinging||p.heavyWindingUp||p.heavyCooldown>0)return;
   if(p.swinging||p.wwActive)return;
   if(inWilderness && (p.heavyLevel||0) < 1) return; // locked
-  if(p.mp < W().mpCostHeavy){ gNotEnoughMana(); return; } // not enough mana
+  // No mana gate to START charging — the windup self-caps the charge to what you can afford on release, and
+  // mana regens as you hold, so you can always begin a heavy (at reduced charge when low on mana).
   p.heavyWindingUp   = true;
   gGritGain(); // Grit
   p.heavyWindupTimer = 0;
@@ -4331,7 +4332,7 @@ function _fireHeavyAtk(p){
   p.heavyTimer      = 0;
   p._heavyX0 = p.wx; p._heavyY0 = p.wy;   // lunge START — the hit zone spans from here through the lunge + stab
   p.heavyHitRegistry = new Set();
-  p.mp = Math.max(0, p.mp - W().mpCostHeavy); // mana cost on release
+  p.mp = Math.max(0, p.mp - W().mpCostHeavy * p.heavyChargeRatio); // cost SCALES with charge (full = mpCostHeavy); the windup capped the ratio to what you can afford, so this never goes below 0
   p.heavyCooldown = Math.round(W().heavyCooldown * wildDexCdMult()); // CD begins on RELEASE, not at charge-start
   const r = p.heavyChargeRatio;
   const chargedLen = pSkillStat(p,'heavyLen') * (1 + r);
@@ -4356,7 +4357,13 @@ function gUpdateHeavyAtk(p, dt){
   // ── Windup: hold RMB, charge and rect grow ────────────────────
   if(p.heavyWindingUp){
     p.heavyWindupTimer += dt;
-    p.heavyChargeRatio  = Math.min(1, p.heavyWindupTimer / pSkillSpeed(p,'heavyMaxWindup','heavyChgPct'));
+    // Charge grows with held time, but is CAPPED at what you can afford on release: cost scales as
+    // mpCostHeavy×ratio, so the most you can charge is mp/mpCostHeavy. The charge silently stalls there;
+    // because mana regens while you hold, the affordable cap rises and the charge resumes — hold long
+    // enough and it reaches full, paced by your regen.
+    const rawRatio    = Math.min(1, p.heavyWindupTimer / pSkillSpeed(p,'heavyMaxWindup','heavyChgPct'));
+    const affordRatio = W().mpCostHeavy > 0 ? Math.min(1, p.mp / W().mpCostHeavy) : 1;
+    p.heavyChargeRatio  = Math.min(rawRatio, affordRatio);
     p.heavyAngle        = p.angle; // aim tracks mouse during windup
     if(!p.heavyRect){
       p.heavyRect = { angle: p.heavyAngle, len: pSkillStat(p,'heavyLen'),

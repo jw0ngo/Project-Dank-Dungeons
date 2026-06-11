@@ -13,8 +13,11 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
   doing nothing. (Throttled so holding a key doesn't spam it.)
 
 ### Changed
-- **Heavy attack mana cost lowered 30 → 10.** Under the tighter mana economy the heavy was starving (you'd run
-  dry and it silently wouldn't fire even with the cooldown ready); 10 keeps it usable as a staple.
+- **Heavy attack mana cost now scales with charge (full charge = 10), and you can always start charging.** The
+  cost rises with how far you charge, so the windup **caps at what you can afford** and silently stalls there
+  rather than refusing to start. Because mana regens while you hold, the affordable cap keeps rising — hold
+  through it and the charge resumes, reaching full at the pace of your regen. (Full-charge cost lowered 30 → 10
+  under the tighter mana economy.)
 
 ## [0.0.1] - 2026-06-12
 
