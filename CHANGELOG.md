@@ -14,11 +14,14 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
   most common is a **cluster of small trees** (occasionally a lone small tree); second is a **single large
   tree ringed by a small-tree cluster**; rare is a **lone large tree**. Formation anchors are spaced
   (min-separation) so clusters read as distinct stands rather than a uniform wash. Large trees become
-  occasional landmarks; the small understory carries the forest. Tuned for **dense-but-walkable woods**: the
-  trunk hitbox was thinned (`TREE_BASE_RX_FRAC` 0.30→0.22) so trees can pack closer without walling the player,
-  letting small trees sit at a ≥4-tile centre spacing (large ≥7). That's the sweet spot where the ~150px
-  canopies **overlap generously into a lush continuous canopy** while the trunks below leave a player-width gap
-  to weave through — no impassable walls of trees. Density varies across the map (thick groves + open clearings)
+  occasional landmarks; the small understory carries the forest. Tuned for **dense-but-walkable woods** by a
+  single physical rule: **any two trees keep a player-width gap between their trunks** (centre-distance ≥
+  `rxOf(a) + rxOf(b) + TREE_WALK_GAP`, computed from each tree's real trunk radius). Thin small trunks pack
+  close so the ~150px canopies **overlap into a lush continuous canopy**, fat large trunks push apart into
+  spread landmarks, and — crucially — a small tree can no longer spawn jammed against a large tree's trunk
+  (the cross-set case the old per-set spacing missed). The trunk hitbox was also thinned (`TREE_BASE_RX_FRAC`
+  0.30→0.22) so the canopy can be dense while the floor stays weave-through walkable — no impassable walls of
+  trees. Checks are O(1) via a spatial hash. Density varies across the map (thick groves + open clearings)
   because the larger clusters overlap in places and leave gaps in others. Spacing is a hard rule enforced with
   O(1) blocked-tile grids. Re-uses the occluding-prop system as-is
   (`gWildTrees`/`gDrawTree`/`gRCTrees` — canopy fade + size-coupled trunk collision unchanged); small trees

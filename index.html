@@ -2332,8 +2332,8 @@ function gRCRocks(wx,wy,r){
 // The hitbox is a WIDE, SHORT ellipse covering the whole roots/rocks base (measured ~0.30-0.40 half-width,
 // ~0.20 tall) — a circle fits that footprint poorly. Sized as fractions of the drawn width; its base sits at
 // the foot. The same fractions drive the opaque base-band in gDrawTree, so the hitbox is visible when faded.
-const TREE_BASE_RX_FRAC = 0.22;  // base ellipse horizontal radius / drawn width (knob — root spread; also sets the
-                                 // walkable trunk gap, so it's coupled to SMALL/LARGE_MIN_SEP — see the §4c forest note)
+const TREE_BASE_RX_FRAC = 0.22;  // base ellipse horizontal radius / drawn width (knob — root spread; also the
+                                 // trunk size the §4c forest generator spaces trees by, via rxOf/TREE_WALK_GAP)
 const TREE_BASE_RY_FRAC = 0.12;  // base ellipse vertical radius / drawn width (knob — base height; centre = foot - this)
 function gRCTrees(wx,wy,r){
   let x=wx,y=wy;
@@ -13145,45 +13145,49 @@ function generateWildernessMap(seed){
   //       (1) most common — a cluster of small trees (sometimes a lone small tree),
   //       (2) second      — a single large tree ringed by a small-tree cluster,
   //       (3) rare        — a lone large tree.
-  //     Décor draw + trunk collision (gRCTrees) only; both are size-coupled to the drawn scale. A hard
-  //     per-set min-separation keeps trees off each other: small trees stay ≥ SMALL_MIN_SEP tiles apart,
-  //     large trees ≥ LARGE_MIN_SEP (cross-set has no rule — a small tree may sit at a large tree's foot).
-  //     Spacing is enforced with O(1) per-set "blocked" grids (each placed tree stamps a disk of its
-  //     separation radius), so a dense forest never triggers an O(n²) distance scan.
-  //     ── Walkability vs lushness (the key tuning): trunk collision (gRCTrees) is an ellipse,
-  //     rx = TREE_BASE·scale·TREE_BASE_RX_FRAC (0.22 → ~33px for a small tree, ~66px for a large). The player
-  //     is r=9 (18px wide), T=24px. For two small trees not to wall the player, their centres need a gap >
-  //     rx_a+rx_b+18 ≈ 84px, i.e. ≥ ~4 tiles. But the canopy is ~150px wide, so at 4-tile (96px) spacing the
-  //     canopies overlap GENEROUSLY — a DENSE, lush canopy overhead while the trunks below stay weave-through
-  //     walkable (~30px gaps). SMALL_MIN_SEP and TREE_BASE_RX_FRAC are a coupled pair: this floor only stays
-  //     walkable because the trunk was thinned to 0.22. Drop the trunk thinner → can tighten spacing further
-  //     (lusher); widen it → must raise the spacing or risk walls. Density VARIES across the map (some parts
-  //     thick, some open) because the big clusters overlap in places and leave clearings in others.
-  //     Live knobs: formation rate, the per-set separations, the three formation weights, cluster size/radius.
+  //     Décor draw + trunk collision (gRCTrees) only; both are size-coupled to the drawn scale.
+  //     ── Walkability rule (the key tuning): ANY two trees keep a player-width gap between their TRUNKS, so
+  //     you can always weave through — never a wall. The trunk hitbox is an ellipse of horizontal radius
+  //     rxOf = TREE_BASE·scale·TREE_BASE_RX_FRAC (0.22 → ~33px small, ~66px large); the player is 18px wide.
+  //     So two trees are spaced to centre-distance ≥ rxOf(a) + rxOf(b) + TREE_WALK_GAP. This ONE physical
+  //     rule subsumes the old per-set tile separations: thin small trunks pack close (dense, lush — canopies
+  //     are ~150px so they overlap generously), fat large trunks push apart (spread landmarks), AND a small
+  //     tree can't sit on a large tree's foot (cross-set) — the bug that motivated this. Lushness knob is
+  //     TREE_WALK_GAP (smaller = tighter/lusher, never below the player's 18px) or TREE_BASE_RX_FRAC (thinner
+  //     trunk = closer packing). Density VARIES across the map because big clusters overlap in places.
+  //     Checks are O(1) via a spatial hash (cell = widest possible trunk-pair span). Live knobs: formation
+  //     rate, TREE_WALK_GAP, the three formation weights, cluster size/radius, per-set scales.
   const treeEntities = [];
   const TREE_FORMATION_RATE = 0.08;   // chance per forest tile to seed a formation (knob — forest density/coverage)
-  const SMALL_MIN_SEP = 4;            // small trees ≥4 tiles apart — dense overlapping canopy, walkable trunks (coupled to RX_FRAC)
-  const LARGE_MIN_SEP = 7;            // large trees ≥7 tiles apart — their trunks are ~2× wider (coupled to RX_FRAC)
-  const treeMark   = new Uint8Array(W*H);  // tiles already carrying a tree (no two trees share a tile)
-  const smallBlock = new Uint8Array(W*H);  // tiles too close to a placed SMALL tree (within SMALL_MIN_SEP)
-  const largeBlock = new Uint8Array(W*H);  // tiles too close to a placed LARGE tree (within LARGE_MIN_SEP)
+  const TREE_WALK_GAP = 26;           // px of clear floor between any two trunks (≥ player's 18px; knob — lushness)
   const smallScale = () => 0.42 + rng()*0.20;   // small-tree draw scale (knob)
   const largeScale = () => 0.80 + rng()*0.30;   // large-tree draw scale (knob)
+  const rxOf = (scale) => TREE_BASE * scale * TREE_BASE_RX_FRAC;   // trunk horizontal (collision) radius, px
   const isForestTile = (tx,ty) => tx>=2 && ty>=2 && tx<W-2 && ty<H-2 && tiles[idx(tx,ty)] && !rocks[idx(tx,ty)];
-  // stamp a filled disk (tiles within `rad`, exclusive) into a "blocked" grid around (tx,ty)
-  const stampDisk = (grid,tx,ty,rad) => {
-    const r2=rad*rad;
-    for(let dy=-(rad-1); dy<=rad-1; dy++){ const ny=ty+dy; if(ny<0||ny>=H) continue;
-      for(let dx=-(rad-1); dx<=rad-1; dx++){ if(dx*dx+dy*dy>=r2) continue; const nx=tx+dx; if(nx<0||nx>=W) continue; grid[ny*W+nx]=1; } }
+  // Spatial hash of placed trees ({wx,wy,rx}) for O(1) neighbour clearance. Cell ≥ the widest trunk-pair
+  // span (two max-scale large trunks + the gap), so a clearing tree can only conflict within the 3×3 block.
+  const TREE_CELL = rxOf(1.10)*2 + TREE_WALK_GAP;
+  const treeGrid = new Map();
+  const cellKey = (gx,gy) => gx + ',' + gy;
+  const treeClear = (wx,wy,rx) => {        // does a trunk of radius rx at (wx,wy) clear every nearby tree?
+    const gx=Math.floor(wx/TREE_CELL), gy=Math.floor(wy/TREE_CELL);
+    for(let cy=gy-1; cy<=gy+1; cy++) for(let cx=gx-1; cx<=gx+1; cx++){
+      const bucket=treeGrid.get(cellKey(cx,cy)); if(!bucket) continue;
+      for(const o of bucket){ const need=rx+o.rx+TREE_WALK_GAP; if((o.wx-wx)**2+(o.wy-wy)**2 < need*need) return false; }
+    }
+    return true;
   };
-  // place one tree of the given set at a forest tile (sub-tile jitter), honouring per-set spacing. Returns success.
+  // place one tree of the given set at a forest tile (sub-tile jitter), honouring the walkable-gap rule. Returns success.
   const placeTree = (tx,ty,small) => {
-    const block = small?smallBlock:largeBlock;
-    if(!isForestTile(tx,ty) || treeMark[idx(tx,ty)] || block[idx(tx,ty)]) return false;
-    const wx=(tx+0.5)*T + (rng()-0.5)*T*0.4, wy=(ty+0.5)*T + (rng()-0.5)*T*0.4;  // mild jitter — keep the min-sep gap intact
-    treeEntities.push({ kind:'tree', small, wx, wy, variant: Math.floor(rng()*9),
-                        scale: small ? smallScale() : largeScale() });
-    treeMark[idx(tx,ty)]=1; stampDisk(block, tx, ty, small?SMALL_MIN_SEP:LARGE_MIN_SEP); return true;
+    if(!isForestTile(tx,ty)) return false;
+    const scale = small ? smallScale() : largeScale();
+    const wx=(tx+0.5)*T + (rng()-0.5)*T*0.4, wy=(ty+0.5)*T + (rng()-0.5)*T*0.4;  // mild organic jitter
+    const rx = rxOf(scale);
+    if(!treeClear(wx,wy,rx)) return false;
+    treeEntities.push({ kind:'tree', small, wx, wy, variant: Math.floor(rng()*9), scale });
+    const k=cellKey(Math.floor(wx/TREE_CELL), Math.floor(wy/TREE_CELL));
+    let b=treeGrid.get(k); if(!b){ b=[]; treeGrid.set(k,b); } b.push({wx,wy,rx});
+    return true;
   };
   // scatter up to `n` small trees on forest tiles within `rad` tiles of (cx,cy)
   const smallCluster = (cx,cy,n,rad) => {
