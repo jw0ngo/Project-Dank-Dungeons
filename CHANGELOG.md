@@ -8,6 +8,9 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 ## [Unreleased]
 
 ### Changed
+- **Heavy-attack cooldown now starts when you _release_ the swing, not when you start charging.** Holding a
+  long charge no longer burns the cooldown down before the hit lands — the full cooldown always applies after
+  the heavy resolves. (Re-triggering mid-charge stays blocked as before.)
 - **Mana is now a real, shared resource (item 7 — all three phases).** Previously you could cast forever and
   the auto-firing God Skills cost nothing; now mana funds both your class kit and the god layer, and you run
   dry — especially early.

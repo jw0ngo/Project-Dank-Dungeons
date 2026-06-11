@@ -4300,8 +4300,10 @@ function gDoHeavyAtk(){
   p.heavyWindupTimer = 0;
   p.heavyChargeRatio = 0;
   p.heavyAngle       = p.angle;
-  p.heavyCooldown    = Math.round(W().heavyCooldown * wildDexCdMult());
   p.smear            = null;
+  // NOTE: the cooldown is NOT started here — it begins on RELEASE (_fireHeavyAtk), so holding a long charge
+  // doesn't burn the cooldown down before the hit lands. Re-triggering mid-charge is already blocked by the
+  // heavyWindingUp/heavySwinging guards above.
 }
 
 function gReleaseHeavyAtk(){
@@ -4317,6 +4319,7 @@ function _fireHeavyAtk(p){
   p._heavyX0 = p.wx; p._heavyY0 = p.wy;   // lunge START — the hit zone spans from here through the lunge + stab
   p.heavyHitRegistry = new Set();
   p.mp = Math.max(0, p.mp - W().mpCostHeavy); // mana cost on release
+  p.heavyCooldown = Math.round(W().heavyCooldown * wildDexCdMult()); // CD begins on RELEASE, not at charge-start
   const r = p.heavyChargeRatio;
   const chargedLen = pSkillStat(p,'heavyLen') * (1 + r);
   const _dbuf = (p.wildBuffs && (1+(p.wildBuffs.damagePct||0)/100))||1;   // obelisk + level-up %damage
