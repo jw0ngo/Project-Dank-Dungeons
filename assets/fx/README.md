@@ -8,18 +8,23 @@ other interface art go in `assets/ui/`.
 
 ```
 assets/fx/
-  _shared/   god-agnostic FX reused across kits (basic-attack arcs, generic bursts)
+  _shared/   truly unowned FX (generic bursts, explosion-*) — used by no specific kit/class
+  knight/    the player KNIGHT class's attack FX (slash crescent, heavy thrust)
   cilia/     the fire god's kit FX (+ her substances)
   boreas/    ikras/  bhumi/   one folder per patron god, added as they ship
 ```
 
-- **A folder per god** holds that god's whole kit. **Gods are the stable unit** — individual *skills* get
-  renamed/reworked constantly, so we organize on the durable axis. A skill rename never moves a file.
+- **A folder per owner** holds that owner's whole kit. **Owners are the stable unit** — a *god* or a
+  *character class* (`knight`); individual *skills* get renamed/reworked constantly, so we organize on the
+  durable axis. A skill rename never moves a file.
+- **A class owns its attack FX** the same way a god owns its kit: the knight's basic `slash` (swing
+  crescent, also reused by whirlwind) and `thrust` (heavy lunge) live in `knight/` — they are **not**
+  god-agnostic, so they do **not** belong in `_shared/`. A future class gets its own `fx/<class>/`.
 - **Substances live at the god level** (e.g. `cilia/chaosfire-circle.png`, `cilia/dragonfire-circle.png`) —
   they're shared across that god's skills (Burning Body, Dance of Fire, …), so they don't belong to any one skill.
-- **`_shared/`** is for FX tied to no god — the basic swing/heavy arcs (`slash`, `thrust`), generic bursts
-  (`explosion-*`), impact sparks, etc.
-- **Flat within a god** until a folder gets large (>~12 files); only then sub-group by skill.
+- **`_shared/`** is only for FX tied to no owner — generic bursts (`explosion-*`), impact sparks — reused
+  across kits/classes. (If an `explosion-*` turns out to be a specific kit's, move it to that owner.)
+- **Flat within an owner** until a folder gets large (>~12 files); only then sub-group by skill.
 
 ## Conventions
 

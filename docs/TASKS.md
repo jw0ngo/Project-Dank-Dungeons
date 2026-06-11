@@ -37,6 +37,21 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 ## 🟧 Engineer / CTO lane
 
+- ◻️ 🎨 **Reclass `char/` into per-type folders + player→knight class** (↳ from ART, 2026-06-11 · tool ready, dry-run verified) — **atomic `--apply` migration** (file moves + manifest rewrite in ONE commit; deploy-affecting → needs Josh's push auth). Tool: **`tools/reclass-char.py`** (Artist-built; you run `--apply`). Target tree: `char/<group>/<type>/` (`player/knight/` · `goblins/{goblin,archer,warrior,shaman,bomber,king}/` · `wolves/{direwolf,alphawolf,wolfmother}/`); slash/thrust → `fx/knight/`. **Why:** each type owns its anim set (idle+atk+hurt+future walk) instead of a flat faction dump; slash/thrust were mis-filed as `_shared` "god-agnostic" — they're the **knight class's** attack FX. Dry-run plan: 248 files moved, 200 paths + 72 keys rewritten, 2 FX moved, 48 unwired sprites relocated too. Manifest-rewrite logic Artist-validated (0 stale `char.player.*`, 72 `char.knight.*`, 2 `fx.knight.*`).
+  <details><summary>recipe (the draw-code edits the tool does NOT auto-apply)</summary>
+
+  **Boundary — rename the ART layer only; LEAVE the game-logic `'player'` identity.** The `player` *entity* wears a `knight` *class*. So `char.player.* → char.knight.*` but `kind:'player'`, `SpriteRegistry.register/get('player')` (pixel-art fallback ~2105/8109), the map editor, and `gEntsRaw` 'player' lookups all **stay `player`**.
+  1. `python tools/reclass-char.py` (dry-run) → re-read the plan + the printed DRAW-CODE EDITS list.
+  2. `python tools/reclass-char.py --apply` → git mv (char + fx) + rewrite manifest paths + keys. (Stage the risk if you like: `--only goblins,wolves` is path-only/keys-stable/zero-code first, then a second commit for `--only player`.)
+  3. Apply the **draw-code edits** (the tool can't — they'd collide with the logic `'player'`), all in `drawAnyPlayer` (~8103–8141) + FX sites:
+     - `_bodyId` default + pose strings: `'player'→'knight'`, `'playerdash'→'knightdash'`, `'playerheavywindup'→'knightheavywindup'`, `'playerheavy'→'knightheavy'`, `'playeratk'→'knightatk'`.
+     - walk gate/key (~8117/8120): `_bodyId==='player'→'knight'`; `'char.playerwalk'+…→'char.knightwalk'+…`.
+     - pose-mult compares (~8134–8141): `_bodyId==='playerheavy'/'playerheavywindup'` → `knight*`.
+     - FX lookups: `gArtReg['fx.slash']` (×3: `_slashTintCanvas` ~7542, whirlwind ~8203) + `gArtReg['fx.thrust']` (~7466) → `'fx.knight.slash'` / `'fx.knight.thrust'`.
+     - optional cosmetic: `PLAYER_WALK_OCT`→`KNIGHT_WALK_OCT`, `PSCALE` (just const names; no behavior).
+  4. **Verify:** the tool self-checks every `assets/char|fx` path resolves; then `node --check` the extracted `<script>`, grep a `char.knight.*` + `fx.knight.*` key, `python dev.py` → confirm the player (idle/walk/swing/heavy/windup/dash) **and** every enemy render in all 8 facings; whirlwind + Cilia-tint slash still draw. Commit atomically; README scheme docs already updated (Artist).
+  </details>
+
 - 🔄 ✨ **Item 2 — God Skills** (roadmap #2 `approved` · spec [`specs/god-skills.md`](specs/god-skills.md)) —
   phased trigger-swap, 3/5 done:
   - [x] **Architecture generalization** (2026-06-11) — imbue-path mastery machinery generalized from
@@ -132,7 +147,7 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 ## 🟨 Artist lane
 
-- ◻️ 🔧 **After char-fold lands: teach the slice tool to emit foldered paths** — once `assets/char/` is foldered (engineer runs `fold-assets.py --apply`), update `tools/slice-turnaround.py` to write cutouts into `assets/char/<faction>/` and emit foldered manifest paths (auto-route by id via the shared `FAMILIES` map in `fold-assets.py`, or a `--family` flag). Otherwise every future char slice re-introduces a flat file — the "migrate the tool when you migrate the pipeline" tax. **Depends on** the engineer's char-fold being applied first.
+- ◻️ 🔧 **After the per-type reclass lands: teach the slice tool to emit per-type foldered paths** — once `reclass-char.py --apply` lands (Engineer lane), update `tools/slice-turnaround.py` to write cutouts into `assets/char/<group>/<type>/` and emit the two-level manifest paths (route by id via `reclass-char.py`'s `TYPE_GROUP`/`TYPE_RENAME` maps — import or mirror them; honor `player→knight`). Otherwise every future char slice re-introduces a flat file in the wrong place — the "migrate the tool when you migrate the pipeline" tax. **Depends on** the reclass being applied first. (Supersedes the old one-level `fold-assets` version of this task.)
 
 - *(eye-glow look **decided & handed to Engineer** 2026-06-11: eyes-only, subtle, yellow→red; full-body tint tried & rejected. See the Engineer-lane handoff + Done.)*
 
