@@ -53,6 +53,8 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
   - [ ] **Pyroclasm** — add `kind:'interval+autotarget'` entry + a nearest-cluster helper + updater branch (heavy spawn already removed).
   - **⚠ Verification gap:** `node --check` + greps + logic trace done; the **in-browser canary** (`await Sim.batch(3)` + manual pledge→acquire→rank→fork→ascension) is **not yet run** — needs a live browser. Run before tagging.
 
+- ◻️ 🎨 **Burning Body fire-ring art upgrade — one-constant wiring** (↳ from ART, 2026-06-11) — `assets/fx/fr.png` replaced with a nicer hand-painted ring (wispier filaments + a subtle interior heat-haze, no longer hollow). **The only `index.html` change: `FR_RING_FRAC 0.59 → 0.76`** (`index.html:6049`). The new ring's bright band sits at frac **0.759** of the half-width (old was 0.61); the draw already sizes `D = 2*traveled/FR_RING_FRAC` so the bright band lands at the damage radius — leave it at 0.59 and the visible ring renders ~29% larger than where it hits. No manifest/key/draw-loop change (same `FR_SPR`/`assets/fx/fr.png`, still black-bg `'lighter'`; background floored to true black so no square wash). Affects all ring modes (Firebloom / Dragonbreath breathe / Chaos Crown settle / remote-visual) — all fine. **Verify:** pledge Cilia → Burning Body → reach Form @5 Firebloom; confirm the bright band tracks the damage edge and the interior reads as warm haze. Source/tool: `tools/fx-ring-heatfill.py` (`--no-fill` cleans a baked-fill source), masters in `art/fx/burning-body-ring-*.png`.
+
 - ◻️ 🎨 **Wire enemy HURT pose sprites** (↳ from ART, 2026-06-10) — 32 cutouts committed, new pose state the engine lacks (`gDrawEnemy` only picks idle/atk).
   <details><summary>detail</summary>
 

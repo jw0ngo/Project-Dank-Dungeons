@@ -32,6 +32,7 @@ art/player/_recut/
 art/player/_mirror-QA/
 art/**/_qa/
 art/**/_gifs/
+assets/**/_heatfill_qa/
 
 # PM Telegram bot — secrets and local conversation state
 tools/pm-bot/.env
