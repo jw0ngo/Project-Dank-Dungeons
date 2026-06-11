@@ -1,5 +1,10 @@
 // player walk — ne (frames [30, 36, 42, 46])
-'char.player.walk1.ne':'assets/char/playerwalk1-ne.png',
-'char.player.walk2.ne':'assets/char/playerwalk2-ne.png',
-'char.player.walk3.ne':'assets/char/playerwalk3-ne.png',
-'char.player.walk4.ne':'assets/char/playerwalk4-ne.png',
+'char.playerwalk1.ne':'assets/char/playerwalk1-ne.png',
+'char.playerwalk2.ne':'assets/char/playerwalk2-ne.png',
+'char.playerwalk3.ne':'assets/char/playerwalk3-ne.png',
+'char.playerwalk4.ne':'assets/char/playerwalk4-ne.png',
+// mirrored -> nw
+'char.playerwalk1.nw':'assets/char/playerwalk1-nw.png',
+'char.playerwalk2.nw':'assets/char/playerwalk2-nw.png',
+'char.playerwalk3.nw':'assets/char/playerwalk3-nw.png',
+'char.playerwalk4.nw':'assets/char/playerwalk4-nw.png',

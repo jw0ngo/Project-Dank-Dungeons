@@ -24,8 +24,14 @@ desktop.ini
 __pycache__/
 *.pyc
 
-# Art QA scratch (magenta contact sheets, vs-idle strips, preview gifs)
+# Art QA scratch (magenta contact sheets, vs-idle strips, preview gifs, recut/mirror QA)
 art/_walkqa/
+art/player/_walkqa/
+art/player/_haloqa/
+art/player/_recut/
+art/player/_mirror-QA/
+art/**/_qa/
+art/**/_gifs/
 
 # PM Telegram bot — secrets and local conversation state
 tools/pm-bot/.env
