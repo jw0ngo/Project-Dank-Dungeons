@@ -178,14 +178,21 @@ take burn DoT each `AURA_TICK`. Standalone damage (`AURA_DMG`/`FR_BASE_DMG`-scal
     → an always-on aura, since there's no dash trigger.)*
 - **Ranks 6–9:** Wake → +length / +damage / +width · Shroud → +aura radius / +damage / +tick rate.
 - **Rank 10 — Ascension:**
-  - **Wake →** 🐉 **Wyrmwake** (trail is dragonfire; weaving back through your lanes heals you) · 🔥 **Scorched
-    Earth** (trail spreads sideways as chaosfire walls that catch you if you backtrack).
+  - **Wake →** 🐉 **Wyrmwake** (trail is dragonfire; weaving back through your lanes heals you) · 🔥 **Chaos
+    Steps** *(redesign, Josh 2026-06-12 — was "Scorched Earth")* — **every 2s you drop a patch of burnt chaos
+    ground that detonates into a chaosfire explosion ~1s later** (a fused delayed blast). Keep moving and your
+    bombs bloom *behind* you — a chasing trail of explosions that clears your wake; linger on a patch and you eat
+    your own detonation. The 1s fuse is the readable telegraph + the self-burn cost, perfectly on the movement
+    identity (move = safe + devastation behind you; stand still = caught). Reuses the chaosfire explosion FX
+    (Conflagration/Cinderburst-style nova). *Engineering when built: a 2s emit timer (not the pure
+    distance-accumulator the base trail uses) dropping a fused-patch entity → chaosfire explosion on fuse-end.*
   - **Shroud →** 🐉 **Phoenix Mantle** (persistent dragonfire aura heals you continuously) · 🔥 **Immolation**
     (permanent self-immolation aura: huge constant AOE that drains your own HP).
   - **✅ RESOLVED (Josh, 2026-06-12) — option (b): Trail keeps its movement identity, exempt from the footprint
     rule.** Trail of Embers is the **movement-as-weapon** skill, so chaosfire here means "burn the path," not
-    "anchor and devastate." Its 🔥 cost is **movement-keyed**: **Scorched Earth** catches you if you backtrack;
-    **Immolation** stays a self-burn aura centered on you (drains your HP by design). The stand-still footprint
+    "anchor and devastate." Its 🔥 cost is **movement-keyed**: **Chaos Steps** detonates fused chaos patches 1s
+    after you drop them (move = blasts bloom behind you; linger = caught in your own detonation); **Immolation**
+    stays a self-burn aura centered on you (drains your HP by design). The stand-still footprint
     rule is confined to the *area/burst* chaos leaves (Burning Body's Chaos Crown, Pyroclasm's Hellfront) — Trail
     and Eye of Chaos are the two exceptions.
 
