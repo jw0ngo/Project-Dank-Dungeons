@@ -18,6 +18,35 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 
 ---
 
+### 2026-06-11 — An art handoff's "new prop" framing can really be a "replace the placeholder" job — reconcile the spec against what's already on screen
+
+- **Principle:** An Artist render-spec tells you how the *art* works, not what *product role* it plays in the
+  live game. The tree handoff said "NEW world-prop, scatter, NOT a tile" — so I built an open-field scatter
+  layer beside the existing procedural `TILE_TREE` forest. The CD actually wanted those painted sprites to
+  *replace* the placeholder forest. Both readings satisfy the literal spec; only looking at what's already
+  rendered distinguishes them. Before wiring a "new" asset, ask: **is there an existing procedural/placeholder
+  thing this art is meant to supersede?** If yes, the job is a swap (retarget placement onto the old thing's
+  positions + delete the old draw), not an addition.
+- **The tell + the disambiguation were both cheap.** The user's word **"still"** ("still getting placeholder
+  trees") points at something that *predates* your change — i.e. not the thing you just added. And the
+  "which placeholder?" question settled in two greps: there was **no** pre-existing tree entity/sprite, and
+  `gInitArt` + valid case-correct PNGs meant the new art *does* load — so the only thing left that could read
+  as "placeholder" was the procedural `TILE_TREE` tile draw. Enumerate the candidate sources and eliminate
+  by evidence instead of guessing or rebuilding twice.
+- **Reusable mechanics (good first-cut, survived the pivot):** a scatter/overflow world-prop is the `gRocks`
+  family — off-grid `{wx,wy,variant,scale}` generated in the **seeded** map gen (so MP-deterministic), returned
+  as `kind:` entities, unpacked at load, and pushed into the **y-sorted `drawables`** so it occludes/tucks
+  with characters (NOT drawn in the tile pass, which always sits under entities). Feet-anchor by the
+  **measured alpha-bbox foot** (PIL `getbbox` over the PNGs → the base sits ~0.93 down; one shared `*_FOOT`
+  const), never the canvas bottom. Only the *placement source* changed in the pivot (open grass → forest
+  tiles) — the render/draw/load machinery was right the first time.
+- **How to apply:** for any art-wiring handoff, hold the spec next to a live look (or a precise mental model)
+  of what currently occupies that visual slot; when the art is a quality upgrade of an existing element, plan
+  for swap-and-delete (retarget + remove the superseded draw + its now-dead consts) and expose density/size as
+  named knobs for the CD to tune live — a visual feature's final spec converges on his eyeball, not your first
+  guess. Sibling of the 2026-06-11 fog lesson (pull the visual forks before a big rewrite) and the
+  display-text-vs-frozen-token rename split.
+
 ### 2026-06-11 — To make a modal MP-seamless, separate "UI is open" from "the world is frozen" — they were one overloaded flag
 
 - **Principle:** `gPaused` had quietly accreted *four* meanings: UI-open, sim-freeze, input-lock, and
@@ -244,24 +273,12 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   reachability + every consumer; if the premise is false, reframe the entry and report, don't proceed. Full
   entry: `agents/engineer/archive/2026-06-09-deferred-fix-is-a-hypothesis.md`.
 
-### 2026-06-09 — Global state set for a special mode must be torn down symmetrically, or it corrupts the default mode
-
-- **Principle:** When a sub-mode (headless sim, debug, replay) flips a *shared global* to change
-  behavior, the same code path must restore it on exit — ideally save-at-entry / restore-in-`finally`,
-  not set-and-forget. A one-way mutation leaks out of its mode and silently breaks normal operation,
-  and the symptom shows up far from the toggle.
-- **Why:** `Sim.startRun` set `window._SIM.muted = true` so headless stepping is silent, but nothing
-  ever cleared it — so after *any* `Sim.batch`/`runFast` (including the `await Sim.batch(3)` canary the
-  docs tell you to run), every SFX's `gpfx` guard early-returned and the game was mute until reload.
-  The same function already had the correct pattern for a *different* global — `installClock()` /
-  `restoreClock()` in a `try/finally` around the loop — so the fix was to make audio mirror the clock:
-  remember the caller's state, mute for the stepping, restore in the `finally`.
-- **How to apply:** For any `_SIM.*` / debug / mode flag that alters runtime behavior, own its full
-  lifecycle in the function that enters the mode (capture → set → `finally` restore); don't set it in a
-  "begin" helper and hope something resets it. When you find a leak like this, look for a *sibling
-  global already toggled correctly in the same scope* and mirror its teardown. And treat the AI-native
-  harness as production code: it mutates shared globals (`_SIM`, the clock, hooks), so its mode toggles
-  need the same restore discipline — a harness that dirties the default play state is a real player bug.
+### 2026-06-09 — A mode-global flipped for a special mode must be torn down symmetrically — archived
+- A sub-mode (headless sim/debug/replay) that flips a *shared global* must restore it on exit
+  (save-at-entry / restore-in-`finally`), or the mutation leaks and silently breaks the default mode far
+  from the toggle (`Sim.startRun` left `_SIM.muted` set → game mute after any `Sim.batch`). Mirror a sibling
+  global already toggled correctly in the same scope; treat the AI-native harness as production code. Full
+  entry: `agents/engineer/archive/2026-06-09-symmetric-teardown-of-mode-globals.md`.
 
 ### 2026-06-09 — A new standing entity population is a hidden input to every global census — archived
 - Adding a large *persistent* cohort to a shared collection (`gEnemies`) silently breaks any unfiltered
