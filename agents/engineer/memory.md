@@ -18,6 +18,31 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 
 ---
 
+### 2026-06-12 — A phased/multi-site mechanic belongs at the site that enforces the HARDEST constraint; and a run-start reset block is a second source of truth
+
+- **Principle:** When a spec splits a mechanic across two code sites, don't implement each phase where the
+  spec happens to name it — find the site that can express the **hardest constraint** and put the *whole*
+  mechanic there. Item 7's mana drain was grounded as Phase 2 "drain inside `gTickBurningBody`" + Phase 3
+  "gate in `gUpdateGodSkills`." Those fight: the hard constraint was *"pay per-second drains in hotkey order
+  1→9, last-toggled starves first, dormant + auto-resume"* — enforceable only where you see **all** skills at
+  once and control iteration order: the dispatcher. Draining inside each tick would force the gate to *peek*
+  every cost to decide payability (double-accounting risk). One central **pay-then-fire** loop made
+  "lowest-key stays" a one-line consequence of loop order and kept tick functions pure FX/damage. The spec
+  even labels its grounding "not prescriptive on *how*" — read phase-site hints as *where the effect lands*,
+  not *where the code goes*.
+- **Second source of truth — the run-start reset block.** Stats that upgrades mutate **in place**
+  (`sw.wwCooldown`, `sw.mpCostLeap`) are re-seeded from hardcoded literals every run (`gWildReset`'s `sw.* =`
+  block). Editing only the `WeaponRegistry` definition passes `node --check`, reads correct, and **silently
+  reverts at the next run start.** Any value that is both registry-defined AND reset-seeded must change in
+  **both** places — grep the reset block for the symbol before trusting the definition-site edit. (Same
+  family as the duplicate-`function` shadow trap: "looks wired, does nothing.")
+- **How to apply:** for a phased feature, sketch the data-flow once and locate the single chokepoint that can
+  satisfy *every* constraint before writing a line; for a number tune, grep for a reset/re-seed of the symbol
+  first. New rank-scaling params come free when the rank-up apply pours **every** key of the step object
+  (`for(const k in step)`) — add the key to base/step, no apply-site edit (sibling: registries are the
+  extension point). Verified the new dispatcher by **extracting the real functions and driving the state
+  machine in Node** (the no-browser canary from the syntax-pass-≠-behavior-pass lesson).
+
 ### 2026-06-12 — Occluding environment sprites: a reusable system + three rules (cull by extents · fade tracks the occluded · hitbox matches the art)
 
 - **Principle:** A tall world-prop the player can walk behind (tree, and future pillars/statues) is the
@@ -116,32 +141,6 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   token), **split by layer**: rename only the art layer, leave logic tokens frozen, and verify every
   draw-CONSTRUCTED key resolves to a manifest entry *and* a real file. Full entry:
   `agents/engineer/archive/2026-06-11-pages-stale-cache-and-rename-by-layer.md`.
-
-### 2026-06-11 — A Pages-only asset 404 with a case-correct commit is a STALE CACHE, not a path bug; and rename only the layer that's actually the art
-
-- **Principle:** When art loads locally but 404s on GitHub Pages (Linux, case-sensitive) while Windows
-  (`core.ignorecase=true`) hides it, the textbook cause is a case mismatch — but **prove it against the
-  committed/staged git tree, not the working disk** (the disk lies under ignorecase; what *deploys* is the
-  index). If the committed tree is already case-exact (every manifest path ∈ `git ls-tree HEAD` / `git
-  ls-files --cached`, case-sensitive), then the live 404 is a **stale Pages build or CDN-cached 404**, not a
-  bug in the current commit — and a content change that gives the asset a **fresh path** sidesteps it on the
-  next deploy. Don't "fix" a correct commit; diagnose the delivery layer.
-- **The two diagnostics that settle it fast:** (1) `git show HEAD:index.html` manifest paths vs `git ls-tree
-  -r HEAD` as a **set membership** test = exactly what the case-sensitive host sees; (2) after staging a
-  move, the same test against `git ls-files --cached` = what the *next* deploy will serve. Both are ~10-line
-  Python; neither touches a browser.
-- **Renaming an entangled identity — split by layer, not by token.** `player` meant two things: the
-  **art class** (`char.player.*`, the `_bodyId` draw selectors, `fx.slash`) and the **game-logic hero
-  identity** (entity `kind:'player'`, `SpriteRegistry('player')` pixel fallback, the editor, custom-sprite
-  uploads). Renaming player→**knight** touched only the art layer; the logic identity is *frozen* (the
-  `player` entity *wears* a `knight` class — and a blind `'player'`→`'knight'` would have broken MP/editor).
-  A key-rename's "test that would have caught it": cross-check **every draw-CONSTRUCTED key**
-  (`'char.'+_bodyId+'.'+dir`, `'char.knightwalk'+n+…`, `fx.knight.*`) resolves to a manifest entry **and** a
-  real file — `node --check` + a path-exists grep both pass a rename that points the draw code at a dead key.
-- **How to apply:** for "works here, broken on Pages," check the committed tree case-sensitively *first*
-  (one grep, exonerates or convicts the commit); for any identity rename, enumerate the game-logic vs
-  art-layer occurrences before find/replace (sibling to the 2026-06-09 display-text-vs-frozen-token split),
-  rename only the art layer, and verify the full draw→key→file chain, not just parse.
 
 ### 2026-06-11 — A feel/visual feature's spec converges through user iteration; localize with the "what already works" diagnostic, and decouple before you resize
 - **Principle:** For a *feel/visual* feature (fog of war, juice, game feel) the real spec emerges over several

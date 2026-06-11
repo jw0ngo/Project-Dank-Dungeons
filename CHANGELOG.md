@@ -7,6 +7,36 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+### Changed
+- **Mana is now a real, shared resource (item 7 — all three phases).** Previously you could cast forever and
+  the auto-firing God Skills cost nothing; now mana funds both your class kit and the god layer, and you run
+  dry — especially early.
+  - **Phase 1 — class-skill costs & cooldowns rebalanced.** Dash `15→18` mp, Heavy `25→30` mp. **Leap** is now
+    a rare, heavy nuke: `35→45` mp and a **15 s cooldown** (was 3.3 s) — CD-led. **Whirlwind** is now mana-led:
+    its drain quadruples (`4.8/s → 18/s`) and its cooldown lengthens to **5 s** (was 2 s), so a full pool
+    sustains only ~5.5 s of spin. To keep the rarer, costlier spin worth committing to, its **payoff rose with
+    it** — damage per hit `22→30` and hit radius `36→44`. Net benchmark: **1 leap + ~3 s of whirlwind ≈ empties
+    a fresh 100 pool.** (Swing stays free; dash/heavy cooldowns left as-is pending playtest.)
+  - **Phase 2 — God Skills drain mana per second while active**, rank-scaled. Burning Body costs **5 mp / 3 s
+    (≈1.67 mp/s)** at rank 1 and climbs to **≈3 mp/s** maxed, through the *same* rank machinery as its
+    damage/radius (a new `mpCost` key on the skill registry's base/per-rank steps). **Passive regen is also
+    cut to a tight 1 MP/s starting rate** (was ~9/s), so even a single aura now **net-drains** the pool —
+    keeping a god skill lit visibly costs you, and `+MP regen` cards become the deliberate way to afford more.
+    A toggled god skill is **one evolving ability**: toggling it (or it going dormant on starvation) hides the
+    **whole** skill — base aura *and* its current emit — and the HUD chip shows the skill's **current
+    evolution** name/icon (Burning Body → Firebloom → Dragonbreath…), since an evolution replaces the base.
+  - **Phase 3 — toggle your auto-casts on hotkeys 1–9** (in the order you acquire them; default ON). A small
+    **chip row by the MP bar** shows each owned god skill: its key, icon, live mp/s cost, and state. When mana
+    can't cover everything, skills **starve lowest-key-last** — your core (key 1) keeps running while the
+    marginal ones go **dormant** (stop firing + draining, chip dims with a ⚠) and **auto-resume** the moment
+    regen restores enough mana. Toggling stays your intent; mana gates the actual output.
+  - **MP-investment cards (`+Max MP`, `+MP regen`) now matter twice** — they fund both your manual bursts and
+    how many auras you can keep lit, becoming the deliberate early→late loosening of the economy.
+  - *Multiplayer/AI-native:* mana is per-player and god-skill firing is host-authoritative, so toggle/dormant
+    state is purely local — no protocol change. The `Sim` harness gained `Sim.toggleGodSkill(n)` and now exposes
+    each owned skill's `{key, active, dormant, mpCostPerSec}` (+ `mp`) in `observe()`, so headless bots can
+    manage mana and runs reflect the real economy.
+
 ## [0.12.0] - 2026-06-12
 
 ### Changed

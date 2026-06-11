@@ -261,6 +261,30 @@ The god layer no longer imbues active skills; it grants **class-agnostic auto-fi
 - **MP:** per-skill timers are local-only (each client ticks its own); only FX/damage outcomes sync (the existing
   `_frSeq` bump in `gSpawnFireRing`). **Sim:** `Sim.observe().godSkills` + `.pendingEvolution`; forks resolve via
   `gSimEvolution`/`Sim.pickEvolution`.
+- **Mana economy (item 7) — one pool funds class kit + god layer.** Spec `docs/specs/mana-economy.md`.
+  - *Class costs/CDs* live in `WeaponRegistry.sword` **and** are re-seeded each run by the `sw.*` reset block
+    (`gWildReset`, ~`:14770`) for the upgrade-mutated `ww*`/`leap*` — **change both or the registry edit reverts
+    at run start.** Tuned for "run dry early": leap = mana + a 15 s CD (CD-led); whirlwind = an 18 mp/s drain +
+    5 s CD (mana-led, with a paired damage/radius power bump).
+  - *Regen:* base passive `mpRegen` is a tight **~1 MP/s** (`WeaponRegistry.sword.mpRegen 0.01667`; was ~9/s),
+    so even one god-skill aura (~1.67/s) net-drains the pool. `wildBuffs.mpRegenAdd` cards loosen it over a run.
+    Regen is suppressed while whirlwind is active (it drains instead); god-skill drain is *layered* on regen
+    (not suppressed) — net = regen − Σ(active drains).
+  - *God-skill drain:* each owned skill has an **`mpCost` (mp/sec)** key in its registry `base`/`waveStep`/
+    `formStep`, so it rank-scales through the *same* `gGodFireParam` path as damage (the rank-up card pours
+    every step key — no apply-site change for a new param). Burning Body = 5 mp/3 s (~1.67/s) base → ~2.92/s maxed.
+  - *Payment + toggles:* `gUpdateGodSkills` is the **central pay-then-fire** site — it pays each owned skill's
+    `mpCost*dt/60` **in hotkey order (1→9)** before dispatching its tick, so on starvation the **last-toggled**
+    skills go **dormant** (skip fire+drain, `p.godSkillDormant[id]`) and **auto-resume** when mana recovers; the
+    core (key 1) keeps running. A god skill is **one evolving ability** — `gGodSkillRunning(p,id)` (owned ∧ on ∧
+    not-dormant) is the single predicate the fire/drain AND the aura draw (`gDrawBurningBodyAura`) share, so a
+    toggle/starve hides the **whole** skill (base aura + emit), not half. `gGodSkillDisplay(p,id)` returns the
+    **current evolution's** name/icon (Ascension ▸ Form ▸ base) for the HUD. Per-player state: `godSkillOrder`
+    (acquisition order, built lazily in the dispatcher — no per-acquire hook), `godSkillOff` (player toggle, keys
+    1–9 → `gToggleGodSkillByKey`), `godSkillDormant` (HUD only). DOM chip row `#g-godskills` by the MP bar
+    (`gUpdateGodSkillHud`, signature-gated). All local-only (mana is per-player, firing host-authoritative) →
+    **no MP protocol change.** **Sim:** `Sim.toggleGodSkill(n)` + per-skill `{key,active,dormant,mpCostPerSec}`
+    in `observe().godSkills`.
 - **Parked:** **Dance of Fire** (the swing imbue tree, `IMBUE_PATHS.cilia.swing` + `gFireWaveParams` + wave FX) and
   the skill-imbue overlay (`gOpenImbueMenu`/`gImbueSelectSkill`/`#g-imbue-overlay`) are kept but **unreachable** in
   play — nothing writes `imbues['swing']`, so all `gIsImbued(p,'swing'/'ww'/'evasion'/'heavy',…)` reads are now

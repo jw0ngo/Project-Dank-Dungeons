@@ -21,6 +21,50 @@ Each entry captures: what was built, what broke badly, and what the root cause t
 
 ---
 
+## 2026-06-12 — Mana economy (item 7) — all three phases  [eng] · s19
+
+### Built / Done
+- **Item 7 (mana economy & skill management) — Phases 1–3 landed in one session.** Mana now funds both the
+  class kit and the god layer from one pool.
+  - **Phase 1 (numbers):** tightened `WeaponRegistry.sword` — leap 45 mp / 15 s CD (CD-led), whirlwind
+    0.30/f (18/s) / 5 s CD + power bump (dmg 22→30, radius 36→44) (mana-led), heavy 30, dash 18. **Edited the
+    `sw.*` run-start reset block too** — it re-clobbers `ww*`/`leap*` to hardcoded bases each run, so a registry
+    edit alone would be silently reverted at run start. Benchmark hit: leap + ~3 s WW ≈ empties the 100 pool.
+  - **Phase 2 (rank-scaled drain):** added an `mpCost` key (mp/**sec**) to the Burning Body registry
+    base/waveStep/formStep. It auto-scales with rank for free because the rank-up card pours **every** key of
+    the step object into mods (`for(const k in step)`), so a new param needs no apply-site change — same path
+    as emitDmg. Maxed ≈2.92 mp/s.
+  - **Phase 3 (toggle/HUD/Sim):** keys 1–9 toggle owned god skills (acquisition order); central pay-then-fire
+    in `gUpdateGodSkills`; dormant + auto-resume on starvation, paid lowest-key-first; signature-gated DOM chip
+    row by the MP bar; `Sim.toggleGodSkill(n)` + enriched `observe()`.
+- **Same-session playtest fixes (Josh).** (1) **"Not consuming mana"** — the 1.67/s drain was real but masked
+  by the 9/s passive regen; Josh's fix was to **cut base regen to 1 MP/s** (`mpRegen` 0.15→0.01667), so one
+  aura net-drains (the spec's "layered on regen" model only bites once regen is tight). (2) **Toggle hid only
+  half the skill** — `gDrawBurningBodyAura` was gated on *ownership*, so toggling off stopped the emit but the
+  base aura glow churned on. Added `gGodSkillRunning(p,id)` (owned ∧ on ∧ not-dormant) as the one predicate the
+  fire/drain AND the draw share. (3) **Chip always said "Burning Body"** — added `gGodSkillDisplay` so the label
+  shows the *current evolution* (Ascension ▸ Form ▸ base), since an evolution replaces what it grew from.
+
+### Decisions / lessons
+- **Where to put a per-second drain: pay centrally in the dispatcher, not inside each skill's tick.** The
+  spec grounded Phase 2 as "subtract in `gTickBurningBody`" and Phase 3 as "gate in `gUpdateGodSkills`." Those
+  fight: Phase 3's "pay in key order 1→9, dormant-on-starve" can only be enforced where you see *all* skills at
+  once and control the order — the dispatcher. Draining inside the tick would force the gate to *peek* each
+  cost to decide payability, risking double-accounting. Doing both (pay + dormancy decision + fire-dispatch) in
+  one central loop keeps the tick functions pure FX/damage and makes "lowest-key stays" a one-line consequence
+  of iteration order. **Lesson: when a spec phases a mechanic across two sites, find the site that can express
+  the *hardest* constraint (here: ordered, all-at-once payment) and put the whole thing there.**
+- **A run-start reset block is a second source of truth for any value it touches.** `ww*`/`leap*` are mutated
+  in place by ability upgrades, so they're re-seeded from hardcoded literals each run (`sw.wwCooldown = 120;`).
+  Editing only the `WeaponRegistry` definition looks correct (`node --check` passes, the registry reads right)
+  but the value silently reverts the next run. **Any stat that's both registry-defined AND reset-block-seeded
+  must be changed in both places** — grep the reset block for the symbol before trusting a registry edit.
+- **Verifying new control-flow logic with no browser:** extracted the real `gUpdateGodSkills` /
+  `gSyncGodSkillOrder` / `gToggleGodSkillByKey` (brace-balanced slice from `index.html`), stubbed the ~5
+  dependencies, and drove pay/dormant/auto-resume/key-order in ~40 lines of Node. Caught nothing this time but
+  *proved* the new logic — stronger and cheaper than `Sim.batch` for a self-contained state machine (which I
+  still owe in-browser before tagging).
+
 ## 2026-06-11 — God Skills slice 1 (Burning Body) shipped, asset reorg, PM playtest retune  [PM+eng] · s18
 *combined PM + engineer (role-switched from artist mid-session); parallel sessions sharing the tree*
 

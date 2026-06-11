@@ -868,6 +868,9 @@ function _fbInit() {
         <span class="ghud-lbl" style="color:#55aaff;">MP</span>
         <div class="ghud-bar" style="background:#0a1428;"><div class="ghud-fill" id="gmp" style="background:#2266cc;"></div></div>
       </div>
+      <!-- God-skill toggle row (item 7 Phase 3) — one chip per owned auto-fire skill: hotkey, icon,
+           per-second mp cost, lit/dormant/off state. Populated each frame by gUpdateGodSkillHud. -->
+      <div id="g-godskills" style="display:none;gap:4px;align-items:center;font-family:monospace;"></div>
       <div class="ghud-hp" id="g-xp-wrap" style="display:none;">
         <span class="ghud-lbl" id="g-lvl" style="color:#ffd040;min-width:28px;">Lv1</span>
         <div class="ghud-bar" style="background:#1a1400;width:70px;"><div class="ghud-fill" id="gxp" style="background:#ccaa00;"></div></div>
@@ -2501,15 +2504,15 @@ const WeaponRegistry = {
     // Whirlwind dash
     wwRange:      180,    // max dash distance (px)
     wwSpeed:      7,      // dash speed (px/frame)
-    wwRadius:     36,     // hit radius during dash
-    wwDamage:     22,     // damage per enemy hit
-    wwCooldown:   120,    // frames between whirlwinds
+    wwRadius:     44,     // hit radius during spin (item-7 power bump 36→44 — pairs the longer 5s CD with a wider catch)
+    wwDamage:     30,     // damage per enemy hit (item-7 power bump 22→30 — a rarer, mana-led spin must hit harder)
+    wwCooldown:   300,    // frames between whirlwinds (item-7: 120→300 = 5s — a deliberate burst, not spammable)
     wwHitCd:      40,     // frames between repeated hits on same enemy
-    mpRegen:       0.15,  // mp per frame passive regen (~9/s)
-    mpCostHeavy:   25,    // heavy attack charge release
-    mpCostEvasion: 15,    // evasion dash
-    mpCostLeap:    35,    // leap
-    mpCostWwTick:  0.08,  // whirlwind mp drain per frame while spinning
+    mpRegen:       0.01667, // mp per frame passive regen (~1/s — item 7: the tight STARTING rate; mpRegenAdd cards loosen it over a run, and one god-skill aura at ~1.67/s now net-drains the pool)
+    mpCostHeavy:   30,    // heavy attack charge release (item-7: 25→30)
+    mpCostEvasion: 18,    // evasion dash (item-7: 15→18 — mobility stays affordable)
+    mpCostLeap:    45,    // leap (item-7: 35→45 — the opening leap+WW burst must bite the pool)
+    mpCostWwTick:  0.30,  // whirlwind mp drain per frame while spinning (item-7: 0.08→0.30 = 18/s — mana-led; a full 100 pool sustains ~5.5s of spin)
     // Evasion dash — spacebar, sword only
     evasionRange:    90,  // 50% of wwRange — short forward burst
     evasionSpeed:    9,   // px/frame (faster than ww for snappiness)
@@ -2522,7 +2525,7 @@ const WeaponRegistry = {
     leapWindup:      18,  // frames of hang before launch (~0.3s)
     leapFlight:      38,  // frames of flight arc
     leapHeight:      80,  // peak arc height in px
-    leapCooldown:   200,  // frames between leaps (~3.3s)
+    leapCooldown:   900,  // frames between leaps (item-7: 200→900 = 15s — leap is CD-led: a rare, heavy nuke gated by a real cooldown)
     // Smash — overhead rectangular slam (right-click)
     heavyDamage:  40,     // base damage (uncharged)
     heavyDamageMax: 80,   // fully charged damage (2× base)
@@ -3367,6 +3370,11 @@ function makePlayerState(wx, wy) {
     // God-skill pivot (item 2): the patron pledged at the shrine (e.g. 'cilia'), unlocking that god's
     // auto-firing god-skill pool in the level-up draft. Per-run; set in gShrineSelectGod, reset on run start.
     patron: null,
+    // God-skill toggles (item 7 Phase 3): which owned auto-fire skills are lit, keyed in acquisition order.
+    //   godSkillOrder = owned ids in acquire order (hotkey N = order[N-1]); godSkillOff[id] = toggled off by
+    //   the player; godSkillDormant[id] = starved this frame (recomputed in gUpdateGodSkills, HUD-only). All
+    //   per-run, local-only — mana is per-player and god-skill firing is host-authoritative (no MP protocol).
+    godSkillOrder: [], godSkillOff: {}, godSkillDormant: {},
     // Whirlwind — per-player, not global
     wwActive: null, wwCooldown: 0,
     wwLevel: 0,   // whirlwind ability upgrade level
@@ -3539,6 +3547,15 @@ document.addEventListener('keydown', function(e){
     if(!gPlayer||gPlayer.dead||exitReached) return;
     if(gActiveWeapon !== 'sword') return;
     gToggleWhirlwind();
+    return;
+  }
+
+  // ── Number keys 1–9 ──────────────────────────────────────────
+  // Toggle the owned God Skill bound to that hotkey (acquisition order, item 7 Phase 3). Mana still
+  // gates output — a toggled-on but starved skill goes dormant and auto-resumes when mana recovers.
+  if(key >= '1' && key <= '9'){
+    if(!gPlayer||gPlayer.dead||exitReached) return;
+    if(gToggleGodSkillByKey(gPlayer, +key)) e.preventDefault();
     return;
   }
 });
@@ -3748,13 +3765,105 @@ function gUpdateWhirlwind(p, dt){
 // NOT tied to any active skill. gUpdateGodSkills is ticked once per frame from gUpdatePlayer for the
 // LOCAL player only (each client owns/ticks its own skills; only the FX/damage outcomes sync in MP via
 // the existing _frSeq bump in gSpawnFireRing). Each owned skill dispatches on its registry `fire.kind`.
+// ── God-skill toggles (item 7 Phase 3) — keys 1–9, acquisition order ──────────────────────────────
+// Owned god skills are bound to hotkeys 1–9 in the order acquired. The order is built LAZILY here:
+// the first frame a skill is owned it's appended to godSkillOrder, so the array reflects acquire order
+// (one-at-a-time via the draft) without hooking every acquire site. Owned is monotonic, so it only grows.
+function gSyncGodSkillOrder(p){
+  p.godSkillOrder = p.godSkillOrder || [];
+  for(const id of gOwnedGodSkills(p)) if(p.godSkillOrder.indexOf(id) === -1) p.godSkillOrder.push(id);
+  return p.godSkillOrder;
+}
+// Owned god skills in hotkey order, each tagged with its 1-based key, on/off, dormant (starved this
+// frame), and live per-second mp cost. Single source the keydown toggle, the HUD, and Sim.observe read.
+function gGodSkillHud(p){
+  p = p || gPlayer; if(!p) return [];
+  const order = gSyncGodSkillOrder(p), off = p.godSkillOff || {}, dorm = p.godSkillDormant || {}, out = [];
+  for(let i = 0; i < order.length && i < 9; i++){
+    const id = order[i]; if(!gOwnsGodSkill(p, id)) continue;
+    const tree = gGodSkillTree(p, id); if(!tree) continue;
+    const d = gGodSkillDisplay(p, id);   // show the CURRENT evolution (Firebloom/Dragonbreath…), not the base
+    out.push({ id, key: i + 1, icon: d.icon, name: d.name,
+               active: !off[id], dormant: !!dorm[id], mpCostPerSec: gGodFireParam(p, id, 'mpCost') });
+  }
+  return out;
+}
+// Toggle the god skill on hotkey n (1–9) on/off. Toggling ON is intent only — mana still gates whether
+// it actually runs (an on-but-unpayable skill goes dormant and auto-resumes). Returns true if it toggled.
+function gToggleGodSkillByKey(p, n){
+  p = p || gPlayer; if(!p) return false;
+  const id = gSyncGodSkillOrder(p)[n - 1]; if(!id || !gOwnsGodSkill(p, id)) return false;
+  p.godSkillOff = p.godSkillOff || {};
+  p.godSkillOff[id] = !p.godSkillOff[id];
+  return true;
+}
+// Is the WHOLE skill running this frame? — owned ∧ toggled on ∧ not starved. A god skill is ONE evolving
+// ability (base aura → Form → Ascension), so this single predicate gates *everything* it does (base aura
+// AND its emit, fire AND the visual) — toggling/starving hides the entire skill, not just the emit half.
+function gGodSkillRunning(p, id){
+  p = p || gPlayer;
+  return !!p && gOwnsGodSkill(p, id)
+    && !(p.godSkillOff && p.godSkillOff[id])
+    && !(p.godSkillDormant && p.godSkillDormant[id]);
+}
+// The skill's CURRENT identity for display — an evolution REPLACES the base, so the latest fork wins:
+// rank-10 Ascension leaf ▸ Form (@5) ▸ base tree. Returns {name, icon} for HUD/labels.
+function gGodSkillDisplay(p, id){
+  const tree = gGodSkillTree(p, id); if(!tree) return { name:id, icon:'✦' };
+  const form = gImbueForm(p, id), fdef = form && tree.forms && tree.forms[form];
+  if(fdef){
+    const asc = gImbueAscension(p, id), leaf = asc && fdef.ascensions && fdef.ascensions[asc];
+    if(leaf) return { name: leaf.name || fdef.name, icon: leaf.icon || fdef.icon || tree.icon || '✦' };
+    return { name: fdef.name || tree.art || id, icon: fdef.icon || tree.icon || '✦' };
+  }
+  return { name: tree.art || id, icon: tree.icon || '✦' };
+}
+// Render the god-skill toggle row by the MP bar — one chip per owned skill (hotkey · icon · mp/s · state).
+// Rebuilds innerHTML only when the chip set/state changes (signature-gated), not every frame; hidden when
+// no god skills are owned. lit=amber, dormant=dim amber + ⚠, toggled-off=grey + ✕.
+let _godHudSig = '';
+function gUpdateGodSkillHud(){
+  const el = document.getElementById('g-godskills'); if(!el) return;
+  const list = (inWilderness && gPlayer && !gPlayer.dead) ? gGodSkillHud(gPlayer) : [];
+  if(!list.length){ if(el.style.display !== 'none'){ el.style.display = 'none'; el.innerHTML = ''; } _godHudSig = ''; return; }
+  const sig = list.map(s => s.key + s.id + (s.active ? (s.dormant ? 'd' : 'on') : 'off') + s.mpCostPerSec.toFixed(1)).join('|');
+  if(sig === _godHudSig) return;
+  _godHudSig = sig;
+  el.style.display = 'flex';
+  el.innerHTML = list.map(s => {
+    const st  = !s.active ? 'off' : s.dormant ? 'dormant' : 'on';
+    const col = st === 'on' ? '#ff9a3a' : st === 'dormant' ? '#9c6a3a' : '#556677';
+    const op  = st === 'on' ? '1' : st === 'dormant' ? '0.75' : '0.4';
+    return `<span title="${s.name} — ${s.mpCostPerSec.toFixed(1)} mp/s · press ${s.key} to toggle" `
+      + `style="display:inline-flex;align-items:center;gap:3px;padding:1px 5px;border:1px solid ${col};border-radius:4px;opacity:${op};background:rgba(8,8,20,.6);">`
+      + `<b style="color:#8aa;font-size:7px;">${s.key}</b><span style="font-size:11px;line-height:1;">${s.icon}</span>`
+      + `<span style="color:${col};font-size:7px;">${s.mpCostPerSec.toFixed(1)}${s.dormant ? '⚠' : st === 'off' ? '✕' : ''}</span></span>`;
+  }).join('');
+}
+
+// Dispatch + PAY the patron's owned auto-fire abilities — ticked once per frame from gUpdatePlayer for
+// the LOCAL player only (each client owns/ticks its own; FX/damage outcomes sync via _frSeq). Item 7:
+// each skill drains its per-second mpCost (rank-scaled via gGodFireParam) BEFORE it fires, paid in KEY
+// ORDER (1→9), so when mana can't cover everything the LAST-toggled skills go dormant first and the core
+// ones keep running. A skill that's toggled off — or can't be paid this frame — is skipped (no fire, no
+// drain) and auto-resumes once regen restores enough mana. Net passive = regen − Σ(active drains), so
+// over-committing bleeds the pool even while idle: the pressure that makes the toggle a real decision.
 function gUpdateGodSkills(p, dt){
   if(p !== gPlayer || p.dead) return;
-  for(const id of gOwnedGodSkills(p)){
+  const order = gSyncGodSkillOrder(p), off = p.godSkillOff || {};
+  p.godSkillDormant = p.godSkillDormant || {};
+  for(const id of order){
+    if(!gOwnsGodSkill(p, id)) continue;
     const tree = gGodSkillTree(p, id); if(!tree || !tree.fire) continue;
+    if(off[id]){ p.godSkillDormant[id] = false; continue; }   // toggled OFF → not running (distinct from dormant)
+    const cost = gGodFireParam(p, id, 'mpCost') * dt / 60;     // registry mpCost is mp/SEC → this frame's spend
+    if(p.mp < cost){ p.godSkillDormant[id] = true; continue; } // starved → dormant; resumes when mana recovers
+    p.mp -= cost;
+    p.godSkillDormant[id] = false;
     switch(tree.fire.kind){
       case 'burningBody': gTickBurningBody(p, dt, id, tree); break;
-      // 'distance' (Trail of Embers) and 'interval+autotarget' (Pyroclasm) land in the next slice.
+      // 'distance' (Trail of Embers) and 'interval+autotarget' (Pyroclasm) land in the next slice — each
+      // carries an mpCost in its registry entry, so this pay-then-fire gate covers them with no new code.
     }
   }
 }
@@ -6257,7 +6366,9 @@ function _laySettleRing(w){ gLayChaosfireRing(w.x, w.y, w.range, w.dmg); }   // 
 // Floor decal: called before the character draw so the player stands inside their own fire.
 function gDrawBurningBodyAura(){
   const p = gPlayer;
-  if(!p || p.dead || !gOwnsGodSkill(p, 'burningBody')) return;
+  // Gate on the WHOLE-skill predicate, not mere ownership — so toggling the skill off (or it going dormant
+  // on starvation) hides the base aura too, not just the emit. The aura is one half of the single skill.
+  if(!p || p.dead || !gGodSkillRunning(p, 'burningBody')) return;
   const radius = gGodFireParam(p, 'burningBody', 'auraRadius');
   if(!(radius > 0)) return;
   // Pick the aura skin: once a rank-10 Ascension is chosen, the leaf's substance reskins the aura —
@@ -9298,6 +9409,7 @@ function gRender(){
     else if(gPlayer&&gPlayer.evasionCooldown>0) evEl.textContent='[SPACE] '+Math.ceil(gPlayer.evasionCooldown/60)+'s';
     else evEl.textContent='[SPACE] DASH';
   }
+  gUpdateGodSkillHud();   // god-skill toggle row by the MP bar (item 7 Phase 3)
   if(gPlayer.dead){
     if(!document.getElementById('g-death').classList.contains('show')){
       mpShowDeath(true);
@@ -13759,18 +13871,19 @@ const IMBUE_PATHS = {
       fire: {
         kind:'burningBody', timerKey:'_bbTimer',
         base:   { auraRadius:AURA_RADIUS, auraDmg:AURA_DMG, auraBurn:AURA_BURN_FRAMES,
-                  emitDmg:FR_BASE_DMG, emitRange:FR_RANGE_TILES, burnFrames:FR_BURN_FRAMES },
+                  emitDmg:FR_BASE_DMG, emitRange:FR_RANGE_TILES, burnFrames:FR_BURN_FRAMES,
+                  mpCost:1.67 },  // item-7 Phase 2: mp/SEC drain while active (≈5mp/3s at rank 1; /60 per frame at the drain site)
         floors: { auraRadius:40, emitInterval:90 },
         caps:   { emitRange:12 },
       },
       // ranks 1–4: grow the base aura (bigger / hotter / longer ignite) + seed the emit's damage.
-      waveStep: { auraRadius:6, auraDmg:2, auraBurn:12, emitDmg:4 },
+      waveStep: { auraRadius:6, auraDmg:2, auraBurn:12, emitDmg:4, mpCost:0.15 },  // +0.15 mp/s per pre-Form rank (stronger = costlier)
       forms: {
         firebloom: {
           name:'Firebloom', tag:'RHYTHM · REACH', icon:'🔥',
           desc:'Releases an expanding ring of fire every few seconds — timed waves sweep outward and ignite all they cross.',
           // ranks 6–9: harder / wider / longer-burning rings (+ a touch of aura).
-          formStep: { emitDmg:5, emitRange:0.6, burnFrames:18, auraDmg:1 },
+          formStep: { emitDmg:5, emitRange:0.6, burnFrames:18, auraDmg:1, mpCost:0.2 },  // +0.2 mp/s per post-Form rank → maxed ≈3 mp/s
           fire: { emit:'ring', interval:BB_RING_INTERVAL, speed:FR_SPEED },
           ascensions: {
             dragonbreath: { name:'Dragonbreath', icon:'🐉', age:'old', tag:'OLD · DRAGON · SUSTAIN', ground:'dragonfire', ringMode:'breathe', interval:130,
@@ -13783,7 +13896,7 @@ const IMBUE_PATHS = {
           name:'Cinderburst', tag:'BURST · STAND', icon:'🔥',
           desc:'The burning aura swells and detonates every few seconds — a fixed-radius nova centred on you that erupts and ignites the pack.',
           // ranks 6–9: bigger / harder / longer-burning detonations.
-          formStep: { emitDmg:7, emitRange:0.5, burnFrames:18, auraDmg:1 },
+          formStep: { emitDmg:7, emitRange:0.5, burnFrames:18, auraDmg:1, mpCost:0.2 },  // +0.2 mp/s per post-Form rank → maxed ≈3 mp/s
           fire: { emit:'nova', interval:BB_BURST_INTERVAL, speed:BB_NOVA_SPEED },
           ascensions: {
             dragonheart: { name:'Dragonheart', icon:'🐉', age:'old', tag:'OLD · DRAGON · SUSTAIN', ground:'dragonfire',
@@ -14758,6 +14871,7 @@ function gWildReset(){
     gPlayer.skillMods = {}; gPlayer.gritMods = {}; gPlayer.cardPicks = {};  // per-run card state
     gPlayer.imbuePaths = {};  // per-run imbue-path / god-skill mastery state (item 2) — forks re-chosen each run
     gPlayer.patron = null;    // per-run patron pledge — re-chosen at the shrine each run
+    gPlayer.godSkillOrder = []; gPlayer.godSkillOff = {}; gPlayer.godSkillDormant = {};  // per-run god-skill toggles (item 7 Phase 3)
     gPlayer.wildBuffs = { hpBonus:0, mpBonus:0, hpRegenAdd:0, mpRegenAdd:0,
                           speedPct:0, damagePct:0, cdPct:0, spawnPct:0,
                           xpPct:0, pickupRange:0, critChance:0, critDamage:0,
@@ -14767,8 +14881,8 @@ function gWildReset(){
   }
   // Reset weapon stats to base values (ability upgrades modify these)
   const sw = WeaponRegistry.sword;
-  sw.wwDamage    = 22;  sw.wwRadius  = 36;  sw.wwCooldown  = 120; sw.mpCostWwTick = 0.08;
-  sw.leapDamage  = 45;  sw.leapRadius= 60;  sw.leapCooldown= 200; sw.leapRange    = 200; sw.mpCostLeap   = 35;
+  sw.wwDamage    = 30;  sw.wwRadius  = 44;  sw.wwCooldown  = 300; sw.mpCostWwTick = 0.30;
+  sw.leapDamage  = 45;  sw.leapRadius= 60;  sw.leapCooldown= 900; sw.leapRange    = 200; sw.mpCostLeap   = 45;
   // Hide/reset HUD elements
   const xpWrap = document.getElementById('g-xp-wrap');
   const infoEl = document.getElementById('g-wild-info');
@@ -16237,9 +16351,15 @@ const Sim = (function(){
         // God Skills (item 2 pivot): the active patron + each owned auto-firing skill's rank / Form /
         // rank-10 ascension leaf, plus any pending evolution fork the agent must resolve.
         patron: gActivePatron(p) || null,
-        godSkills: gOwnedGodSkills(p).reduce((m,id)=>{
-          m[id] = { rank:gImbueRank(p,id), form:gImbueForm(p,id), ascension:gImbueAscension(p,id) }; return m;
-        }, {}),
+        // Each owned skill carries its mastery (rank/form/ascension) AND its item-7 toggle state: the 1–9
+        // hotkey, whether it's lit (active) or toggled off, whether it's dormant (starved this frame), and
+        // its live per-second mp cost. With player.mp/maxMp, this is everything a bot needs to manage mana.
+        godSkills: (gSyncGodSkillOrder(p), gOwnedGodSkills(p).reduce((m,id)=>{
+          m[id] = { rank:gImbueRank(p,id), form:gImbueForm(p,id), ascension:gImbueAscension(p,id),
+                    key:((p.godSkillOrder||[]).indexOf(id)+1)||null, active:!(p.godSkillOff&&p.godSkillOff[id]),
+                    dormant:!!(p.godSkillDormant&&p.godSkillDormant[id]), mpCostPerSec:+gGodFireParam(p,id,'mpCost').toFixed(2) };
+          return m;
+        }, {})),
         pendingEvolution: (()=>{ const e = gPendingEvolution(p); return e ? { skill:e.skill, kind:e.kind } : null; })(),
       };
       const list=[];
@@ -16284,6 +16404,7 @@ const Sim = (function(){
   Sim.reroll = function(){ return gSimDraft && gSimDraft.reroll ? gSimDraft.reroll() : false; };      // Favor reroll
   Sim.upgradeCard = function(i){ return gSimDraft && gSimDraft.upgrade ? gSimDraft.upgrade(i|0) : false; }; // Favor rarity-upgrade
   Sim.buyRank     = function(i){ return gSimDraft && gSimDraft.buyRank ? gSimDraft.buyRank(i|0) : false; }; // Favor god-skill rank buy
+  Sim.toggleGodSkill = function(n){ return typeof gToggleGodSkillByKey==='function' ? gToggleGodSkillByKey(gPlayer, n|0) : false; }; // item 7: toggle auto-cast on hotkey n (1–9)
   // Convenience: one call applying an intent object.
   Sim.act = function(c){
     if(!c) return;
@@ -16298,6 +16419,7 @@ const Sim = (function(){
     if(c.bow==='draw') Sim.bowDraw(); else if(c.bow==='loose') Sim.bowLoose();
     if(c.reroll) Sim.reroll();
     if(c.upgradeCard!=null) Sim.upgradeCard(c.upgradeCard);
+    if(c.toggleGodSkill!=null) Sim.toggleGodSkill(c.toggleGodSkill);   // item 7: toggle an auto-cast god skill on/off
     if(c.pickCard!=null) Sim.pickCard(c.pickCard);   // pick last so a same-tick reroll/upgrade resolves first
   };
 
