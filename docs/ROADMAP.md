@@ -283,8 +283,8 @@ Concepts (🔥 Chaos — massive AOE that *burns* you). What *"To Dust"* means, 
 - **Standalone damage bases** — Pyre Waltz / Pyroclasm currently scale off `wwDamage` / `heavyDmg`; give each a
   standalone level+`damagePct`-scaled base.
 - **Migration:** retire the active-skill imbues. **Dance of Fire (shipped Phase 1, the fire swing) reverts to a
-  plain swing and its tree code parks** (can return later as a 4th auto-fire Cilia skill). ⚑ **Open call (Josh
-  + eng):** retire-and-park now (recommended) vs. leave dormant behind a flag. Sunfall (leap) was never built.
+  plain swing and its tree code parks** — **retire-and-park decided (Josh, 2026-06-11)**; no flag, no dormant
+  live path (can return later as a 4th auto-fire Cilia skill). Sunfall (leap) was never built.
 - **Acquire + rank-up via the existing draft**; ranks 5/10 are the 2-option evolution overlays; gated on the
   active patron (same gate as Patron Cards). Auto-fire needs **no** new Sim input hook (a harness *simplification*).
 - **Don't duplicate the spec here — update [`specs/god-skills.md`](specs/god-skills.md).**
@@ -480,8 +480,8 @@ the two drift. Items with no spec (small fixes) keep their detail inline in the 
   **Build order: Pyre Waltz (already interval-based — start here to prove it) → Trail of Embers (emit on
   movement) → Pyroclasm (interval + auto-target nearest cluster).** Keep the 10-rank binary tree (Form @5,
   two-age Ascension @10) and reuse the shipped dragonfire/chaosfire grounds. **Migration:** whirlwind/dash/heavy
-  revert to plain; **Dance of Fire (shipped) reverts to a plain swing + its tree parks** (⚑ open: retire-and-park
-  vs. dormant-flag — recommend retire-and-park). All conversions, line-refs, state model, draft/Sim hooks in the spec.
+  revert to plain; **Dance of Fire (shipped) reverts to a plain swing + its tree parks** (✅ retire-and-park
+  decided, Josh 2026-06-11 — no flag, no dormant live path). All conversions, line-refs, state model, draft/Sim hooks in the spec.
 - **PM → ENG (NEW, 2026-06-10):** **CHANGELOG archive done** (this session) — pre-rename Dungeon Forge era
   (v0.9.0–v0.11.0) moved to `docs/archive/changelog-dungeon-forge.md`, pointer left in `CHANGELOG.md`
   (610→509 lines). Uncommitted in the working tree; fold into your next `docs:` commit. Going forward,

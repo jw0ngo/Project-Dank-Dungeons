@@ -221,12 +221,11 @@ The pivot removes the *active-skill* fire imbues from the live build. Engineer o
 
 - **Whirlwind / dash / heavy revert to neutral** (their plain class behaviour) — they stop spawning fire.
   Their FX systems are repurposed as the three auto-fire god skills above.
-- **Dance of Fire (the fire swing, shipped Phase 1) is retired from the live path.** The swing belongs to the
-  class and carries no element skin. Recommendation: revert the swing to plain, and **park** the Dance-of-Fire
-  tree code (don't necessarily delete — it can return as a 4th Cilia god skill later, reworked for auto-fire:
-  its 3-hit-LMB-combo peak becomes "every Nth auto-sweep fires the empowered climax"). **Open call for Josh +
-  engineer:** retire-and-park now, or leave dormant behind a flag? Recommend retire-and-park to keep the build
-  honest to the new model.
+- **Dance of Fire (the fire swing, shipped Phase 1) is RETIRED AND PARKED** (Josh, 2026-06-11). The swing
+  belongs to the class and carries no element skin: **revert the swing to plain**, and **park** the
+  Dance-of-Fire tree code — keep it (don't delete) so it can return later as a 4th Cilia god skill, reworked
+  for auto-fire (its 3-hit-LMB-combo peak becomes "every Nth auto-sweep fires the empowered climax"). This is
+  the decided model — no flag, no dormant live path; the build stays honest to the new god-skill model.
 - **Sunfall (leap cross)** was never built — no migration, just deferred design in `imbue-paths.md`.
 - **Near-term shippable state:** one implicit "class" (the current sword kit, neutral) **+ Cilia's three
   auto-firing god skills** with full trees. That *is* a complete, playable roguelike loadout — no class system
