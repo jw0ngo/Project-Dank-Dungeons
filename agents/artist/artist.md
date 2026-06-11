@@ -146,7 +146,8 @@ the game loads the sliced/sized-down outputs from **`assets/`**, not these):
 - `art/enemies/` — goblin family (idle `goblin-*.png` + matching `*-attack.png`, incl. `goblin-king-white-bg.png`)
 - `art/gods/` — four patrons `bhumi/boreas/ikras/cilia` (some with a `-bg-removed` variant)
 - `art/tiles/` — `dirt/grass/stone.png` source sheets + `sliced/*_floor_*.png`
-- `art/fx/` — `fire-*`, `burning-ground`, `jump-impact`, `sword-slash`, `heavy-stab`
+- `art/fx/` — FX masters, foldered **by owner** to mirror `assets/fx/` (see both READMEs): `cilia/` (fire
+  kit), `_shared/` (god-agnostic: `jump-impact`/`sword-slash`/`heavy-stab`), `boreas/`·`ikras/`·`bhumi/` (per god)
 - `art/world/` — `shrine-of-the-gods.png`
 
 ### 2. Slice + background-remove (character/enemy turnaround sheets)
