@@ -8,6 +8,17 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 ## [Unreleased]
 
 ### Changed
+- **Level-up no longer pauses the game — it's now a non-blocking sidebar (MP-seamless).** Gaining a level
+  no longer freezes the world and throws up a full-screen modal. Instead a **level-up icon pulses in the
+  bottom-left** (with a count badge if several are queued); **click it to open a left-docked "Choose a
+  Blessing" sidebar** while the game keeps running on the right. You **keep full control** — move and
+  attack normally with the panel open (clicks on the world still swing; clicks on the panel pick cards) —
+  and you stay vulnerable, so leveling up mid-fight is a real choice of *when* to stop and pick. The 3
+  cards are now stacked **card-rows** (icon · rarity · name · description · Favor chip). The Lv 5/10
+  **Form / Ascension fork** shows its two options as rows **in the same sidebar** (replacing the 3 cards
+  that level) — also no pause. Favor reroll / rarity-upgrade / rank-buy all carry over unchanged. Because
+  nothing pauses, one player's level-up never freezes the shared world in multiplayer. *(Art: functional
+  CSS frame + existing Cilia portrait now; a painted frame / card icons pass is queued for the Artist.)*
 - **Favor coins and treasure chests now use their painted art** (was procedural shapes). Dropped Favor
   surfaces as the gold-coin sprite (with a soft pickup glow + gentle hover); wolf-camp and village chests
   render as a real chest that swaps **closed → open** when looted, and a still-guarded camp chest reads

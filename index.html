@@ -172,20 +172,40 @@ button{font-family:inherit;cursor:pointer;}
 #g-stat-pick{ --lvl-accent:#c8d2dc; --lvl-accent2:#8fa8c0; --lvl-glow:rgba(150,180,210,.40); --lvl-frame:#3a4654; --lvl-frame-hi:#c2ccd8; --lvl-frame-lo:#454f5c; }
 #g-stat-pick.theme-cilia{ --lvl-accent:#ff8a3a; --lvl-accent2:#ffd040; --lvl-glow:rgba(255,110,20,.55); --lvl-frame:#6a4628; --lvl-frame-hi:#ffd884; --lvl-frame-lo:#7e4a12; }
 .lvl-flourish{ color:var(--lvl-accent); font-size:13px; opacity:.75; text-shadow:0 0 10px var(--lvl-glow); }
-.lvl-title{ font:bold 30px 'Palatino Linotype',serif; color:var(--lvl-accent); letter-spacing:7px; text-shadow:0 0 18px var(--lvl-glow),0 2px 4px #000; }
+.lvl-title{ font:bold 26px 'Palatino Linotype',serif; color:var(--lvl-accent); letter-spacing:5px; text-shadow:0 0 18px var(--lvl-glow),0 2px 4px #000; }
 .lvl-sub{ font:8px monospace; color:var(--lvl-accent2); letter-spacing:4px; opacity:.75; text-transform:uppercase; }
 .lvl-btn{ padding:8px 22px; min-width:118px; background:rgba(10,10,16,.7); border:1px solid var(--lvl-accent); border-radius:5px; color:var(--lvl-accent); font:bold 10px monospace; letter-spacing:2px; cursor:pointer; transition:all .15s; text-shadow:0 0 8px var(--lvl-glow); }
 .lvl-btn:hover{ background:rgba(255,255,255,.06); box-shadow:0 0 14px var(--lvl-glow); }
 .lvl-btn-confirm{ opacity:.4; cursor:not-allowed; }
 .lvl-btn-sub{ font:6.5px monospace; color:#777; letter-spacing:1px; text-transform:uppercase; }
-#g-stat-pick .stat-card{ width:128px; padding:12px 10px 11px; background:linear-gradient(180deg,rgba(20,18,26,.92),rgba(8,8,14,.95)); border:1px solid var(--lvl-frame); border-radius:8px; gap:7px; align-items:center; }
-#g-stat-pick .stat-card:hover{ border-color:var(--lvl-accent); background:linear-gradient(180deg,rgba(28,24,34,.95),rgba(10,10,16,.96)); box-shadow:0 0 16px var(--lvl-glow); transform:translateY(-2px); }
+/* Level-up cards are full-width horizontal ROWS (icon-ring | rarity/name/desc | Favor chip). */
+#g-stat-pick .stat-card{ width:100%; flex-direction:row; align-items:center; text-align:left; gap:11px; padding:9px 11px; background:linear-gradient(180deg,rgba(20,18,26,.92),rgba(8,8,14,.95)); border:1px solid var(--lvl-frame); border-radius:8px; }
+#g-stat-pick .stat-card:hover{ border-color:var(--lvl-accent); background:linear-gradient(180deg,rgba(28,24,34,.95),rgba(10,10,16,.96)); box-shadow:0 0 16px var(--lvl-glow); transform:translateY(-1px); }
 #g-stat-pick .stat-card.selected{ border-color:var(--lvl-accent); box-shadow:0 0 20px var(--lvl-glow), inset 0 0 12px var(--lvl-glow); }
+#g-stat-pick .sc-body{ display:flex; flex-direction:column; align-items:flex-start; gap:2px; flex:1; min-width:0; }
 #g-stat-pick .sc-rarity{ font:bold 6.5px monospace; letter-spacing:3px; }
-#g-stat-pick .sc-ring{ width:46px; height:46px; border-radius:50%; border:2px solid #555; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.5); margin:2px 0; }
+#g-stat-pick .sc-ring{ width:46px; height:46px; flex-shrink:0; border-radius:50%; border:2px solid #555; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.5); }
 #g-stat-pick .sc-icon{ font-size:22px; line-height:1; }
-#g-stat-pick .sc-name{ font:bold 10px 'Palatino Linotype',serif; letter-spacing:1px; color:var(--lvl-accent); }
-#g-stat-pick .sc-bonuses{ font:7px monospace; color:#9aaab4; line-height:1.5; text-align:center; background:none; padding:0; }
+#g-stat-pick .sc-name{ font:bold 11px 'Palatino Linotype',serif; letter-spacing:1px; color:var(--lvl-accent); }
+#g-stat-pick .sc-bonuses{ font:7px monospace; color:#9aaab4; line-height:1.5; text-align:left; background:none; padding:0; }
+#g-stat-pick .imb-track{ justify-content:flex-start; margin-top:4px; }
+/* Left-docked panel — only this strip is interactive; the rest of the screen passes clicks to the world. */
+.lvl-dock{ display:flex; height:100%; width:42%; min-width:330px; max-width:560px; pointer-events:auto; box-shadow:0 0 40px rgba(0,0,0,.7); }
+.lvl-content{ position:relative; flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; padding:22px 18px 16px; overflow-y:auto;
+  background:linear-gradient(180deg,rgba(14,11,18,.97),rgba(6,6,11,.985)); border-left:1px solid var(--lvl-frame); }
+.lvl-close{ position:absolute; top:8px; right:10px; width:22px; height:22px; padding:0; background:rgba(10,10,16,.6); border:1px solid var(--lvl-frame); border-radius:4px; color:var(--lvl-accent2); font:bold 11px monospace; cursor:pointer; opacity:.7; transition:all .12s; }
+.lvl-close:hover{ opacity:1; border-color:var(--lvl-accent); box-shadow:0 0 8px var(--lvl-glow); }
+/* Bottom-left "level-up ready" FAB — slow pulse so it reads as an invitation, not an alarm. */
+#g-levelup-fab{ position:absolute; left:16px; bottom:46px; z-index:9; display:none; align-items:center; gap:7px; padding:8px 13px;
+  background:linear-gradient(180deg,rgba(46,32,8,.94),rgba(22,15,4,.96)); border:1px solid #ffc132; border-radius:7px; cursor:pointer;
+  color:#ffd884; font:bold 10px 'Palatino Linotype',serif; letter-spacing:2px; text-shadow:0 0 8px rgba(255,180,40,.8);
+  box-shadow:0 0 14px rgba(255,170,30,.5); animation:fabPulse 1.5s ease-in-out infinite; }
+#g-levelup-fab:hover{ filter:brightness(1.15); }
+#g-levelup-fab .fab-glyph{ font-size:14px; line-height:1; }
+#g-levelup-fab .fab-lbl{ white-space:nowrap; }
+#g-levelup-fab-badge{ min-width:15px; height:15px; padding:0 3px; display:none; align-items:center; justify-content:center;
+  background:#ff5a2a; border-radius:8px; color:#fff; font:bold 9px monospace; box-shadow:0 0 6px rgba(255,90,40,.8); }
+@keyframes fabPulse{ 0%,100%{ box-shadow:0 0 12px rgba(255,170,30,.4); transform:translateY(0);} 50%{ box-shadow:0 0 22px rgba(255,190,50,.85); transform:translateY(-2px);} }
 /* Imbue-Path rank track (item 2) — 10 dots = the named skill's level; the 5th/10th (fork levels)
    are larger; on card hover the next level flashes to preview what this pick grants. */
 .imb-track{ display:flex; gap:4px; justify-content:center; align-items:center; margin-top:6px; height:11px; }
@@ -871,55 +891,57 @@ function _fbInit() {
       <div style="font:9px monospace;color:#888;letter-spacing:2px;">CHOOSE A BLESSING</div>
       <div id="g-obelisk-cards" style="display:flex;gap:14px;"></div>
     </div>
-    <!-- Wilderness level-up stat selection overlay -->
-    <div id="g-stat-pick" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0);align-items:stretch;z-index:14;overflow:hidden;">
-
-      <!-- Dark background with subtle vignette -->
-      <!-- Semi-transparent scrim — the game stays vaguely visible behind the level-up screen -->
-      <div style="position:absolute;inset:0;background:rgba(0,0,0,0.6);"></div>
-      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 28% 50%, var(--lvl-glow,rgba(40,40,55,0.22)) 0%, transparent 68%);opacity:0.5;pointer-events:none;"></div>
-
-      <!-- Portrait panel (left) — fills the full left side; CSS ornate frame over the full-bleed figure -->
-      <div id="g-levelup-god-panel" style="
-        position:relative;z-index:1;
-        width:35%;min-width:260px;flex-shrink:0;overflow:hidden;">
-        <div class="lvl-portrait">
-          <img id="g-levelup-god-img" src="" alt="">
-          <span class="lvl-corner tl">❖</span><span class="lvl-corner tr">❖</span>
-          <span class="lvl-corner bl">❖</span><span class="lvl-corner br">❖</span>
-          <div class="lvl-pname">
-            <div class="nm" id="g-levelup-god-name"></div>
-            <div class="ln"></div>
-            <div class="sub" id="g-levelup-god-sub"></div>
+    <!-- Bottom-left flashing indicator — pending level-up(s); click to open the no-pause sidebar. -->
+    <button id="g-levelup-fab" onclick="gDraftOpen()" style="display:none;">
+      <span class="fab-glyph">⬆</span>
+      <span class="fab-lbl">LEVEL&nbsp;UP</span>
+      <span id="g-levelup-fab-badge" style="display:none;">2</span>
+    </button>
+    <!-- Wilderness level-up sidebar — non-blocking: docked left, the world keeps running on the right
+         (no pause). Container catches no pointer events; only the dock is interactive, so clicks on the
+         right-hand world fall through to the canvas and the player keeps attacking/aiming. -->
+    <div id="g-stat-pick" style="display:none;position:absolute;inset:0;z-index:14;pointer-events:none;">
+      <div class="lvl-dock">
+        <!-- Portrait strip (far left) — CSS ornate frame over the full-bleed figure -->
+        <div id="g-levelup-god-panel" style="position:relative;width:34%;min-width:130px;flex-shrink:0;overflow:hidden;">
+          <div class="lvl-portrait">
+            <img id="g-levelup-god-img" src="" alt="">
+            <span class="lvl-corner tl">❖</span><span class="lvl-corner tr">❖</span>
+            <span class="lvl-corner bl">❖</span><span class="lvl-corner br">❖</span>
+            <div class="lvl-pname">
+              <div class="nm" id="g-levelup-god-name"></div>
+              <div class="ln"></div>
+              <div class="sub" id="g-levelup-god-sub"></div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Right panel: level-up content -->
-      <div style="position:relative;z-index:1;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px 18px;">
-        <div style="display:flex;align-items:center;gap:16px;">
-          <span class="lvl-flourish">✦</span>
-          <div class="lvl-title">LEVEL UP</div>
-          <span class="lvl-flourish">✦</span>
-        </div>
-        <div class="lvl-sub">Choose a Blessing</div>
-        <!-- Favor wallet — the world currency, shown so spend costs are legible on this screen -->
-        <div id="g-levelup-favor" style="display:none;align-items:center;gap:9px;margin-top:8px;padding:5px 18px;border-radius:22px;background:linear-gradient(180deg,rgba(46,36,9,0.88),rgba(20,15,4,0.94));border:1px solid #b8860b;box-shadow:0 0 16px rgba(255,204,51,0.35),inset 0 0 10px rgba(255,204,51,0.12);">
-          <span style="font-size:17px;color:#ffd040;text-shadow:0 0 9px rgba(255,204,51,0.85);line-height:1;">✦</span>
-          <span id="g-levelup-favor-n" style="font:bold 14px 'Palatino Linotype',serif;color:#ffe49a;letter-spacing:2px;text-shadow:0 0 7px rgba(255,204,51,0.55);">0</span>
-          <span style="font:7px monospace;color:#bfa05a;letter-spacing:3px;text-transform:uppercase;">Favor</span>
-        </div>
-        <div id="g-levelup-favor-hint" style="display:none;font:7px monospace;color:#9a8a6a;letter-spacing:1.5px;text-transform:uppercase;margin-top:3px;opacity:0.85;">🔒 Spend unlocks once you choose a patron (Lv 5)</div>
-        <div id="g-stat-cards" style="display:flex;gap:14px;justify-content:center;margin-top:16px;"></div>
-        <div id="g-ability-cards" style="display:none;"></div>
-        <div style="display:flex;gap:20px;align-items:flex-start;margin-top:18px;">
-          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-            <button id="g-levelup-reroll" onclick="gWildReroll()" class="lvl-btn">↻ REROLL (1)</button>
-            <div class="lvl-btn-sub">Recall the Blessings</div>
+        <!-- Blessing content -->
+        <div class="lvl-content">
+          <button id="g-levelup-close" onclick="gDraftClose()" class="lvl-close" title="Close — keep this level-up for later">✕</button>
+          <div style="display:flex;align-items:center;gap:12px;justify-content:center;">
+            <span class="lvl-flourish">✦</span>
+            <div class="lvl-title">LEVEL UP</div>
+            <span class="lvl-flourish">✦</span>
           </div>
-          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-            <button id="g-levelup-confirm" onclick="gWildConfirmPick()" class="lvl-btn lvl-btn-confirm">CONFIRM</button>
-            <div class="lvl-btn-sub">Accept this Blessing</div>
+          <div class="lvl-sub">Choose a Blessing</div>
+          <!-- Favor wallet — the world currency, shown so spend costs are legible on this screen -->
+          <div id="g-levelup-favor" style="display:none;align-items:center;gap:9px;margin-top:8px;padding:5px 18px;border-radius:22px;background:linear-gradient(180deg,rgba(46,36,9,0.88),rgba(20,15,4,0.94));border:1px solid #b8860b;box-shadow:0 0 16px rgba(255,204,51,0.35),inset 0 0 10px rgba(255,204,51,0.12);">
+            <span style="font-size:17px;color:#ffd040;text-shadow:0 0 9px rgba(255,204,51,0.85);line-height:1;">✦</span>
+            <span id="g-levelup-favor-n" style="font:bold 14px 'Palatino Linotype',serif;color:#ffe49a;letter-spacing:2px;text-shadow:0 0 7px rgba(255,204,51,0.55);">0</span>
+            <span style="font:7px monospace;color:#bfa05a;letter-spacing:3px;text-transform:uppercase;">Favor</span>
+          </div>
+          <div id="g-levelup-favor-hint" style="display:none;font:7px monospace;color:#9a8a6a;letter-spacing:1.5px;text-transform:uppercase;margin-top:3px;opacity:0.85;">🔒 Spend unlocks once you choose a patron (Lv 5)</div>
+          <div id="g-stat-cards" style="display:flex;flex-direction:column;gap:9px;width:100%;margin-top:14px;"></div>
+          <div style="display:flex;gap:18px;align-items:flex-start;margin-top:16px;justify-content:center;">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+              <button id="g-levelup-reroll" onclick="gWildReroll()" class="lvl-btn">↻ REROLL (1)</button>
+              <div class="lvl-btn-sub">Recall the Blessings</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+              <button id="g-levelup-confirm" onclick="gWildConfirmPick()" class="lvl-btn lvl-btn-confirm">CONFIRM</button>
+              <div class="lvl-btn-sub">Accept this Blessing</div>
+            </div>
           </div>
         </div>
       </div>
@@ -13743,168 +13765,187 @@ function gDrawCards(n){
 // Set while a level-up card draft is on screen — lets the §8 playtest harness resolve
 // the draft programmatically (the choices are otherwise closure-bound DOM onclicks).
 let gSimDraft = null;
-let gSimEvolution = null;   // set while an Imbue-Path Form/Chaos fork chooser is on screen (item 2);
-                           // mirrors gSimDraft so the §8 harness resolves the fork headlessly.
-// Nameless-knight portrait for the level-up screen when no patron is chosen (warrior class).
-const CILIA_FIG_IMG  = 'assets/portraits/cilia.jpg';   // Cilia portrait (figure+fire), CSS frames it
-const KNIGHT_FIG_IMG = 'assets/portraits/knight.jpg';   // nameless-knight portrait (figure+atmosphere)
-function gWildShowStatPick(){
-  const p = gPlayer;
-  if(!p) return;
-  // Imbue Paths (item 2): if an imbued skill has hit a fork rank, the Form/Chaos chooser
-  // replaces the card draft for this level-up (one pausing modal at a time).
-  const _evo = gPendingEvolution(p);
-  if(_evo){ gOpenEvolutionMenu(_evo); return; }
-  gPaused = true;
+let gSimEvolution = null;   // set while a Form/Ascension fork is the active draft (item 2); mirrors
+                            // gSimDraft so the §8 harness resolves the fork headlessly.
+// Portrait figures for the level-up sidebar (CSS frames them).
+const CILIA_FIG_IMG  = 'assets/portraits/cilia.jpg';    // Cilia portrait (figure+fire)
+const KNIGHT_FIG_IMG = 'assets/portraits/knight.jpg';   // nameless-knight portrait (no patron)
 
-  const overlay   = document.getElementById('g-stat-pick');
-  const cards     = document.getElementById('g-stat-cards');
-  const abCards   = document.getElementById('g-ability-cards');
-  const confirmBtn= document.getElementById('g-levelup-confirm');
-  if(!overlay || !cards) return;
-  cards.innerHTML = '';
-  if(abCards) abCards.innerHTML = '';
+// ── Wilderness level-up draft — non-blocking sidebar (no pause; MP-seamless) ─────────────────
+// Leveling up no longer pauses the game or auto-opens a modal: it bumps gDraft.pending and flashes the
+// bottom-left FAB. The player keeps full control (move + attack) and the world keeps running, so the flow
+// is identical in single-player and multiplayer. Clicking the FAB opens the left-docked sidebar; CONFIRM
+// applies the pick and drains one pending level-up. The draft options persist while the panel is closed so
+// the §8 bot can resolve them headlessly (gSimDraft / gSimEvolution) without ever opening the UI.
+const gDraft = { opts:[], pending:0, sel:-1, rerollCount:0, open:false, evo:null };
 
-  // Pending selections — null until chosen
-  let pendingStat   = null; // { applyFn, label, newLv, color, el }
-  let pendingAbil   = null; // same shape
+// Favor spend tables (specs/favor.md). Reroll cost escalates within the *current* draft (resets on
+// generate); rarity-upgrade indexed by TARGET tier; god-skill rank-buy scales with the skill's live rank.
+const _DRAFT_REROLL_COSTS  = [3, 5, 8];
+const _DRAFT_UPGRADE_COSTS = [0, 8, 20, 44];
+const _DRAFT_RANK_BUY_BASE = 10, _DRAFT_RANK_BUY_STEP = 10;
+const _draftCanSpend    = () => !!(gShrine && gShrine.patron);   // Favor unlocks after pledging (Lv-5 shrine)
+const _draftRerollCost  = () => _DRAFT_REROLL_COSTS[Math.min(gDraft.rerollCount, _DRAFT_REROLL_COSTS.length-1)]
+                              + Math.max(0, gDraft.rerollCount - (_DRAFT_REROLL_COSTS.length-1)) * 3;
+const _draftRankBuyCost = (skillId) => _DRAFT_RANK_BUY_BASE + gImbueRank(gPlayer, skillId) * _DRAFT_RANK_BUY_STEP;
 
-  function _updateConfirm(){
-    if(!confirmBtn) return;
-    const ready = !!pendingStat;   // themed color/border come from .lvl-btn; just gate enabled-ness
-    confirmBtn.style.opacity = ready ? '1' : '0.4';
-    confirmBtn.style.cursor  = ready ? 'pointer' : 'not-allowed';
-  }
+// Queue one level-up: bump pending, ensure a draft exists (for FAB-open + the headless bot), flash the FAB.
+function gDraftQueue(){
+  gDraft.pending++;
+  if(!gDraft.opts.length) gDraftGenerate();
+  gDraftUpdateFab();
+}
 
-  function _selectStat(applyFn, label, newLv, color, el){
-    // Deselect previous
-    if(pendingStat) pendingStat.el.classList.remove('selected');
-    pendingStat = { applyFn, label, newLv, color, el };
-    el.classList.add('selected');
-    _updateConfirm();
-  }
-
-  function _selectAbil(applyFn, label, newLv, color, el){
-    if(pendingAbil) pendingAbil.el.classList.remove('selected');
-    pendingAbil = { applyFn, label, newLv, color, el };
-    el.classList.add('selected');
-    _updateConfirm();
-  }
-
-  // Expose confirm handler on window so the button onclick can reach it
-  window.gWildConfirmPick = function(){
-    if(!pendingStat) return;
-    const s = pendingStat;
-    s.applyFn();
-
-    overlay.style.display = 'none';
-    gPaused = false;
+// (Re)generate the active draft. At a Form/Ascension fork the two evolution options REPLACE the 3 cards
+// (mandatory fork, as before); otherwise draw 3 cards. Sets the matching §8 harness hook (one or the other).
+function gDraftGenerate(){
+  const p = gPlayer; if(!p) return;
+  gDraft.sel = -1;
+  gDraft.rerollCount = 0;
+  const evo = gPendingEvolution(p);
+  if(evo){
+    gDraft.evo  = evo;
+    gDraft.opts = _evolutionOptions(evo);   // { id, name, desc, icon, tag }
     gSimDraft = null;
-    gWildUpdateHUD();
-    spawnGP(gPlayer.wx, gPlayer.wy, '#ffd040', 25, 5);
+    gSimEvolution = { skill:evo.skill, kind:evo.kind,
+      options: gDraft.opts.map(o => ({ id:o.id, name:o.name })),
+      pick(i){ gDraft.sel = Math.max(0, Math.min(gDraft.opts.length-1, i|0)); gDraftConfirm(); },
+    };
+  } else {
+    gDraft.evo  = null;
+    gDraft.opts = gDrawCards(3);             // { card, rarity, value }
+    gSimEvolution = null;
+    gSimDraft = { opts: gDraft.opts,
+      pick(i){ gDraft.sel = Math.max(0, Math.min(gDraft.opts.length-1, i|0)); gDraftConfirm(); },
+      reroll(){ return gDraftReroll(); },
+      upgrade(i){ return _draftUpgradeCard(Math.max(0, Math.min(gDraft.opts.length-1, i|0))); },
+      buyRank(i){ return _draftBuyRank(Math.max(0, Math.min(gDraft.opts.length-1, i|0))); },   // god-skill rank buy
+      rerollCost(){ return _draftRerollCost(); },
+      upgradeCost(i){ const o=gDraft.opts[i]; if(!o) return 0; const ri=CARD_RARITIES.indexOf(o.rarity); return (ri>=0&&ri<CARD_RARITIES.length-1)?_DRAFT_UPGRADE_COSTS[ri+1]:0; },
+    };
+  }
+}
 
-    // Banner shows the stat pick
-    const banner = document.getElementById('g-levelup-banner');
-    if(banner){
-      banner.textContent = `✦  ${s.label}  ✦`;
-      banner.style.color = s.color;
-      banner.style.opacity='1'; banner.style.transition='';
-      clearTimeout(banner._fadeTimer);
-      banner._fadeTimer=setTimeout(()=>{banner.style.transition='opacity 1.5s';banner.style.opacity='0';},1500);
-    }
-  };
+// Bump one shown card up a rarity tier for Favor (Sink B). Returns true on success.
+function _draftUpgradeCard(idx){
+  if(gDraft.evo || !_draftCanSpend()) return false;
+  const o = gDraft.opts[idx]; if(!o) return false;
+  const ri = CARD_RARITIES.indexOf(o.rarity);
+  if(ri < 0 || ri >= CARD_RARITIES.length-1) return false;   // missing or already Legendary
+  const cost = _DRAFT_UPGRADE_COSTS[ri+1];
+  if(gFavor < cost) return false;
+  gFavor -= cost;
+  o.rarity = CARD_RARITIES[ri+1];
+  o.value  = _cardValue(o.card, o.rarity.mult);              // rarity is pure ×multiplier
+  spawnGP(gPlayer.wx, gPlayer.wy, o.rarity.color, 16, 4);
+  gWildUpdateHUD();
+  gDraftPaint();
+  return true;
+}
+// Spend Favor to rank up a god skill straight from its card (Sink C — one rank per buy, escalating cost).
+function _draftBuyRank(idx){
+  if(gDraft.evo || !_draftCanSpend()) return false;
+  const o = gDraft.opts[idx]; if(!o || !o.card.godSkill) return false;
+  if(!gGodSkillWindow(gPlayer, o.card.godSkill)) return false;   // at a fork / maxed → can't buy past it
+  const cost = _draftRankBuyCost(o.card.godSkill);
+  if(gFavor < cost) return false;
+  gFavor -= cost;
+  o.card.apply(gPlayer, o.value);                                // advance one rank + its mods (same as a pick)
+  spawnGP(gPlayer.wx, gPlayer.wy, '#ff8a2a', 18, 4.5);
+  gWildUpdateHUD();
+  gDraftPaint();
+  return true;
+}
 
-  // ── Card draft — 3 cards, pick one. Reroll (gWildReroll) re-draws all three. ──
+// Reroll all three cards for Favor (forks can't be rerolled). Returns true on success.
+function gDraftReroll(){
+  if(gDraft.evo || !_draftCanSpend()) return false;
+  const cost = _draftRerollCost();
+  if(gFavor < cost) return false;
+  gFavor -= cost;
+  gDraft.rerollCount++;
+  gDraft.opts = gDrawCards(3);
+  gDraft.sel  = -1;
+  if(gSimDraft) gSimDraft.opts = gDraft.opts;   // keep the harness pointer fresh (observe reads it)
+  gWildUpdateHUD();
+  gDraftPaint();
+  spawnGP(gPlayer.wx, gPlayer.wy, '#66bbdd', 14, 4);
+  return true;
+}
+
+function _draftUpdateConfirm(){
+  const confirmBtn = document.getElementById('g-levelup-confirm');
+  if(!confirmBtn) return;
+  const ready = gDraft.sel >= 0;
+  confirmBtn.style.opacity = ready ? '1' : '0.4';
+  confirmBtn.style.cursor  = ready ? 'pointer' : 'not-allowed';
+}
+function _draftUpdateReroll(){
   const rerollBtn = document.getElementById('g-levelup-reroll');
-  // ── Favor spends (specs/favor.md) ── unlock only after committing to a patron at the Lv-5
-  // shrine; until then the spend controls show locked with a hint.
-  const _canSpend = () => !!(gShrine && gShrine.patron);
-  let _rerollCount = 0;                       // rerolls used this level-up → escalating cost, resets each level
-  const REROLL_COSTS = [3, 5, 8];             // within one level-up; beyond the table, +3 each
-  const _rerollCost = () => REROLL_COSTS[Math.min(_rerollCount, REROLL_COSTS.length-1)]
-                            + Math.max(0, _rerollCount - (REROLL_COSTS.length-1)) * 3;
-  // Rarity-upgrade cost indexed by TARGET tier (1=Rare, 2=Epic, 3=Legendary); index 0 unused. Steep so
-  // upgrading one card all the way (or repeatedly across drafts) is a real Favor sink (Josh 2026-06-11).
-  const UPGRADE_COSTS = [0, 8, 20, 44];
-  // God-skill rank-BUY (item 2): spend Favor to pour extra ranks into a god skill right on its card. Cost
-  // scales with the skill's CURRENT rank — and rank is PERSISTENT across level-ups — so buying a skill toward
-  // max is a large, steadily-escalating investment, not a couple of cheap level-ups (Josh playtest 2026-06-11).
-  const RANK_BUY_BASE = 10, RANK_BUY_STEP = 10;
-  const _rankBuyCost = (skillId) => RANK_BUY_BASE + gImbueRank(p, skillId) * RANK_BUY_STEP;
-  function _updateReroll(){
-    if(!rerollBtn) return;
-    const cost = _rerollCost();
-    const locked = !_canSpend();
-    const afford = !locked && gFavor >= cost;
-    rerollBtn.textContent = locked ? '↻ REROLL 🔒' : ('↻ REROLL  ✦' + cost);
-    rerollBtn.title = locked ? 'Choose a patron (Lv 5) to spend Favor' : ('Reroll all three — ' + cost + ' Favor');
-    rerollBtn.style.opacity = afford ? '1' : '0.35';
-    rerollBtn.style.cursor  = afford ? 'pointer' : 'not-allowed';
-  }
-  // Styled Favor wallet on the level-up screen (the HUD counter is hidden behind this overlay).
-  function _updateFavorDisplay(){
-    const wrap = document.getElementById('g-levelup-favor');
-    const numEl = document.getElementById('g-levelup-favor-n');
-    const hintEl = document.getElementById('g-levelup-favor-hint');
-    if(wrap) wrap.style.display = 'flex';
-    if(numEl) numEl.textContent = gFavor;
-    if(hintEl) hintEl.style.display = _canSpend() ? 'none' : 'block';
-  }
-  // Active draft options (mutable: a rarity-upgrade bumps an option's tier + recomputes its value
-  // in place, then repaints; a reroll replaces the array wholesale → upgrades naturally clear).
-  let _draftOpts = [];
-  // Sink B — bump one shown card up a rarity tier for Favor. Returns true on success.
-  function _upgradeCard(idx){
-    if(!_canSpend()) return false;
-    const o = _draftOpts[idx];
-    if(!o) return false;
-    const ri = CARD_RARITIES.indexOf(o.rarity);
-    if(ri < 0 || ri >= CARD_RARITIES.length - 1) return false;   // missing or already Legendary
-    const cost = UPGRADE_COSTS[ri + 1];
-    if(gFavor < cost) return false;
-    gFavor -= cost;
-    o.rarity = CARD_RARITIES[ri + 1];
-    o.value  = _cardValue(o.card, o.rarity.mult);                // rarity is pure ×multiplier
-    spawnGP(gPlayer.wx, gPlayer.wy, o.rarity.color, 16, 4);
-    gWildUpdateHUD();
-    _paintDraft();                                               // re-render cards + spend affordances
-    return true;
-  }
-  // Sink C — spend Favor to rank up a god skill straight from its rank-up card (one rank per buy, escalating
-  // cost). Applies immediately (the skill ranks now); the card's own pick still grants its rank on top.
-  function _buyRank(idx){
-    if(!_canSpend()) return false;
-    const o = _draftOpts[idx];
-    if(!o || !o.card.godSkill) return false;
-    if(!gGodSkillWindow(p, o.card.godSkill)) return false;       // at a fork / maxed → can't buy past it
-    const cost = _rankBuyCost(o.card.godSkill);
-    if(gFavor < cost) return false;
-    gFavor -= cost;
-    o.card.apply(p, o.value);                                    // advance one rank + its mods (same as a pick)
-    spawnGP(gPlayer.wx, gPlayer.wy, '#ff8a2a', 18, 4.5);
-    gWildUpdateHUD();
-    _paintDraft();
-    return true;
-  }
-  // Paint the current _draftOpts (no re-draw) — used after an upgrade and by _renderDraft.
-  function _paintDraft(){
-    cards.innerHTML = '';
-    pendingStat = null;            // selection clears on any (re)paint
-    _draftOpts.forEach((o, idx) => {
+  if(!rerollBtn) return;
+  if(gDraft.evo){ rerollBtn.style.display = 'none'; return; }   // forks can't be rerolled
+  rerollBtn.style.display = '';
+  const cost = _draftRerollCost();
+  const locked = !_draftCanSpend();
+  const afford = !locked && gFavor >= cost;
+  rerollBtn.textContent = locked ? '↻ REROLL 🔒' : ('↻ REROLL  ✦' + cost);
+  rerollBtn.title = locked ? 'Choose a patron (Lv 5) to spend Favor' : ('Reroll all three — ' + cost + ' Favor');
+  rerollBtn.style.opacity = afford ? '1' : '0.35';
+  rerollBtn.style.cursor  = afford ? 'pointer' : 'not-allowed';
+}
+function _draftUpdateFavor(){
+  const wrap = document.getElementById('g-levelup-favor');
+  const numEl = document.getElementById('g-levelup-favor-n');
+  const hintEl = document.getElementById('g-levelup-favor-hint');
+  if(wrap) wrap.style.display = 'flex';
+  if(numEl) numEl.textContent = gFavor;
+  if(hintEl) hintEl.style.display = _draftCanSpend() ? 'none' : 'block';
+}
+
+// Highlight the chosen card-row (selection persists across repaints via gDraft.sel).
+function gDraftSelect(i){
+  const cards = document.getElementById('g-stat-cards');
+  if(!cards) return;
+  Array.from(cards.children).forEach((c, ix) => c.classList.toggle('selected', ix === i));
+  gDraft.sel = i;
+  _draftUpdateConfirm();
+}
+
+// Render the current draft as vertical card-rows (cards, or a Form/Ascension fork's two options).
+function gDraftPaint(){
+  const cards = document.getElementById('g-stat-cards');
+  if(!cards) return;
+  const p = gPlayer;
+  cards.innerHTML = '';
+  if(gDraft.evo){
+    const forkTag = gDraft.evo.kind === 'form' ? 'FORM' : 'ASCENSION';
+    gDraft.opts.forEach((o, idx) => {
+      const el = document.createElement('div');
+      el.className = 'stat-card';
+      el.innerHTML = `
+        <div class="sc-ring" style="border-color:#ff7a22;box-shadow:0 0 12px rgba(255,110,0,0.6), inset 0 0 10px rgba(255,110,0,0.5);"><span class="sc-icon" style="color:#ff7a22">${o.icon || '🔥'}</span></div>
+        <div class="sc-body">
+          <div class="sc-rarity" style="color:#ff9a3a">${o.tag || forkTag}</div>
+          <div class="sc-name">${o.name}</div>
+          <div class="sc-bonuses">${o.desc || ''}</div>
+        </div>`;
+      el.onclick = () => gDraftSelect(idx);
+      cards.appendChild(el);
+    });
+  } else {
+    gDraft.opts.forEach((o, idx) => {
       const { card, rarity, value } = o;
       const ri = CARD_RARITIES.indexOf(rarity);
       const canUp = ri >= 0 && ri < CARD_RARITIES.length - 1;
-      const upCost = canUp ? UPGRADE_COSTS[ri + 1] : 0;
-      const upAfford = canUp && _canSpend() && gFavor >= upCost;
-      const el = document.createElement('div');
-      el.className = 'stat-card';
+      const upCost = canUp ? _DRAFT_UPGRADE_COSTS[ri + 1] : 0;
+      const upAfford = canUp && _draftCanSpend() && gFavor >= upCost;
       // Imbue-Path rank track (item 2): 10 dots = the named skill's level (filled to current rank);
-      // the 5th/10th are larger (Form/Chaos evolution levels); the next-level dot flashes on hover.
+      // the 5th/10th are larger (Form/Ascension levels); the next-level dot flashes on hover.
       let track = '';
       const _trackSkill = card.godSkill || card.imbueSkill;
       if(_trackSkill){
         const rank = gImbueRank(p, _trackSkill);   // 0..10
-        const next = rank + 1;                          // the level this pick would grant
+        const next = rank + 1;
         let dots = '';
         for(let lv=1; lv<=10; lv++){
           let c = 'imb-dot';
@@ -13915,85 +13956,55 @@ function gWildShowStatPick(){
         }
         track = `<div class="imb-track" title="Level ${rank} / 10 — larger dots are evolution levels">${dots}</div>`;
       }
-      // Favor spend button: god-skill rank-up cards get a "RANK UP" buy (pour Favor into more ranks now);
-      // acquire cards get none (a one-time grant); everything else gets the rarity ▲ upgrade.
+      // Favor spend button: god-skill rank-up cards get a "RANK UP" buy; acquire cards get none; everything
+      // else gets the rarity ▲ upgrade.
       const _isRankBuy = !!(card.godSkill && gGodSkillWindow(p, card.godSkill));
       const _isAcquire = !!card.godAcquire;
-      const rkCost   = _isRankBuy ? _rankBuyCost(card.godSkill) : 0;
-      const rkAfford = _isRankBuy && _canSpend() && gFavor >= rkCost;
+      const rkCost   = _isRankBuy ? _draftRankBuyCost(card.godSkill) : 0;
+      const rkAfford = _isRankBuy && _draftCanSpend() && gFavor >= rkCost;
       let favorBtn = '';
       if(_isRankBuy){
-        favorBtn = `<div class="sc-rankbuy" style="margin-top:6px;font:bold 10px monospace;letter-spacing:1px;color:${rkAfford?'#ff9a3a':'#7a5a30'};border:1px solid ${rkAfford?'#ff9a3a':'#5a432a'};border-radius:4px;padding:2px 6px;display:inline-block;cursor:${rkAfford?'pointer':'not-allowed'};opacity:${rkAfford?1:0.6};" title="Spend ${rkCost} Favor to rank up ${card.name} now (one more rank on top of taking the card)">⬆ RANK ✦${rkCost}</div>`;
+        favorBtn = `<div class="sc-rankbuy" style="font:bold 10px monospace;letter-spacing:1px;color:${rkAfford?'#ff9a3a':'#7a5a30'};border:1px solid ${rkAfford?'#ff9a3a':'#5a432a'};border-radius:4px;padding:2px 6px;cursor:${rkAfford?'pointer':'not-allowed'};opacity:${rkAfford?1:0.6};white-space:nowrap;" title="Spend ${rkCost} Favor to rank up ${card.name} now (one more rank on top of taking the card)">⬆ RANK ✦${rkCost}</div>`;
       } else if(!_isAcquire && canUp){
-        favorBtn = `<div class="sc-upgrade" style="margin-top:6px;font:bold 10px monospace;letter-spacing:1px;color:${upAfford?'#ffd040':'#7a6a30'};border:1px solid ${upAfford?'#ffd040':'#5a4f28'};border-radius:4px;padding:2px 6px;display:inline-block;cursor:${upAfford?'pointer':'not-allowed'};opacity:${upAfford?1:0.6};" title="Upgrade to ${CARD_RARITIES[ri+1].name} for ${upCost} Favor">▲ ✦${upCost}</div>`;
+        favorBtn = `<div class="sc-upgrade" style="font:bold 10px monospace;letter-spacing:1px;color:${upAfford?'#ffd040':'#7a6a30'};border:1px solid ${upAfford?'#ffd040':'#5a4f28'};border-radius:4px;padding:2px 6px;cursor:${upAfford?'pointer':'not-allowed'};opacity:${upAfford?1:0.6};white-space:nowrap;" title="Upgrade to ${CARD_RARITIES[ri+1].name} for ${upCost} Favor">▲ ✦${upCost}</div>`;
       }
-      // Frame is themed (CSS); rarity reads on the icon-ring + label.
+      const el = document.createElement('div');
+      el.className = 'stat-card';
       el.innerHTML = `
-        <div class="sc-rarity" style="color:${rarity.color}">${rarity.name.toUpperCase()}</div>
         <div class="sc-ring" style="border-color:${rarity.color};box-shadow:0 0 12px ${rarity.glow}, inset 0 0 10px ${rarity.glow};"><span class="sc-icon" style="color:${rarity.color}">${card.icon}</span></div>
-        <div class="sc-name">${card.name}</div>
-        <div class="sc-bonuses">${card.fmt(value)}</div>
-        ${track}
+        <div class="sc-body">
+          <div class="sc-rarity" style="color:${rarity.color}">${rarity.name.toUpperCase()}</div>
+          <div class="sc-name">${card.name}</div>
+          <div class="sc-bonuses">${card.fmt(value)}</div>
+          ${track}
+        </div>
         ${favorBtn}
       `;
-      el.onclick = () => _selectStat(() => {
-        o.card.apply(p, o.value);                                  // read current (maybe upgraded) value
-        p.cardPicks = p.cardPicks || {};
-        p.cardPicks[o.card.id] = (p.cardPicks[o.card.id]||0) + 1;  // per-run pick count (drives caps)
-      }, `${card.name} (${o.rarity.name})`, 0, o.rarity.color, el);
+      el.onclick = () => gDraftSelect(idx);
       const rkEl = el.querySelector('.sc-rankbuy');
-      if(rkEl && rkAfford) rkEl.onclick = (ev) => { ev.stopPropagation(); _buyRank(idx); };
+      if(rkEl && rkAfford) rkEl.onclick = (ev) => { ev.stopPropagation(); _draftBuyRank(idx); };
       const upEl = el.querySelector('.sc-upgrade');
-      if(upEl && upAfford) upEl.onclick = (ev) => { ev.stopPropagation(); _upgradeCard(idx); };
+      if(upEl && upAfford) upEl.onclick = (ev) => { ev.stopPropagation(); _draftUpgradeCard(idx); };
       cards.appendChild(el);
     });
-    _updateConfirm();
-    _updateReroll();               // reroll affordability shifts as Favor is spent on upgrades
-    _updateFavorDisplay();         // keep the wallet plaque in sync after every spend
   }
-  function _renderDraft(){
-    _draftOpts = gDrawCards(3);
-    // Harness hook (§8): resolve / reroll / upgrade the draft headlessly without a DOM click.
-    gSimDraft = { opts:_draftOpts,
-      pick(i){
-        const o = _draftOpts[Math.max(0, Math.min(_draftOpts.length-1, i|0))];
-        o.card.apply(p, o.value);
-        p.cardPicks = p.cardPicks||{}; p.cardPicks[o.card.id] = (p.cardPicks[o.card.id]||0)+1;
-        overlay.style.display='none'; gPaused=false; gSimDraft=null; gWildUpdateHUD();
-      },
-      reroll(){ return window.gWildReroll(); },
-      upgrade(i){ return _upgradeCard(Math.max(0, Math.min(_draftOpts.length-1, i|0))); },
-      buyRank(i){ return _buyRank(Math.max(0, Math.min(_draftOpts.length-1, i|0))); },   // god-skill rank buy (item 2)
-      rerollCost(){ return _rerollCost(); },
-      upgradeCost(i){ const o=_draftOpts[i]; if(!o) return 0; const ri=CARD_RARITIES.indexOf(o.rarity); return (ri>=0&&ri<CARD_RARITIES.length-1)?UPGRADE_COSTS[ri+1]:0; },
-    };
-    _paintDraft();
-  }
-  window.gWildReroll = function(){
-    if(!_canSpend()) return false;
-    const cost = _rerollCost();
-    if(gFavor < cost) return false;
-    gFavor -= cost;
-    _rerollCount++;
-    _renderDraft();                // fresh opts (clears upgrades) + repaint + refreshed gSimDraft.opts
-    gWildUpdateHUD();
-    spawnGP(gPlayer.wx, gPlayer.wy, '#66bbdd', 14, 4);
-    return true;
-  };
+  if(gDraft.sel >= 0 && cards.children[gDraft.sel]) cards.children[gDraft.sel].classList.add('selected');
+  _draftUpdateConfirm();
+  _draftUpdateReroll();
+  _draftUpdateFavor();
+}
 
-  if(abCards) abCards.innerHTML = '';
-  _renderDraft();
-  _updateReroll();
-
-  // ── God portrait ──────────────────────────────────────────────
+// Portrait figure + theme: Cilia → her fire portrait + warm theme; no patron → the Nameless-Knight figure
+// + cool theme. The frame/glow/name are CSS (.lvl-portrait / .lvl-pname).
+function gDraftSetupTheme(){
+  const overlay = document.getElementById('g-stat-pick');
+  if(!overlay) return;
   const GOD_DATA = {
     cilia:  { src: document.querySelector('.shrine-god-card[data-god="cilia"]  img')?.src,  glow:'rgba(255,100,0,0.55)',   col:'#ff6622', title:'GODDESS OF FIRE'  },
     ikras:  { src: document.querySelector('.shrine-god-card[data-god="ikras"]  img')?.src,  glow:'rgba(180,130,255,0.55)', col:'#cc99ff', title:'GOD OF WIND'      },
     bhumi:  { src: document.querySelector('.shrine-god-card[data-god="bhumi"]  img')?.src,  glow:'rgba(60,180,60,0.55)',   col:'#44cc44', title:'GODDESS OF EARTH'  },
     boreas: { src: document.querySelector('.shrine-god-card[data-god="boreas"] img')?.src,  glow:'rgba(60,150,255,0.55)',  col:'#44aaff', title:'GOD OF ICE'        },
   };
-  // ── Portrait figure + theme: Cilia → her fire portrait + warm theme; no patron → the
-  //    Nameless-Knight figure + cool theme. The frame, glow and name are CSS (.lvl-portrait/.lvl-pname). ──
   const patron   = gShrine && gShrine.patron ? GOD_DATA[gShrine.patron] : null;
   const isCilia  = gShrine && gShrine.patron === 'cilia';
   const godImg   = document.getElementById('g-levelup-god-img');
@@ -14013,9 +14024,95 @@ function gWildShowStatPick(){
   if(godPanel) godPanel.style.setProperty('--god-glow', glowCol);
   if(godName) godName.textContent = nm;
   if(godSub)  godSub.textContent  = sub;
-
-  overlay.style.display = 'flex';
 }
+
+// Open / close the sidebar. Opening is on demand (the FAB) — never automatic; closing keeps any pending
+// level-ups queued (the FAB keeps flashing) so the player picks on their own time.
+function gDraftOpen(){
+  if(!gDraft.opts.length){ if(gDraft.pending > 0) gDraftGenerate(); else return; }
+  gDraft.open = true;
+  gDraftSetupTheme();
+  gDraftPaint();
+  const overlay = document.getElementById('g-stat-pick');
+  if(overlay) overlay.style.display = 'flex';
+  gDraftUpdateFab();
+}
+function gDraftClose(){
+  gDraft.open = false;
+  const overlay = document.getElementById('g-stat-pick');
+  if(overlay) overlay.style.display = 'none';
+  gDraftUpdateFab();
+}
+
+// Show/hide + badge the bottom-left FAB. Visible only when a level-up is waiting and the panel is closed.
+function gDraftUpdateFab(){
+  const fab = document.getElementById('g-levelup-fab');
+  if(!fab) return;
+  const show = inWilderness && gDraft.pending > 0 && !gDraft.open;
+  fab.style.display = show ? 'inline-flex' : 'none';
+  const badge = document.getElementById('g-levelup-fab-badge');
+  if(badge){
+    badge.style.display = gDraft.pending > 1 ? 'flex' : 'none';
+    badge.textContent = gDraft.pending;
+  }
+}
+
+// Apply the selected card / evolution, then drain one pending level-up. If more remain, regenerate in place
+// (panel stays open if it was open; otherwise the FAB keeps flashing); else close. Funnels both the DOM
+// CONFIRM and the §8 harness pick. Never touches gPaused — the world keeps running throughout.
+function gDraftConfirm(){
+  const p = gPlayer; if(!p) return;
+  if(gDraft.sel < 0) return;
+  const i = gDraft.sel, o = gDraft.opts[i];
+  if(!o) return;
+  let label = null, color = '#ffd040';
+  if(gDraft.evo){
+    _chooseEvolution(gDraft.evo, i);    // applies + clears gSimEvolution + closes the (unused) overlay; shows its own banner
+  } else {
+    o.card.apply(p, o.value);           // read current (maybe upgraded) value
+    p.cardPicks = p.cardPicks || {};
+    p.cardPicks[o.card.id] = (p.cardPicks[o.card.id]||0) + 1;   // per-run pick count (drives caps)
+    gSimDraft = null;
+    label = `${o.card.name} (${o.rarity.name})`;
+    color = o.rarity.color;
+  }
+  spawnGP(p.wx, p.wy, '#ffd040', 25, 5);
+  if(label){
+    const banner = document.getElementById('g-levelup-banner');
+    if(banner){
+      banner.textContent = `✦  ${label}  ✦`;
+      banner.style.color = color;
+      banner.style.opacity = '1'; banner.style.transition = '';
+      clearTimeout(banner._fadeTimer);
+      banner._fadeTimer = setTimeout(()=>{ banner.style.transition='opacity 1.5s'; banner.style.opacity='0'; }, 1500);
+    }
+  }
+  gDraft.pending = Math.max(0, gDraft.pending - 1);
+  gDraft.opts = []; gDraft.sel = -1; gDraft.evo = null;
+  if(gDraft.pending > 0){
+    gDraftGenerate();
+    if(gDraft.open) gDraftPaint();
+    else gDraftClose();             // closed: stay closed, FAB keeps flashing for the next one
+  } else {
+    gDraftClose();
+  }
+  gWildUpdateHUD();
+  gDraftUpdateFab();
+}
+
+// Reset all draft state (called when a wilderness run ends).
+function gDraftReset(){
+  gDraft.pending = 0; gDraft.opts = []; gDraft.sel = -1; gDraft.evo = null; gDraft.open = false;
+  gSimDraft = null; gSimEvolution = null;
+  const overlay = document.getElementById('g-stat-pick');
+  if(overlay) overlay.style.display = 'none';
+  const fab = document.getElementById('g-levelup-fab');
+  if(fab) fab.style.display = 'none';
+}
+
+// Button handlers (inline onclick reaches these via global scope / window).
+window.gWildConfirmPick = function(){ gDraftConfirm(); };
+window.gWildReroll = function(){ return gDraftReroll(); };
 
 // ── Automatic skill unlocks (no skill-point currency) ─────────
 // Wilderness skills unlock at fixed player levels. We keep the existing per-player
@@ -14048,14 +14145,14 @@ function gWildSyncUnlocks(announce){
   if(typeof updateSkillBar === 'function') updateSkillBar();
 }
 
-// ── Apply level-up (now just shows the pick screen) ───────────
+// ── Apply level-up (no-pause: queue a draft + flash the FAB; player opens the sidebar on demand) ───────────
 function gWildLevelUp(){
   gShake(6, 10);
   spawnGP(gPlayer.wx, gPlayer.wy, '#ffd040', 20, 5);
   addGDmg(gPlayer.wx, gPlayer.wy - 32, 'LEVEL UP!', '#ffd040');
   gWildSyncUnlocks(true);   // auto-unlock dash@2 / whirlwind@3 / leap@4 / Grit@5
   // (Reroll is now Favor-priced on the card screen — the old +1-charge-per-5-levels grant retired.)
-  gWildShowStatPick();
+  gDraftQueue();
   // Nudge an un-pledged player toward the shrine — her god skills only unlock once you pledge.
   if(wildLevel % 5 === 0 && gShrineHasUnclaimed()){
     addGDmg(gPlayer.wx, gPlayer.wy - 48, '✦ THE SHRINE GLOWS — PLEDGE TO A GOD', '#cc88ff');
@@ -14085,6 +14182,7 @@ function gWildTick(dt){
 // ── HUD update ────────────────────────────────────────────────
 function gWildUpdateHUD(){
   if(!inWilderness) return;
+  if(typeof gDraftUpdateFab === 'function') gDraftUpdateFab();   // keep the level-up FAB in sync
   // XP bar
   const xpWrap = document.getElementById('g-xp-wrap');
   const xpFill = document.getElementById('gxp');
@@ -14395,6 +14493,7 @@ function gWildEnd(){
   if(!inWilderness) return;
   inWilderness = false;
   gWildReset();
+  gDraftReset();                 // clear pending level-ups + hide the sidebar/FAB
   gEnemies.length = 0;
   gArrows.length  = 0;
   gXPOrbs.length  = 0;
@@ -15478,8 +15577,10 @@ function gCloseImbueMenu(){
 
 // ── Imbue Paths (item 2) — Form/Chaos fork chooser ──────────────────────────────────────────────
 // A fork is "pending" when an imbued skill has maxed a numeric stretch and hasn't yet chosen the
-// next branch. gWildShowStatPick checks this and shows the chooser instead of the card draft. Both
-// the DOM click and the §8 harness (gSimEvolution.pick) funnel through _chooseEvolution.
+// next branch. gDraftGenerate checks this and renders the fork's two options as card-rows in the
+// no-pause sidebar (replacing the 3 normal cards that level). Both the sidebar CONFIRM and the §8
+// harness (gSimEvolution.pick) funnel through _chooseEvolution. gOpenEvolutionMenu (full-screen,
+// paused) now serves ONLY the Sanctum skillforge dev path.
 // Slice B implements the Form fork @5; the Chaos fork @10 (Slice C) is detected but not yet offered.
 let _evolutionOpen = false;
 function gPendingEvolution(p){
