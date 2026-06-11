@@ -81,7 +81,12 @@ The rank-10 fork is the *turning of the age* myth made playable (Creative Manife
 >    hazard you choose to enter (by moving), not instant death planted under you."
 >
 > This reframes the cost from "keep moving to dodge the hazard" → "you're committed to your ground; leaving it
-> burns you." See the per-leaf reconciliation notes (some currently-spec'd leaves conflict with this — flagged).
+> burns you."
+>
+> **Scope (resolved Josh, 2026-06-12):** the footprint rule governs the **area/burst** chaos leaves that lay
+> *settled ground* — **Chaos Crown** (Burning Body) and **Hellfront** (Pyroclasm). **Two exceptions:** **Eye of
+> Chaos** (a travelling *band*, lays no ground — keeps its sweep-over-you cost) and **all of Trail of Embers**
+> (the movement skill — chaosfire = "burn the path," cost is movement-keyed). See the per-leaf notes.
 
 **Both grounds already exist and are tuned in the shipped build** (Slice C): dragonfire heals the owner
 **0.18× the climax damage per tick**; chaosfire hurts the owner **0.35× per tick** (outside a 38px bare-center
@@ -142,14 +147,10 @@ take burn DoT each `AURA_TICK`. Standalone damage (`AURA_DMG`/`FR_BASE_DMG`-scal
     burns; **self-burn cost (the 🔥 rule):** the ebb's contraction phases sweep the band back across the player,
     so the cost is real but **readable** — you ride the ebb and stay clear, same "avoidable hazard, not instant
     death" principle as Chaos Crown's ground-ring. Engineer owns the exact ebb curve + how thick "intensifies" reads.
-    - **⚠ Conflict with the footprint rule (2026-06-12) — needs Josh's call.** As spec'd, the ebb band *sweeps
-      back across the player* (the cost is paid by riding it). The new chaosfire identity says the opposite —
-      hold still, stay safe in a clear center. Reconcile one of two ways: **(a)** the ebb leaves a **clear inner
-      safe radius** around the player (band oscillates between an inner radius and max range, never collapsing onto
-      the footprint — the cost becomes "don't drift outward into it"), or **(b)** Eye of Chaos keeps its
-      sweep-over-you cost as a deliberate exception (it's a travelling *band*, not settled *ground* — the footprint
-      rule is about ground). Default recommendation: **(a)**, to keep all chaos leaves on one coherent "safe pocket"
-      philosophy. Flagged for decision.
+    - **✅ RESOLVED (Josh, 2026-06-12) — option (b): keep the sweep-over-you cost.** The footprint rule governs
+      *settled ground*; Eye of Chaos lays **none** (the travelling band IS the hazard), so it's a deliberate
+      exception. The ebb's contraction sweeping back across the player stays as its self-burn cost — readable, you
+      ride the ebb. No clear-inner-radius change.
   - **Chaos Crown under Cinderburst:** keep its settle-into-chaosfire-ground payoff (`_laySettleRing` /
     `gLayChaosfireRing`); the Cinderburst form emits a nova, so its ascension reshapes that detonation into the
     colossal-blast-then-settle "crown" (reuse `novaScale` + the settle). Engineer's call on the cleanest wiring —
@@ -181,17 +182,12 @@ take burn DoT each `AURA_TICK`. Standalone damage (`AURA_DMG`/`FR_BASE_DMG`-scal
     Earth** (trail spreads sideways as chaosfire walls that catch you if you backtrack).
   - **Shroud →** 🐉 **Phoenix Mantle** (persistent dragonfire aura heals you continuously) · 🔥 **Immolation**
     (permanent self-immolation aura: huge constant AOE that drains your own HP).
-  - **⚠ Conflict with the chaosfire identity (2026-06-12) — needs Josh's call.** Trail of Embers is the
-    **movement-as-weapon** skill, so its 🔥 leaves are designed around *moving*, which is the opposite of the new
-    chaosfire fantasy (root yourself, devastate around you, clear footprint). Two clashes: **Scorched Earth**'s
-    "catch you if you backtrack" is movement-keyed (fine vs. the footprint rule — nothing spawns under you on
-    activation — but off-philosophy), and **Immolation** is a *self-burn aura centered on you* — directly violates
-    the footprint rule (burns under your feet by design). Options: **(a)** redesign Trail's chaos leaves toward the
-    "around-you, clear-center" model (Immolation → a chaosfire bloom that rings you, not an under-feet drain); or
-    **(b)** accept that Trail's element is *movement*, so its chaos cost is movement-keyed (backtrack/relocate
-    penalties) and exempt it from the stand-still footprint rule — Trail is the one skill where chaosfire means
-    "burn the path," not "anchor and devastate." Default recommendation: **(b)** — let Trail keep its movement
-    identity, and confine the stand-still footprint rule to the *area/burst* skills (Burning Body, Pyroclasm). Flagged for decision.
+  - **✅ RESOLVED (Josh, 2026-06-12) — option (b): Trail keeps its movement identity, exempt from the footprint
+    rule.** Trail of Embers is the **movement-as-weapon** skill, so chaosfire here means "burn the path," not
+    "anchor and devastate." Its 🔥 cost is **movement-keyed**: **Scorched Earth** catches you if you backtrack;
+    **Immolation** stays a self-burn aura centered on you (drains your HP by design). The stand-still footprint
+    rule is confined to the *area/burst* chaos leaves (Burning Body's Chaos Crown, Pyroclasm's Hellfront) — Trail
+    and Eye of Chaos are the two exceptions.
 
 ---
 
