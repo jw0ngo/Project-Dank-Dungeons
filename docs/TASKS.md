@@ -37,9 +37,27 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 ## 🟧 Engineer / CTO lane
 
+- ◻️ 🔧 **Apply the `assets/world` + `assets/tile` fold (atomic move + manifest rewrite)** (↳ from ART,
+  2026-06-12 · Josh-approved scheme) — `assets/world/` and `assets/tile/` are flat and filling up (one area's
+  worth so far). New standing scheme (`assets/README.md`): **`world/` by AREA + `_shared/`**, **`tile/` by
+  terrain TYPE**. Tooling done & dry-run CLEAN (every file maps, no unmapped). **You run `--apply`** (sole
+  `index.html` editor); it does `git mv` + `ART_MANIFEST` path rewrite in one commit per domain — keys
+  unchanged, paths only.
+  ```
+  python tools/fold-assets.py --domain world --apply   # 44 files -> _shared/ goblin-forest/ sanctum/  (22 manifest paths rewritten, 22 unwired just moved)
+  python tools/fold-assets.py --domain tile  --apply   # 48 files -> floor/ cobble/ dirt/ grass/ forestgrass/ rock/ spike/  (35 rewritten, 13 moved)
+  ```
+  Self-verifies every `assets/<domain>/` path resolves post-rewrite; then `node --check` the extracted
+  `<script>` + `python dev.py` → all tiles/props still render (a missed path 404s → silent procedural
+  fallback). **Do this BEFORE wiring the new forest assets below** (their snippets now cite the foldered
+  paths). Two separate commits (one per domain) keep each diff a clean path-rewrite. Deploy-affecting → push
+  with Josh's auth. *`world.tree.*`/`treesmall.*`/`foresttree.*` all move under `world/goblin-forest/`;
+  `grass`/`forestgrass` etc. under their `tile/<type>/`.*
+
 - ◻️ 🎨 **Wire forest-tree set + forest-grass tiles + barrel/crate props** (↳ from ART, 2026-06-12) — four new
   asset families sliced & committed under `assets/`. All **new ids** (non-destructive — Josh's call: add, don't
-  replace the existing `tree-*`/`grass-*` sets). Manifest snippets are paste-ready; nothing renders until wired.
+  replace the existing `tree-*`/`grass-*` sets). **Snippets below use the POST-FOLD foldered paths** (do the fold
+  task above first; if you wire before folding, drop the `<area>/`/`<type>/` segment and the fold will rewrite it).
   <details><summary>detail (render spec)</summary>
 
   **1. Forest trees — `world.foresttree.0..8`** (9 files, ~605 KB, `assets/world/foresttree-<n>.png`). A 3rd tree
@@ -48,11 +66,11 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
   **same `gDrawTree` feet-anchored world-prop path and share `TREE_FOOT≈0.94`**, no new draw code. Sliced with the
   `--bleed 50` overflow recovery (full canopies, no flat tops — QA contact CLEAN). Paste:
   ```
-  'world.foresttree.0':'assets/world/foresttree-0.png', 'world.foresttree.1':'assets/world/foresttree-1.png',
-  'world.foresttree.2':'assets/world/foresttree-2.png', 'world.foresttree.3':'assets/world/foresttree-3.png',
-  'world.foresttree.4':'assets/world/foresttree-4.png', 'world.foresttree.5':'assets/world/foresttree-5.png',
-  'world.foresttree.6':'assets/world/foresttree-6.png', 'world.foresttree.7':'assets/world/foresttree-7.png',
-  'world.foresttree.8':'assets/world/foresttree-8.png',
+  'world.foresttree.0':'assets/world/goblin-forest/foresttree-0.png', 'world.foresttree.1':'assets/world/goblin-forest/foresttree-1.png',
+  'world.foresttree.2':'assets/world/goblin-forest/foresttree-2.png', 'world.foresttree.3':'assets/world/goblin-forest/foresttree-3.png',
+  'world.foresttree.4':'assets/world/goblin-forest/foresttree-4.png', 'world.foresttree.5':'assets/world/goblin-forest/foresttree-5.png',
+  'world.foresttree.6':'assets/world/goblin-forest/foresttree-6.png', 'world.foresttree.7':'assets/world/goblin-forest/foresttree-7.png',
+  'world.foresttree.8':'assets/world/goblin-forest/foresttree-8.png',
   ```
   - **Wiring (your call):** to make them appear, either extend `gWildTrees` placement to pick from this family too
     (add a per-tree `family:'tree'|'treesmall'|'foresttree'` + variant index, `gDrawTree` selects the keyspace) or a
@@ -66,11 +84,11 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
   **96² RGB full-bleed** (matches the live `grass-*` treatment exactly — grass edge-to-edge, verified tiles
   seamlessly with no dark-edge grid). A darker, lusher forest-floor grass (flowers, dirt patches, rocks). Paste:
   ```
-  'tile.forestgrass.0':'assets/tile/forestgrass-0.png', 'tile.forestgrass.1':'assets/tile/forestgrass-1.png',
-  'tile.forestgrass.2':'assets/tile/forestgrass-2.png', 'tile.forestgrass.3':'assets/tile/forestgrass-3.png',
-  'tile.forestgrass.4':'assets/tile/forestgrass-4.png', 'tile.forestgrass.5':'assets/tile/forestgrass-5.png',
-  'tile.forestgrass.6':'assets/tile/forestgrass-6.png', 'tile.forestgrass.7':'assets/tile/forestgrass-7.png',
-  'tile.forestgrass.8':'assets/tile/forestgrass-8.png',
+  'tile.forestgrass.0':'assets/tile/forestgrass/forestgrass-0.png', 'tile.forestgrass.1':'assets/tile/forestgrass/forestgrass-1.png',
+  'tile.forestgrass.2':'assets/tile/forestgrass/forestgrass-2.png', 'tile.forestgrass.3':'assets/tile/forestgrass/forestgrass-3.png',
+  'tile.forestgrass.4':'assets/tile/forestgrass/forestgrass-4.png', 'tile.forestgrass.5':'assets/tile/forestgrass/forestgrass-5.png',
+  'tile.forestgrass.6':'assets/tile/forestgrass/forestgrass-6.png', 'tile.forestgrass.7':'assets/tile/forestgrass/forestgrass-7.png',
+  'tile.forestgrass.8':'assets/tile/forestgrass/forestgrass-8.png',
   ```
   - **⚠ NOT auto-wired.** `gTileArt` only maps `TILE_FLOOR→'floor'`, `TILE_DIRT→'dirt'`, `TILE_GRASS→'grass'`. A new
     `forestgrass` family needs a `gTileArt` mapping for whatever tile id should use it (a new `TILE_FORESTGRASS`
@@ -84,7 +102,7 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
   metal-band highlights intact). **`barrel.png` overwrote the old 39×43 unwired placeholder** with a crisp HiDPI
   cutout; **`crate.png` is new.** Paste:
   ```
-  'world.barrel':'assets/world/barrel.png', 'world.crate':'assets/world/crate.png',
+  'world.barrel':'assets/world/_shared/barrel.png', 'world.crate':'assets/world/_shared/crate.png',
   ```
   - **Wiring:** single overlay props (tall transparent cutouts → draw ground first, composite on top; same family as
     the chest/rock overlay path, feet-anchored by the bottom of the opaque pixels). Need a draw hook + placement
@@ -165,23 +183,32 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
   naturally resumes once the heavy clears, so holding through a heavy still feels right. **Why:** weighty-combat
   directive (Josh, standing) — a committed action must compromise other options.
 
-- ◻️ ✨ **Item 7 — Mana economy & skill management** (↳ from PM playtest, 2026-06-11 · roadmap #7 `approved` ·
-  spec [`specs/mana-economy.md`](specs/mana-economy.md)) — make mana a real, shared resource. Phased:
-  - [ ] **Phase 1 — class mana + cooldown rebalance** (quick, standalone) — tighten `WeaponRegistry.sword`
-    costs/CDs (`index.html:2476-2495`) + the `sw.*` reset block (`:14583-14584`) so **1 leap + ~3s WW ≈ empties
-    the 100 pool**. Starting numbers in the spec — **CDs LENGTHEN (Josh: too short)**: leap 35→45 & CD
-    200f→**900f (15s)**; WW drain 4.8/s→18/s & CD 120f→**300f (5s)**; heavy 25→30; dash 15→18. Per-skill one lever
-    leads (leap = CD; WW = mana). ⚠ **WW needs a power bump paired with its longer CD** (feels underpowered — spec
-    Balance). Dash/heavy CDs candidates to lengthen too (flagged). Confirm `SKILL_STAT_FLOOR` (`:2542`).
-  - [ ] **Phase 2 — God Skills drain mana/sec, rank-scaled** — add an `mpCost` key to `IMBUE_PATHS.cilia.burningBody`
-    `base`/`waveStep`/`formStep` (`:13527-13567`) so it auto-scales via `gGodFireParam`; subtract
-    `gGodFireParam(p,id,'mpCost')*dt` in `gTickBurningBody` (`:3736`). Base ≈ 5mp/3s; curve in spec. Layered on
-    regen (net = regen − Σdrains), so over-committing bleeds the pool even idle.
-  - [ ] **Phase 3 — toggle/hotkey + HUD + Sim hooks** — per-player toggle state (acquisition-order key 1–9, default
-    ON, assign at acquire `:13691`); `keydown` 1–9 branch; gate `gUpdateGodSkills` (`:3719`) on active/not-dormant;
-    HUD row near the MP bar (`:4233`). **Starvation = dormant-resume, pay in key order 1→9** (DECIDED Josh
-    2026-06-11 — no fork). **AI-native (required):** add `Sim.toggleGodSkill(n)` + expose per-skill `{key,active,dormant,mpCostPerSec}`
-    + `mp` in `Sim.observe()` — toggles re-add the input hook item 2 had dropped.
+- ✅ ✨ **Item 7 — Mana economy & skill management** (↳ from PM playtest, 2026-06-11 · roadmap #7 `approved` ·
+  spec [`specs/mana-economy.md`](specs/mana-economy.md)) — **done 2026-06-12, all three phases.** Mana is now a
+  real shared resource funding both the class kit and the god layer.
+  - [x] **Phase 1 — class mana + cooldown rebalance** — `WeaponRegistry.sword` (registry **and** the `sw.*`
+    run-start reset block, which re-clobbers `ww*`/`leap*` — both edited): leap `35→45` mp & CD `200f→900f`
+    (15 s, CD-led); WW drain `0.08→0.30`/f (18/s, mana-led) & CD `120f→300f` (5 s) + power bump `wwDamage 22→30`,
+    `wwRadius 36→44`; heavy `25→30`; dash `15→18`. Benchmark **leap + ~3 s WW ≈ empties 100 pool** ✓.
+    `SKILL_STAT_FLOOR` confirmed sane (floors unchanged). Dash/heavy CDs left as-is (flagged for Josh). Live knobs.
+  - [x] **Phase 2 — God Skills drain mana/sec, rank-scaled** — added `mpCost` (mp/**sec**) to
+    `IMBUE_PATHS.cilia.burningBody` `base`(1.67)/`waveStep`(0.15)/both `formStep`s(0.2); auto-scales via
+    `gGodFireParam` (the rank-up card pours *all* step keys → no special-casing). Maxed ≈2.92 mp/s. Drain paid
+    centrally in the dispatcher (Phase 3) as `gGodFireParam(p,id,'mpCost')*dt/60`.
+  - [x] **Phase 3 — toggle/hotkey + HUD + Sim hooks** — per-player `godSkillOrder`/`godSkillOff`/`godSkillDormant`
+    (factory init + run-start reset). **Architecture call:** payment is **central in `gUpdateGodSkills`** (pay in
+    key order 1→9, then fire), not inside each tick — exactly what "pay lowest-key-first, dormant-on-starve"
+    needs, and keeps tick functions pure (the spec's "drain in gTickBurningBody" was grounding, not
+    prescriptive). Acquisition order built **lazily** in the dispatcher (no per-acquire-site hook). `keydown`
+    1–9 → `gToggleGodSkillByKey`. Signature-gated DOM chip row (`#g-godskills`) by the MP bar:
+    key · icon · mp/s · lit/dormant(⚠)/off(✕). **Starvation = dormant + auto-resume, lowest-key-last** ✓.
+    **AI-native:** `Sim.toggleGodSkill(n)` + `Sim.act({toggleGodSkill})`; `observe().player.godSkills[id]` now
+    carries `{key,active,dormant,mpCostPerSec}` (+ existing `mp`).
+  - **Verified:** `node --check` clean; no function shadowing; **extracted the real dispatcher functions and
+    drove pay/dormant/auto-resume/key-order in Node** (6 behavior assertions pass — stronger than batch for the
+    new logic). ⚠ **In-browser canary pending** (`Sim.batch(3)` + manual: acquire 2 god skills → over-commit mana
+    → watch high-key go dormant + auto-resume → toggle with 1–9) — needs a live browser; run before tagging.
+    Committed locally (deploy-affecting — awaiting Josh push auth).
 
 - 🔄 ✨ **Item 2 — God Skills** (roadmap #2 `approved` · spec [`specs/god-skills.md`](specs/god-skills.md)) —
   phased trigger-swap, 3/5 done:
@@ -299,6 +326,16 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 ## ✅ Done (recent track record — prune to git history as it grows)
 
+- **2026-06-12 — Asset-folder stewardship: scheme set, fold tooling ready** (Artist, ↳ from Josh — new standing
+  responsibility) — Josh assigned the Artist ongoing **upkeep of `assets/`** as the game scales across areas
+  (`world/` was filling from one area's set-dressing). Decided axis (Josh-approved): **`world/` folds by AREA**
+  (`goblin-forest/` · `sanctum/` · `_shared/` for cross-area props) — a new area = a new folder; **`tile/` folds
+  by TERRAIN TYPE** (tiles recur across biomes). Recorded the responsibility in `agents/artist/artist.md`
+  (+ scope), rewrote `assets/README.md` with the decided per-kind taxonomy, extended `fold-assets.py` `FAMILIES`
+  (world + tile), and **taught `slice-variants.py` to auto-route** tile/world outputs into their family folder +
+  emit the foldered manifest path (so new slices don't re-flatten — the "migrate the tool with the pipeline"
+  rule). Dry-ran both folds CLEAN (44 world + 48 tile files, every one mapped). Engineer-lane handoff filed for
+  the atomic `--apply` (move + manifest rewrite). Tooling/docs only — not deploy-affecting; committed.
 - **2026-06-12 — Forest trees + forest grass + barrel/crate sliced** (Artist, ↳ from Josh) — four asset families
   cut from new masters: (1) **`world.foresttree.0..8`** — a 3rd tree family (fir/pine, willow, banyan, oaks; 256²,
   bottom-anchored foot ~0.94 to share `TREE_FOOT` & the `gDrawTree` path; `slice-variants --bleed 50` so canopies

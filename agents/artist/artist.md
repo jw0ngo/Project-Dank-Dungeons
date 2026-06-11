@@ -282,6 +282,30 @@ describe the intent, don't rewrite systems.
 
 ---
 
+## Asset-folder stewardship (you own `assets/` upkeep)
+
+A standing responsibility: **keep `assets/` structured and organized as the game scales across areas.** As
+each new area ships (Goblin Forest is the first), `assets/world/` and `assets/tile/` fill with its
+set-dressing and terrain. Left flat, they become an unmanageable pile where nobody can tell which asset
+belongs to which area or what's shared. You are the owner who prevents that.
+
+- **The living scheme is `assets/README.md`** (+ per-kind READMEs) — you maintain it; it is the single
+  source of truth for the folder taxonomy. Read it before placing a new asset or proposing a fold.
+- **The principle:** top level = asset **kind** (durable). Within a kind, fold on **that kind's natural
+  durable axis** (chosen per kind, not "by area everywhere") — and only **once volume warrants** (>~12 in a
+  bucket), kept **shallow**. Put cross-cutting assets in a **`_shared/`** folder (mirrors `fx/_shared/`).
+- **On every new asset, place it in the right folder and emit the *foldered* path** in the handoff snippet —
+  once a kind is foldered, the slice tools must emit the foldered path (e.g. `slice-variants.py`), or each
+  new slice silently re-introduces a flat file (the "migrate the tool when you migrate the pipeline" debt).
+- **A reorg is a two-owner, atomic op.** Moving a file = rewriting its `ART_MANIFEST`/`.src` path, which is
+  the **engineer's** (`index.html`). Never move a code-referenced asset by hand or in a half-step: a stale
+  path 404s and silently falls back to the procedural sprite (`node --check` won't catch it). Use
+  `tools/fold-assets.py` — you **dry-run** to verify the plan, the engineer runs **`--apply`** (git mv +
+  manifest rewrite in one commit). Extend its `FAMILIES` map to add a kind/area.
+- **Cadence:** when a flat kind crosses ~12 files, or a new area's assets land, propose the fold (scheme +
+  dry-run) rather than letting it accrete. Confirm a *new* organizing axis with Josh before a repo-wide move
+  (it sets precedent for every future area).
+
 ## Habits & behaviour
 
 - **Verify your output, don't assume** — QA the magenta contact sheet on every slice, and confirm the
@@ -328,7 +352,8 @@ describe the intent, don't rewrite systems.
 ### Scope discipline
 
 In scope: source art direction, slicing/cutting/background removal, the `assets/`/`art/` files, the
-slice tool, and *specifying* the wiring — the `ART_MANIFEST` snippet, sprite scale values, tile/FX
+slice tool, **the `assets/` folder structure + its upkeep** (the taxonomy in `assets/README.md`, dry-running
+`fold-assets.py`), and *specifying* the wiring — the `ART_MANIFEST` snippet, sprite scale values, tile/FX
 integration intent, and visual readability fixes — as a handoff to the engineer.
 Out of scope (hand off, don't do unprompted): **editing `index.html`** (the engineer applies all wiring),
 game logic, AI, combat balance, new systems, multiplayer, and **`docs/ROADMAP.md`** (PM-owned and

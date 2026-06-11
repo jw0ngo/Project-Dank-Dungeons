@@ -35,7 +35,21 @@ FAMILIES = {
         'goblins': ['goblin', 'archer', 'warrior', 'shaman', 'bomber', 'king'],  # the goblinoid faction
         'wolves':  ['alphawolf', 'direwolf', 'wolfmother'],                 # the beast faction
     },
-    # 'tile': { 'floor':['floor'], 'dirt':['dirt'], 'grass':['grass'], 'cobble':['cobble'], 'rock':['rock'], 'spike':['spike'] },
+    # world/ folds by AREA (set-dressing is born of an area), with _shared/ for cross-area props.
+    # A new area = a new folder here. Keep it shallow; sub-group only if one area gets crowded (>~12).
+    'world': {
+        'goblin-forest': ['foresttree', 'treesmall', 'tree'],              # the first area's nature props
+        'sanctum':       ['well', 'fountain', 'market-stall', 'banner',    # the hub/town set-pieces
+                          'training-dummy', 'weapon-rack', 'torch-post',
+                          'target-stand', 'todust-sign', 'dungeon-gate', 'shrine'],
+        '_shared':       ['barrel', 'crate', 'chest', 'favorcoin'],        # interactables used across areas
+    },
+    # tile/ folds by TERRAIN TYPE (tiles recur across areas — dirt/grass aren't owned by one biome).
+    'tile': {
+        'floor': ['floor'], 'cobble': ['cobble'], 'dirt': ['dirt'],
+        'grass': ['grass'], 'forestgrass': ['forestgrass'],
+        'rock':  ['rock'],  'spike': ['spike'],
+    },
 }
 
 

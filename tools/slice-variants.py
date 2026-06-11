@@ -48,6 +48,23 @@ _st = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_st)
 cut_cell, bg_leak_px, is_bg, keep_owner = _st.cut_cell, _st.bg_leak_px, _st.is_bg, _st.keep_owner
 
+# Import the asset-fold routing so new slices land in (and emit) the FOLDERED path for an
+# already-foldered keyspace — otherwise every new slice silently re-introduces a flat file
+# under assets/<keyspace>/ that the next fold has to sweep up again ("migrate the tool with
+# the pipeline"). family_for(domain, id) -> family subfolder, or None if the keyspace isn't
+# foldered / the id is unmapped.
+_fspec = importlib.util.spec_from_file_location(
+    'fold_assets', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fold-assets.py'))
+_fa = importlib.util.module_from_spec(_fspec)
+_fspec.loader.exec_module(_fa)
+
+
+def route_family(keyspace, ident):
+    """Family subfolder for this id under assets/<keyspace>/, or None (flat)."""
+    if keyspace not in _fa.FAMILIES:
+        return None
+    return _fa.family_for(keyspace, ident)
+
 CELLS = [(r, c) for r in range(3) for c in range(3)]   # all 9, reading order
 
 
@@ -169,7 +186,15 @@ def main():
                     help='QA dir for the contact sheet + manifest snippet (default <tempdir>/slice_<id>)')
     args = ap.parse_args()
     if args.assets_dir is None:
-        args.assets_dir = os.path.join('assets', args.keyspace)
+        fam = route_family(args.keyspace, args.id)
+        if fam:
+            args.assets_dir = os.path.join('assets', args.keyspace, fam)
+            print(f"[fold] {args.keyspace}.{args.id} -> assets/{args.keyspace}/{fam}/  (foldered keyspace)")
+        else:
+            args.assets_dir = os.path.join('assets', args.keyspace)
+            if args.keyspace in _fa.FAMILIES:
+                print(f"[fold] WARN: id '{args.id}' matches no family in assets/{args.keyspace}/ — "
+                      f"writing FLAT. Add it to fold-assets.py FAMILIES['{args.keyspace}'] so it folds.")
 
     sheet = Image.open(args.sheet).convert('RGB')
     W, H = sheet.size
