@@ -3,6 +3,29 @@
 
 ---
 
+### 2026-06-12 — A single FX sprite is NOT a variant sheet; the white-hot core survives edge-seeded flood *because* it's interior, which is also why fire never wants `--global`
+
+- **Principle:** Match the cut to the asset's *cardinality*, not just its kind. A lone FX sprite (one `fx.<id>`
+  key — the `fx.thrust`/`fx.slash`/`fx.fireexplosion` shape) is **not** a 3×3 variant set, and `slice-variants.py`
+  is hardcoded 3×3 (`W//3, H//3`) — it can't process one sprite. The right pipeline is still `cut_cell` +
+  `recover_specks` (FX flying embers ARE the art), just applied to **one cell**. I encoded that as
+  `tools/slice-single-fx.py` rather than hand-bridging — the recurring single-FX-cutout case now lives in the
+  tooling (sibling to "migrate the tool when you migrate the pipeline" / "encode a recurring defect class as a flag").
+- **Why — the white-bg-vs-white-hot-core trap, and the connectivity insight that defuses it:** a fire burst on
+  white has a near-white core; a naive whole-image white-key would punch it transparent. **Edge-seeded flood fill
+  keeps the core for free** — the core is *interior* (surrounded by orange flame), so it's never border-connected
+  and the flood never reaches it. Same fact, contrapositive: **do NOT reach for `--global` on fire** — `--global`
+  cuts *enclosed* bg pockets, and a white-hot core reads as an enclosed white pocket → global would punch it out.
+  (`--global` is for a genuine hole like the gap inside a drawn bow, not a bright core.) The bg-leak metric
+  over-reports here (the core counts as "bg-white") — 321px on a clean cut; the magenta contact is the verdict.
+- **How to apply:** (a) for a single burst/impact FX on a plain bg → `slice-single-fx.py <img> <id> --bg white
+  --erode 1 --out-dir assets/fx/<owner>` (fx folds by OWNER, not derivable from the id, so name the owner dir).
+  Default keeps specks; `--no-specks` to drop them. (b) Diagnose core-vs-hole before picking `--global`: a *bright*
+  enclosed region is figure (leave default edge-seeded); an *empty* enclosed region (true gap) is the only
+  `--global` case. (c) Handoff: a transparent FX cutout draws fine alpha-composited, but additive `'lighter'`
+  reads hotter for fire-over-scene (transparent contributes nothing, flame pixels add) — name it, engineer's call.
+  Where it *fires* (which skill) is a design call — deliver the clean asset + key, don't presume the wiring.
+
 ### 2026-06-12 — Organizing assets for an AI-native game: foldering is mostly human-readability; machine-value comes from where CODE reasons, or from DERIVING the dimension cheaply
 
 - **Principle:** Before a structural reorg, ask the AI-native question Josh asks — *"does this actually help the
