@@ -290,6 +290,7 @@ erode for the halo).
 | Sprite looks wrong size vs. another | Per-entity draw multiplier (e.g. `PLAYER_DRAW_SCALE`), not the sprite/box |
 | Overlapping AoE patches over-damage | Per-patch hit-cooldowns multi-hit — use one shared per-enemy cooldown |
 | `node --check` unavailable / parser rejects valid code | No Node here; use esprima-python but neutralize ES2019+ first (`catch{}`, `??`, `?.`-before-ident, BigInt `0n`) — and skip the parse entirely for numeric/comment-only edits |
+| Art loads locally but 404s on GitHub Pages | Case-sensitivity (Linux) hidden by Windows `core.ignorecase`. Check manifest paths against the **committed/staged git tree** case-sensitively (`git ls-files --cached`), not the disk. If the commit is already case-exact → it's a **stale Pages/CDN-cached 404**, not a path bug; a fresh path on next deploy sidesteps it |
 | Special chars (`—`/`§`/`→`/`×`) turn to mojibake after a PowerShell file rewrite | `Get-Content`/`Out-File` used the Win-1252 default — a `SimpleMatch` on `—` then also silently fails to match. Read+write UTF-8 via .NET (`[IO.File]::ReadAllLines`/`WriteAllText` with `UTF8Encoding($false)`); match lines by an ASCII-only substring |
 | Deleting a stat used in 50+ places | Neuter the helper to its neutral return (1/0); don't edit every call-site (works when the stat's baseline is 0) |
 | MP: one player's upgrade buffs everyone | A shared registry (`WeaponRegistry`) was mutated for a per-player effect — use a per-player modifier map read at use-time |
