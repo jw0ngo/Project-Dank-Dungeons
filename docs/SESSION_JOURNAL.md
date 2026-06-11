@@ -1,18 +1,180 @@
 # To Dust — Session Journal
-**Append-only log of sessions, decisions, and hard-won debugging lessons**
+**Reverse-chronological log of sessions, decisions, and hard-won debugging lessons — newest at top.**
 
 Each entry captures: what was built, what broke badly, and what the root cause taught us. The debugging lessons are the most portable value — they represent understanding that cannot be derived from the code alone.
 
----
+> **How to add an entry (read before logging a session):**
+> - **Date-keyed header, newest at the TOP:** `## YYYY-MM-DD — Title  [roles] · sN`. Insert it directly under
+>   this note, above the previous newest entry. No manual sequence math — the **date** orders it; `sN` is a
+>   stable id (the next integer after the current max) kept only for cross-references (e.g. the Architecture
+>   Decisions Log's *Session* column) and to break same-day ties.
+> - **`[roles]`** tags the agents involved — `[eng]`, `[PM]`, `[artist]`, or combined like `[PM+eng]`. A
+>   cross-role or role-switching session is **one** entry tagged with every role; grep a tag to filter.
+> - **Same-day sessions** each get their own entry; the later one sits **above** the earlier (higher `sN` on top).
+> - Crystallized, role-specific lessons still graduate to `agents/<role>/memory.md` — this file is the shared,
+>   cross-role timeline; the per-role memory is the distilled layer.
 
 > **Older sessions (1-13) are archived** in [`docs/archive/session-journal-2026H1.md`](archive/session-journal-2026H1.md).
-> Their still-live, distilled value survives in the **Debugging Heuristics Reference** table below and in
-> `agents/engineer/memory.md`. This live file keeps only the **most recent sessions** + the reference tables,
-> so a session loads the running context without the full back-catalogue. Archive older sessions here as it grows.
+> Their still-live, distilled value survives in the **Debugging Heuristics Reference** + **Architecture Decisions
+> Log** tables (bottom of this file) and in `agents/engineer/memory.md`. This live file keeps only the **most
+> recent sessions** + the reference tables; archive older sessions there as the list grows.
 
 ---
-## Session 14 — Image-Art Combat Pass, Card Pool Expansion, Weighty Heavy, Level-Up Redesign
-*June 2026 | engineer (+ a parallel playtest session sharing the tree)*
+
+## 2026-06-11 — God Skills slice 1 (Burning Body) shipped, asset reorg, PM playtest retune  [PM+eng] · s18
+*combined PM + engineer (role-switched from artist mid-session); parallel sessions sharing the tree*
+
+### Built / Done
+- **Burning Body (god-skill item 2, slice 1) shipped** — ignite-aura + Firebloom/Cinderburst + Dragon/Chaos
+  ascensions; ground-circle sprites + ring upgrade (`FR_RING_FRAC` 0.76) wired. Logged in CHANGELOG
+  `[Unreleased]`; ROADMAP item 2 flipped to in-progress with the build order (Burning Body → Trail of Embers
+  → Pyroclasm). Verified `node --check` + the AI-native invariants statically (`gUpdateGodSkills` is in the
+  `gSimUpdate` chain via `gUpdatePlayer`; the ascension fork sets `gSimEvolution`, so headless runs resolve
+  it). **Browser `Sim.batch` canary still owed** (no headless browser this session).
+- **PM + Josh full-run playtest retune (2026-06-11).** Josh played a full run; the PM/engineer tuned from it
+  and recorded it in CHANGELOG `[Unreleased]`: Burning Body cards surface far more once pledged
+  (`GODSKILL_CARD_CHANCE` 0.6, prioritized over patron burn-card injection), chaosfire is never laid under the
+  player, and emit-damage was rebalanced. Also recorded Josh's redirect renaming skill 1 **Pyre Waltz →
+  Burning Body** (ROADMAP). PM-reviewed, engineer-committed (git access).
+- **`assets/` reorganized for long-term health.** `fx/` → `_shared/` + per-god (`cilia/`…); `char/` → faction
+  folders (`player`/`goblins`/`wolves` — 248 files, 200 manifest paths). New `tools/fold-assets.py` does the
+  `git mv` **and** the `ART_MANIFEST` path-rewrite atomically + self-verifies. `assets/README.md` records the
+  durable scheme: **top level by asset-kind; fold within a kind on *its own* axis** (char=faction, fx=owner,
+  tile=type) — not "by god everywhere". `art/fx/` masters mirrored. New FX (Burning Body ring + heat-fill,
+  dragonfire/chaosfire ground-circles) cleaned to true-black via `tools/fx-ring-heatfill.py`.
+- Spec'd (Artist→Engineer handoffs, in `docs/TASKS.md` + `docs/specs/levelup-screen.md`): level-up screen
+  art pass + 27-icon generation batch; enemy hurt poses; threat-tier eye glow.
+
+### Lessons
+- **Code-referenced asset paths migrate atomically — script the move + the manifest rewrite as ONE op.** In a
+  single-file game, ~200 `ART_MANIFEST` strings point at files; a half-done fold (files moved, paths stale)
+  404s every sprite into the procedural fallback, which `node --check` never catches. `fold-assets.py --apply`
+  does both in one self-verifying commit; the engineer (sole `index.html` editor) runs it so the halves are
+  inseparable. (Crystallized in `agents/engineer/memory.md`.)
+- **The shared-tree auto-sweep trap** (reinforces s14): a "stage everything" moment bundled cross-role
+  WIP (`index.html`, PM's `ROADMAP`) into an *art* commit. Fix: `git reset --soft` + restage **explicit
+  paths**. Reconcile a diverged `origin` with `--force-with-lease` **only after** diffing that nothing unique
+  to origin is lost (here only PM's `ROADMAP`, preserved uncommitted in the working tree).
+- **Journal upkeep reworked: date-keyed, reverse-chronological, newest at top.** This wrap was first filed as a
+  duplicate "Session 15" prepended above the *existing* Session 15 — manual `max(n)+1` numbering miscounts and
+  fights the natural prepend instinct. Fix (this session): headers are now `## YYYY-MM-DD — title [roles] · sN`,
+  newest at the top; the date orders entries and `sN` is just a stable cross-ref/tiebreak id. See the header note.
+
+---
+
+## 2026-06-10 — Card pass, wolf fixes, late-game danger, patron cards + a walk-halo diagnosis  [eng] · s17
+*engineer (alongside parallel PM + Artist sessions on the shared tree)*
+
+### Built (shipped v0.5.0 + uncommitted/awaiting-push)
+- **0b Combat card pass (shipped v0.5.0):** per-skill damage cards (Swing: Bite, Heavy: Devastation, both
+  +8% via new `swingDmgPct`/`heavyDmgPct` skillMods applied at `gDoSwingAt`/`_fireHeavyAtk` + the char-screen
+  readout), retargeted the old width card → **Heavy: Reach** (`heavyLen`). Then **removed pick caps
+  pool-wide** (27 cards, scripted) — draft RNG is the only governor; degenerate states were already
+  clamped/floored independently (crit 75%, CD 99%, `SKILL_STAT_FLOOR`, Grit streak ≥2).
+- **3+4 Wolf fixes (shipped v0.5.0):** wolves are native climbers — added an optional walk-predicate param
+  to `gRC` (default `gIsWalk`, zero change for other callers) and resolve wolves with `gIsWalkWolf` (rock
+  climbable) + skip `gRCDestructibles`/`gTreeSlow`; bumped base HP/bite (dire 26→38/10→15, alpha 72→105/17→25).
+- **1 Late-game danger (built, awaiting push):** new `wildDmgMult` (+15%/night) at the **`gDamagePlayer`
+  chokepoint** so every damage source scales with one edit; steeper HP/density/cap slopes; mix-shift
+  breakpoints (warriors n4, shamans n6, goblin backbone thins 100→60 at n8+); `e.threatTier` flag (0/1/2)
+  → `gDrawThreatGlow` yellow/red eye-glow tell.
+- **0c Patron Cards (built, awaiting push):** reusable `PATRON_CARDS` pool keyed by patron god, gated by
+  `gIsPatronActive`, ~25% draft injection swapping one fill slot. Cilia burn set: Conflagration (per-tick
+  detonation → `gBurnExplode` AoE+re-ignite chain), Lingering Flame (`burnDurMult`), Searing Heat
+  (`burnTickMult`); duration/tick applied in `gApplyEnemyBurn`, detonation rolled in `gUpdateEnemyBurn`
+  (already inside `gSimUpdate`). Host/SP-authoritative → no MP-protocol change.
+
+### Lessons
+- **A user attributing a visual bug to your edits is a hypothesis to test, not a fact to accept.** The
+  "walk sprites have a dark halo" report felt caused by my reload, but the session-wide `index.html` diff
+  had **zero** player-render lines and the assets were git-clean. Measuring the PNG alpha-fringe nailed it:
+  walk frames carry a wide mid-gray semi-transparent edge band (brightness ~55-64) vs the idle's tight dark
+  fringe (~14) — a slicer keying artifact, fixable by the Artist (the cleanly re-cut `-e`/`-w` frames at
+  ~22 prove it). Diagnosis = diff for causation + measure the asset against a known-good sibling; then hand
+  it to the owning role with the data (`CLEANUP_BACKLOG` "Art / sprites" + a roadmap ENG→ARTIST line).
+- **A roadmap's "X scales with threat" is a claim to grep, not a given — then fix at the chokepoint.** The
+  board said HP+dmg both scaled ×(1+0.25·night); `wildThreatMult` had a single caller touching HP/speed
+  only, so enemy *damage never scaled at all*. Applying the new `wildDmgMult` at the one `gDamagePlayer`
+  chokepoint covered melee/arrows/bombs/fireballs/MP-mirror with zero per-site wiring — the same
+  "one interface-narrow chokepoint" move that made the burn mods and the threat tell cheap.
+- **The shared tree carries other roles' WIP — commit only your lane, every time.** All session, the PM's
+  `imbue-paths.md`/`ROADMAP.md` edits and the Artist's `slice-turnaround.py` sat modified in the tree; the
+  release gate (`release.ps1`) refused to run with them dirty, so I `git stash push -- <path>` for the
+  exact Artist file across the tag, then popped it. Always stage explicit paths; never `git add -A`.
+
+---
+
+## 2026-06-09 — Art externalized (index.html 14 MB → 650 KB)  [eng] · s16
+
+**Built:** Moved all inline base64 image art out of `index.html` into files under a new `assets/` tree.
+A census (`tools/census-base64.py`) found 179 inline blobs — 172 `ART_MANIFEST` entries, 5 `F*_SPR` fire
+sprites, 2 figure consts — plus the 4 shrine god-card `<img>`s (12 MB of base64). One scripted pass
+(`tools/externalize-art.py`) decoded each blob to a file (named from its manifest key / var), rewrote the
+reference to the path, and relocated the POC god cards into `assets/gods/`. `gInitArt` already did
+`im.src = ART_MANIFEST[key]`, so a path is interchangeable with a data-URL — the change is
+behaviour-preserving. Result: 183 asset files, `index.html` 14 MB → ~650 KB.
+
+**Lesson — externalizing inline art is a value-rewrite, not an engine change, *when* the loader is already
+src-generic.** The whole migration was "decode blob → write file → swap the string literal." Zero draw-code
+changes. The precondition that made it safe: the only consumer of a manifest value was `im.src = value`
+(grep-confirmed — no `atob`, no `startsWith('data:')`, no base64 slicing anywhere). Before externalizing
+any inlined data, **grep for code that introspects the value as a data-URI**; if nothing does, it's a
+mechanical swap.
+
+**Lesson — for art changes, "no 404s" is the real correctness check, not `node --check`.** A typo'd path
+passes syntax check, returns 404 at runtime, and **silently falls back to the procedural sprite** — looks
+plausible, art just quietly missing. Verified instead by HEAD-ing every `assets/` path referenced in the
+HTML over a local server (183/183 reachable) and headless-rendering the town (Chrome `--headless=new
+--screenshot` over `python -m http.server`). The screenshot caught that real sprites loaded; the reachability
+sweep caught that nothing was orphaned.
+
+**Lesson — `<img src>` relative paths load from `file://`, but a headless full-boot needs a server.** The
+POC confirmed the four god cards render from a bare `file://` double-click (image loads aren't CORS-blocked).
+But headless-booting the *whole game* from `file://` produced no screenshot (Firebase remote `<script>`s /
+virtual-time timing) — over `http://localhost` it rendered fine. So: `file://` is OK for the shipped game,
+but verify headless over HTTP.
+
+**Tooling friction:** `tools/slice-turnaround.py` still emits base64 manifest snippets — now a step behind
+the file-based pipeline (logged in `CLEANUP_BACKLOG.md`, flagged in `agents/artist/artist.md`).
+
+---
+
+## 2026-06-09 — Neutral Wolf Camps (spine)  [eng] · s15
+*engineer | ~12,800 lines*
+
+### Built
+- **Neutral Wolf Camps** — the final mechanical-slice feature (spec `docs/specs/neutral-camps.md`).
+  40 fixed crescent rock dens at world-gen, each a neutral pack (1 Alpha + 2–4 Direwolves) guarding a
+  chest. New `direwolf`/`alphawolf` EntityDefs + `makeWolfEnt` + one shared `_aiWolf` (neutral until
+  hit; circle-to-flank; telegraphed lunge-bite with an exposed recovery; `WOLF_LEASH_R` hard-leash →
+  disengage + full-heal). Camp-linked wake (`_wolfWakeCamp` from the `gDealEnemyDamage` chokepoint so a
+  one-shot still propagates). `gUpdateWolfCamps` inside `gSimUpdate` runs the 3-min respawn + chest-on-
+  clear (2–4 Favor via `gGrantFavor`) off the run clock. Crescents carved into the existing `rocks`
+  layer (no new tile art); minimap dots; editor palette. Sprites/draw-scales were pre-wired by the
+  Artist (`char.{direwolf,alphawolf}.*`, `ENEMY_DRAW_SCALE`).
+
+### Lessons
+- **Reuse the village template, but diverge on the *one* new axis.** Camps are villages-shaped (placed
+  at gen → `gWildCamps[]` of `data` objects → runtime `_wolves` populated in `goWilderness` → per-frame
+  update + chest-on-proximity + minimap dots). The *only* genuinely new code is the behavior that
+  differs — neutrality + leash-heal in `_aiWolf`. Copying the surrounding scaffold (despawn exemption,
+  reset sites, entity-load `forEach`, draw dispatch) is mechanical; spend the thought on the delta.
+- **Wake on the damage chokepoint, not the kill path.** Hooking pack-wake into `gDealEnemyDamage`
+  *before* the `hp<=0` branch (not in `gKillEnemy` or the non-fatal `_villageCheckDamageAlert` else)
+  means a one-shot killing blow on one wolf still wakes the rest — the obvious "wake on hit" spot misses
+  the lethal hit.
+- **`SpriteRegistry.get()` falls back to `player`, so the eager fallback arg in `gDrawEnemy` is
+  crash-safe** for a brand-new `defId` even before art loads — but the *real* art still renders because
+  `gDirBody` finds `char.<id>.<dir>`. New enemy types don't need a pixel-array sprite registered first.
+- **Verification reality (no node here):** confirmed syntax by a **differential bracket-balance** of the
+  extracted `<script>` vs `git show HEAD:index.html` (identical residual = no nesting broken), plus
+  targeted greps for every wiring site + a duplicate-declaration scan. The runtime `await Sim.batch(3)`
+  canary and visual playtest remain the browser-side loop (`python dev.py`).
+
+---
+
+## 2026-06-09 — Image-Art Combat Pass, Card Pool Expansion, Weighty Heavy, Level-Up Redesign  [eng] · s14
+*engineer (+ a parallel playtest session sharing the tree)*
 
 ### Built
 - **Image-art combat poses across the whole cast.** Player normal-attack + heavy-attack + a
@@ -142,159 +304,9 @@ erode for the halo).
 
 ---
 
-## Session 15 — Neutral Wolf Camps (spine)
-*June 2026 | engineer | ~12,800 lines*
-
-### Built
-- **Neutral Wolf Camps** — the final mechanical-slice feature (spec `docs/specs/neutral-camps.md`).
-  40 fixed crescent rock dens at world-gen, each a neutral pack (1 Alpha + 2–4 Direwolves) guarding a
-  chest. New `direwolf`/`alphawolf` EntityDefs + `makeWolfEnt` + one shared `_aiWolf` (neutral until
-  hit; circle-to-flank; telegraphed lunge-bite with an exposed recovery; `WOLF_LEASH_R` hard-leash →
-  disengage + full-heal). Camp-linked wake (`_wolfWakeCamp` from the `gDealEnemyDamage` chokepoint so a
-  one-shot still propagates). `gUpdateWolfCamps` inside `gSimUpdate` runs the 3-min respawn + chest-on-
-  clear (2–4 Favor via `gGrantFavor`) off the run clock. Crescents carved into the existing `rocks`
-  layer (no new tile art); minimap dots; editor palette. Sprites/draw-scales were pre-wired by the
-  Artist (`char.{direwolf,alphawolf}.*`, `ENEMY_DRAW_SCALE`).
-
-### Lessons
-- **Reuse the village template, but diverge on the *one* new axis.** Camps are villages-shaped (placed
-  at gen → `gWildCamps[]` of `data` objects → runtime `_wolves` populated in `goWilderness` → per-frame
-  update + chest-on-proximity + minimap dots). The *only* genuinely new code is the behavior that
-  differs — neutrality + leash-heal in `_aiWolf`. Copying the surrounding scaffold (despawn exemption,
-  reset sites, entity-load `forEach`, draw dispatch) is mechanical; spend the thought on the delta.
-- **Wake on the damage chokepoint, not the kill path.** Hooking pack-wake into `gDealEnemyDamage`
-  *before* the `hp<=0` branch (not in `gKillEnemy` or the non-fatal `_villageCheckDamageAlert` else)
-  means a one-shot killing blow on one wolf still wakes the rest — the obvious "wake on hit" spot misses
-  the lethal hit.
-- **`SpriteRegistry.get()` falls back to `player`, so the eager fallback arg in `gDrawEnemy` is
-  crash-safe** for a brand-new `defId` even before art loads — but the *real* art still renders because
-  `gDirBody` finds `char.<id>.<dir>`. New enemy types don't need a pixel-array sprite registered first.
-- **Verification reality (no node here):** confirmed syntax by a **differential bracket-balance** of the
-  extracted `<script>` vs `git show HEAD:index.html` (identical residual = no nesting broken), plus
-  targeted greps for every wiring site + a duplicate-declaration scan. The runtime `await Sim.batch(3)`
-  canary and visual playtest remain the browser-side loop (`python dev.py`).
-
----
-
-## Session 16 — Art externalized (index.html 14 MB → 650 KB)
-
-**Built:** Moved all inline base64 image art out of `index.html` into files under a new `assets/` tree.
-A census (`tools/census-base64.py`) found 179 inline blobs — 172 `ART_MANIFEST` entries, 5 `F*_SPR` fire
-sprites, 2 figure consts — plus the 4 shrine god-card `<img>`s (12 MB of base64). One scripted pass
-(`tools/externalize-art.py`) decoded each blob to a file (named from its manifest key / var), rewrote the
-reference to the path, and relocated the POC god cards into `assets/gods/`. `gInitArt` already did
-`im.src = ART_MANIFEST[key]`, so a path is interchangeable with a data-URL — the change is
-behaviour-preserving. Result: 183 asset files, `index.html` 14 MB → ~650 KB.
-
-**Lesson — externalizing inline art is a value-rewrite, not an engine change, *when* the loader is already
-src-generic.** The whole migration was "decode blob → write file → swap the string literal." Zero draw-code
-changes. The precondition that made it safe: the only consumer of a manifest value was `im.src = value`
-(grep-confirmed — no `atob`, no `startsWith('data:')`, no base64 slicing anywhere). Before externalizing
-any inlined data, **grep for code that introspects the value as a data-URI**; if nothing does, it's a
-mechanical swap.
-
-**Lesson — for art changes, "no 404s" is the real correctness check, not `node --check`.** A typo'd path
-passes syntax check, returns 404 at runtime, and **silently falls back to the procedural sprite** — looks
-plausible, art just quietly missing. Verified instead by HEAD-ing every `assets/` path referenced in the
-HTML over a local server (183/183 reachable) and headless-rendering the town (Chrome `--headless=new
---screenshot` over `python -m http.server`). The screenshot caught that real sprites loaded; the reachability
-sweep caught that nothing was orphaned.
-
-**Lesson — `<img src>` relative paths load from `file://`, but a headless full-boot needs a server.** The
-POC confirmed the four god cards render from a bare `file://` double-click (image loads aren't CORS-blocked).
-But headless-booting the *whole game* from `file://` produced no screenshot (Firebase remote `<script>`s /
-virtual-time timing) — over `http://localhost` it rendered fine. So: `file://` is OK for the shipped game,
-but verify headless over HTTP.
-
-**Tooling friction:** `tools/slice-turnaround.py` still emits base64 manifest snippets — now a step behind
-the file-based pipeline (logged in `CLEANUP_BACKLOG.md`, flagged in `agents/artist/artist.md`).
-
----
-
-## Session 17 — Card pass, wolf fixes, late-game danger, patron cards + a walk-halo diagnosis
-*June 10 2026 | engineer (alongside parallel PM + Artist sessions on the shared tree)*
-
-### Built (shipped v0.5.0 + uncommitted/awaiting-push)
-- **0b Combat card pass (shipped v0.5.0):** per-skill damage cards (Swing: Bite, Heavy: Devastation, both
-  +8% via new `swingDmgPct`/`heavyDmgPct` skillMods applied at `gDoSwingAt`/`_fireHeavyAtk` + the char-screen
-  readout), retargeted the old width card → **Heavy: Reach** (`heavyLen`). Then **removed pick caps
-  pool-wide** (27 cards, scripted) — draft RNG is the only governor; degenerate states were already
-  clamped/floored independently (crit 75%, CD 99%, `SKILL_STAT_FLOOR`, Grit streak ≥2).
-- **3+4 Wolf fixes (shipped v0.5.0):** wolves are native climbers — added an optional walk-predicate param
-  to `gRC` (default `gIsWalk`, zero change for other callers) and resolve wolves with `gIsWalkWolf` (rock
-  climbable) + skip `gRCDestructibles`/`gTreeSlow`; bumped base HP/bite (dire 26→38/10→15, alpha 72→105/17→25).
-- **1 Late-game danger (built, awaiting push):** new `wildDmgMult` (+15%/night) at the **`gDamagePlayer`
-  chokepoint** so every damage source scales with one edit; steeper HP/density/cap slopes; mix-shift
-  breakpoints (warriors n4, shamans n6, goblin backbone thins 100→60 at n8+); `e.threatTier` flag (0/1/2)
-  → `gDrawThreatGlow` yellow/red eye-glow tell.
-- **0c Patron Cards (built, awaiting push):** reusable `PATRON_CARDS` pool keyed by patron god, gated by
-  `gIsPatronActive`, ~25% draft injection swapping one fill slot. Cilia burn set: Conflagration (per-tick
-  detonation → `gBurnExplode` AoE+re-ignite chain), Lingering Flame (`burnDurMult`), Searing Heat
-  (`burnTickMult`); duration/tick applied in `gApplyEnemyBurn`, detonation rolled in `gUpdateEnemyBurn`
-  (already inside `gSimUpdate`). Host/SP-authoritative → no MP-protocol change.
-
-### Lessons
-- **A user attributing a visual bug to your edits is a hypothesis to test, not a fact to accept.** The
-  "walk sprites have a dark halo" report felt caused by my reload, but the session-wide `index.html` diff
-  had **zero** player-render lines and the assets were git-clean. Measuring the PNG alpha-fringe nailed it:
-  walk frames carry a wide mid-gray semi-transparent edge band (brightness ~55-64) vs the idle's tight dark
-  fringe (~14) — a slicer keying artifact, fixable by the Artist (the cleanly re-cut `-e`/`-w` frames at
-  ~22 prove it). Diagnosis = diff for causation + measure the asset against a known-good sibling; then hand
-  it to the owning role with the data (`CLEANUP_BACKLOG` "Art / sprites" + a roadmap ENG→ARTIST line).
-- **A roadmap's "X scales with threat" is a claim to grep, not a given — then fix at the chokepoint.** The
-  board said HP+dmg both scaled ×(1+0.25·night); `wildThreatMult` had a single caller touching HP/speed
-  only, so enemy *damage never scaled at all*. Applying the new `wildDmgMult` at the one `gDamagePlayer`
-  chokepoint covered melee/arrows/bombs/fireballs/MP-mirror with zero per-site wiring — the same
-  "one interface-narrow chokepoint" move that made the burn mods and the threat tell cheap.
-- **The shared tree carries other roles' WIP — commit only your lane, every time.** All session, the PM's
-  `imbue-paths.md`/`ROADMAP.md` edits and the Artist's `slice-turnaround.py` sat modified in the tree; the
-  release gate (`release.ps1`) refused to run with them dirty, so I `git stash push -- <path>` for the
-  exact Artist file across the tag, then popped it. Always stage explicit paths; never `git add -A`.
-
----
-
-## Session 18 — God Skills slice 1 (Burning Body) shipped, asset reorg, PM playtest retune
-*June 11 2026 | combined PM + engineer (role-switched from artist mid-session); parallel sessions sharing the tree*
-
-### Built / Done
-- **Burning Body (god-skill item 2, slice 1) shipped** — ignite-aura + Firebloom/Cinderburst + Dragon/Chaos
-  ascensions; ground-circle sprites + ring upgrade (`FR_RING_FRAC` 0.76) wired. Logged in CHANGELOG
-  `[Unreleased]`; ROADMAP item 2 flipped to in-progress with the build order (Burning Body → Trail of Embers
-  → Pyroclasm). Verified `node --check` + the AI-native invariants statically (`gUpdateGodSkills` is in the
-  `gSimUpdate` chain via `gUpdatePlayer`; the ascension fork sets `gSimEvolution`, so headless runs resolve
-  it). **Browser `Sim.batch` canary still owed** (no headless browser this session).
-- **PM + Josh full-run playtest retune (2026-06-11).** Josh played a full run; the PM/engineer tuned from it
-  and recorded it in CHANGELOG `[Unreleased]`: Burning Body cards surface far more once pledged
-  (`GODSKILL_CARD_CHANCE` 0.6, prioritized over patron burn-card injection), chaosfire is never laid under the
-  player, and emit-damage was rebalanced. Also recorded Josh's redirect renaming skill 1 **Pyre Waltz →
-  Burning Body** (ROADMAP). PM-reviewed, engineer-committed (git access).
-- **`assets/` reorganized for long-term health.** `fx/` → `_shared/` + per-god (`cilia/`…); `char/` → faction
-  folders (`player`/`goblins`/`wolves` — 248 files, 200 manifest paths). New `tools/fold-assets.py` does the
-  `git mv` **and** the `ART_MANIFEST` path-rewrite atomically + self-verifies. `assets/README.md` records the
-  durable scheme: **top level by asset-kind; fold within a kind on *its own* axis** (char=faction, fx=owner,
-  tile=type) — not "by god everywhere". `art/fx/` masters mirrored. New FX (Burning Body ring + heat-fill,
-  dragonfire/chaosfire ground-circles) cleaned to true-black via `tools/fx-ring-heatfill.py`.
-- Spec'd (Artist→Engineer handoffs, in `docs/TASKS.md` + `docs/specs/levelup-screen.md`): level-up screen
-  art pass + 27-icon generation batch; enemy hurt poses; threat-tier eye glow.
-
-### Lessons
-- **Code-referenced asset paths migrate atomically — script the move + the manifest rewrite as ONE op.** In a
-  single-file game, ~200 `ART_MANIFEST` strings point at files; a half-done fold (files moved, paths stale)
-  404s every sprite into the procedural fallback, which `node --check` never catches. `fold-assets.py --apply`
-  does both in one self-verifying commit; the engineer (sole `index.html` editor) runs it so the halves are
-  inseparable. (Crystallized in `agents/engineer/memory.md`.)
-- **The shared-tree auto-sweep trap** (reinforces Session 14): a "stage everything" moment bundled cross-role
-  WIP (`index.html`, PM's `ROADMAP`) into an *art* commit. Fix: `git reset --soft` + restage **explicit
-  paths**. Reconcile a diverged `origin` with `--force-with-lease` **only after** diffing that nothing unique
-  to origin is lost (here only PM's `ROADMAP`, preserved uncommitted in the working tree).
-- **Append the journal entry — number from the last entry, add at the bottom.** This wrap was first filed as a
-  duplicate "Session 15" prepended above Session 14, colliding with the real Session 15 and breaking the
-  ascending order. The live file runs oldest→newest top-to-bottom; a new session is `max(n)+1` appended after
-  the last one.
-
----
-
 ## Architecture Decisions Log
+
+*The `Session` column cites the `sN` id from each entry's header.*
 
 | Decision | Rationale | Session |
 |----------|-----------|---------|
