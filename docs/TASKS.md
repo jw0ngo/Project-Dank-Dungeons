@@ -128,6 +128,27 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
   grass.png`, `art/world/barrel.png`, `art/world/crate.png`.
   </details>
 
+- ◻️ 🎨 **Wire `fx.fireexplosion` — single fire-burst FX sprite** (↳ from ART, 2026-06-12) — one new transparent
+  FX cutout committed at `assets/fx/cilia/fireexplosion.png` (256², ~88 KB; radial fire burst, bright white-hot
+  core, flying embers/debris). A **single key** like `fx.thrust`/`fx.slash` (not a numbered variant set). Paste:
+  ```
+  'fx.fireexplosion':'assets/fx/cilia/fireexplosion.png',
+  ```
+  - **Compositing:** it's a **transparent cutout** (no black bg), so it draws fine alpha-composited — but for
+    fire-over-scene a hot glow reads best with `globalCompositeOperation='lighter'` (additive; transparent areas
+    contribute nothing, flame pixels add). Engineer's call; additive recommended.
+  - **Use (open — PM/engineer call):** it's in the **Cilia** kit; natural homes are a one-shot **impact burst**
+    (Cinderburst nova / Chaos Crown blast / a generic fire-hit pop), drawn for a short life with a quick
+    scale-up + fade. Not wired to anything yet — this handoff is just the clean asset + key; *where* it fires is
+    a design decision. No size-coupling to a hitbox unless it's bound to a damage radius (then scale the draw to
+    that radius).
+  - **Raster → HiDPI:** standard FX blit; draw size is a tunable (an impact pop ~64–140 px; a big nova larger).
+    256² source covers a generous on-screen size. **Verify:** `node --check` + grep the key resolves to the file
+    + `python dev.py` → trigger wherever wired; burst composites cleanly (no white halo), embers read.
+  - *Tool:* new `tools/slice-single-fx.py` (one-cell `cut_cell`+`recover_specks` wrapper; slice-variants is
+    3×3-only). Source master `art/fx/cilia/fire-explosion.png`. *(The older 9-variant `art/fx/cilia/fire-explosions.png`
+    sheet is separate and unsliced — ping ART if a full explosion variant set is wanted too.)*
+
 - ✅ 🎨 **Wire SMALLER tree sprites + formation-based forest** (Josh, 2026-06-12) — **done 2026-06-12.**
   Re-used the occluding-prop system as-is (`gWildTrees`/`gDrawTree`/`gRCTrees`). Wired the `world.treesmall.0..8`
   set; small trees render smaller via a smaller draw `scale` (both sets are cell-framed to fill the 256²
