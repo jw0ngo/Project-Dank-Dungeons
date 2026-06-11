@@ -18,6 +18,28 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 
 ---
 
+### 2026-06-11 — A feel/visual feature's spec converges through user iteration; localize with the "what already works" diagnostic, and decouple before you resize
+- **Principle:** For a *feel/visual* feature (fog of war, juice, game feel) the real spec emerges over several
+  fast rounds with the user — don't try to nail it in one shot, and don't over-plan the first cut. But DO
+  pull the consequential **visual forks** out of the user *before a big rewrite*, not after: shape (circle vs
+  screen-shaped), persistence (does it stay revealed?), what hides (terrain vs entities). I rewrote the fog
+  render ~4 times because I implemented each new clue instead of asking "circle or screen-shaped? persistent
+  or spotlight?" up front once the direction was clear.
+- **The sharpest diagnostic was the user's:** *"it works at night but not during the day."* A same-feature
+  works-in-regime-A-not-B report is a **parameter-regime bug, not a render bug** — localize by the parameter
+  that differs (day vision 30 tiles ≥ screen vs night 12 < screen). Render code was correct; only the radius
+  was wrong. Cheaper than any code reading.
+- **Decouple shared knobs before you retune one.** `fogVisRadius()` drove *both* the visual circle *and*
+  enemy aggro/spawn distances; shrinking it for looks would have silently changed combat. Split gameplay
+  ranges onto their own constants (`ENEMY_DEAGGRO_TILES`) **first**, then the visual radius is free to move.
+  Generalises the "hidden input to every census" lesson: one number feeding two systems is a trap when you
+  tune it for one.
+- **How to apply:** Two standard canvas tricks worth reaching for — composite the effect on an **offscreen
+  layer** then blit (so `destination-out` punches/erases hit only the effect, never the game canvas), and
+  **bilinear-upscale a low-res (1px/tile) mask** for smooth sub-tile fields instead of per-tile `fillRect`
+  (kills blocky reveal). Both are render-only ⇒ MP/Sim-safe by construction. When a feature is "tune it live,"
+  expose every magnitude as a named const and say so — the user iterates on numbers, not geometry.
+
 ### 2026-06-11 — Documentation is a system: tier by load-cost, key shared artifacts to self-order, write every altitude (consolidated)
 
 - **Principle:** The repo is the shared brain, so its docs are engineered artifacts with their own failure
