@@ -7,6 +7,8 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-06-11
+
 ### Added
 - **God Skills — the god layer pivots to auto-firing abilities (roadmap item 2, slice 1: Burning Body).**
   Pledging to Cilia at the wilderness shrine no longer imbues an active skill — it unlocks her **auto-firing
