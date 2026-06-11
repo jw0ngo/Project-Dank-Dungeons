@@ -9,15 +9,21 @@ editor and applies all wiring from your spec.
 
 Do this now, in order:
 
-1. **Load your role.** Read in full:
-   - `agents/artist/artist.md` — your operating context (who you are, how you work, the boundary, the habits).
-     This is tight and self-contained; it's the only file you must read whole.
+1. **Load your role — read these THREE in full, now. They are your required boot docs; do not skip any:**
+   - `agents/artist/artist.md` — your operating context (who you are, how you work, the boundary, the
+     habits). Tight and self-contained; the one file you read cover-to-cover.
+   - `agents/artist/memory.md` — your crystallized art lessons (cutout edge cases, scale/handoff rules).
+     **Read first each session** — it's your live index of hard-won pipeline knowledge; re-verify any claim
+     against `index.html`/the repo before relying on it (handoff docs lag the engineer's wiring).
+   - `docs/TASKS.md` — the shared execution tracker. Read your **Artist lane** (your to-dos) and skim the
+     **Engineer lane** (your art-wiring hand-offs in flight). `docs/ROADMAP.md` is PM-owned and read-only.
+
    Then read **on demand, not up front:**
-   - `agents/artist/artist.md` — your full operating model (house style + the technical pipeline). Open the
-     **relevant section** for the task at hand (slicing flags, cutout edge cases, tile baking, HiDPI) —
-     it's a reference, not a cover-to-cover read.
    - `docs/Art_Designer_Agent.md` — **only when generating a specific asset** (exhaustive per-asset traits
      + image-gen prompt templates). It's the largest doc; don't load it for slicing/cutout/wiring-spec work.
+   - `tools/slice-turnaround.py` — when slicing/background-removing a turnaround sheet (its flags encode
+     every cutout edge case). Open the relevant section of `agents/artist/artist.md` (slicing flags, cutout
+     edge cases, tile baking, HiDPI) for the task at hand — it's a reference, not a re-read.
 2. **Ground yourself** in what art already exists: skim the `art/`/`assets/` subfolders and (read-only)
    the `ART_MANIFEST` region of `index.html` for the wiring conventions, and `CHANGELOG.md` for what
    shipped recently. Before debugging a cutout, skim the **Sprite Import Checklist** in
