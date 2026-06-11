@@ -37,6 +37,68 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 ## 🟧 Engineer / CTO lane
 
+- ◻️ 🎨 **Wire forest-tree set + forest-grass tiles + barrel/crate props** (↳ from ART, 2026-06-12) — four new
+  asset families sliced & committed under `assets/`. All **new ids** (non-destructive — Josh's call: add, don't
+  replace the existing `tree-*`/`grass-*` sets). Manifest snippets are paste-ready; nothing renders until wired.
+  <details><summary>detail (render spec)</summary>
+
+  **1. Forest trees — `world.foresttree.0..8`** (9 files, ~605 KB, `assets/world/foresttree-<n>.png`). A 3rd tree
+  family alongside `world.tree.*` (large) + `world.treesmall.*`. **Same pipeline & framing as `tree-*`:** 256²
+  cell-framed canvas, bottom-anchored to **foot fraction ~0.94** (uniform across all 9) — so they draw through the
+  **same `gDrawTree` feet-anchored world-prop path and share `TREE_FOOT≈0.94`**, no new draw code. Sliced with the
+  `--bleed 50` overflow recovery (full canopies, no flat tops — QA contact CLEAN). Paste:
+  ```
+  'world.foresttree.0':'assets/world/foresttree-0.png', 'world.foresttree.1':'assets/world/foresttree-1.png',
+  'world.foresttree.2':'assets/world/foresttree-2.png', 'world.foresttree.3':'assets/world/foresttree-3.png',
+  'world.foresttree.4':'assets/world/foresttree-4.png', 'world.foresttree.5':'assets/world/foresttree-5.png',
+  'world.foresttree.6':'assets/world/foresttree-6.png', 'world.foresttree.7':'assets/world/foresttree-7.png',
+  'world.foresttree.8':'assets/world/foresttree-8.png',
+  ```
+  - **Wiring (your call):** to make them appear, either extend `gWildTrees` placement to pick from this family too
+    (add a per-tree `family:'tree'|'treesmall'|'foresttree'` + variant index, `gDrawTree` selects the keyspace) or a
+    separate scatter pass. `gInitArt` will count `world.foresttree.*` like any variant set. **Size-coupling:** shares
+    `TREE_FOOT≈0.94`; give it its own `TREE_BASE`-equivalent / per-family scale if it should read larger/smaller than
+    the existing trees. These are taller "real forest" trees (fir/pine, willow #3, banyan #2, oaks/maples) — likely
+    intended to dominate the Goblin Forest; Josh may later want them to *replace* `tree-*` (then just repoint the
+    `world.tree.*` keys — drop-in).
+
+  **2. Forest-grass tiles — `tile.forestgrass.0..8`** (9 files, ~157 KB, `assets/tile/forestgrass-<n>.png`). Opaque
+  **96² RGB full-bleed** (matches the live `grass-*` treatment exactly — grass edge-to-edge, verified tiles
+  seamlessly with no dark-edge grid). A darker, lusher forest-floor grass (flowers, dirt patches, rocks). Paste:
+  ```
+  'tile.forestgrass.0':'assets/tile/forestgrass-0.png', 'tile.forestgrass.1':'assets/tile/forestgrass-1.png',
+  'tile.forestgrass.2':'assets/tile/forestgrass-2.png', 'tile.forestgrass.3':'assets/tile/forestgrass-3.png',
+  'tile.forestgrass.4':'assets/tile/forestgrass-4.png', 'tile.forestgrass.5':'assets/tile/forestgrass-5.png',
+  'tile.forestgrass.6':'assets/tile/forestgrass-6.png', 'tile.forestgrass.7':'assets/tile/forestgrass-7.png',
+  'tile.forestgrass.8':'assets/tile/forestgrass-8.png',
+  ```
+  - **⚠ NOT auto-wired.** `gTileArt` only maps `TILE_FLOOR→'floor'`, `TILE_DIRT→'dirt'`, `TILE_GRASS→'grass'`. A new
+    `forestgrass` family needs a `gTileArt` mapping for whatever tile id should use it (a new `TILE_FORESTGRASS`
+    constant for a forest biome, **or** repoint `TILE_GRASS→'forestgrass'` if it's meant to be the wilderness grass).
+    `gInitArt` auto-counts `tile.forestgrass.*` into `gTileVarCount` once the keys exist; variant selection uses the
+    `gWallVar` table (not a coordinate hash). Opaque ground → normal `gTileArt` blit-and-return (no overlay/ground-
+    beneath needed).
+
+  **3. Barrel + crate props — `world.barrel` / `world.crate`** (`assets/world/barrel.png` 186×256 74 KB,
+  `assets/world/crate.png` 204×256 75 KB). Transparent cutouts, white-bg removed + halo eroded (QA magenta CLEAN,
+  metal-band highlights intact). **`barrel.png` overwrote the old 39×43 unwired placeholder** with a crisp HiDPI
+  cutout; **`crate.png` is new.** Paste:
+  ```
+  'world.barrel':'assets/world/barrel.png', 'world.crate':'assets/world/crate.png',
+  ```
+  - **Wiring:** single overlay props (tall transparent cutouts → draw ground first, composite on top; same family as
+    the chest/rock overlay path, feet-anchored by the bottom of the opaque pixels). Need a draw hook + placement
+    (town set-dressing and/or wilderness scatter — a PM/Josh placement call; see the unwired-Sanctum-props task).
+    **Raster → HiDPI:** draw at `devicePixelRatio` (`_prepHiDPICanvas`/`<img>`). Suggested draw size ~28–40 px tall;
+    tune in-game (engineer's knob). If barrel/crate become destructible loot containers that's a systems call, not
+    part of this art handoff — décor by default.
+
+  **Verify (all):** `node --check` + grep each new key resolves to a file + `python dev.py` → foresttrees show full
+  canopies feet-on-ground & mix with the other trees; forestgrass tiles blit seamlessly; barrel/crate composite
+  cleanly over ground (no white halo). Source masters committed: `art/world/forest trees.png`, `art/tiles/forest
+  grass.png`, `art/world/barrel.png`, `art/world/crate.png`.
+  </details>
+
 - ✅ 🎨 **Wire SMALLER tree sprites + formation-based forest** (Josh, 2026-06-12) — **done 2026-06-12.**
   Re-used the occluding-prop system as-is (`gWildTrees`/`gDrawTree`/`gRCTrees`). Wired the `world.treesmall.0..8`
   set; small trees render smaller via a smaller draw `scale` (both sets are cell-framed to fill the 256²
@@ -237,6 +299,15 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 ## ✅ Done (recent track record — prune to git history as it grows)
 
+- **2026-06-12 — Forest trees + forest grass + barrel/crate sliced** (Artist, ↳ from Josh) — four asset families
+  cut from new masters: (1) **`world.foresttree.0..8`** — a 3rd tree family (fir/pine, willow, banyan, oaks; 256²,
+  bottom-anchored foot ~0.94 to share `TREE_FOOT` & the `gDrawTree` path; `slice-variants --bleed 50` so canopies
+  aren't clipped; QA CLEAN). (2) **`tile.forestgrass.0..8`** — opaque 96² full-bleed forest-floor grass (small
+  custom PIL crop: inner-square inset past the sheet's dark bushy fringe → matches the live `grass-*` treatment,
+  verified seamless-tiling, no dark grid). (3+4) **`world.barrel` / `world.crate`** — single transparent props
+  (white-bg flood-fill + erode via the slicer's `cut_cell`; barrel replaced its tiny 39×43 placeholder, crate new).
+  All **new ids** (Josh: add, don't replace existing tree/grass sets). Engineer wiring handoff filed (Engineer lane)
+  with paste-ready manifest snippets. ~908 KB total. Committed locally (deploy-affecting — awaiting Josh push auth).
 - **2026-06-12 — Tree sprites: small set sliced + large-tree top-clip fixed; `slice-variants.py` gains `--bleed`** (Artist, ↳ from Josh) — sliced the new `art/world/tree small.png` 9-variant sheet → `assets/world/treesmall-0..8` (new smaller-tree variety incl. a willow), and re-sliced the existing large `tree-0..8` to recover canopy tops Josh flagged as clipped on `tree-5..8`. **Root cause:** the bottom/middle source trees overflow their 3×3 cells upward (~33px), and `slice-variants.py` (which crops to the exact cell) had no overflow recovery. **Fix — ported `--bleed` (expanded-window + `keep_owner`) from `slice-turnaround.py` into `slice-variants.py`**, plus `--anchor bottom`/`--foot-pad` so every recovered variant shares one foot baseline (foot fraction ~0.94, uniform across all 18). QA'd both magenta contacts CLEAN (full canopies, feet aligned, no neighbour fragments; bg-leak metric over-reports on bright foliage). Engineer handoff filed (Engineer lane): `treesmall` keys to wire + verify `TREE_FOOT≈0.94`/`TREE_BASE`. *Lesson: a recurring cutout defect class belongs IN the slicer — tree-canopy-overflow on a variant sheet is now a documented flag.* Committed locally (deploy-affecting — awaiting Josh push auth).
 - **2026-06-12 — Cilia pledge-card art fixed + optimized** (Artist, ↳ from Josh) — Josh's updated bust (full flaming hair no longer cut off at the top of frame) had landed as an unoptimized 2.1 MB `assets/gods/cilia.png` while `index.html:765` still pointed at the deleted `assets/gods/cilia.jpg` → broken pledge card. Converted the new master → **`assets/gods/cilia.jpg`** (1408×792, 204 KB — in family with bhumi 170 / boreas 200 / ikras 169 KB), removed the 2.1 MB PNG. **No `index.html` change** (line 765 already references `cilia.jpg`). QA'd: full hair contained, no flatten/banding, dark bg intact, crops clean to the 130px `top center` card strip.
 
