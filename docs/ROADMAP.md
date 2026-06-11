@@ -216,14 +216,17 @@ juiced-up elites — hard, but fair and readable.
 
 ### 2. God Skills — Cilia's fire skills become auto-firing abilities
 
-`✅ approved — cleared for build` (Josh-directed pivot 2026-06-10; **supersedes old "Imbue Paths" active-skill model**) · **Size:** large, phased · **Pillars:** build-craft depth, game feel, mastery
-**Source of truth:** [`specs/god-skills.md`](specs/god-skills.md). (Old active-skill design archived in [`specs/imbue-paths.md`](specs/imbue-paths.md) — still the FX/line-ref reference.) **Build order (cheapest/proves-the-pattern first):** **Pyre Waltz** (already interval-based) → **Trail of Embers** (movement-emit) → **Pyroclasm** (interval + auto-target).
+`🔄 in-progress — slice 1 shipped (Unreleased)` (Josh-directed pivot 2026-06-10; **supersedes old "Imbue Paths" active-skill model**) · **Size:** large, phased · **Pillars:** build-craft depth, game feel, mastery
+**Source of truth:** [`specs/god-skills.md`](specs/god-skills.md). (Old active-skill design archived in [`specs/imbue-paths.md`](specs/imbue-paths.md).) **Build order:** ✅ **Burning Body** (slice 1, shipped+feel-tuning) → **Trail of Embers** (movement-emit) → **Pyroclasm** (interval + auto-target).
+> **Redirect (Josh, 2026-06-11):** skill 1 "Pyre Waltz" → **Burning Body** — refocused on fire's true identity
+> (**AOE burst + burn → explosions**, *not* movement/pull). Base is an ignite-aura; Forms = **Firebloom** (rings)
+> / **Cinderburst** (detonations). Detail in the spec.
 
 **What:** The god's power is no longer welded to your active skills — it's a set of **auto-firing abilities
 (Vampire-Survivors-style)** that play on intervals as you move and fight, sitting on top of *whatever* class
-kit you have. Cilia's launch loadout = her three best fire skills, converted: **Pyre Waltz** (pulsing fire-ring
-nova, around you), **Trail of Embers** (a burning trail you lay as you walk), **Pyroclasm** (an auto-aimed line
-of fire pillars at range). Each keeps the **10-rank binary tree** — **Form fork @5** (how it plays) and the
+kit you have. Cilia's launch loadout = three fire skills: **Burning Body** (an ignite-aura that bursts into
+fire rings / detonations, around you), **Trail of Embers** (a burning trail you lay as you walk), **Pyroclasm**
+(an auto-aimed line of fire pillars at range). Each keeps the **10-rank binary tree** — **Form fork @5** (how it plays) and the
 **two-age Ascension @10** (🐉 Dragon *heal* vs 🔥 Chaos *self-burn* peak). 4 endpoints per skill.
 
 **Why the pivot:** the combat system is a **reusable platform** (this roguelike is mode one; MOBA/MMORPG are
@@ -401,6 +404,15 @@ cheaper once Boreas ships. **Needs ≥2 gods with imbues** — unblocked once Bo
 - **A boss variant (parked)** — the fast-flanker idea is now realized as the wolves; what remains parked is
   a *boss-tier* variant (a dire-alpha world boss / a goblin elite). Revisit if the difficulty work wants
   more roster variety.
+- **🛰️ MMO-scale server architecture spike** *(Pillar: the platform's MMORPG "future mode")* — the long-term
+  goal of **hundreds of players on one map** is a **backend/netcode** re-architecture, **not** an engine swap
+  (decision recorded in [`decisions/0001-engine-and-mmo-scaling.md`](decisions/0001-engine-and-mmo-scaling.md)).
+  The walls are Firebase RTDB (O(N²) fan-out — breaks in the low *tens*), browser-host authority, and O(N²)
+  sim loops; the fix is a dedicated **authoritative server + interest management + spatial sharding**, which the
+  deterministic `gSimUpdate`/headless-`Sim` design is already well-positioned to grow into. **A sizable
+  separate project — sequence it *after* the slice is fun;** the near-term ask is only *discipline* (keep net
+  behind the `Net`/`MP` adapter, keep the sim step server-runnable) so the run-loop work doesn't lock in choices
+  that are expensive to undo. A scoping spike comes first when this is greenlit.
 
 ---
 
