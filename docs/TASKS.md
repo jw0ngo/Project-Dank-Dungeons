@@ -37,6 +37,13 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 ## 🟧 Engineer / CTO lane
 
+- ◻️ 🎨 **Wire SMALLER tree sprites (next set)** (Josh, 2026-06-12) — next session. The occluding-prop system
+  is already built and tuned (`gWildTrees`/`gDrawTree`/`gRCTrees`); a new/smaller tree set should **reuse it
+  as-is** and just re-tune the knobs: `TREE_BASE` (draw size), `TREE_DENSITY`, base-ellipse `TREE_BASE_RX_FRAC`
+  /`TREE_BASE_RY_FRAC`, `TREE_FADE_ALPHA`/`TREE_FADE_BLEND`, `PLAYER_VIS_H`. **Re-measure the new art's foot +
+  base footprint** (alpha bbox via PIL, as for the 256² set) and reset `TREE_FOOT` if proportions differ. Full
+  transferable rules in `agents/engineer/memory.md` (2026-06-12 occluding-env-sprites entry).
+
 - ✅ 🎨 **Wire world TREE props — 9-variant scatter set** (↳ from ART, 2026-06-11) — **done 2026-06-11.**
   Wired as a new off-grid scatter-prop family mirroring `gRocks`: 9 `world.tree.<n>` manifest keys →
   `gWildTrees` (reset with the other run state) → placed in `generateWildernessMap` step 4c (seeded RNG, so

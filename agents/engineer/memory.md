@@ -18,6 +18,38 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 
 ---
 
+### 2026-06-12 — Occluding environment sprites: a reusable system + three rules (cull by extents · fade tracks the occluded · hitbox matches the art)
+
+- **Principle:** A tall world-prop the player can walk behind (tree, and future pillars/statues) is the
+  `gWildTrees` / `gDrawTree` / `gRCTrees` family. Three rules make it read right and all transfer to the next
+  such sprite:
+  1. **Cull by the DRAWN extents, not the anchor.** A foot-anchored sprite draws far ABOVE its foot, so
+     culling on the foot with a small margin clips *visible* sprites at the screen edge → "popping." Use
+     margins derived from the size const (canopy reaches ~0.93·h above the foot). Latent at small scale,
+     blatant at 2×.
+  2. **The occlusion-fade boundary must track the OCCLUDED entity, not a fixed fraction of the occluder.**
+     Standing rule of thumb: **the player's top half always stays visible** behind env sprites. How much of
+     the sprite covers the player depends on where they *stand*, so map the player's **waist** (foot −
+     `PLAYER_VIS_H`/2) into the sprite's image-height fraction and go fully translucent at/above it, ramping
+     to opaque below. A fixed "top X% fades" is wrong — it ignores the player's position.
+  3. **Hitbox matches the art's footprint, and the opaque region coincides with the hitbox.** A wide/short
+     base (roots+rocks) is an **ellipse**, not a circle (a circle over-blocks vertically); a circle centred
+     on the foot dips a full radius *below* the visible base and reads "too low" — anchor the shape so its
+     base meets the ground contact. Drive the collision extent AND the always-opaque draw band from the
+     **same const** so the player can see exactly where collision is.
+- **Mechanics worth keeping:** depth-sort props by foot-y in the `drawables` list (NOT the tile pass, which
+  always sits under entities) so the player tucks behind a canopy / in front of a trunk. Smooth opacity
+  gradient = draw to a **reused offscreen** then `destination-in` a vertical linear gradient (a hard clip =
+  visible seam); faded sprites only. Player-radius-inflated point-vs-ellipse is a fine cheap resolution.
+  Placement seeded in map-gen ⇒ MP-deterministic. Every feel value (`TREE_BASE`, `TREE_DENSITY`,
+  `TREE_BASE_RX/RY_FRAC`, `TREE_FADE_ALPHA/BLEND`, `PLAYER_VIS_H`) is a **named knob** — the feature
+  converged over ~7 one-number user iterations (sibling of the visual-feature-converges-on-the-user's-eye
+  lesson).
+- **How to apply (next session — smaller tree sprites):** the system is built; a new tree set = new
+  `world.tree.*` art reusing `gWildTrees`/`gDrawTree`/`gRCTrees` as-is, then tune the knobs. **Re-measure the
+  new art's foot + base footprint** (alpha bbox via PIL, as done for the 256² set) if its proportions differ,
+  and reset `TREE_FOOT`/`TREE_BASE_RY_FRAC` accordingly.
+
 ### 2026-06-11 — An art handoff's "new prop" framing can really be a "replace the placeholder" job — reconcile the spec against what's already on screen
 
 - **Principle:** An Artist render-spec tells you how the *art* works, not what *product role* it plays in the
@@ -192,34 +224,14 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   the proof is observing the side effect fire** (pipe a synthetic payload in; watch it actually act), never
   "the script looks right" — and copy-pasting a buggy guard propagates the silent failure to the next script.
 
-### 2026-06-10 — De-risk a large spec'd feature: sub-slice on rails, drive it with a dev harness, iterate feel behind named knobs
-
-- **Principle:** A big, multi-session, fully-specced feature lands safest as **independently-verified
-  sub-slices on rails you build once**, amplified by two things: (1) a **`_DEV`-gated test harness that
-  drives the *real* systems** (never a parallel code path) so you can reach any deep state in one click,
-  and (2) **placeholder FX wired to named registry/const knobs** so feel-iteration with the user is
-  *edit-a-number*, not re-architect-geometry.
-- **Why:** Imbue Paths Phase 1 split into Slice A (tree rails + numeric ranks) → B (Form fork + the
-  reusable evolution overlay + the charter-critical `gSimEvolution` headless hook) → C (rank-10 ascension:
-  3-hit combo + two burning-ground substances + four climaxes) — each `node --check`'d, grep-proven,
-  node-logic-tested, and committed alone. A "Skillforge" panel (imbue / rank / trigger any fork on the
-  shipping code) turned "grind the wilderness to rank 9 to test the capstone" into one button, and let the
-  user redirect the wave shape, jet shape, ball size, ground placement, and ring radius ~7 times in a row —
-  each a one-constant edit (`FW_*`, `DRAGONFIRE_JET_*`, `FLAMEOFCHAOS_*`, `FIREFIELD_EYE`) because each
-  shape lived in *one* accessor/spawn. Once the rails existed, every leaf was registry data + one bespoke
-  FX function. The riskiest piece (a new pausing modal) was de-risked by reusing Slice B's overlay+hook.
-- **How to apply:** For a spec'd epic, build the system + its highest-feedback instance first (front-load
-  the system risk); fan out the rest as registry data + per-instance FX. Stand up a `_DEV`-gated harness
-  early, route it through shipping code, and make it reachable wherever you actually test (town **and**
-  dungeon — drive its visibility from the one `showScreen('game')` gateway, gate actions on
-  `isGameActive()`). Keep every feel value a named knob; centralize a shape into one source of truth
-  (e.g. `gFireWaveShape` read by both hitbox and draw) so "what you see is what you hit" and one edit
-  retunes both. **Committing intermixed feature + incidental tweaks from the single `index.html`:** split
-  into clean commits by *snapshot full → scripted-revert one concern (report OK/SKIP/FAIL per site) →
-  commit → restore the snapshot → commit the rest* — never hand-reapply a large block. And `node --check`
-  is blind to runtime faults: a `const` referenced by the **boot path** before its own declaration line
-  throws a TDZ error on load (the deploy-breaking kind), so declare cross-cutting flags (`_DEV`) early and
-  verify behavior, not just parse.
+### 2026-06-10 — De-risk a large spec'd feature: sub-slice on rails, dev harness, named knobs — archived
+- Land a big spec'd feature as independently-verified **sub-slices on rails built once**, plus a `_DEV`-gated
+  harness that drives the *real* systems (one click to any deep state) and placeholder FX on named const knobs
+  (feel-iteration = edit-a-number). Build the system + its highest-feedback instance first; fan the rest out as
+  registry data + per-instance FX. Centralize a shape into one source of truth read by both hitbox and draw.
+  Split intermixed commits by snapshot→scripted-revert-one-concern→commit→restore. `node --check` is blind to
+  boot-path TDZ — declare cross-cutting flags early, verify behavior. Full entry:
+  `agents/engineer/archive/2026-06-10-de-risk-spec-feature-rails-harness-knobs.md`.
 
 ### 2026-06-10 — Measure sprite scale & art quality; never trust a handoff figure or an eyeball (consolidated)
 
