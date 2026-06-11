@@ -3904,7 +3904,9 @@ function gGodSkillDrainPerSec(p, id){
 let _godHudSig = '';
 function gUpdateGodSkillHud(){
   const el = document.getElementById('g-godskills'); if(!el) return;
-  const list = (inWilderness && gPlayer && !gPlayer.dead) ? gGodSkillHud(gPlayer) : [];
+  // Show wherever god skills are actually owned (gGodSkillHud is [] otherwise) — so it appears in the
+  // wilderness in real play AND in town when forging skills for testing, not gated to wilderness only.
+  const list = (isGameActive() && gPlayer && !gPlayer.dead) ? gGodSkillHud(gPlayer) : [];
   if(!list.length){ if(el.style.display !== 'none'){ el.style.display = 'none'; el.innerHTML = ''; } _godHudSig = ''; return; }
   const haveArt = typeof CARD_ICON_ART !== 'undefined';
   const sig = list.map(s => s.key + s.id + (!s.active ? 'off' : s.poolTooSmall ? 'poor' : s.dormant ? 'd' : 'on') + s.mpCostPerSec.toFixed(0) + s.col).join('|');
