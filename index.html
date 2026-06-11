@@ -2016,6 +2016,9 @@ let gDestructibles=[], gEnemies=[], gTorches=[], gArrows=[], gPlayerArrows=[], g
 // Free-placed rock entities (off-grid collidable boulders forming organic outcrops). Unlike TILE_ROCK
 // (grid-locked impassable tiles), each has its own world pos, collision radius, and draw scale/height.
 let gRocks=[];
+// Scatter tree props (off-grid decorative cutouts that overflow a cell, drawn over the ground and
+// depth-sorted with characters). Décor only — no collision. Placed deterministically per map seed.
+let gWildTrees=[]; // [{wx,wy,variant,scale}] — world.tree.<variant> art, drawn by gDrawTree
 let gFireWaves=[]; // imbued-LMB fire arcs (Cilia's Fire)
 let gFireRings=[]; // imbued-whirlwind expanding fire rings (Cilia's Fire)
 let gFireCrosses=[]; // imbued-leap burning crosses (Cilia's Fire)
@@ -3142,7 +3145,7 @@ function gameLoad(mapData) {
   if(_db){ _db.textContent='RESPAWN'; _db.onclick=mpRespawn; }
   gTiles = tilesFromRows(mapData.rows, gMapW, gMapH);
   gEntsRaw = JSON.parse(JSON.stringify(mapData.entities || []));
-  gDestructibles=[]; gEnemies=[]; gTorches=[]; gArrows=[]; gPlayerArrows=[]; gTraps=[]; gPotions=[]; gBombs=[]; gXPOrbs=[]; gFavorOrbs=[]; gObelisks=[]; gWildCamps=[]; gRocks=[];
+  gDestructibles=[]; gEnemies=[]; gTorches=[]; gArrows=[]; gPlayerArrows=[]; gTraps=[]; gPotions=[]; gBombs=[]; gXPOrbs=[]; gFavorOrbs=[]; gObelisks=[]; gWildCamps=[]; gRocks=[]; gWildTrees=[];
   gFireWaves=[];
   gFireRings=[];
   gFireCrosses=[];
@@ -3184,6 +3187,7 @@ function gameLoad(mapData) {
     if(e.kind==='village') gVillages.push(e.data);
     if(e.kind==='wolfcamp') gWildCamps.push(e.data);
     if(e.kind==='rock') gRocks.push({wx:e.wx, wy:e.wy, r:e.r, scale:e.scale, vr:e.vr});
+    if(e.kind==='tree') gWildTrees.push({wx:e.wx, wy:e.wy, variant:e.variant, scale:e.scale});
     if(e.kind==='shrine')  gShrine = {
       wx:(e.tx+0.5)*T, wy:(e.ty+0.5)*T, tx:e.tx, ty:e.ty,
       activated:false,  // lights up after first patron selection
@@ -7281,9 +7285,6 @@ const WINDUP_PLANT     = 0.14;   // × PSCALE, downward — measured idle-vs-pos
 // Tile colour palettes — hoisted to module scope (were allocated per gDrawTile call).
 const _TC_GRASS=['#2d4a1e','#2a4420','#31501f','#294018'];
 const _TC_DIRT=['#5a3d1a','#533715','#61421d','#4e3412'];
-const _TC_TREE_DARK=['#172b0c','#132608','#1b300e','#102208'];
-const _TC_TREE_FG=['#2e5e14','#276012','#346616','#2a5810'];
-const _TC_TREE_BG=['#1e4010','#1a3c0c','#224414','#183808'];
 const _TC_ROCK=['#5a5560','#524e58','#5e5a64','#504c54'];
 const _TC_STAKE=['#6b3d12','#5a3010','#7a4518','#623a14'];
 const _TC_WALL=['#3a3040','#352b3a','#403545','#383040'];
@@ -7320,34 +7321,20 @@ function gDrawTile(sx,sy,sz,tid,tx,ty){
     return;
   }
   if(tid===TILE_TREE){
-    const fB=gIsWalk(tx,ty+1),fL=gIsWalk(tx-1,ty),fR=gIsWalk(tx+1,ty),fA=gIsWalk(tx,ty-1);
-    if(!fB&&!fA&&!fL&&!fR){
-      // Deep interior canopy — no trunk visible
-      gctx.fillStyle=_TC_TREE_DARK[v]; gctx.fillRect(sx,sy,sz,sz);
-      gctx.fillStyle='rgba(25,55,8,.55)';
-      gctx.fillRect(sx+5,sy+7,4,4);gctx.fillRect(sx+18,sy+4,3,3);
-      gctx.fillRect(sx+11,sy+17,5,3);gctx.fillRect(sx+22,sy+21,4,4);
-      return;
-    }
-    // Edge tree — grass base, then trunk, then foliage
+    // Forest FLOOR only — the trees themselves are now painted props (gWildTrees / gDrawTree, placed at
+    // gen and depth-sorted with characters). This tile just renders shaded woodland ground under/between
+    // them: grass + a canopy-shadow overlay, deeper in the interior (all neighbours forest) for depth.
+    // (Slow-zone + walkability still key off the TILE_TREE id, so gameplay is unchanged.)
     gctx.fillStyle=_TC_GRASS[v]; gctx.fillRect(sx,sy,sz,sz);
-    if(fB){
-      // Trunk
-      gctx.fillStyle='#4a2e0e'; gctx.fillRect(sx+sz/2-3,sy+sz/2-2,6,sz/2+4);
-      gctx.fillStyle='#5c3a12'; gctx.fillRect(sx+sz/2-2,sy+sz/2-2,2,sz/2+2);
-      // Root flare
-      gctx.fillStyle='#3d2508';
-      gctx.fillRect(sx+sz/2-5,sy+sz-5,4,5);
-      gctx.fillRect(sx+sz/2+1,sy+sz-5,4,5);
-    }
-    // Foliage canopy
-    gctx.fillStyle=_TC_TREE_BG[v];
-    gctx.beginPath();gctx.ellipse(sx+sz/2+1,sy+sz/2,sz*.43,sz*.38,0,0,Math.PI*2);gctx.fill();
-    gctx.fillStyle=_TC_TREE_FG[v];
-    gctx.beginPath();gctx.ellipse(sx+sz/2,sy+sz/2-2,sz*.38,sz*.34,0,0,Math.PI*2);gctx.fill();
-    // Highlight
-    gctx.fillStyle='rgba(85,165,30,.22)';
-    gctx.beginPath();gctx.ellipse(sx+sz/2-3,sy+sz/2-5,sz*.14,sz*.1,-.4,0,Math.PI*2);gctx.fill();
+    const interior = !gIsWalk(tx,ty+1)&&!gIsWalk(tx-1,ty)&&!gIsWalk(tx+1,ty)&&!gIsWalk(tx,ty-1);
+    gctx.fillStyle = interior ? 'rgba(8,20,4,.5)' : 'rgba(15,35,8,.3)'; // canopy shadow — darker in the core
+    gctx.fillRect(sx,sy,sz,sz);
+    // Dappled light/leaf litter so the floor isn't flat
+    gctx.fillStyle='rgba(45,85,18,.22)';
+    if(v===0){gctx.fillRect(sx+5,sy+7,3,3);gctx.fillRect(sx+18,sy+16,3,3);}
+    if(v===1){gctx.fillRect(sx+10,sy+9,3,3);gctx.fillRect(sx+22,sy+19,2,2);}
+    if(v===2){gctx.fillRect(sx+6,sy+15,3,3);gctx.fillRect(sx+20,sy+6,3,3);}
+    if(v===3){gctx.fillRect(sx+13,sy+12,3,3);gctx.fillRect(sx+24,sy+22,2,2);}
     return;
   }
 
@@ -7868,6 +7855,17 @@ const ART_MANIFEST = {
   'world.favorcoin':'assets/world/favorcoin.png',
   'world.chest-closed':'assets/world/chest-closed.png',
   'world.chest-open':'assets/world/chest-open.png',
+  // Scatter tree props — 9 interchangeable variants (oaks, willow, banyans), each a transparent
+  // cutout incl. its own grass/rock base. Drawn over the ground by gDrawTree, not a tile.
+  'world.tree.0':'assets/world/tree-0.png',
+  'world.tree.1':'assets/world/tree-1.png',
+  'world.tree.2':'assets/world/tree-2.png',
+  'world.tree.3':'assets/world/tree-3.png',
+  'world.tree.4':'assets/world/tree-4.png',
+  'world.tree.5':'assets/world/tree-5.png',
+  'world.tree.6':'assets/world/tree-6.png',
+  'world.tree.7':'assets/world/tree-7.png',
+  'world.tree.8':'assets/world/tree-8.png',
 };
 const gArtReg = Object.create(null);   // key → { img, baked, ready }
 const gTileVarCount = Object.create(null); // tile type name → number of art variants in the manifest
@@ -8854,6 +8852,27 @@ function gDrawRock(k){
   }
 }
 
+// Scatter tree props — tall transparent cutouts (256² art) drawn over the ground, feet-anchored and
+// depth-sorted with characters (so the player tucks behind a canopy / in front of a trunk). Mirrors
+// gDrawRock: HiDPI smooth draw, falls back to a simple blob until the art loads. Décor — no collision.
+const TREE_BASE = 150;   // px draw-width at scale 1.0 (visible tree ≈ 0.93× this tall — see TREE_FOOT)
+const TREE_FOOT = 0.93;  // share of drawn height ABOVE the foot line (measured: opaque base sits ~0.93 down)
+function gDrawTree(t){
+  const sx=t.wx-camX, sy=t.wy-camY;
+  const rec = gArtReg['world.tree.'+t.variant];
+  if(rec && rec.ready && rec.img){
+    const img=rec.img;
+    const w=TREE_BASE*t.scale, h=w*(img.height/img.width);
+    gctx.imageSmoothingEnabled=true;
+    gctx.drawImage(img, sx-w/2, sy-h*TREE_FOOT, w, h);
+  } else {
+    // Procedural fallback — a green canopy blob on a trunk, foot-anchored at sy
+    const w=TREE_BASE*t.scale;
+    gctx.fillStyle='#3a2a12'; gctx.fillRect(sx-w*0.05, sy-w*0.45, w*0.1, w*0.45);
+    gctx.fillStyle='#2a5810'; gctx.beginPath(); gctx.ellipse(sx, sy-w*0.6, w*0.4, w*0.45, 0, 0, Math.PI*2); gctx.fill();
+  }
+}
+
 // Build an organic rock outcrop: `count` boulders scattered around (wx,wy) — denser, bigger rocks
 // in the core thinning to smaller ones at the rim. Returns {kind:'rock'} entity descriptors (off-grid,
 // collidable). rng is the seeded generator so outcrops are deterministic per map seed. Feel-knobs are
@@ -8943,6 +8962,8 @@ function gRender(){
   if(inTown&&gForgeProp) drawables.push({y:gForgeProp.wy,draw:drawForgeProp,arg:gForgeProp});
   // Rock entities depth-sort with characters (foot y) so tall boulders occlude and tuck correctly.
   for(const k of gRocks){ const sx=k.wx-camX, sy=k.wy-camY; if(sx<-90||sx>VW+90||sy<-160||sy>VH+90) continue; drawables.push({y:k.wy,draw:gDrawRock,arg:k}); }
+  // Tree props depth-sort the same way — taller than rocks, so a wider top cull margin.
+  for(const t of gWildTrees){ const sx=t.wx-camX, sy=t.wy-camY; if(sx<-120||sx>VW+120||sy<-220||sy>VH+120) continue; drawables.push({y:t.wy,draw:gDrawTree,arg:t}); }
   gDrawArrows();
   drawables.sort((a,b)=>a.y-b.y);
   for(const d of drawables){ d.draw(d.arg); if(d.arg&&d.arg.threatTier&&!d.arg.dead) gDrawThreatGlow(d.arg); }
@@ -13029,6 +13050,22 @@ function generateWildernessMap(seed){
     for(const rk of _genRockOutcrop(_ox, _oy, rng, _n, _spread, 0.4, 1.6, 0.25, 2.6)) rockEntities.push(rk);
   }
 
+  // 4c. Paint the forest — emit a painted-tree prop (gWildTrees / gDrawTree) at a tuned fraction of the
+  //     FOREST tiles, so the new sprites ARE the forest (replacing the old procedural canopies, which now
+  //     render only as shaded forest floor). Single deterministic pass over the final tile grid: every
+  //     'T' tile that survived feature-carving rolls the seeded rng; rocks/feature tiles are skipped
+  //     (they override 'T' in the row build). Density + size are live knobs. Décor only (no collision).
+  const treeEntities = [];
+  const TREE_DENSITY = 0.10;   // chance per forest tile to carry a painted tree — controls forest density (knob)
+  for(let y=2; y<H-2; y++){
+    for(let x=2; x<W-2; x++){
+      if(!tiles[idx(x,y)] || rocks[idx(x,y)]) continue;          // forest ('T') tiles only, never under a rock
+      if(rng() >= TREE_DENSITY) continue;
+      const wx=(x+0.5)*T + (rng()-0.5)*T*0.8, wy=(y+0.5)*T + (rng()-0.5)*T*0.8;   // sub-tile jitter (organic)
+      treeEntities.push({ kind:'tree', wx, wy, variant: Math.floor(rng()*9), scale: 0.7+rng()*0.4 });
+    }
+  }
+
   // 7. Convert to row strings using wilderness tile characters
   // Merge all village spike/hut/interior maps
   const globalSpikeMap    = new Uint8Array(W*H);
@@ -13070,6 +13107,7 @@ function generateWildernessMap(seed){
       ...villageEntities,
       ...campEntities,
       ...rockEntities,
+      ...treeEntities,
       ...(shrineFound ? [{kind:'shrine', tx:shrineTx, ty:shrineTy}] : []),
     ],
     createdAt: Date.now(), updatedAt: Date.now(),
@@ -14542,6 +14580,7 @@ function gWildEnd(){
   gVillages = [];
   gWildCamps = [];
   gRocks = [];
+  gWildTrees = [];
   gShrine = null;
   gShamanFireballs = [];
   const _mm = document.getElementById('minimap-canvas');

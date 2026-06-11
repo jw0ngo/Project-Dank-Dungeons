@@ -26,6 +26,11 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
   render as a real chest that swaps **closed → open** when looted, and a still-guarded camp chest reads
   dim/in-shadow until you clear the pack. Pure render swap — the Favor pickup and chest-loot logic are
   unchanged.
+- **The Goblin Forest is now painted.** The old procedural pixel-canopy trees are replaced by 9 hand-painted
+  tree variants (oaks, a willow, banyans) standing in the forest, **depth-sorted with characters** so you
+  walk behind a canopy and in front of a trunk. The forest tiles themselves now render as shaded woodland
+  floor beneath them (and still slow you, unchanged). Placement is seeded, so co-op players see the same
+  forest. Trees are decoration for now (no collision).
 - **Charging a heavy attack now commits you — no free normal swing mid-charge** (roadmap #6). While a heavy
   is winding up *or* swinging, the normal swing is locked out until the heavy fully resolves; a left-click
   during the heavy is dropped (if you keep LMB held, the swing resumes the moment the heavy ends). Committing

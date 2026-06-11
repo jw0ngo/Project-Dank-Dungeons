@@ -37,9 +37,21 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 ## 🟧 Engineer / CTO lane
 
-- ◻️ 🎨 **Wire world TREE props — 9-variant scatter set** (↳ from ART, 2026-06-11) — 9 transparent tree
-  cutouts committed to `assets/world/`; new world prop, no draw hook/placement yet (systems work, not just
-  a manifest paste).
+- ✅ 🎨 **Wire world TREE props — 9-variant scatter set** (↳ from ART, 2026-06-11) — **done 2026-06-11.**
+  Wired as a new off-grid scatter-prop family mirroring `gRocks`: 9 `world.tree.<n>` manifest keys →
+  `gWildTrees` (reset with the other run state) → placed in `generateWildernessMap` step 4c (seeded RNG, so
+  MP-deterministic) on open grass clear of spawn/shrine/villages/obelisks/camps/forest, with a min-separation
+  → returned as `kind:'tree'` entities, unpacked at load → drawn by `gDrawTree`, **depth-sorted in the y-sort
+  `drawables`** so the player tucks behind a canopy / in front of a trunk. Feet-anchored via a **measured**
+  `TREE_FOOT=0.93` (opaque base sits ~0.93 down the 256² canvas — measured all 9, not eyeballed); HiDPI smooth
+  draw + procedural fallback. **Décor only — draw-only, no collision** (the spec's fork).
+  **Revision (Josh, same day):** the painted trees **replace the procedural `TILE_TREE` forest**, not a
+  separate open-field scatter — placement now samples FOREST tiles (`TREE_DENSITY=0.10` per forest tile,
+  seeded), and the `TILE_TREE` tile draw became **shaded forest floor** (procedural canopies + the
+  `_TC_TREE_*` palettes deleted). Slow-zone/walkability unchanged (still keyed off the tile id). **Live knobs
+  for Josh to tune:** `TREE_DENSITY` (forest density), `TREE_BASE` (150px draw size), per-tree `scale`
+  0.7–1.1. **Follow-up available:** trunk-base collision via a `gRC`-style pass. Visual tuning pending Josh's
+  eyeball in `python dev.py`. Browser canary (`Sim.batch`) not run (render/gen-only, no sim-step change).
   <details><summary>detail (render spec)</summary>
 
   Art committed: `assets/world/tree-0..8.png` (9 interchangeable tree variants — oaks, a willow (#3),
