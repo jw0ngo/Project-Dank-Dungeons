@@ -2443,7 +2443,7 @@ const WeaponRegistry = {
     smearOuter:   52,
     swingArc:     2.4,    // radians — width of the attack cone
     swingDur:     24,     // frames the swing animation lasts
-    swingCd:      60,     // frames of cooldown after swing (doubled to halve attack rate)
+    swingCd:      60,     // frames of cooldown after swing — the attack-RATE gate; Swing: Tempo (swingSpdPct) cuts it, floored by SKILL_STAT_FLOOR.swingCd
     // Normal attack (flat — the hold-to-charge mechanic was removed)
     baseDamage:   18,     // damage per swing
     // Whirlwind dash
@@ -2519,7 +2519,10 @@ function W(){ return WeaponRegistry[gActiveWeapon] || WeaponRegistry.sword; }
 // Floors so reduction cards (−cooldown / −MP) can't drive a stat to zero or negative.
 const SKILL_STAT_FLOOR = { wwCooldown: 30, leapCooldown: 45, mpCostWwTick: 0, mpCostLeap: 0,
   // Card Pool Expansion (swing/heavy/dash) — floors so reduction/speed cards can't hit zero:
-  swingDur: 10, heavyMaxWindup: 36, evasionCooldown: 24 };
+  // swingCd: Swing: Tempo cuts the post-swing cooldown (attack RATE); floor at ~0.3s so the
+  // fastest attack cycle bottoms out around swingDur(24)+18 ≈ 42f. swingDur is NOT a speed lever
+  // anymore (the swing animation always plays at its authored pace) — its floor is just defensive.
+  swingDur: 10, swingCd: 18, heavyMaxWindup: 36, evasionCooldown: 24 };
 function pSkillStat(p, key){
   const base = W()[key] || 0;
   const v = base + ((p && p.skillMods && p.skillMods[key]) || 0);
@@ -4248,7 +4251,7 @@ function gUpdatePlayer(dt=1){
   // Swing lunge: a normal swing steps the player forward in the committed aim direction. Free movement is
   // off during the swing (csm=0), so this push is the only motion — the strike carries you (weighty combat).
   if(p.swinging){
-    const _sp = p.swingTimer / pSkillSpeed(p,'swingDur','swingSpdPct');     // 0→1 swing progress
+    const _sp = p.swingTimer / pSkillStat(p,'swingDur');     // 0→1 swing progress (animation is constant-speed)
     if(_sp < SWING_LUNGE_FRAC){
       const _ls = SWING_LUNGE_SPEED * (1 - _sp / SWING_LUNGE_FRAC);         // decelerating forward push
       let lx = p.wx + Math.cos(p.swingAimAngle) * _ls * dt;
@@ -4258,7 +4261,7 @@ function gUpdatePlayer(dt=1){
     }
   }
   if(p.moving){p.walkTimer+=dt;if(p.walkTimer>=8){p.walkTimer=0;p.walkFrame=(p.walkFrame+1)%4;if(p.walkFrame===1||p.walkFrame===3)gPlayStep();}p.stepTimer+=dt;}else{p.walkFrame=0;p.walkTimer=0;}
-  if(p.swinging){p.swingTimer+=dt;if(p.smear){p.smear.cx=p.wx;p.smear.cy=p.wy;p.smear.sweepEnd=p.swingStartAngle+(p.swingEndAngle-p.swingStartAngle)*easeSwing(p.swingTimer/pSkillSpeed(p,'swingDur','swingSpdPct'));}gCheckHits(p);if(p.swingTimer>=pSkillSpeed(p,'swingDur','swingSpdPct')){p.swinging=false;p.swingCooldown=Math.round(W().swingCd*wildDexCdMult());if(p.smear)p.smear.fading=true;p._chargeDmg=null;}}
+  if(p.swinging){p.swingTimer+=dt;const _swDur=pSkillStat(p,'swingDur');if(p.smear){p.smear.cx=p.wx;p.smear.cy=p.wy;p.smear.sweepEnd=p.swingStartAngle+(p.swingEndAngle-p.swingStartAngle)*easeSwing(p.swingTimer/_swDur);}gCheckHits(p);if(p.swingTimer>=_swDur){p.swinging=false;p.swingCooldown=Math.round(pSkillSpeed(p,'swingCd','swingSpdPct')*wildDexCdMult());if(p.smear)p.smear.fading=true;p._chargeDmg=null;}}
   if(p.smear&&p.smear.fading){p.smear.life-=0.1*dt;if(p.smear.life<=0)p.smear=null;}
   // Per-player freeze (hit-stop) — only pauses THIS player's frame, not the whole loop
   if(p.freezeUntil>0&&performance.now()<p.freezeUntil){}
@@ -4556,6 +4559,7 @@ function gDrawPotions() {
   for (const pot of gPotions) {
     const sx = pot.wx - camX, sy = pot.wy - camY;
     if (sx < -20 || sx > VW + 20 || sy < -20 || sy > VH + 20) continue;
+    if (gHiddenByFog(pot.wx, pot.wy)) continue;  // hidden in shroud/black
     const pulse = 0.75 + 0.25 * Math.sin(pot.pulse);
     gctx.save();
     gctx.translate(sx, sy);
@@ -6701,6 +6705,7 @@ function gDrawShamanFireballs(){
   for(const fb of gShamanFireballs){
     const sx=fb.wx-camX, sy=fb.wy-camY;
     if(sx<-30||sx>VW+30||sy<-30||sy>VH+30) continue;
+    if(gHiddenByFog(fb.wx,fb.wy)) continue;  // hidden in shroud/black
     gctx.save();
     // Glow
     gctx.globalAlpha=0.35+0.15*Math.sin(now*0.012);
@@ -8067,7 +8072,7 @@ function drawAnyPlayer(p, tint){
   gctx.save();gctx.globalAlpha=.2;gctx.fillStyle='#000';
   gctx.beginPath();gctx.ellipse(sx,sy+PSCALE*.44,PSCALE*.3,PSCALE*.1,0,0,Math.PI*2);gctx.fill();gctx.restore();
   // Sword behind
-  const prog=p.swinging?(p.swingTimer||0)/pSkillSpeed(p,'swingDur','swingSpdPct'):0;
+  const prog=p.swinging?(p.swingTimer||0)/pSkillStat(p,'swingDur'):0;
   const{px:spx,py:spy,sa}=gGetSword(prog,p);
   // Draw weapon — bow or sword depending on equipment
   const _isBow = (p===gPlayer) ? gActiveWeapon==='bow' : p._activeWeapon==='bow';
@@ -8584,6 +8589,7 @@ function gDrawBombFireZones(){
 function gDrawBombs(){
   for(const b of gBombs){
     if(b.exploded)continue;
+    if(gHiddenByFog(b.tx,b.ty))continue;  // hidden in shroud/black (target is the danger zone)
     const ratio=1-(b.fuse/b.maxFuse); // 0→1 as bomb travels
     // Ground impact circle — always at target position
     const gsx=b.tx-camX,gsy=b.ty-camY;
@@ -8735,6 +8741,7 @@ function gDrawArrows(){
     if(!Number.isFinite(a.wx)||!Number.isFinite(a.wy)||!Number.isFinite(a.angle))continue;
     const sx=a.wx-camX,sy=a.wy-camY;
     if(sx<-20||sx>VW+20||sy<-20||sy>VH+20)continue;
+    if(gHiddenByFog(a.wx,a.wy))continue;  // hidden in shroud/black
     gctx.save();gctx.translate(sx,sy);gctx.rotate(a.angle);
     gctx.strokeStyle='#c8a030';gctx.lineWidth=2;
     gctx.beginPath();gctx.moveTo(-9,0);gctx.lineTo(6,0);gctx.stroke();
@@ -8899,7 +8906,7 @@ function gRender(){
   gDrawBurningBodyAura(); // Burning Body base ignite-aura — fr.png ring under the player (god skill, item 2)
   gDrawBombs(); // impact circles drawn first (under everything)
   const drawables=[{y:gPlayer.dead?-999:gPlayer.wy,draw:gDrawPlayer,arg:gPlayer}];
-  for(const e of gEnemies){ if(!e.dead) drawables.push({y:e.wy,draw:e.isArcher?gDrawArcher:e.isWarrior?gDrawWarrior:e.isBomber?gDrawBomber:e.isKing?gDrawKing:e.isShaman?gDrawShaman:gDrawEnemy,arg:e}); }
+  for(const e of gEnemies){ if(!e.dead && !gHiddenByFog(e.wx,e.wy)) drawables.push({y:e.wy,draw:e.isArcher?gDrawArcher:e.isWarrior?gDrawWarrior:e.isBomber?gDrawBomber:e.isKing?gDrawKing:e.isShaman?gDrawShaman:gDrawEnemy,arg:e}); }
   if(inTown&&gTrainingDummy) drawables.push({y:gTrainingDummy.wy,draw:drawTrainingDummy,arg:gTrainingDummy});
   if(inTown&&gForgeProp) drawables.push({y:gForgeProp.wy,draw:drawForgeProp,arg:gForgeProp});
   // Rock entities depth-sort with characters (foot y) so tall boulders occlude and tuck correctly.
@@ -13213,6 +13220,7 @@ function gDrawXPOrbs(){
   for(const orb of gXPOrbs){
     const sx = orb.wx - camX, sy = orb.wy - camY;
     if(sx < -20 || sx > VW+20 || sy < -20 || sy > VH+20) continue;
+    if(gHiddenByFog(orb.wx, orb.wy)) continue;  // hidden in shroud/black
     // Outer glow — cheap single arc
     gctx.globalAlpha = pulse * 0.45;
     gctx.fillStyle = '#ffaa00';
@@ -13281,6 +13289,7 @@ function gDrawFavorOrbs(){
   for(const orb of gFavorOrbs){
     const sx = orb.wx - camX, sy = orb.wy - camY;
     if(sx < -20 || sx > VW+20 || sy < -20 || sy > VH+20) continue;
+    if(gHiddenByFog(orb.wx, orb.wy)) continue;  // hidden in shroud/black
     // Outer glow
     gctx.globalAlpha = pulse * 0.5;
     gctx.fillStyle = '#ffcc33';
@@ -13410,7 +13419,7 @@ const SKILL_CARDS = [
     apply(p,v){ _addSkillMod(p,'leapCooldown', -v); } },
   // ── Card Pool Expansion: swing/heavy/dash (the level-1 core kit). Swing is always on; heavy
   //    unlocks @L1, dash @L2. Speed cards write a % mod read via pSkillSpeed; the rest are flat. ──
-  { id:'sw-reach', cat:'skill', icon:'⚔', name:'Swing: Reach',     base:4, frac:false, fmt:v=>`Swing +${v} reach`,
+  { id:'sw-reach', cat:'skill', icon:'⚔', name:'Swing: Reach',     base:8, frac:false, fmt:v=>`Swing +${v} reach`,
     apply(p,v){ _addSkillMod(p,'smearOuter', v); } },
   { id:'sw-spd',   cat:'skill', icon:'⚔', name:'Swing: Tempo',     base:6, frac:false, fmt:v=>`Swing +${v}% attack speed`,
     apply(p,v){ _addSkillMod(p,'swingSpdPct', v); } },
@@ -14228,7 +14237,7 @@ function _wildSpawnKings(n, message){
 // and the maintainer respawns fresh camps around you as you move — the "living zone".
 
 const AMBIENT_PULL_R = 340;                                   // px (~10.6 tiles) — walk this close to pull a pack
-function gAmbientDeaggroR(){ return (fogVisRadius() + 2) * T; } // de-aggro once the pack is off-screen
+function gAmbientDeaggroR(){ return ENEMY_DEAGGRO_TILES * T; } // de-aggro leash — fixed, independent of vision
 
 let _ambientTimer = 0;
 function gWildAmbientTarget(){ return 20 + Math.floor(wildThreatLevel * 1.5); } // live ambient goblins to maintain (Day1/threat0 = 20 → ~38). Base lifts the early-day floor (Day 1 felt sparse); slope unchanged so later days still climb.
@@ -14629,30 +14638,62 @@ function _drawObeliskStone(sx, sy, topCol, shadowCol, now){
 
 // ═══════════════════════════════════════════════════════════════
 // §13  FOG OF WAR
-//      Dota/SC style: tiles revealed permanently as explored.
-//      Vision radius: 30 tiles day, 12 tiles night (wilderness only).
-//      Overlay: black outside current vision; revealed areas fully lit.
-//      Minimap: shows explored terrain in top-right corner.
+//      Dota/SC three-state (wilderness only): UNSEEN=black · SHROUD (visited, out of sight)=dim terrain,
+//      entities hidden · VISION (current sight circle)=bright, entities visible. Circle is capped just
+//      below the screen so day always shows fog at the edges. Enemy aggro/spawn are decoupled from vision.
+//      Minimap: shows visited terrain + a vision-radius ring at the player.
 // ═══════════════════════════════════════════════════════════════
 
 let gFogMap       = null;  // Uint8Array(W*H): 0=unseen, 1=revealed
-let _fogOffscreen = null;  // OffscreenCanvas or regular canvas for fog texture
+let _fogOffscreen = null;  // screen-sized canvas the fog overlay is composed on (rebuilt on resize)
 let _fogCtx       = null;
-let _fogDirty     = true;  // rebuild offscreen when new tiles revealed
+let _fogLow       = null;  // low-res (1px/tile) fog-alpha canvas, bilinear-upscaled for smooth (sub-tile) edges
+let _fogLowCtx    = null;
+let _fogLowImg    = null;  // reusable ImageData for _fogLow
+let _fogLowW      = 0, _fogLowH = 0;  // current low-res dims (tiles); rebuilt on viewport resize
 
-const FOG_VIS_DAY   = 30;  // tiles radius during day
-const FOG_VIS_NIGHT = 12;  // tiles radius during night
+const FOG_VIS_DAY   = 30;  // tiles radius for SPAWN/gameplay placement during day (NOT the visual circle)
+const FOG_VIS_NIGHT = 12;  // tiles radius for SPAWN/gameplay placement at night
 
+// Enemy aggro/leash range — DECOUPLED from player vision (Josh: aggro must not depend on what you can
+// see). Fixed tiles; ~preserves the old daytime leash (was vision 30 +2). Night is now this too (was 14).
+const ENEMY_DEAGGRO_TILES = 32;
+
+// ── Fog of war (three-state, SC/Dota-style, wilderness) ──────────────────────────────────────
+// UNSEEN (never visited)  → solid black; you can't tell what's there.
+// SHROUD (visited, outside current vision) → dim — terrain stays semi-visible but ENTITIES are HIDDEN.
+// VISION (current sight circle) → fully bright, entities visible.
+// The vision circle is CIRCULAR and capped just below the screen so the day view always shows shroud/black
+// at the edges (night's small radius already fits). Reveal + render + entity-hiding all read one radius.
+const FOG_VIS_FRAC     = 0.5;   // day vision-circle radius = this × VW → the circle spans the screen WIDTH (L/R edges touch)
+const FOG_SIGHT_SOFT   = 0.82;  // inner fraction of the vision radius that's fully clear (then feathers out)
+const FOG_SIGHT_EDGE   = 1.12;  // outer feather reaches this multiple of the vision radius
+const FOG_SHROUD_A     = 0.55;  // dim over SHROUD (visited but out of sight) — terrain semi-visible
+const FOG_SHROUD_A_N   = 0.72;  // ...at night (darker)
+const FOG_UNSEEN_A     = 1.0;   // never-seen ground = fully black
+
+// Spawn/gameplay sight radius (tiles) — used to place enemies just beyond sight; NOT the visual circle.
 function fogVisRadius(){
   return (inWilderness && wildIsNight) ? FOG_VIS_NIGHT : FOG_VIS_DAY;
+}
+// VISUAL vision-circle radius in px — the bright sight circle. Day spans the screen width (L/R edges touch);
+// night keeps its tight radius. Drives gFogReveal, gDrawFog, and gHiddenByFog.
+function fogVisRadiusVisualPx(){
+  const dayR = FOG_VIS_FRAC * VW;   // day: circle spans the screen width
+  return (inWilderness && wildIsNight) ? Math.min(FOG_VIS_NIGHT * T, dayR) : dayR;
+}
+// True when a world point is OUTSIDE the current vision circle → its entity should be hidden (shroud/black).
+function gHiddenByFog(wx, wy){
+  if(!inWilderness || !gPlayer) return false;
+  const r = fogVisRadiusVisualPx();
+  return (wx-gPlayer.wx)*(wx-gPlayer.wx) + (wy-gPlayer.wy)*(wy-gPlayer.wy) > r*r;
 }
 
 // ── Initialise fog for current map ───────────────────────────
 function gFogInit(){
   if(!inWilderness){ gFogMap = null; return; }
   gFogMap = new Uint8Array(gMapW * gMapH);
-  _fogDirty = true;
-  _fogOffscreen = null; _fogCtx = null; // reset; rebuilt lazily
+  _fogOffscreen = null; _fogCtx = null; _fogLow = null; // reset; rebuilt lazily
   const mm = document.getElementById('minimap-canvas');
   if(mm) mm.style.display = 'block';
 }
@@ -14661,7 +14702,7 @@ function gFogInit(){
 function gFogReveal(){
   if(!gFogMap || !gPlayer) return;
   if(gFrame % 4 !== 0) return; // throttle: reveal every 4 frames
-  const r   = fogVisRadius();
+  const r   = Math.ceil(fogVisRadiusVisualPx() / T);  // "visited" grows by the bright vision circle
   const ptx = Math.floor(gPlayer.wx / T);
   const pty = Math.floor(gPlayer.wy / T);
   const x0  = Math.max(0, ptx - r);
@@ -14669,63 +14710,86 @@ function gFogReveal(){
   const y0  = Math.max(0, pty - r);
   const y1  = Math.min(gMapH - 1, pty + r);
   const r2  = r * r;
-  let newTiles = false;
   for(let ty = y0; ty <= y1; ty++){
     for(let tx = x0; tx <= x1; tx++){
       if((tx-ptx)*(tx-ptx)+(ty-pty)*(ty-pty) <= r2){
         const i = ty * gMapW + tx;
-        if(!gFogMap[i]){ gFogMap[i] = 1; newTiles = true; }
+        if(!gFogMap[i]) gFogMap[i] = 1;
       }
     }
   }
-  if(newTiles) _fogDirty = true;
+}
+
+// ── Lazily (re)create the screen-sized offscreen the fog overlay is composed on ─────────────
+function _fogEnsureOffscreen(){
+  if(!_fogOffscreen || _fogOffscreen.width !== VW || _fogOffscreen.height !== VH){
+    _fogOffscreen = document.createElement('canvas');
+    _fogOffscreen.width = VW; _fogOffscreen.height = VH;
+    _fogCtx = _fogOffscreen.getContext('2d');
+  }
+  return _fogCtx;
+}
+// ── Lazily (re)create the low-res 1px-per-tile fog buffer (w×h tiles), bilinear-upscaled for smooth edges ──
+function _fogEnsureLow(w, h){
+  if(!_fogLow || _fogLowW !== w || _fogLowH !== h){
+    _fogLow = document.createElement('canvas');
+    _fogLow.width = w; _fogLow.height = h;
+    _fogLowCtx = _fogLow.getContext('2d');
+    _fogLowImg = _fogLowCtx.createImageData(w, h);
+    _fogLowW = w; _fogLowH = h;
+  }
+  return _fogLowCtx;
 }
 
 // ── Draw fog overlay on game canvas (screen-space) ───────────
 function gDrawFog(){
   if(!gFogMap || !inWilderness || !gPlayer) return;
+  const fx = _fogEnsureOffscreen();
+  if(!fx) return;
 
-  const visR = fogVisRadius() * T; // vision radius in screen-px
-  const px = gPlayer.wx - camX;
-  const py = gPlayer.wy - camY;
+  const px = gPlayer.wx - camX, py = gPlayer.wy - camY;
+  const reveal = fogVisRadiusVisualPx();   // bright vision-circle radius (px)
 
-  // ── Pass 1: draw black over every tile NOT currently in vision
-  //    but skip tiles that have been revealed (explored = fully lit)
-  // We draw tile-sized black rects only for unrevealed tiles on screen.
-  const c0 = Math.max(0, Math.floor(camX/T));
-  const c1 = Math.min(gMapW-1, Math.ceil((camX+VW)/T));
-  const r0 = Math.max(0, Math.floor(camY/T));
-  const r1 = Math.min(gMapH-1, Math.ceil((camY+VH)/T));
+  // On-screen tile span + a 1-tile margin (so bilinear sampling has neighbours at the screen edge).
+  const tc0 = Math.floor(camX/T) - 1, tr0 = Math.floor(camY/T) - 1;
+  const tw = Math.ceil(VW/T) + 3, th = Math.ceil(VH/T) + 3;
+  const lx = _fogEnsureLow(tw, th);
+  if(!lx) return;
 
-  gctx.save();
-  gctx.fillStyle = '#000';
-  for(let ty=r0; ty<=r1; ty++){
-    for(let tx=c0; tx<=c1; tx++){
-      if(!gFogMap[ty*gMapW+tx]){
-        // Unrevealed — paint black regardless of vision
-        gctx.fillRect(tx*T - camX, ty*T - camY, T, T);
-      }
+  // ── Build the low-res per-tile fog-alpha mask: SHROUD over visited, BLACK over unseen/off-map ──
+  const shroudA = ((wildIsNight ? FOG_SHROUD_A_N : FOG_SHROUD_A) * 255) | 0;
+  const unseenA = (FOG_UNSEEN_A * 255) | 0;
+  const d = _fogLowImg.data;
+  for(let ty=0; ty<th; ty++){
+    const my = tr0 + ty;
+    const inRowMap = (my >= 0 && my < gMapH);
+    const mapRow = my * gMapW;
+    for(let tx=0; tx<tw; tx++){
+      const mx = tc0 + tx;
+      const visited = inRowMap && mx >= 0 && mx < gMapW && gFogMap[mapRow + mx];
+      const p = (ty*tw + tx) * 4;
+      d[p] = 0; d[p+1] = 0; d[p+2] = 0; d[p+3] = visited ? shroudA : unseenA;
     }
   }
+  _fogLowCtx.putImageData(_fogLowImg, 0, 0);
 
-  // ── Pass 2: darken tiles outside current vision circle
-  //    (even revealed tiles are darkened outside vision)
-  gctx.fillStyle = 'rgba(0,0,0,0.88)';
-  gctx.beginPath();
-  gctx.rect(0, 0, VW, VH);
-  gctx.arc(px, py, visR, 0, Math.PI*2, true); // counter-clockwise = hole
-  gctx.fill('evenodd');
+  // ── Bilinear-upscale the mask onto the screen offscreen → smooth, sub-tile shroud↔black edges ──
+  fx.clearRect(0, 0, VW, VH);
+  fx.imageSmoothingEnabled = true;
+  fx.drawImage(_fogLow, 0, 0, tw, th, (tc0*T - camX), (tr0*T - camY), tw*T, th*T);
 
-  // ── Pass 3: soft gradient at vision edge
-  const grad = gctx.createRadialGradient(px, py, visR*0.75, px, py, visR);
-  grad.addColorStop(0, 'rgba(0,0,0,0)');
-  grad.addColorStop(1, 'rgba(0,0,0,0.88)');
-  gctx.fillStyle = grad;
-  gctx.beginPath();
-  gctx.arc(px, py, visR, 0, Math.PI*2);
-  gctx.fill();
+  // VISION: punch the bright sight circle (soft edge) — erases shroud AND black within current sight.
+  fx.save();
+  fx.globalCompositeOperation = 'destination-out';
+  const hole = fx.createRadialGradient(px, py, reveal*FOG_SIGHT_SOFT, px, py, reveal*FOG_SIGHT_EDGE);
+  hole.addColorStop(0, 'rgba(255,255,255,1)'); // sight interior: fully clear
+  hole.addColorStop(1, 'rgba(255,255,255,0)'); // past the edge: shroud/black remains
+  fx.fillStyle = hole;
+  fx.fillRect(0, 0, VW, VH);
+  fx.restore();
 
-  gctx.restore();
+  // ── Composite the fog over the game (never touches the game canvas pixels directly) ──
+  gctx.drawImage(_fogOffscreen, 0, 0, VW, VH);
 }
 
 // ── Draw minimap ──────────────────────────────────────────────
@@ -14787,6 +14851,10 @@ function gDrawMinimap(){
     // Player dot at centre
     ctx.fillStyle = '#fff';
     ctx.beginPath(); ctx.arc(halfS, halfS, 2, 0, Math.PI*2); ctx.fill();
+    // Vision ring — shows the player's actual current sight radius at minimap scale
+    const visMmPx = (fogVisRadiusVisualPx() / T) * pxPerTile;
+    ctx.strokeStyle = 'rgba(150,210,255,0.35)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(halfS, halfS, visMmPx, 0, Math.PI*2); ctx.stroke();
     // Obelisk dots when explored and within view radius
     for(const ob of gObelisks){
       const otx = Math.floor(ob.wx/T), oty = Math.floor(ob.wy/T);

@@ -22,8 +22,29 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
   binary-tree draft/evolution machinery was **generalized** (keyed by god-skill id, registry-driven cards), so
   **Trail of Embers** and **Pyroclasm** are now near-pure additions next. The first god skill is guaranteed to
   appear in the draft after pledging, so the auto-fire layer is immediately visible (tuning knob).
+- **Three-state fog of war (SC/Dota-style), wilderness.** Replaces the old flat overlay with proper fog:
+  **unseen** ground is solid black (you can't tell what's there); **shroud** (ground you've visited but is
+  outside your current sight) stays dimly visible so you keep your mental map — but **enemies and pickups in
+  the shroud are hidden**; your **current vision circle** is fully bright with everything visible. The vision
+  circle is **circular** (daytime spans the screen width; night is tighter) and its edges **fade in smoothly
+  at sub-tile resolution** (a low-res fog mask bilinear-upscaled) instead of popping one blocky tile at a
+  time. Enemies, enemy
+  projectiles (arrows/bombs/fireballs), and pickups are culled outside the sight circle — so an aggroed pack
+  can stalk you from the shroud, unseen, and emerge as it closes. The minimap draws a vision-radius ring at the
+  player matching the real sight size. Composited on an offscreen layer — darkens only the fog overlay, never
+  the game canvas; render-only, MP/Sim-safe.
+- **Enemy aggro/leash range decoupled from player vision.** De-aggro is now a fixed range (`ENEMY_DEAGGRO_TILES`)
+  instead of being derived from the (now smaller, screen-relative) vision radius — so shrinking what you can see
+  doesn't make enemies give up chasing. Spawn distances are unchanged, so packs still appear from beyond sight.
 
 ### Fixed
+- **Swing: Tempo now raises attack *rate*, not swing animation speed.** The card was shortening each swing's
+  animation (`swingDur`) instead of cutting the cooldown between swings, so attacks looked twitchy without
+  actually firing more often. It now reduces the post-swing cooldown (`swingCd`, floored at ~0.3s) while the
+  swing always plays at its authored pace — the card delivers a genuine fire-rate increase.
+- **Swing: Reach now visibly grows the swing.** Wiring was already correct (reach feeds both the hitbox and the
+  slash visual), but at +4px/pick on a 52px base the growth was imperceptible; bumped to +8px/pick (~15%) so
+  picking it reads as a bigger, longer-reaching swing.
 - **The game fully freezes on the level-up screen.** The sim kept running behind the level-up/evolution/shrine
   modals, so bombs, burn, and enemy attacks still hit you while choosing a card. Now the whole sim freezes
   while a modal is open (single-player), and the player is untouchable while paused even in MP where the shared
