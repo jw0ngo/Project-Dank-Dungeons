@@ -851,6 +851,17 @@ function _fbInit() {
       <div id="skillforge-rows" style="display:flex;flex-direction:column;gap:8px;min-width:400px;"></div>
     </div>
 
+    <!-- Statforge (dev/testing) — manually set character stats (e.g. crank Max MP to test god-skill costs).
+         Opened by the in-world statforge prop in the Sanctum (walk up + E) or the J key. Dev builds only. -->
+    <div id="g-statforge-overlay" style="display:none;position:absolute;inset:0;z-index:23;background:rgba(0,0,0,0.92);flex-direction:column;align-items:center;justify-content:center;">
+      <div style="text-align:center;margin-bottom:16px;">
+        <div style="font:bold 9px monospace;letter-spacing:6px;color:#5aaeff;text-transform:uppercase;">&#10022; Statforge &#10022;</div>
+        <div style="font:bold 18px 'Palatino Linotype',serif;letter-spacing:2px;color:#bcd8ff;text-shadow:0 0 16px rgba(60,140,255,0.7);">Attune Your Stats</div>
+        <div style="font:7px monospace;color:#4466aa;letter-spacing:2px;margin-top:5px;">TESTING — MANUALLY ADJUST CHARACTER STATS · J or ESC to leave</div>
+      </div>
+      <div id="statforge-rows" style="display:flex;flex-direction:column;gap:6px;min-width:420px;max-height:78vh;overflow-y:auto;"></div>
+    </div>
+
     <div id="skill-bar" style="
       position:absolute; bottom:30px; left:50%; transform:translateX(-50%);
       display:flex; justify-content:center; align-items:center; gap:6px;
@@ -2039,6 +2050,7 @@ let gBombFireZones=[]; // {wx,wy,radius,life,maxLife,dmgAccum}
 let gShrine = null; // single shrine per wilderness run
 let gTrainingDummy=null; // persistent in Sanctum, null in dungeons
 let gForgeProp=null;     // dev-only Skillforge prop in the Sanctum (walk up + E); null off dev builds / outside town
+let gStatForgeProp=null; // dev-only Statforge prop in the Sanctum (walk up + E); null off dev builds / outside town
 let gPlayer=null;
 let gLoopId=null;
 let gLoopGen=0; // incremented each time a new loop starts — stale loops self-terminate
@@ -3465,6 +3477,7 @@ document.addEventListener('keydown', function(e){
     e.preventDefault();
     // Close the Skillforge (dev panel) if open
     if(_skillforgeOpen){ gCloseSkillforge(); return; }
+    if(_statForgeOpen){ gCloseStatForge(); return; }
     // Close portal overlay if open
     if(portalOpen){ portalClose(); return; }
     // Close hub overlay if open
@@ -3490,6 +3503,12 @@ document.addEventListener('keydown', function(e){
   if((key === 'k' || key === 'K') && _DEV && isGameActive()){
     e.preventDefault();
     if(_skillforgeOpen) gCloseSkillforge(); else gOpenSkillforge();
+    return;
+  }
+  // ── Statforge (dev/testing) — toggle anywhere on dev builds ──
+  if((key === 'j' || key === 'J') && _DEV && isGameActive()){
+    e.preventDefault();
+    if(_statForgeOpen) gCloseStatForge(); else gOpenStatForge();
     return;
   }
 
@@ -3524,6 +3543,7 @@ document.addEventListener('keydown', function(e){
     if(!gPlayer||gPlayer.dead||exitReached) return;
     // Skillforge prop (dev): walk up + E to open it (replaces the old corner button).
     if(inTown && gForgeProp && gForgeInteract()) return;
+    if(inTown && gStatForgeProp && gStatForgeInteract()) return;
     // Shrine: in the wilderness the patron menu auto-opens within 2 tiles (see
     // gUpdateShrine), leaving E free for LEAP. In town it still opens on E.
     if(inTown && gShrine && gShrineInteract()) return;
@@ -4969,6 +4989,61 @@ function drawTrainingDummy(){
 const FORGE_TX = 32, FORGE_TY = 5;   // upper-right of the Sanctum, mirroring the shrine on the left
 function initForgeProp(){
   gForgeProp = _DEV ? { wx: FORGE_TX*T+T/2, wy: FORGE_TY*T+T/2, r: 14, promptRange: 2*T } : null;
+}
+const STATFORGE_TX = 32, STATFORGE_TY = 8;   // just below the Skillforge — the dev corner of the Sanctum
+function initStatForgeProp(){
+  gStatForgeProp = _DEV ? { wx: STATFORGE_TX*T+T/2, wy: STATFORGE_TY*T+T/2, r: 14, promptRange: 2*T } : null;
+}
+function gStatForgeInteract(){
+  if(!gStatForgeProp || !gPlayer || gPlayer.dead) return false;
+  if(Math.hypot(gPlayer.wx-gStatForgeProp.wx, gPlayer.wy-gStatForgeProp.wy) > gStatForgeProp.promptRange) return false;
+  gOpenStatForge();
+  return true;
+}
+function drawStatForgeProp(){
+  const f = gStatForgeProp;
+  if(!f) return;
+  const sx = f.wx-camX, sy = f.wy-camY;
+  if(sx<-40||sx>VW+40||sy<-40||sy>VH+40) return;
+  const near = gPlayer && Math.hypot(gPlayer.wx-f.wx, gPlayer.wy-f.wy) <= f.promptRange;
+  const t = gFrame*0.06;
+  gctx.save();
+  gctx.translate(sx, sy);
+  // arcane glow under the pedestal (blue — mana theme, to distinguish from the orange Skillforge)
+  gctx.globalAlpha = 0.5 + 0.2*Math.sin(t);
+  const grad = gctx.createRadialGradient(0,4,2,0,4,22);
+  grad.addColorStop(0,'rgba(70,150,255,0.7)'); grad.addColorStop(1,'rgba(40,90,255,0)');
+  gctx.fillStyle = grad; gctx.beginPath(); gctx.arc(0,4,22,0,Math.PI*2); gctx.fill();
+  gctx.globalAlpha = 1;
+  // stone pedestal
+  gctx.fillStyle = '#34303f'; gctx.fillRect(-9, 6, 18, 8);
+  gctx.fillStyle = '#26222e'; gctx.fillRect(-9, 12, 18, 3);
+  gctx.fillStyle = '#46415a'; gctx.fillRect(-7, 0, 14, 7);
+  gctx.strokeStyle='#171420'; gctx.lineWidth=1.5;
+  gctx.strokeRect(-7,0,14,7); gctx.strokeRect(-9,6,18,8);
+  // floating mana crystal (diamond) that bobs + pulses
+  const bob = Math.sin(t*1.3)*2;
+  gctx.translate(0, -10 + bob);
+  gctx.rotate(Math.sin(t*0.5)*0.15);
+  gctx.fillStyle = '#7fc0ff';
+  gctx.beginPath(); gctx.moveTo(0,-8); gctx.lineTo(5,0); gctx.lineTo(0,8); gctx.lineTo(-5,0); gctx.closePath(); gctx.fill();
+  gctx.fillStyle = '#cfe8ff';
+  gctx.beginPath(); gctx.moveTo(0,-8); gctx.lineTo(2,0); gctx.lineTo(0,3); gctx.lineTo(-2,0); gctx.closePath(); gctx.fill();
+  gctx.globalAlpha = 0.6 + 0.3*Math.sin(t*2);
+  gctx.strokeStyle='#aad4ff'; gctx.lineWidth=1;
+  gctx.beginPath(); gctx.moveTo(0,-8); gctx.lineTo(5,0); gctx.lineTo(0,8); gctx.lineTo(-5,0); gctx.closePath(); gctx.stroke();
+  gctx.restore();
+  // label + proximity prompt
+  gctx.save();
+  gctx.textAlign='center';
+  gctx.globalAlpha=0.6; gctx.fillStyle='#5aaeff'; gctx.font='7px monospace';
+  gctx.fillText('STATFORGE', sx, sy+28);
+  if(near){
+    gctx.globalAlpha=0.85+0.15*Math.sin(t*2);
+    gctx.fillStyle='#9ccbff'; gctx.font='bold 9px monospace';
+    gctx.fillText('[E] ADJUST STATS', sx, sy-22);
+  }
+  gctx.restore();
 }
 function gForgeInteract(){
   if(!gForgeProp || !gPlayer || gPlayer.dead) return false;
@@ -9215,6 +9290,7 @@ function gRender(){
   for(const e of gEnemies){ if(!e.dead && !gHiddenByFog(e.wx,e.wy)) drawables.push({y:e.wy,draw:e.isArcher?gDrawArcher:e.isWarrior?gDrawWarrior:e.isBomber?gDrawBomber:e.isKing?gDrawKing:e.isShaman?gDrawShaman:gDrawEnemy,arg:e}); }
   if(inTown&&gTrainingDummy) drawables.push({y:gTrainingDummy.wy,draw:drawTrainingDummy,arg:gTrainingDummy});
   if(inTown&&gForgeProp) drawables.push({y:gForgeProp.wy,draw:drawForgeProp,arg:gForgeProp});
+  if(inTown&&gStatForgeProp) drawables.push({y:gStatForgeProp.wy,draw:drawStatForgeProp,arg:gStatForgeProp});
   // Rock entities depth-sort with characters (foot y) so tall boulders occlude and tuck correctly.
   for(const k of gRocks){ const sx=k.wx-camX, sy=k.wy-camY; if(sx<-90||sx>VW+90||sy<-160||sy>VH+90) continue; drawables.push({y:k.wy,draw:gDrawRock,arg:k}); }
   // Tree props depth-sort the same way — taller than rocks, so a wider top cull margin.
@@ -12511,6 +12587,7 @@ let hubPresenceRef = null;
 function goTown() {
   initTrainingDummy();
   initForgeProp();
+  initStatForgeProp();
   inTown = true;
   inWilderness = false;
   const map = JSON.parse(JSON.stringify(HUB_MAP));
@@ -12530,8 +12607,10 @@ function goTown() {
 function leaveTown() {
   gTrainingDummy=null;
   gForgeProp=null;
+  gStatForgeProp=null;
   gShrine=null;
   if(_skillforgeOpen) gCloseSkillforge();
+  if(_statForgeOpen) gCloseStatForge();
   if (!inTown) return;
   inTown = false;
   portalOpen = false;
@@ -13447,6 +13526,7 @@ function goWilderness(){
   inWilderness  = true;
   inTown        = false;
   if(_skillforgeOpen) gCloseSkillforge();
+  if(_statForgeOpen) gCloseStatForge();
   wildernessPortalNearby = false;
   portalNearby  = false;
   exitReached   = false;
@@ -16169,6 +16249,84 @@ function gOpenSkillforge(){
 function gCloseSkillforge(){
   _skillforgeOpen = false; gPaused = false;
   const el = document.getElementById('g-skillforge-overlay');
+  if(el) el.style.display = 'none';
+}
+
+// ── Statforge (dev) — manually set character stats, for testing (e.g. crank Max MP to afford god-skill costs).
+// Each stat reads/writes the live player state: Max HP/MP go through wildBuffs.hpBonus/mpBonus + _wildApplyStats
+// (the same path the cards use); the rest are wildBuffs the combat code already reads. NOTE: entering the
+// wilderness runs gWildReset, which wipes these — re-apply in the run (J opens it anywhere on dev builds).
+let _statForgeOpen = false;
+const STAT_FORGE_STATS = [
+  { label:'Max MP', step:50, get:()=>Math.round(gPlayer.maxMp),
+    add:v=>{ const b=gPlayer.wildBuffs; b.mpBonus=Math.max(0,(b.mpBonus||0)+v); _wildApplyStats(); gPlayer.mp=gPlayer.maxMp; } },
+  { label:'Max HP', step:50, get:()=>Math.round(gPlayer.maxHp),
+    add:v=>{ const b=gPlayer.wildBuffs; b.hpBonus=Math.max(0,(b.hpBonus||0)+v); _wildApplyStats(); gPlayer.hp=gPlayer.maxHp; } },
+  { label:'MP regen /s', step:2, get:()=>+(((W().mpRegen||0)*60)+(gPlayer.wildBuffs.mpRegenAdd||0)).toFixed(1),
+    add:v=>{ const b=gPlayer.wildBuffs; b.mpRegenAdd=Math.max(0,(b.mpRegenAdd||0)+v); } },
+  { label:'HP regen /s', step:2, get:()=>+(gPlayer.wildBuffs.hpRegenAdd||0).toFixed(1),
+    add:v=>{ const b=gPlayer.wildBuffs; b.hpRegenAdd=Math.max(0,(b.hpRegenAdd||0)+v); } },
+  { label:'Damage %', step:25, get:()=>Math.round(gPlayer.wildBuffs.damagePct||0),
+    add:v=>{ const b=gPlayer.wildBuffs; b.damagePct=Math.max(0,(b.damagePct||0)+v); } },
+  { label:'Move speed %', step:10, get:()=>Math.round(gPlayer.wildBuffs.speedPct||0),
+    add:v=>{ const b=gPlayer.wildBuffs; b.speedPct=Math.max(-50,(b.speedPct||0)+v); } },
+  { label:'Cooldown reduction %', step:10, get:()=>Math.round(gPlayer.wildBuffs.cdPct||0),
+    add:v=>{ const b=gPlayer.wildBuffs; b.cdPct=Math.max(0,Math.min(99,(b.cdPct||0)+v)); } },
+  { label:'Crit chance %', step:10, get:()=>Math.round(gPlayer.wildBuffs.critChance||0),
+    add:v=>{ const b=gPlayer.wildBuffs; b.critChance=Math.max(0,Math.min(75,(b.critChance||0)+v)); } },
+  { label:'Crit damage %', step:25, get:()=>Math.round(gPlayer.wildBuffs.critDamage||0),
+    add:v=>{ const b=gPlayer.wildBuffs; b.critDamage=Math.max(0,(b.critDamage||0)+v); } },
+];
+function gRenderStatForge(){
+  const wrap = document.getElementById('statforge-rows');
+  if(!wrap || !gPlayer) return;
+  wrap.innerHTML = '';
+  const mkBtn = (label, fn) => {
+    const b = document.createElement('button');
+    b.className = 'forge-btn'; b.textContent = label;
+    b.addEventListener('click', ev => { ev.stopPropagation(); fn(); gRenderStatForge(); });
+    return b;
+  };
+  STAT_FORGE_STATS.forEach(stat => {
+    const row  = document.createElement('div'); row.className = 'forge-row';
+    const left = document.createElement('div'); left.className = 'forge-left';
+    left.innerHTML = `<div class="forge-name">${stat.label}</div>`;
+    const state = document.createElement('div'); state.className = 'forge-state';
+    state.style.color = '#7fc0ff';
+    state.textContent = 'now: ' + stat.get();
+    left.appendChild(state);
+    const btns = document.createElement('div'); btns.className = 'forge-btns';
+    btns.appendChild(mkBtn('− ' + stat.step, () => stat.add(-stat.step)));
+    btns.appendChild(mkBtn('+ ' + stat.step, () => stat.add(stat.step)));
+    row.appendChild(left); row.appendChild(btns);
+    wrap.appendChild(row);
+  });
+  // Utility row — refill pools / reset all the above to base.
+  const util  = document.createElement('div'); util.className = 'forge-row';
+  const uleft = document.createElement('div'); uleft.className = 'forge-left';
+  uleft.innerHTML = `<div class="forge-name">Utilities</div><div class="forge-state" style="color:#7fc0ff;">refill HP/MP · clear all the above</div>`;
+  const ubtns = document.createElement('div'); ubtns.className = 'forge-btns';
+  ubtns.appendChild(mkBtn('Refill HP/MP', () => { gPlayer.hp = gPlayer.maxHp; gPlayer.mp = gPlayer.maxMp; }));
+  ubtns.appendChild(mkBtn('Reset all', () => {
+    const b = gPlayer.wildBuffs;
+    b.mpBonus = b.hpBonus = b.mpRegenAdd = b.hpRegenAdd = 0;
+    b.damagePct = b.speedPct = b.cdPct = b.critChance = b.critDamage = 0;
+    _wildApplyStats(); gPlayer.hp = gPlayer.maxHp; gPlayer.mp = gPlayer.maxMp;
+  }));
+  util.appendChild(uleft); util.appendChild(ubtns);
+  wrap.appendChild(util);
+}
+function gOpenStatForge(){
+  if(!_DEV || !gPlayer || !isGameActive()) return;   // dev builds, any active gameplay (town/dungeon/wilderness)
+  const el = document.getElementById('g-statforge-overlay');
+  if(!el) return;
+  _statForgeOpen = true; gPaused = true;
+  gRenderStatForge();
+  el.style.display = 'flex';
+}
+function gCloseStatForge(){
+  _statForgeOpen = false; gPaused = false;
+  const el = document.getElementById('g-statforge-overlay');
   if(el) el.style.display = 'none';
 }
 

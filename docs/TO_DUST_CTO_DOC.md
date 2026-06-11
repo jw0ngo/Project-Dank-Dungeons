@@ -306,6 +306,15 @@ The god layer no longer imbues active skills; it grants **class-agnostic auto-fi
   with **Acquire / Rank +1 / Max (10) / Reset** per skill; it auto-pledges the patron and reuses the real
   apply paths (`gGodSkillCards`, `_chooseEvolution`), so a forged skill auto-fires immediately (e.g. on the
   town training dummy). New god skills appear here automatically.
+- **Statforge (dev):** sibling of the Skillforge for **manually setting character stats** (built to test the
+  rank-scaling god-skill costs — crank **Max MP** to afford big chunks). In-world **blue crystal pedestal prop**
+  in the Sanctum at `(STATFORGE_TX,STATFORGE_TY)=(32,8)`, below the Skillforge (`initStatForgeProp`/
+  `gStatForgeInteract`/`drawStatForgeProp`); walk up + `E`, or the **`J`** key anywhere on dev builds.
+  `STAT_FORGE_STATS` is a data-driven `{label,step,get,add}` list — Max HP/MP route through
+  `wildBuffs.hpBonus/mpBonus` + `_wildApplyStats` (the card path), the rest are direct `wildBuffs` writes
+  (regen, damage%, speed%, cd%, crit) with the same clamps as the cards; plus Refill HP/MP and Reset-all.
+  `_DEV`-gated (localhost/file only — never on Pages). ⚠ `gWildReset` wipes `wildBuffs` on wilderness entry, so
+  re-apply Max-MP in the run (the `J` hotkey works in the wilderness too).
 
 ---
 

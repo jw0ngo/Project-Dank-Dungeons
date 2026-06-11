@@ -41,6 +41,9 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
     state is purely local — no protocol change. The `Sim` harness gained `Sim.toggleGodSkill(n)` and now exposes
     each owned skill's `{key, active, dormant, mpBaseChunk, mpEmitCost, mpCostPerSec}` (+ `mp`/`maxMp`) in
     `observe()`, so headless bots can manage mana, see when a skill outgrew the pool, and reflect the real economy.
+  - *Dev tooling:* a new **Statforge** (sibling of the Skillforge) — a blue crystal pedestal in the Sanctum
+    (walk up + `E`, or `J` anywhere) to **manually set character stats** (Max MP/HP, regen, damage%, crit, …),
+    built to crank Max MP and test the rank-scaling god-skill costs. Dev builds only (localhost/file).
 
 ## [0.12.0] - 2026-06-12
 
