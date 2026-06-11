@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/User/dev/Project-Dank-Dungeons/agents/**)",
+      "Edit(//c/Users/User/dev/Project-Dank-Dungeons/agents/**)",
+      "Write(//c/Users/User/dev/Project-Dank-Dungeons/agents/**)",
+      "Read(//c/Users/User/dev/Project-Dank-Dungeons/studio/creative-director/**)",
+      "Edit(//c/Users/User/dev/Project-Dank-Dungeons/studio/creative-director/**)",
+      "Write(//c/Users/User/dev/Project-Dank-Dungeons/studio/creative-director/**)"
+    ]
+  }
+}
