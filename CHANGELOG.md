@@ -7,6 +7,8 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-06-12
+
 ### Changed
 - **Forest trees now generate as formations of small + large trees (was an even scatter of large trees).**
   A new **smaller/bonsai tree set** (`world.treesmall.0..8`) joins the existing large trees, and the
