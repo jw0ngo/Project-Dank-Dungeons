@@ -18,6 +18,37 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 
 ---
 
+### 2026-06-11 — Documentation is a system: tier by load-cost, key shared artifacts to self-order, write every altitude (consolidated)
+
+- **Principle:** The repo is the shared brain, so its docs are engineered artifacts with their own failure
+  modes. Four standing rules, each from a real miss:
+  1. **Tier always-on context by load-frequency, not topic.** Anything that auto-loads (`CLAUDE.md`/`AGENTS.md`,
+     a journal two roles skim) is taxed on *every* session, including the ones that never use it — keep it a thin
+     **router** (map + where-to-find-X) and push depth behind role/task-gated files. The engineer manual living in
+     the root `CLAUDE.md` made PM/Artist sessions pay ~194 lines they never touched; splitting it dropped the
+     universal load 194→60. Per-tool entrypoints must be thin pointers over ONE deep-doc set, never duplicated
+     depth (a hand-maintained duplicate `AGENTS.md` rotted into a *contradicting* second source of truth).
+  2. **Key a multi-writer append-only log on a self-ordering, collision-proof primary — not a hand-incremented
+     counter.** Manual `## Session N` numbering produced a duplicate "Session 15" prepended into the wrong slot;
+     re-keying on **date** (`## YYYY-MM-DD — title [roles] · sN`, newest-first) makes ordering automatic and
+     collisions impossible. Keep the old sequence id only as a stable cross-reference (other docs cite it) and a
+     same-day tiebreak.
+  3. **Don't fragment a shared cross-role artifact per-role when a keying/tagging change fixes the real problem.**
+     Splitting the journal into per-agent files (the tempting structural fix) would have shattered single
+     cross-role sessions and duplicated the `agents/<role>/memory.md` layer; a `[roles]` **tag** gives per-role
+     *filtering* on a unified timeline instead. Reach for the mechanical fix before the structural one.
+  4. **When docs route content by altitude, each altitude is a separate, deliberate write.** Crystallizing a
+     principle (`memory.md`/`LEARNINGS.md`) does NOT capture the tactic (the `SESSION_JOURNAL` lookup table) or
+     vice-versa — the handoff between a working session and the framework is exactly where a tactic silently
+     vanishes. Log both; the lean home for a one-liner tactic is the existing table, not a new narrative.
+- **Corollary — restructure before you rewire.** References are a function of structure: when a change reshapes
+  *where things live*, lock the target shape FIRST, then rewire inbound references in one pass. Sweeping
+  `../docs`→`../../docs` mid-restructure was pure waste when the structure changed again two messages later.
+  Scouting/folding content parallelizes early; the inbound-reference rewrite is the *last* step. Encode recurring
+  maintenance as a data-driven hook reading declared frontmatter (`memory_compact_at`), not a hardcoded map.
+- *(Consolidates the four 2026-06-10/06-11 doc-system entries; raw originals in
+  `agents/engineer/archive/2026-06-10-doc-system-lessons.md`.)*
+
 ### 2026-06-11 — Code-referenced asset paths migrate atomically: script move + manifest-rewrite as one op
 - **Principle:** Reorganizing assets referenced by explicit path strings (~200 `ART_MANIFEST` entries) is a
   move **plus** a synchronized path-rewrite — inseparable. A half-migration (files moved, paths stale) 404s
@@ -130,68 +161,6 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   proves/disproves) from **asset defect** (measure vs a sibling → owning role's lane); route the asset defect to
   the Artist with the measured table + a roadmap handoff (`CLEANUP_BACKLOG` "Art / sprites") and re-verify on
   redelivery. Generalises the eyeball-vs-measure discipline from *making* art to *diagnosing* it.
-
-### 2026-06-10 — Settle the structure before rewiring references; structure determines the paths
-
-- **Principle:** When a change reshapes *where things live* (a directory move, a doc consolidation, a
-  rename), do not start mechanically fixing inbound references until the target structure is locked.
-  References are a function of the structure — fix them against a structure that's still moving and you
-  redo the work. Get the shape agreed first, then rewire once.
-- **Why:** This session I began converting `../docs` → `../../docs` across the moved role files right
-  after the user dropped them into `agents/`. Two messages later the structure changed again (fold the
-  operating-model docs *into* one file per role, standardize on root-relative paths) — which deleted the
-  very files I was repathing and inverted the path convention. The `../../` work was pure waste. The tell
-  was there: the user was still actively reshaping ("each agent should have its own discrete file") — an
-  unsettled structure.
-- **How to apply:** When a restructure request arrives mid-flight, *pause the reference sweep* and
-  converge the structure first (a crisp AskUserQuestion on the real forks — granularity, what folds in,
-  where memory lives — beats guessing). Only once the shape is fixed, do the rewiring in one pass. Tell
-  the seam apart: scouting/folding content is safe to parallelize early; the inbound-reference rewrite is
-  the *last* step, because it's the one the structure invalidates. Corollary that paid off here: encode
-  recurring maintenance as a **data-driven hook** reading each agent's declared frontmatter
-  (`memory_compact_at`), not a hardcoded role→path map or a prose rule — then a structure change (a new
-  agent) needs no hook edit; the agent self-registers.
-
-### 2026-06-10 — When docs route content by altitude, each altitude is a separate write — or tactics fall through the seam
-
-- **Principle:** A tiered doc system (high-altitude principle → `LEARNINGS.md`; tactical specifics →
-  `SESSION_JOURNAL.md` + its lookup tables) only works if *both* halves are written deliberately.
-  Crystallizing the principle does **not** capture the tactic, and vice-versa — they live in different
-  files for different readers. The handoff between a working session and the framework is exactly where
-  a tactic silently vanishes.
-- **Why:** The parallel wolf-mother session crystallized the right *principle* ("measure the geometry
-  before reaching for flags") into `artist/LEARNINGS.md`, but the *tactical* `--bleed` step it discovered
-  never landed in the Sprite Import Checklist — the working-copy edit was dropped, and because the
-  principle survived, the gap was invisible until audited. The next artist would have the wisdom but not
-  the recipe. The same seam cuts the other way: a checklist step with no crystallized principle teaches
-  the fix but not the class of mistake it prevents.
-- **How to apply:** When you (or a parallel session) finish a piece of work, log it at *both* altitudes
-  as two explicit acts: the recipe/flag/symptom-row in the tactical home, the transferable principle in
-  `LEARNINGS.md`. When reconciling another session's output, don't assume "logged" means complete —
-  check both homes. And the lean home for a tactical one-liner is the existing **lookup table**, not a
-  new session narrative — that keeps the journal from re-bloating while still capturing the recipe.
-  *(Workflow-friction this session: a PowerShell `Get-Content`/`Out-File` rewrite mangled em-dashes/`§`
-  because it used the Win-1252 default — logged the .NET-UTF8 fix in the journal's heuristics table so
-  it costs zero turns next time.)*
-
-### 2026-06-10 — An auto-loaded context file pays its cost in *every* session — keep it a router, push depth behind it
-
-- **Principle:** Context that loads unconditionally (the root `CLAUDE.md`/`AGENTS.md`, an append-only
-  journal two roles skim) is a tax levied on every session, including the ones that never use it. Keep the
-  always-loaded layer a thin **router** (map + where-to-find-X), and put the deep, role-specific content in
-  files that load **only when that role/task is active**. Tier by load-frequency, not by topic.
-- **Why:** The engineer's role manual *was* the repo-root `CLAUDE.md`, which auto-loads into every PM and
-  Artist session too — so those roles silently paid for ~194 lines of engine architecture and gotchas they
-  never touch (the Artist's startup ran ~1,700 hot lines before doing anything). PM and Artist already had
-  their own role folders; the engineer's asymmetry was the whole leak. Splitting out `engineer/CLAUDE.md`
-  made the engineer symmetric and dropped the universal auto-load 194→60. The parallel `AGENTS.md` had also
-  rotted into a *contradicting* second source of truth (claimed "no Node," still described inlined base64
-  art) precisely because it was a full hand-maintained duplicate rather than a thin pointer.
-- **How to apply:** For any always-on context, ask "does every consumer need this, every time?" If not,
-  demote it to on-demand and leave a one-line pointer. Cap append-only logs (archive the tail, keep recent +
-  the distilled lookup tables hot). Make per-tool entrypoints (`CLAUDE.md`/`AGENTS.md`) thin routers over
-  **one** shared deep-doc set — never duplicate the depth, or the copies drift and contradict. Instruct
-  reads as "the relevant section of X," not "read X every session." Measure the win in hot-lines-at-startup.
 
 ---
 
