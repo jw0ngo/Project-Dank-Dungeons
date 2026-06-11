@@ -7,6 +7,8 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+## [0.0.1] - 2026-06-12
+
 ### Changed
 - **Heavy-attack cooldown now starts when you _release_ the swing, not when you start charging.** Holding a
   long charge no longer burns the cooldown down before the hit lands — the full cooldown always applies after
