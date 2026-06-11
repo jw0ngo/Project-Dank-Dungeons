@@ -63,10 +63,12 @@ whiffing reads as the exposed, planted moment it's meant to be. This runs **alon
 
 - **Walk:** ✅ shipped v0.4.0 — `char.playerwalk{1..4}.<dir>`, gated by `PLAYER_WALK_OCT`, driven by
   `p.walkFrame` (network-synced). `tools/slice-walk-cycle.py` is the slicer.
-- **Dash:** pose sheet delivered (8-dir cutouts, `art/player` + engineer handoff, commit `ffa1df7`) —
-  wiring is the engineer's per the Artist handoff spec.
-- **Heavy windup:** windup poses in flight (`assets/char/playerheavywindup-*`, untracked) — the telegraph
-  frame for the committed heavy attack; wire into the heavy-attack windup window once the sheet lands.
+- **Dash:** ✅ shipped — 8-dir cutouts wired (`char.playerdash.<dir>`, commit `adf291d`), selected on the
+  dash state in `gDirBody`.
+- **Heavy windup:** ✅ shipped — 8-dir telegraph poses wired (`char.playerheavywindup.<dir>`, commit
+  `adf291d`), selected on `p.heavyWindingUp`, scaled by `WINDUP_DRAW_MULT` (1.07) / `WINDUP_PLANT` (0.14)
+  from `tools/check-pose-scale.py`. The committed-swing telegraph is now visible per the weighty-combat
+  directive. **All three legs of item 0 (walk · dash · windup) are now shipped — PM to formally re-status.**
 - **Handoff rule:** Artist delivers sheets + `ART_MANIFEST` snippet; engineer is sole editor of
   `index.html` and owns the wiring (per `CLAUDE.md` role boundary).
 </details>
@@ -448,69 +450,25 @@ recolor. Co-op synergy falls out of the contrast (Boreas freezes → Cilia shatt
 ---
 
 <details>
-<summary>📎 Appendix — how PM &amp; engineering stay in sync (process)</summary>
+<summary>📎 Appendix — how this doc stays product-pure (process)</summary>
 
-**Status legend:** `proposed` (PM idea, not yet seen by Josh) · `approved` (greenlit — engineer may build)
-· `in-progress` · `shipped` (move to changelog, delete here) · `held` / `cut`.
+**This doc is PM-owned and product-pure.** It holds *what we're building and why*, priority, sizing, and the
+two **product** lifecycle states the PM owns: `approved` (greenlit — engineer may build) and `shipped` (move
+to changelog, delete here). The other lifecycle states are PM-only too: `proposed` (PM idea, not yet seen by
+Josh) · `held` / `cut`.
 
-**The repo is the shared brain.** Both agents reset context between sessions, so cross-role awareness lives
-*here*, not in memory. Every *Now* item carries a live status — **flip it the moment you act, in the same
-commit:** PM sets `approved`; engineer sets `in-progress` **when starting** (not just when done), then
-`shipped` on push. Pulse of what just happened → git (`git status` + `git log --oneline`, commit prefixes
-`pm:` / `eng:` / `docs:`). **Session-open ritual (~30s):** `git status` + `git log --oneline -15` → read
-*Now* + Handoffs → act. `tools/doc-drift-check.ps1` (Stop hook) nudges if this board goes stale.
-
-**Commit your own lane — never `git add -A`.** The working tree carries long-lived cross-role WIP (untracked
-art PNGs, other roles' in-flight edits), so a blind `git add -A` will sweep another role's work into your
-commit under the wrong prefix. **Always stage explicit paths** (`git add docs/ROADMAP.md docs/specs/…`) so
-a `pm:` commit contains only PM docs, an `art:` commit only assets, etc.
+**Execution state and hand-offs live on the board, not here.** `in-progress`, blocked, sub-task progress, and
+the cross-role hand-off log are tracked in **[`BOARD.md`](BOARD.md)** — the shared doc all three roles write to.
+This keeps the roadmap a clean statement of *intent* that other roles read but don't edit. **One fact, one
+home:** the board references a roadmap item by # / name and never re-states its *why*; the roadmap never tracks
+execution churn. (The git-lane discipline, session-open ritual, and drift rules also live on the board.)
 
 **Source-of-truth rule (avoid drift):** for any item backed by a spec (`docs/specs/*.md`), the **spec is the
-source of truth** and the roadmap item is a thin **summary + pointer** — plain-English what/why + a link.
-Keep build detail (line-refs, balance, phasing internals) in the spec; don't mirror it into the board, or
-the two drift. Items with no spec (small fixes) keep their detail inline in the 🔧 Build notes.
+source of truth** and the roadmap item is a thin **summary + pointer** — plain-English what/why + a link. Keep
+build detail (line-refs, balance, phasing internals) in the spec. Items with no spec (small fixes) keep their
+detail inline in the 🔧 Build notes.
 
-**⇄ Handoffs (append a line; delete when cleared):**
-- **PM → ENG (NEW, 2026-06-10 — DIRECTION CHANGE, supersedes the prior Imbue Paths handoff):** **Item 2 is
-  now "God Skills" — auto-firing, class-agnostic abilities** ([`specs/god-skills.md`](specs/god-skills.md) is
-  the live source of truth; `imbue-paths.md` is archived reference). The god layer **no longer imbues active
-  skills** — it's a VS-style auto-firing layer that ports to the platform's future MOBA/MMORPG modes. **Core
-  work = a TRIGGER SWAP** on three FX systems that already exist + are tuned (`gFireRings`/`gFireTrails`/
-  `gFirePillars`): decouple them from whirlwind/dash/heavy into independent per-skill auto-fire updaters.
-  **Build order: Pyre Waltz (already interval-based — start here to prove it) → Trail of Embers (emit on
-  movement) → Pyroclasm (interval + auto-target nearest cluster).** Keep the 10-rank binary tree (Form @5,
-  two-age Ascension @10) and reuse the shipped dragonfire/chaosfire grounds. **Migration:** whirlwind/dash/heavy
-  revert to plain; **Dance of Fire (shipped) reverts to a plain swing + its tree parks** (✅ retire-and-park
-  decided, Josh 2026-06-11 — no flag, no dormant live path). All conversions, line-refs, state model, draft/Sim hooks in the spec.
-- **PM → ENG (NEW, 2026-06-10):** **CHANGELOG archive done** (this session) — pre-rename Dungeon Forge era
-  (v0.9.0–v0.11.0) moved to `docs/archive/changelog-dungeon-forge.md`, pointer left in `CHANGELOG.md`
-  (610→509 lines). Uncommitted in the working tree; fold into your next `docs:` commit. Going forward,
-  sweep the changelog by era/half-year (like the session journal), not per release.
-- **PM → ENG (NEW, 2026-06-10):** **Item 0c — Patron Cards** approved (session-sized, no art). New
-  `PATRON_CARDS` pool gated on the active patron (`gPlayer.imbues` contains the god), injected into the
-  draft at **~25%/draft**; Cilia's 3 burn cards (Conflagration = explode-chance/tick scaling off
-  `_burnTickDmg` + re-ignite chain · Lingering Flame = +duration · Searing Heat = +tick dmg). Uncapped
-  (explode-chance clamps at 1.0). Full build notes + line-refs (L5339/L5347/L12350) inline in item 0c.
-  **Keep the boundary vs. item 2 clean** — patron cards buff burn, Imbue Paths restructure skill shape.
-- **PM → ENG:** Items 1, 3, 4 shipped (item 1 playtested OK). **The one open approved build is item 2 (God
-  Skills)** — see the direction-change handoff above. Nothing gates it.
-- **PM → ARTIST:** **eye-glow difficulty tell** (item 1) — enemy eyes glow **yellow (mid tier) → red (top
-  tier)**, an additive draw-layer tint (no new sprites). **⚑ UNBLOCKED (eng 2026-06-10):** the flag
-  exists — `e.threatTier` (0/1/2, stamped in `_wildScaleEnt`; tiers at nights 4/8 via `WILD_TIER1_THREAT`/
-  `WILD_TIER2_THREAT`) — and a placeholder two-dot+halo render is live in `gDrawThreatGlow` (contract
-  comment inline). Restyle via a spec handed back to the engineer (sole `index.html` editor).
-- **ENG → ARTIST (NEW, 2026-06-10):** **player WALK cutouts have a loose gray halo** (dark fringe in-game,
-  most visible while moving). Diagnosed: a background-removal quality issue in the walk PNGs — **not** an
-  engine bug (eng session diff touches zero player-render code; assets are the cause). Re-cut the haloed
-  frames tighter via `tools/slice-walk-cycle.py` (`--tol`↑ from 24, `--erode`→2, QA `--compare` vs the
-  idle). Priority `-n`/`-s` (all 4 frames), then the `-3` frames of the diagonals. **Full data table +
-  per-facing fringe measurements + target in `docs/CLEANUP_BACKLOG.md` → "Art / sprites".** Engineer
-  re-verifies the alpha edge on redelivery.
-- **PM → ENG (release housekeeping):** Favor shipped as **v0.2.0**; the Wolf Camps spine is still untagged
-  in CHANGELOG `[Unreleased]`. Fold items 1–4 in and cut **v0.3.0** when they land (or tag wolf-camps alone
-  first if it ships sooner). The Favor-coin art handoff (`fx.favor-coin` + HUD glyph for the placeholder
-  `✦`, drawn procedurally in `gDrawFavorOrbs`) is still open with the Artist.
-
-_PM upkeep: keep this current. Every item carries pillar + plain-English what/why + size. On approval, move
-to **Now** and flip to `approved`; on ship, delete and let the changelog carry the record._
+_PM upkeep: keep this current. Every item carries pillar + plain-English what/why + size. On approval, move to
+**Now** and flip to `approved`; on ship, delete and let the changelog carry the record. Execution status →
+[`BOARD.md`](BOARD.md)._
 </details>

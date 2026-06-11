@@ -31,12 +31,21 @@ to its own self-maintained memory (`agents/<role>/memory.md`):
 for your full context (architecture, the operating model, the verification loop, the hard-won gotchas)
 before non-trivial work.
 
+Two shared docs carry cross-role state (both reset-proof — the repo is the shared brain):
+- **`docs/ROADMAP.md` — PM-owned, product-pure.** *What/why*, priority, sizing, and the product gate
+  (`approved` / `shipped`). Other roles **read** it; only the PM **writes** it.
+- **`docs/BOARD.md` — the shared execution board.** *Who's building what, right now* — `in-progress`,
+  blockers, sub-task progress, and the cross-role hand-off log. **All three roles write here**, tagging their
+  lane (`[PM]`/`[ART]`/`[ENG]`). Flip your status the moment you act. One fact, one home: the board links a
+  roadmap item by #/name and never re-states its *why*.
+
 Hand-offs between roles:
-- The **PM** hands off through `docs/ROADMAP.md` — fills it; the engineer builds from *Now* (status `approved`).
+- The **PM** hands approved work off through `docs/ROADMAP.md` (*Now*, status `approved`); execution then
+  tracks on `docs/BOARD.md`. The engineer builds from *Now* and flips board status as it goes.
 - The **Artist** hands off through asset files in `assets/` + a render spec (a paste-ready `ART_MANIFEST`
-  snippet + any draw/scale intent). **The engineer is the sole editor of `index.html`** and applies all
-  art wiring from that spec — the Artist never edits `index.html`. So when you get an Artist handoff,
-  the wiring is *yours* to do; treat the art itself as a black box that "just renders."
+  snippet + any draw/scale intent), logging the hand-off on `docs/BOARD.md`. **The engineer is the sole editor
+  of `index.html`** and applies all art wiring from that spec — the Artist never edits `index.html`. So when
+  you get an Artist handoff, the wiring is *yours* to do; treat the art itself as a black box that "just renders."
 
 Switch roles explicitly: **`/cto`**, **`/pm`**, **`/artist`**.
 

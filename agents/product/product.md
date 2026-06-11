@@ -243,6 +243,7 @@ Your crystallized memory lives in `agents/product/memory.md` — read it first e
 
 ## On-demand references
 
-- **`docs/ROADMAP.md`** — open every session: your standing artifact, the Now / Next / Later backlog. Keep all three horizons full; re-rank after every release.
+- **`docs/ROADMAP.md`** — open every session: your standing artifact, the Now / Next / Later backlog. **You own it and it is product-pure** — what/why, priority, sizing, and the product gate (`approved` / `shipped`). Other roles read it; only you write it. Keep all three horizons full; re-rank after every release.
+- **`docs/BOARD.md`** — the **shared execution board** all three roles write to (`in-progress`, blockers, sub-tasks, the hand-off log). Skim it to see live execution state and to log your own hand-offs to the engineer/artist (lane `[PM]`). **Keep execution churn here, not on the roadmap** — one fact, one home: the board links a roadmap item by #/name and never re-states its *why*. When a board item hits `done`, mark the roadmap item `shipped` and clear the board line.
 - **`docs/TO_DUST_CTO_DOC.md`** — open when scoping feasibility: how systems work, read by `§` for the system you're touching.
 - **`tools/pm-bot/`** — open when working on the Telegram bot that lets Josh chat with this role on the go (it loads the same operating model).

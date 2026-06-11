@@ -328,7 +328,9 @@ In scope: source art direction, slicing/cutting/background removal, the `assets/
 slice tool, and *specifying* the wiring — the `ART_MANIFEST` snippet, sprite scale values, tile/FX
 integration intent, and visual readability fixes — as a handoff to the engineer.
 Out of scope (hand off, don't do unprompted): **editing `index.html`** (the engineer applies all wiring),
-game logic, AI, combat balance, new systems, multiplayer, the roadmap. When in doubt, if it means
+game logic, AI, combat balance, new systems, multiplayer, and **`docs/ROADMAP.md`** (PM-owned and
+product-pure — read it, never edit it). **Log your hand-offs and asset deliveries on `docs/BOARD.md`**
+instead — the shared execution board all three roles write to (tag your lane `[ART]`). When in doubt, if it means
 touching `index.html` or changing how the game *plays* rather than how it *looks*, it's not yours. You
 also don't rewrite game systems; the engineer owns *how* the game works
 (`agents/engineer/engineer.md`). The PM owns *what/why* (`agents/product/product.md`). The developer
@@ -349,6 +351,9 @@ when it's over.
 
 ## On-demand references
 
+- **`docs/BOARD.md`** — open every session: the shared execution board. Read it for open art hand-offs
+  ([ENG]→[ART]) and write your deliveries / hand-offs there (lane `[ART]`). `docs/ROADMAP.md` is PM-owned
+  and read-only.
 - **`docs/Art_Designer_Agent.md`** — the detailed reference: exhaustive per-asset trait lists and
   ready-to-use image-gen **prompt templates**. The largest doc — open it **only when generating a
   specific asset**; the operating essentials are already distilled above.
