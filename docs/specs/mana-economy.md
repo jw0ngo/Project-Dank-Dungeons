@@ -84,16 +84,41 @@ progression. Starting numbers (tune by feel):
 ### Phase 2 — God Skills cost mana per second (rank-scaled)
 
 - **Per-second drain while active**, paid in `gTickBurningBody` / `gUpdateGodSkills` each frame:
-  `p.mp -= gGodFireParam(p, id, 'mpCost') * dt` (dt in frames; `mpCost` expressed per-frame, e.g. `5/3s = 0.0278/frame`).
+  `p.mp -= gGodFireParam(p, id, 'mpCost') * dt` (dt in frames; `mpCost` per-frame). **Evolved Forms add a
+  per-emit cost** on top, charged each time the effect fires (ring / nova / etc.).
 - **Make `mpCost` a first-class god-skill param** so it **auto-scales with rank** through the *same* machinery as
   damage/radius: add an `mpCost` key to the registry `base` + the per-rank `waveStep`/`formStep` (`:13532-13557`).
-  Then `gGodFireParam(p,id,'mpCost')` = base + rank mods, no special-casing.
-  - **Burning Body starting curve:** base **≈1.67/s** (5 mp / 3 s) at rank 1; **+~0.15/s per rank** via the steps;
-    Form @5 and Ascension @10 add a step (stronger = costlier) → maxed ≈ **3.0/s**. Tune by feel.
-- **Drain is layered on top of regen**, not a replacement: net passive = `regen − Σ(active god-skill drains)`.
-  When total active drain **exceeds regen**, the pool **bleeds even while idle** — this is the intended pressure
-  that forces the player to toggle skills off (Phase 3).
-- **MP-investment cards now matter twice:** they fund both the manual kit and how many auras you can sustain.
+  Then `gGodFireParam(p,id,'mpCost')` = base + rank mods, no special-casing. The per-emit cost is a second param on
+  the Form, charged at the emit site.
+- **Burning Body cost curve (LOCKED model — Josh 2026-06-12; the numbers are a tunable benchmark, the mechanic is not):**
+  - **Base (rank 1): 10 mp / 3 s** (≈3.33/s). Cost **rises every level** alongside damage/area — stronger = costlier.
+  - **Level 10 target: ~80–100 mp/s ALL-IN average** (base per-second drain **+** amortized per-emit). This is the
+    *total range*; the engineer back-solves the per-level increment to land in it. **Treat 80–100 as the combined
+    average — do NOT set the base to 80–100 and stack emit on top (that double-counts → overshoot).**
+  - **NO CAP on cost.** A flat cost the player must structure their build around — not enough mana = you literally
+    cannot sustain a maxed skill. **That gate IS the design** (see build-diversity below).
+- **Drain layered on regen**, not a replacement: net passive = `regen − Σ(active drains)`. When total active drain
+  **exceeds regen**, the pool bleeds even while idle — the pressure that forces toggling skills off (Phase 3).
+
+#### The mechanic is fixed; build variety lives in the CARD pool (design principle — Josh 2026-06-12)
+
+**How mana is spent does not change from here** (numbers tweak, mechanic frozen): a flat per-second drain that
+scales with skill level + per-emit costs on evolved Forms, no cap. The variety comes from the **supply side — the
+card pool — which we expand so a wide range of mana builds are all viable** (the roguelite north star: maximize
+build potential = maximize long-run playability). A flat per-second drain is gated by two *independent* levers, and
+cards push on either:
+
+- **Regen growth → SUSTAIN builds.** Sustained uptime of a skill = **regen ÷ drain** (pool size doesn't change
+  uptime — only burst length). Build regen high enough and a maxed skill runs continuously. (`mpRegenAdd`-family.)
+- **Max-pool growth → BURST builds.** A big pool funds an **ult-window**: light the maxed skill, drain the pool over
+  a few seconds, toggle off to recharge while you run cheap skills, repeat. (`mpBonus`/maxMp family **+ UNIQUE
+  build-defining cards** — e.g. a rare that **3× your mana pool**.)
+- **Both must stay viable — neither sustain nor burst should dominate.** That balance constraint lives in the **card
+  pool**, not the drain mechanic. Hybrids (some regen + some pool) sit on the spectrum between.
+- **The supply must scale ~10× from today.** At 9/s base regen vs an 80–100/s maxed drain, a maxed skill runs only
+  ~10% of the time. A *committed* build must be able to reach ~70–90/s regen (sustain) and/or a multiplied pool
+  (burst). **Rebalance + expand the mana cards in tandem with the drain** — shipping the high drain without the
+  scaled supply bricks maxed skills with no recourse. (This is its own design surface — flagged as follow-on below.)
 
 ### Phase 3 — toggle / hotkey management
 
@@ -137,9 +162,13 @@ progression. Starting numbers (tune by feel):
 
 - **The benchmark is the anchor, not gospel:** "leap + ~3s WW ≈ empty (fresh early pool)" — tune the cost split to
   hit it while each skill still *feels* worth its price. Levers: per-skill cost · `mpRegen` · the god-skill drain curve.
-- **God-skill drain is the new master pressure knob:** with 2–3 auras toggled on, net drain should *approach or
-  exceed* regen so the player must choose what to keep lit. Too cheap → the toggle is meaningless; too steep →
-  god skills feel unusable. Tune so **one** aura is comfortably sustainable, **all** of them is not.
+- **God-skill drain is the new master pressure knob — now build-dependent (revised Josh 2026-06-12):** at the
+  ~80–100/s maxed drain, sustaining even **one** maxed skill takes real mana investment, and running all three
+  maxed (~240–300/s) is never the goal. **Specialization** (max 1–2 skills + cheap filler, toggle the rest) is the
+  intended endgame, not "everything maxed and lit." Tune the **supply** (regen/pool cards) so a *committed* mana
+  build can sustain ~1–2 skills (sustain path) **or** burst-cycle a big one (burst path), while an un-invested
+  build is forced to toggle aggressively. Too cheap → the toggle is meaningless; too steep with no supply → maxed
+  skills brick. The lever to balance is the **card pool**, not the drain.
 - **Early vs late:** the base pool/costs are tuned tight for the early game; `mpRegenAdd` / `mpBonus` / maxMp cards
   are the deliberate loosening over a run. Don't make base regen so high it erases the early pinch.
 - **One lever leads per skill (not double-gate):** leap = **CD-led** (15 s) with mana as the opening-burst cost;
@@ -167,5 +196,12 @@ progression. Starting numbers (tune by feel):
 
 Phase 1 alone delivers Josh's core ask (run out of mana early). 2–3 add the god-skill economy + management depth.
 Depends on item 2's god-skill system being live (it is — Burning Body shipped) for Phases 2–3.
+
+**Follow-on (its own surface, after the mechanic lands) — the mana-build card expansion.** The drain mechanic
+(Phases 1–3) is the *demand* side. The **supply** side — a card pool rich enough to support sustain builds (regen),
+burst builds (pool/UNIQUE multipliers), and hybrids — is a separate, ongoing design surface that makes the variety
+real. Item 7 ships the mechanic + rebalances the *existing* mana cards (`mpRegenAdd`/`mpBonus`) to ~10× scale; the
+*expansion* (new regen/pool archetypes, a UNIQUE build-defining card class) is follow-on work, not a Phase-1 blocker.
+Tracked in the PM lane.
 </content>
 </invoke>

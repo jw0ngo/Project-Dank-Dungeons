@@ -18,6 +18,31 @@ lesson: **the principle → why → how to apply.** Quality over volume.
 
 ---
 
+### 2026-06-12 — Design for build *potential*, not prescribed builds: freeze the mechanic, put the variety in the content layer
+
+- **Principle (Josh, foundational — "this is how I want you to think of our game systems"):** in a roguelite,
+  long-run playability comes from the **breadth of viable builds**, so every system is judged by one question —
+  **does it *open* build space or *close* it?** The durable pattern he set on the mana rework: **freeze the core
+  mechanic** (how mana is spent — flat per-second drain that scales with skill level + per-emit costs, no cap) and
+  make the **content/card layer the variety surface**. Cards push *independent* levers that span the archetype axes
+  (mana: regen → SUSTAIN builds, max-pool → BURST builds, hybrids between), and a **UNIQUE / build-defining card
+  class** (rare, run-shaping — e.g. *3× your mana pool*) is the highest-variance lever. The mechanic is the fixed
+  substrate; the cards are where diversity lives — and **both poles must stay viable** (neither sustain nor burst
+  dominates), a balance constraint that lives in the card pool, not the mechanic.
+- **Why:** a pre-1.0 one-file roguelite earns replays from "what can I build this run?" A mechanic with one optimal
+  use makes every run converge and thins the game out. Keep the mechanic fixed but the supply side rich, and new
+  archetypes become **additive content** (new cards) rather than mechanic rewrites — cheap to extend, and the
+  combinatorics compound. (Same shape as the god-skill lesson: depth from *combination*, not more knobs.) A flat
+  per-second drain, notably, is gated by **regen ÷ drain** for uptime (pool only buys burst length) — so "sustain"
+  vs "burst" are two real, independent build paths the card pool can target separately.
+- **How to apply:** (1) Evaluate every proposal through open-vs-close build space; prefer **fixed mechanic + a
+  content layer with *spanning* levers** (cover the axes) over a clever one-true-use mechanic. (2) When a mechanic
+  creates a **hard gate** (here: a maxed skill costs more mana than you have), make sure the **content layer can
+  answer it** — the supply must scale to meet the demand (the mana cards must scale ~10× with the drain), and the
+  gate is **telegraphed + has a relief valve** (toggle/dormant), so it reads as a *build choice*, not a trap. (3)
+  Separate the **demand** surface (the mechanic) from the **supply** surface (the cards) in specs — they phase
+  differently; ship the mechanic, then expand the content. (4) Reserve a UNIQUE card class for the run-defining swings.
+
 ### 2026-06-11 — When productionizing a directive, separate the *given* from your *inferred design philosophy* — and sequence the foundational system before the features that must inherit it
 
 - **Principle:** Two moves from a mana-rework handoff. (1) Josh gave concrete *givens* (benchmark: "leap + ~3s

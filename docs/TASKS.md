@@ -33,6 +33,8 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
   the Boreas unhold is the keystone (lights up Elemental Fusion + co-op synergy + its own Frost kit at once).
   Define the unhold trigger then. (roadmap #5 / *Next*)
 
+- ◻️ ✨ **Mana-build card expansion — size as a proposal** (↳ Josh 2026-06-12 · spec [`specs/mana-economy.md`](specs/mana-economy.md) "mana-build card expansion" follow-on) — the *supply* side of item 7: a card pool rich enough to make SUSTAIN (regen), BURST (max-pool / UNIQUE multipliers like *3× pool*), and hybrid mana builds all viable. Item 7 only rebalances the existing `mpRegenAdd`/`mpBonus` cards ~10×; this expands the archetypes + introduces a **UNIQUE build-defining card class**. Write a roadmap proposal once item 7's mechanic is live (sequence after, don't block Phase 1). Embodies the build-potential north star (PM memory 2026-06-12).
+
 ---
 
 ## 🟧 Engineer / CTO lane
