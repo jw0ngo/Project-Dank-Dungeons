@@ -13138,47 +13138,47 @@ function generateWildernessMap(seed){
 
   // 4c. Paint the forest — FORMATION-based tree scatter (gWildTrees / gDrawTree). The painted sprites ARE
   //     the forest (the old procedural canopies are gone; TILE_TREE now draws as shaded floor). A single
-  //     deterministic pass over the final tile grid: each forest ('T') tile rolls a low chance to *seed a
-  //     formation*, and an anchor is rejected if it sits within TREE_MIN_SEP of an already-placed tree, so
-  //     formations stay distinct clusters rather than an even wash. Three formations, weighted to favour the
-  //     small-tree understory with large trees as occasional landmarks (Josh's rule):
+  //     deterministic pass over the final tile grid: each forest ('T') tile rolls a chance to *seed a
+  //     formation*. Three formations, weighted to favour the small-tree understory with large trees as
+  //     occasional landmarks (Josh's rule):
   //       (1) most common — a cluster of small trees (sometimes a lone small tree),
   //       (2) second      — a single large tree ringed by a small-tree cluster,
   //       (3) rare        — a lone large tree.
   //     Décor draw + trunk collision (gRCTrees) only; both are size-coupled to the drawn scale. A hard
   //     per-set min-separation keeps trees off each other: small trees stay ≥ SMALL_MIN_SEP tiles apart,
   //     large trees ≥ LARGE_MIN_SEP (cross-set has no rule — a small tree may sit at a large tree's foot).
-  //     This loosens the "clusters" into spaced groves (you can't pack tight at a 4-tile floor), so the
-  //     cluster radii below are sized to fit a few small trees at that spacing. Live knobs: formation rate,
-  //     anchor spacing, the per-set separations, the three formation weights, cluster size/radius, and scales.
+  //     Spacing is enforced with O(1) per-set "blocked" grids (each placed tree stamps a disk of its
+  //     separation radius), so a dense forest never triggers an O(n²) distance scan. Forest density is set by
+  //     the formation rate together with the spacing floors (which cap the max packing). Live knobs: formation
+  //     rate, the per-set separations, the three formation weights, cluster size/radius, and per-set scales.
   const treeEntities = [];
-  const TREE_FORMATION_RATE = 0.022;  // chance per forest tile to seed a formation (knob — forest density)
-  const TREE_MIN_SEP = 3;             // min tiles from a formation anchor to any existing tree (grove spacing)
-  const SMALL_MIN_SEP = 4;            // small trees stay ≥4 tiles apart from each other (hard rule)
+  const TREE_FORMATION_RATE = 0.05;   // chance per forest tile to seed a formation (knob — forest density)
+  const SMALL_MIN_SEP = 2;            // small trees stay ≥2 tiles apart from each other (hard rule)
   const LARGE_MIN_SEP = 7;            // large trees stay ≥7 tiles apart from each other (hard rule)
-  const treeMark = new Uint8Array(W*H);  // tiles already carrying a tree (anchor-spacing guard)
-  const smallPos = [], largePos = [];    // placed tile coords per set (per-set min-separation guard)
+  const treeMark   = new Uint8Array(W*H);  // tiles already carrying a tree (no two trees share a tile)
+  const smallBlock = new Uint8Array(W*H);  // tiles too close to a placed SMALL tree (within SMALL_MIN_SEP)
+  const largeBlock = new Uint8Array(W*H);  // tiles too close to a placed LARGE tree (within LARGE_MIN_SEP)
   const smallScale = () => 0.42 + rng()*0.20;   // small-tree draw scale (knob)
   const largeScale = () => 0.80 + rng()*0.30;   // large-tree draw scale (knob)
   const isForestTile = (tx,ty) => tx>=2 && ty>=2 && tx<W-2 && ty<H-2 && tiles[idx(tx,ty)] && !rocks[idx(tx,ty)];
-  // reject if another tree of the SAME set sits within its min-separation (Euclidean, in tiles)
-  const tooClose = (tx,ty,small) => {
-    const list = small?smallPos:largePos, s2 = (small?SMALL_MIN_SEP:LARGE_MIN_SEP)**2;
-    for(const p of list){ const dx=p.tx-tx, dy=p.ty-ty; if(dx*dx+dy*dy < s2) return true; }
-    return false;
+  // stamp a filled disk (tiles within `rad`, exclusive) into a "blocked" grid around (tx,ty)
+  const stampDisk = (grid,tx,ty,rad) => {
+    const r2=rad*rad;
+    for(let dy=-(rad-1); dy<=rad-1; dy++){ const ny=ty+dy; if(ny<0||ny>=H) continue;
+      for(let dx=-(rad-1); dx<=rad-1; dx++){ if(dx*dx+dy*dy>=r2) continue; const nx=tx+dx; if(nx<0||nx>=W) continue; grid[ny*W+nx]=1; } }
   };
   // place one tree of the given set at a forest tile (sub-tile jitter), honouring per-set spacing. Returns success.
   const placeTree = (tx,ty,small) => {
-    if(!isForestTile(tx,ty) || treeMark[idx(tx,ty)] || tooClose(tx,ty,small)) return false;
+    const block = small?smallBlock:largeBlock;
+    if(!isForestTile(tx,ty) || treeMark[idx(tx,ty)] || block[idx(tx,ty)]) return false;
     const wx=(tx+0.5)*T + (rng()-0.5)*T*0.8, wy=(ty+0.5)*T + (rng()-0.5)*T*0.8;
     treeEntities.push({ kind:'tree', small, wx, wy, variant: Math.floor(rng()*9),
                         scale: small ? smallScale() : largeScale() });
-    treeMark[idx(tx,ty)]=1; (small?smallPos:largePos).push({tx,ty}); return true;
+    treeMark[idx(tx,ty)]=1; stampDisk(block, tx, ty, small?SMALL_MIN_SEP:LARGE_MIN_SEP); return true;
   };
-  // scatter up to `n` small trees on forest tiles within `rad` tiles of (cx,cy) — extra tries, since the
-  // 4-tile floor rejects many spots within a small grove
+  // scatter up to `n` small trees on forest tiles within `rad` tiles of (cx,cy)
   const smallCluster = (cx,cy,n,rad) => {
-    for(let i=0, placed=0; i<n*6 && placed<n; i++){
+    for(let i=0, placed=0; i<n*5 && placed<n; i++){
       const a=rng()*Math.PI*2, d=rng()*rad;
       if(placeTree(Math.round(cx+Math.cos(a)*d), Math.round(cy+Math.sin(a)*d), true)) placed++;
     }
@@ -13187,21 +13187,13 @@ function generateWildernessMap(seed){
     for(let x=2; x<W-2; x++){
       if(!tiles[idx(x,y)] || rocks[idx(x,y)]) continue;          // forest ('T') tiles only, never under a rock
       if(rng() >= TREE_FORMATION_RATE) continue;
-      // spacing guard — reject an anchor that's within TREE_MIN_SEP of an already-placed tree
-      let near=false;
-      for(let dy=-TREE_MIN_SEP; dy<=TREE_MIN_SEP && !near; dy++)
-        for(let dx=-TREE_MIN_SEP; dx<=TREE_MIN_SEP; dx++){
-          const nx=x+dx, ny=y+dy;
-          if(nx>=0 && ny>=0 && nx<W && ny<H && treeMark[idx(nx,ny)]){ near=true; break; }
-        }
-      if(near) continue;
       const roll=rng();
       if(roll < 0.60){            // (1) small-tree cluster — occasionally a lone small tree
         if(rng() < 0.25) placeTree(x,y,true);
-        else smallCluster(x,y, 3+Math.floor(rng()*4), 5.5);     // 3-6 small trees, spread to clear the 4-tile floor
+        else smallCluster(x,y, 3+Math.floor(rng()*4), 3.5);     // tight clump of 3-6 small trees
       } else if(roll < 0.90){     // (2) a large tree ringed by a small-tree cluster
         placeTree(x,y,false);
-        smallCluster(x,y, 3+Math.floor(rng()*4), 6);            // ring of 3-6 small trees around the large one
+        smallCluster(x,y, 3+Math.floor(rng()*4), 4);            // ring of 3-6 small trees around the large one
       } else {                    // (3) a lone large tree
         placeTree(x,y,false);
       }
