@@ -8884,7 +8884,11 @@ function gDrawRock(k){
 const TREE_BASE = 300;        // px draw-width at scale 1.0 (visible tree ≈ 0.93× this tall — see TREE_FOOT)
 const TREE_FOOT = 0.93;       // share of drawn height ABOVE the foot line (measured: opaque base sits ~0.93 down)
 const TREE_FADE_ALPHA = 0.3;  // canopy alpha when it's occluding the player (so it never hides them) — knob
-const TREE_FADE_BLEND = 0.24; // height fraction over which opaque base → faded canopy blends on a gradient (knob)
+const TREE_FADE_BLEND = 0.24; // height fraction over which faded canopy → opaque base blends on a gradient (knob)
+// Rule of thumb (applies to future occluding env sprites too): the TOP HALF of the player must always stay
+// visible behind a tree. So a faded tree goes FULLY translucent at/above the player's waist line and ramps to
+// opaque below it. Player rig draws at PLAYER_DRAW_SCALE about the feet (wy + PSCALE/2); ~PLAYER_VIS_H tall.
+const PLAYER_VIS_H = PSCALE*PLAYER_DRAW_SCALE*1.25;  // ≈ player's drawn height in px (knob)
 let _treeFadeCv = null, _treeFadeCx = null;  // reused offscreen for the canopy-fade gradient mask
 function gDrawTree(t){
   const sx=t.wx-camX, sy=t.wy-camY;
@@ -8914,12 +8918,16 @@ function gDrawTree(t){
     cx.setTransform(1,0,0,1,0,0); cx.globalCompositeOperation='source-over'; cx.globalAlpha=1;
     cx.clearRect(0,0,iw,ih); cx.drawImage(rec.img,0,0);
     cx.globalCompositeOperation='destination-in';
-    const baseTop = TREE_FOOT - TREE_BASE_RY_FRAC*2;            // top of the opaque base band (height fraction)
-    const fadeEnd = Math.max(0, baseTop - TREE_FADE_BLEND);     // above here → fully faded
+    // Fully translucent at/above the player's waist (so their top half shows), ramping to opaque below it —
+    // mapped from screen-space into this tree's image-height fraction (0=canopy top, 1=below the foot).
+    const footScreen = (gPlayer.wy - camY) + PSCALE*0.5;        // player's feet on screen (drawAnyPlayer anchor)
+    let waistFrac = ((footScreen - PLAYER_VIS_H*0.5) - dy)/h;   // player waist → tree-image height fraction
+    waistFrac = Math.max(0, Math.min(0.92, waistFrac));
+    const opaqueFrac = Math.min(1, waistFrac + TREE_FADE_BLEND);
     const g=cx.createLinearGradient(0,0,0,ih);
     g.addColorStop(0, `rgba(0,0,0,${t._a})`);
-    g.addColorStop(fadeEnd, `rgba(0,0,0,${t._a})`);
-    g.addColorStop(Math.min(1,baseTop), 'rgba(0,0,0,1)');
+    g.addColorStop(waistFrac, `rgba(0,0,0,${t._a})`);
+    g.addColorStop(opaqueFrac, 'rgba(0,0,0,1)');
     g.addColorStop(1, 'rgba(0,0,0,1)');
     cx.fillStyle=g; cx.fillRect(0,0,iw,ih);
     cx.globalCompositeOperation='source-over';
