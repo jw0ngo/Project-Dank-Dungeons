@@ -207,14 +207,14 @@ If a great idea is out of scope, you can still log it in *Later* with a note —
 5. **Hand approved work off** by updating `docs/ROADMAP.md`: move the item to *Now*, set its
    status to `approved`, re-rank. The engineer pulls from there. When a *Now* item ships, mark it
    **SHIPPED** and surface the next item.
-6. **Commit your own lane — every time you edit it — but never push.** Your docs are yours to
-   *commit* so they don't strand: after editing, `git add` **only your own paths** (`docs/ROADMAP.md`,
-   `docs/TASKS.md` PM lane, `docs/specs/`) and commit with a clear conventional message — no engineer
-   hand-off needed to commit a roadmap change. **Pushing requires Josh's explicit authorization** —
-   a studio-wide rule: **no agent auto-pushes** (see CLAUDE.md). Leave commits local; Josh pushes (or
-   the pm-bot does, but only on his Telegram approval). **Never** `git add -A` / `git add .` (other
-   lanes have uncommitted work you must not sweep in), never force-push, never commit another lane's
-   files. On an `index.lock` error, wait a beat and retry once.
+6. **Commit AND push your own docs-only lane — every time you edit it.** Your docs don't affect the
+   deploy (Pages serves only `index.html`), so they're yours to land: after editing, `git add` **only
+   your own paths** (`docs/ROADMAP.md`, `docs/TASKS.md` PM lane, `docs/specs/`), commit with a clear
+   conventional message, and `git push origin main` on your own — same as the pm-bot does on Josh's
+   approval. **Never** `git add -A` / `git add .` (other lanes have uncommitted work you must not sweep
+   in), never force-push, never commit/push another lane's files. If a change ever touches the build
+   (`index.html` / `assets/`), that push is **deploy-affecting and gated on Josh's authorization** (see
+   CLAUDE.md). On an `index.lock` error, wait a beat and retry once.
 
 The PM's loop (session rhythm):
 
@@ -240,7 +240,7 @@ The PM's loop (session rhythm):
 ## Boundaries
 
 - **You do not write game code or edit `index.html`.** You write proposals, specs, and roadmap. Implementation is the engineer's lane.
-- **You commit your own lane; you do not push.** `docs/ROADMAP.md`, the PM lane of `docs/TASKS.md`, and `docs/specs/` are yours to *commit* directly — no engineer hand-off needed to commit a roadmap change. But **pushing requires Josh's explicit authorization** (studio-wide: no agent auto-pushes — see CLAUDE.md). Stage only your own paths (never `git add -A`), never force-push, never commit another lane's files.
+- **You commit and push your own docs-only lane.** `docs/ROADMAP.md`, the PM lane of `docs/TASKS.md`, and `docs/specs/` don't affect the deploy (Pages serves only `index.html`), so they're yours to commit **and push** to `main` directly — same as the pm-bot does on Josh's approval. Stage only your own paths (never `git add -A`), never force-push, never commit/push another lane's files. A push that touches the build (`index.html`/`assets/`) is deploy-affecting and **gated on Josh's authorization** (see CLAUDE.md).
 - **Hand approved work to the engineer via `docs/ROADMAP.md`** — move the item to *Now*, set status `approved`. The engineer pulls from there and owns *how* (`agents/engineer/engineer.md`).
 - **The engineer owns *how*** (architecture, execution, releases). Hand off with enough spec that the engineer can own the implementation — and no more; don't dictate implementation.
 - **The artist owns the art** (direction, slicing, asset specs). Account for art cost in proposals, but the art itself is the artist's lane.

@@ -51,15 +51,20 @@ Hand-offs between roles:
 
 Switch roles explicitly: **`/cto`**, **`/pm`**, **`/artist`**.
 
-## Git: commit freely, never push (studio-wide)
+## Git: commit freely; pushing deploys, so it's gated (studio-wide)
 
-**No agent auto-pushes — ever.** Each role may `git commit` its **own lane** freely (so work
-doesn't strand in the working tree), staging only its own paths — **never `git add -A`/`.`** (other
-lanes have in-progress work), and never force-pushing or committing another lane's files. But
-**`git push` requires Josh's explicit authorization, every time.** Leave commits local and hand the
-push decision to him. (The one carve-out is the **pm-bot**, which pushes `ROADMAP.md` to `main` only
-on Josh's Telegram approval — that *is* his authorization; the agent itself still never pushes on its
-own.)
+**Pushing `main` redeploys the game via GitHub Pages — so a push that touches the build is a deploy.**
+Each role may `git commit` its **own lane** freely (so work doesn't strand), staging only its own
+paths — **never `git add -A`/`.`** (other lanes have in-progress work), and never force-pushing or
+committing another lane's files. Pushing is split by deploy impact:
+
+- **Deploy-affecting pushes require Josh's explicit authorization, every time** — anything touching
+  `index.html` or `assets/` (the **Engineer** and **Artist** lanes, and releases via `release.ps1`).
+  Commit locally; leave the push/deploy decision to him.
+- **Docs-only pushes are pre-authorized for the PM lane.** `docs/ROADMAP.md`, the PM lane of
+  `docs/TASKS.md`, and `docs/specs/` don't affect the deploy (Pages serves only `index.html`), so the
+  PM may commit **and push** them on its own — same as the **pm-bot** already does on Josh's Telegram
+  approval. Docs-only means docs-only: a push that also carries a build change is deploy-affecting and gated.
 
 ## Recursive learning (the studio habit)
 
