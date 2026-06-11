@@ -92,6 +92,80 @@ HiDPI rule only if drawn to a canvas — here they're plain DOM images, so just 
 - **P4 — arched portrait frame** (row 7): the largest single painted piece.
 - **P5 — bottom status strip** (row 10): optional.
 
+---
+
+## Icon generation batch (Josh → ChatGPT → Artist preps)
+
+Three **3×3 grid sheets** (27 icons) cover the whole draft. Keying **one icon per skill family** (not per
+card) keeps it tractable — the card *name* already disambiguates `Whirlwind: Edge` vs `Reach`. Generate a
+sheet per request; I slice each into `assets/ui/skill-icons/<iconKey>.png` and clean halos.
+
+### Master style prompt (paste once, prepend to each sheet)
+> A 3×3 grid of fantasy **skill-icon symbols** for a dark-fantasy 2D action-RPG. Each cell is a single
+> emblematic symbol, centered, **clean hand-painted 2D game art — not pixel art, not photorealistic**.
+> Confident dark outlines, simple-to-medium cel shading with painterly gradients, a **bright glowing core
+> inside a darker envelope**, subtle rim lighting. **Saturated colored cores — never pure white.** No discs,
+> rings, frames, borders, text, numbers, or labels — just the floating symbol. **Transparent background.**
+> Identical scale, lighting, and finish across all nine cells; even spacing; symbols must not touch. The nine
+> symbols, left-to-right, top-to-bottom, are:
+
+*(If transparent comes out muddy/haloed, regenerate on a **flat white background** instead — dark-outlined
+symbols key cleanly off white, the slicer's default. Keep cores saturated so they survive the key.)*
+
+### Sheet 1 — Passives I  (palette in parens)
+| cell | iconKey | symbol | covers |
+|---|---|---|---|
+| 1 | `dmg` | a blade with a crimson blood-drop *(deep red)* | Bloodlust |
+| 2 | `speed` | a forked lightning bolt *(gold core / electric-blue edge)* | Swiftness |
+| 3 | `cd` | a clockwise recharge-loop arrow *(cyan-white)* | Alacrity |
+| 4 | `hp` | a stylized heart *(warm red)* | Vitality |
+| 5 | `hpregen` | a heart with a rising renewing spark/cross *(red + green-gold)* | Regeneration |
+| 6 | `mp` | a faceted mana crystal *(luminous blue)* | Arcane Vessel |
+| 7 | `mpregen` | a droplet/crystal with rising motes *(serene cyan)* | Clarity |
+| 8 | `xp` | a four-point star over an open book *(gold)* | Wisdom |
+| 9 | `pickup` | a horseshoe magnet with attraction arcs *(teal)* | Magnetism |
+
+### Sheet 2 — Crit + skill families
+| cell | iconKey | symbol | covers |
+|---|---|---|---|
+| 1 | `crit` | an arrow striking a bullseye *(sharp white-gold)* | Precision |
+| 2 | `critdmg` | a jagged impact-burst / claw slash *(violent orange-red)* | Savagery |
+| 3 | `swing` | a longsword crossed with a white crescent slash-arc *(steel + gold)* | Swing: Reach/Tempo/Bite |
+| 4 | `heavy` | a two-handed maul head over a shockwave *(iron + amber)* | Heavy: Quickdraw/Reach/Devastation |
+| 5 | `whirlwind` | a circular whirling-blade vortex *(steel-white spiral)* | Whirlwind: Edge/Reach/Rhythm |
+| 6 | `leap` | a downward impact shockwave-spiral *(energetic violet→blue core)* | Leap: Force/Impact/Bound/Tempo |
+| 7 | `dash` | forward dash motion-streak chevrons *(wind-blue)* | Dash: Recovery/Momentum |
+| 8 | `grit` | a reinforced heater shield, bright rim *(resolute steel)* | Grit: Bulwark/Resolve/Endurance/Instinct |
+| 9 | `blessing` | a radiant flame-and-star sigil *(neutral gold)* | **default fallback** for any unkeyed card |
+
+### Sheet 3 — Cilia / fire (god-skill + patron set)
+| cell | iconKey | symbol | covers |
+|---|---|---|---|
+| 1 | `conflagration` | a blooming fireball burst *(orange-red)* | Conflagration |
+| 2 | `lingering-flame` | a low ember flame over coals *(deep ember)* | Lingering Flame |
+| 3 | `searing-heat` | a white-hot sun-sigil / heat glyph *(gold-white)* | Searing Heat |
+| 4 | `burningbody` | a humanoid silhouette wreathed in a fire aura | Burning Body (god skill) |
+| 5 | `emberfan` | a fanned cone-arc of ember sparks | Emberfan |
+| 6 | `cinderring` | a closed ring of flame | Cinder Ring |
+| 7 | `danceoffire` | a swirling twin-flame crescent *(dance)* | Dance of Fire |
+| 8 | `dragonfire` | a dragon's head breathing prismatic fire | Dragon ascensions (old age) |
+| 9 | `chaosfire` | a many-rayed dark-red chaos flame-crown | Chaos ascensions (new age) |
+
+### Engineer routing — `CARD_ICON_ART` / `iconKey`
+- **Passives** → `iconKey = card.id` (`dmg, speed, cd, hp, hpregen, mp, mpregen, xp, pickup, crit, critdmg`).
+- **Skill cards** → `iconKey = family` by id-prefix: `ww-*`→`whirlwind`, `leap-*`→`leap`, `sw-*`→`swing`,
+  `hv-*`→`heavy`, `dash-*`→`dash`, `grit-*`→`grit`.
+- **Cilia passives** → `cil-conflag`→`conflagration`, `cil-linger`→`lingering-flame`, `cil-searing`→`searing-heat`.
+- **God-skill acquire/rank cards** (`acq-*`/`rk-*`, and `cil-dof`) → map by god-skill: Burning Body→`burningbody`,
+  Emberfan→`emberfan`, Cinder Ring→`cinderring`, Dance of Fire→`danceoffire`; ascension forks → `dragonfire`/`chaosfire`.
+- Anything unmapped → `blessing` (the Sheet-2 fallback). *Per-variant icons (e.g. ref's purple Bound vs blue
+  Impact) are supported — just add more keys + art; one-per-family is the recommended default.*
+
+**Batch order:** Sheets 1–2 first (the always-available core, 18 icons); Sheet 3 with the Cilia content
+(Cilia is the first patron). Other gods get their own Sheet-3-style sets when they land.
+
+---
+
 ## Verification (engineer, after wiring)
 `node --check` the extracted script · grep each new CSS class/asset key · `python dev.py` → trigger a
 level-up (or the §8 Sim harness draft path) → eyeball **both** themes: pledge Cilia (warm) and an unpledged
