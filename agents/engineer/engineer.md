@@ -248,7 +248,7 @@ Maintenance invariants (so the harness doesn't rot as features land):
 ## Boundaries
 
 - **You don't set product direction.** Sanctioned product work lands in **`docs/ROADMAP.md`** under *Now* with status `approved` — treat that as the build queue. Read the **Now** block; skip Next/Later unless planning. **`ROADMAP.md` is PM-owned and product-pure — read it, never edit it** (no status flips, no build-note edits there). Producing and approving those items is a separate **Product Manager** role with its own operating context under `agents/product/product.md` — the engineer doesn't load or maintain that; it just consumes `ROADMAP.md`.
-- **Track execution on `docs/BOARD.md`, not the roadmap.** This is the shared board all three roles write to. Flip your item to `in-progress` **when you start** (not just when done) and `done` on ship; tag your lane `[ENG]`; log/clear hand-offs there. Commit board updates in your own lane (explicit paths, never `git add -A`).
+- **Track execution in your lane of `docs/TASKS.md`, not the roadmap.** This is the shared task tracker (owner-lanes: PM / Engineer / Artist). Flip your task to `🔄 in-progress` **when you start** (not just when done) and `✅ done` on ship; you own the status of tasks in the **Engineer lane** (incl. art-wiring hand-offs filed there by the Artist). Pull from it when there's no higher-priority *Now*. Commit task updates in your own lane (explicit paths, never `git add -A`).
 - **You don't own art.** Art is the Artist's role (`/artist`, `agents/artist/artist.md`); you treat art as a black box that "just renders." The Artist hands off through asset files in `assets/` + a render spec; you wire it in.
 - **You ARE the sole editor of `index.html`** and apply all art wiring from the Artist's render spec. When you get an Artist handoff, the wiring is *yours* to do; treat the art itself as a black box.
 
@@ -262,8 +262,7 @@ Read the **relevant section** of these when a task touches them — don't read t
 
 - `docs/TO_DUST_CTO_DOC.md` — open when touching a specific system; grep its `§` banner for the system, never read it whole.
 - `docs/ROADMAP.md` — open when picking up product work; read the *Now* block (PM's handoff, status `approved`). **Read-only — PM-owned.**
-- `docs/BOARD.md` — open every session: the shared execution board (your live status, blockers, hand-off log). **You write here** (lane `[ENG]`), not the roadmap.
+- `docs/TASKS.md` — open every session: the shared task tracker. Read + own the **Engineer lane** (your live status, deferred findings, art-wiring hand-offs); the deferred-work backlog to pull from when *Now* is clear.
 - `docs/SESSION_JOURNAL.md` — open before debugging; skim the Debugging Heuristics Reference table (older sessions are in `docs/archive/`).
 - `docs/CHANGELOG.md` — open to see what just shipped, and to add a release entry at session end.
 - `docs/WORKING_AGREEMENT.md` — collaboration mechanics (terse requests, screenshots are bug reports, "assess" = diagnose before fixing).
-- `docs/CLEANUP_BACKLOG.md` — parking lot for known-but-deferred findings. Log out-of-scope findings here; pull from it when there's no higher-priority *Now* work.

@@ -38,7 +38,7 @@ The essentials:
   engineer's side after they wire it. No half-measures — all 8 directions clean, or none.
 - **Flag size-coupled changes** (sprite scale ↔ hitbox `radius` ↔ attack-zone radii) in the spec so the
   engineer moves them in one commit.
-- **Keep the habits:** park deferred findings in `docs/CLEANUP_BACKLOG.md`; keep raster art crisp at
+- **Keep the habits:** park deferred findings / to-dos in the Artist lane of `docs/TASKS.md` (file art-wiring hand-offs in the Engineer lane); keep raster art crisp at
   `devicePixelRatio` (high-res source, never bake a photo into an undersized canvas); log pipeline
   lessons in `docs/SESSION_JOURNAL.md`; note the KB each asset file adds.
 

@@ -5,8 +5,8 @@ Crystallized, high-altitude engineering craft for *To Dust*. Newest first. Read 
 session; add to it at session end (studio doctrine — see `studio/STUDIO.md`). One entry = one
 dated, titled lesson: **the principle → why → how to apply.** Quality over volume.
 
-> **Division of homes:** tactical debugging lessons stay in `docs/SESSION_JOURNAL.md`; deferred findings
-> in `docs/CLEANUP_BACKLOG.md`; architecture in `docs/TO_DUST_CTO_DOC.md`. *This* file is the step up
+> **Division of homes:** tactical debugging lessons stay in `docs/SESSION_JOURNAL.md`; deferred findings /
+> to-dos in your Engineer lane of `docs/TASKS.md`; architecture in `docs/TO_DUST_CTO_DOC.md`. *This* file is the step up
 > from all of them — the transferable principles about *how to engineer well in this codebase*.
 
 > Entry template:
@@ -17,6 +17,28 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 > - **How to apply:** <what to do next time>
 
 ---
+
+### 2026-06-11 — Syntax-pass ≠ behavior-pass; when no browser, extract-and-eval the real logic
+
+- **Principle:** Verifying *syntax* is not verifying *behavior*. A change can be syntactically perfect and
+  still inert or wrong — a duplicate `function` shadows the real one, a per-frame system sits outside
+  `gSimUpdate`, a sprite scale moves without its hitbox, **or a parked sibling leaks into a generalized
+  loop**. Always run a *targeted proof it took effect* (grep the new key, `grep -c "function name("`,
+  `await Sim.batch(3)`); "it parses" is step one of three.
+- **Two sharp instances (both real this session):**
+  - *Generalizing a hardcoded system in place* (imbue-paths `'swing'` → any god-skill id): a **parked
+    sibling in the same registry** (`IMBUE_PATHS.cilia.swing`) got swept up when the new code iterated
+    `Object.keys(pool)` — it would have offered "acquire Dance of Fire" as a god skill. Discriminate by a
+    **structural marker of the new capability** (here a `fire` block, `gIsGodSkill = !!tree.fire`), not by
+    name. Park ≠ inert: it still sits in the collection the new loop walks.
+  - *The Sim canary is browser-side* (`document`/Canvas), so with no headless browser you can still
+    unit-test the **real** pure logic: regex-extract the actual `function`/`const` declarations from
+    `index.html` (brace-match to balance), `eval` them in Node behind ~5 stubs (`gPlayer`,
+    `rollCardRarity`), and drive the state machine. This caught the parked-sibling bug that `node --check`
+    + greps both missed. Watch const ordering (TDZ) and that `eval`-scope `const`s don't leak to the driver.
+- **How to apply:** After a non-trivial change, prove it *behaves* — and when the in-engine harness needs a
+  browser you don't have, lift the pure functions out and assert against them directly. It's the
+  "test that would have caught it," achievable in ~40 lines without a framework.
 
 ### 2026-06-10 — De-risk a large spec'd feature: sub-slice on rails, drive it with a dev harness, iterate feel behind named knobs
 
@@ -192,22 +214,6 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   harness as production code: it mutates shared globals (`_SIM`, the clock, hooks), so its mode toggles
   need the same restore discipline — a harness that dirties the default play state is a real player bug.
 
-### 2026-06-09 — A 14 MB scary blob can be a mechanical migration when the consumer is interface-narrow
-
-- **Principle:** Before pricing a daunting refactor (here: de-inlining ~12 MB of base64 art), find the
-  *single consumer* of the thing you're changing. If everything funnels through one
-  interface-narrow chokepoint, the migration is a value-rewrite, not an engine change — cheap and
-  low-risk. The fear scales with the byte count; the risk scales with how many places interpret the data.
-- **Why:** All 179 inline images were consumed in exactly one place — `gInitArt`'s `im.src = ART_MANIFEST[key]`
-  — which is format-agnostic (a path and a `data:` URL are identical to it). A grep confirmed *nothing*
-  introspected the values as base64 (no `atob`, `startsWith('data:')`, or slicing). So a scripted
-  decode-blob→write-file→swap-the-string-literal pass, with zero draw-code changes, did the whole thing.
-- **How to apply:** Scope a big data-shape migration by grepping every read of the data and classifying
-  each: "assigns/passes through" (safe) vs "parses/inspects the shape" (the real work). If the second
-  set is empty, script the swap and verify by *consequence* not syntax — for art, "no 404s" (HEAD every
-  referenced path) + a render screenshot catches what `node --check` can't (a typo'd path 404s and
-  silently falls back to the procedural sprite, looking fine).
-
 ### 2026-06-09 — A new standing entity population is a hidden input to every global census
 
 - **Principle:** When you add a large, *persistent* cohort to a shared collection (`gEnemies`), audit
@@ -225,19 +231,6 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   ("siege/threat-relevant"), not mere liveness. The same audit applies to separation grids, despawn
   sweeps, and any O(n) pass keyed on the shared array.
 
-### 2026-06-09 — The shared board is a live input, not just a handoff log — re-read it mid-build
-
-- **Principle:** In this studio the roadmap/handoff board is edited by other roles *while you build*.
-  Treat a mid-build board change as a design input that can change an implementation decision, not just
-  status noise.
-- **Why:** Mid-Favor-build the PM's board gained "Wolf Camps — the chest is the marquee Favor source,
-  coordinate the chest payout." That turned an inline chest-grant into a reusable `gGrantFavor(amount,
-  wx, wy)` chokepoint so the upcoming camp chests reuse one wallet + one juice path — a better design I'd
-  have missed by treating the board as read-once.
-- **How to apply:** When a system you're touching is named in another role's queued work, build the seam
-  they'll plug into (a shared helper / hook), not just the path in front of you. The repo is the shared
-  brain — cheap to re-read, expensive to re-architect.
-
 ### 2026-06-09 — A repo-wide rename is two categories, not one
 
 - **Principle:** When renaming a thing across the repo, split occurrences into **display text** (rename
@@ -251,14 +244,3 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   Script the rename over an explicit include-set (exclude archives/stale trees), then hand-fix the
   edge token (add a "frozen legacy" comment), and log deferred filename renames to `CLEANUP_BACKLOG.md`
   rather than risking a wide `git mv` mid-task.
-
-### 2026-06-09 — The toolchain will pass a change that does nothing
-
-- **Principle:** Verifying *syntax* is not verifying *behavior*. In this one-file game, a change can be
-  syntactically perfect and still inert — a duplicate `function` shadows the real one, a new per-frame
-  system sits outside `gSimUpdate`, a sprite scale moves without its hitbox.
-- **Why:** `node --check` passes on duplicate declarations; headless/`Sim` runs skip systems left
-  loose in `loop()`; nothing flags a wire that was never connected.
-- **How to apply:** After every change, run a *targeted* proof it took effect (grep the new key, check
-  for duplicate `function name(`, run `await Sim.batch(3)` after notable changes), then load it. Treat
-  "it parses" as step one of three, never the finish line.

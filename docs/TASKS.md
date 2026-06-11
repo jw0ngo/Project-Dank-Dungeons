@@ -1,0 +1,104 @@
+# To Dust — Task Tracker
+
+**The single shared backlog of concrete work, organized by the agent who owns each task.** Every to-do for
+the PM, Engineer/CTO, and Artist lives here with a live status. When there's no higher-priority *Now* work in
+[`ROADMAP.md`](ROADMAP.md), pull from your lane here.
+
+> **TASKS vs ROADMAP — two layers, one axis each.**
+> [`ROADMAP.md`](ROADMAP.md) is the **strategy** layer (PM-owned): *what* features we're building and *why*,
+> priority, sizing, the product gate (`approved`/`shipped`). **This doc is the execution layer:** the concrete
+> to-dos — feature sub-tasks, cross-role hand-offs, deferred cruft/bugs — for every agent. A roadmap feature
+> spawns tasks here. **One fact, one home:** a task links its roadmap item by # / name and never re-states the
+> *why*; the roadmap never tracks execution churn. (For spec-backed work the **spec** is the source of truth;
+> a task tracks only *progress against it*, not build detail.)
+
+## How to use this doc
+
+- **Lanes are by owner** — the agent who does the work **and updates the status.** Read your lane to pick up work.
+- **Any agent may add a task to any lane** (flag work for another). Tag who flagged it: `(↳ from ART, 2026-06-11)`.
+  **Only the owning lane changes a task's status.**
+- **One line per task where possible:** `<status> <type> **Title** — what + grounding (greppable symbol / file).
+  (↳ from <role>, date)`. Meaty spec-less hand-offs keep a collapsible **detail** block — they're their only home.
+- **Status:** ◻️ todo · 🔄 in-progress · ⛔ blocked · ✅ done (move to **Done** at the bottom; git keeps the depth).
+- **Type:** 🔴 bug · 🟡 cruft (dead/misleading code, no behavior impact) · 🟢 polish · ✨ feature-work · 🎨 art · 🔧 chore.
+- **Flip status the moment you act, in the same commit.** **Commit your own lane — never `git add -A`** (the tree
+  carries cross-role WIP; stage explicit paths so a `pm:`/`eng:`/`art:` commit stays single-lane).
+- **Session-open (~30s):** `git status` + `git log --oneline -15` → roadmap *Now* → your lane here → act.
+
+---
+
+## 🟦 PM lane
+
+- ◻️ 🔧 **Re-rank after item 2's first slice lands** — once God Skills proves out in playtest, re-sequence *Next*:
+  the Boreas unhold is the keystone (lights up Elemental Fusion + co-op synergy + its own Frost kit at once).
+  Define the unhold trigger then. (roadmap #5 / *Next*)
+
+---
+
+## 🟧 Engineer / CTO lane
+
+- 🔄 ✨ **Item 2 — God Skills** (roadmap #2 `approved` · spec [`specs/god-skills.md`](specs/god-skills.md)) —
+  phased trigger-swap, 3/5 done:
+  - [x] **Architecture generalization** (2026-06-11) — imbue-path mastery machinery generalized from
+    hardcoded-`'swing'` → keyed by god-skill id; draft cards registry-driven (`gGodSkillCards`); auto-fire
+    dispatcher `gUpdateGodSkills` ticks owned skills from `gUpdatePlayer`. *Load-bearing — Trail/Pyroclasm are
+    now ~a registry entry + one updater branch each.*
+  - [x] **Pyre Waltz** (2026-06-11) — auto-fires from `p._pwTimer` (decoupled from whirlwind), standalone
+    `FR_BASE_DMG`, full tree (1–4 → Form @5 Wildfire Bloom / Flame Vortex → 6–9 → Ascension @10 🐉/🔥). First-acquire guaranteed in draft (tuning knob).
+  - [x] **Migration** (2026-06-11) — whirlwind/dash/heavy revert to plain (3 fire-spawn blocks deleted); shrine
+    pledge sets `gPlayer.patron` (`#g-imbue-overlay` parked); **Dance of Fire retired-and-parked** (`IMBUE_PATHS.cilia.swing` + wave FX kept, unreachable).
+  - [ ] **Trail of Embers** — add `kind:'distance'` registry entry + a movement-accumulator branch in `gUpdateGodSkills` (dash trail spawn already removed; just the updater branch remains).
+  - [ ] **Pyroclasm** — add `kind:'interval+autotarget'` entry + a nearest-cluster helper + updater branch (heavy spawn already removed).
+  - **⚠ Verification gap:** `node --check` + greps + logic trace done; the **in-browser canary** (`await Sim.batch(3)` + manual pledge→acquire→rank→fork→ascension) is **not yet run** — needs a live browser. Run before tagging.
+
+- ◻️ 🎨 **Wire enemy HURT pose sprites** (↳ from ART, 2026-06-10) — 32 cutouts committed, new pose state the engine lacks (`gDrawEnemy` only picks idle/atk).
+  <details><summary>detail</summary>
+
+  Art committed: `assets/char/<id>hurt-<dir>.png` for `goblinhurt`/`archerhurt`/`direwolfhurt`/`alphawolfhurt`
+  (goblins sliced 192, wolves 256, swap at the same per-enemy `gs`).
+  - **Add to `ART_MANIFEST`** (no-separator id, like `goblinatk`): `'char.goblinhurt.<8 dirs>':'assets/char/goblinhurt-<dir>.png'`, same for archer/direwolf/alphawolf (full 32-line snippet was in the Artist handoff; all `assets/char/<id>-<dir>.png`).
+  - **Draw intent:** select `char.<defId>hurt.<dir>` while damage-flash active (`e.hitFlash>0`), priority over idle, same `gs` (no per-pose mult). `_bid` selection ~`index.html:7784`.
+  - **Two flags:** (a) `hitFlash` is ~8 frames — likely too brief; give the swap its own short `_hurtHold` if it flickers (the wolf `biteStrike` lesson). (b) Scale parity: `check-pose-scale.py` vs idle reads goblin ~0.97 / alphawolf ~0.99 (ship at parity) but archer ~0.84 / direwolf ~0.88 (wider hunched recoils) — if the flinch reads oversized, add a per-pose mult in `gDrawEnemy` or ping Artist to re-pad.
+  - **Verify:** `node --check` + grep each key + `python dev.py`, all 8 facings, hard-refresh.
+  </details>
+
+- ◻️ 🎨 **Wire world props — favor coin + treasure chests** (↳ from ART, 2026-06-10) — new world OBJECTS, no draw hook/entity kind yet (systems work, not just a manifest paste). *(De-dups the old "Favor-coin art" hand-off — the art is committed; this is the wiring + the HUD glyph for the placeholder `✦` in `gDrawFavorOrbs`.)*
+  <details><summary>detail</summary>
+
+  Art committed: `assets/world/favorcoin.png`, `chest-closed.png`, `chest-open.png` (transparent cutouts).
+  Coin = a Favor-currency pickup drop; chest = an interactable that swaps closed→open on open.
+  - **Manifest keys:** `'world.favorcoin':…`, `'world.chest-closed':…`, `'world.chest-open':…` (most town props load via a separate pipeline; only `world.shrine` is a manifest entry today — confirm the load path).
+  - **Raster art:** draw at `devicePixelRatio` (`_prepHiDPICanvas`/`<img>`, not an undersized backing store). Size from the longest side (coin 190×192, chests ~224–256 tall); masters scale up.
+  </details>
+
+- ◻️ 🟢 **Unwired art inventory — cobble tiles + Sanctum props** (audit 2026-06-10) — prepped art committed to `assets/`, zero refs in `index.html`.
+  <details><summary>detail</summary>
+
+  - **Cobble tiles** (`assets/tile/cobble-0..3`, `2da0b0a`) — ⏸️ deferred (Josh 2026-06-10). Cobble is *opaque ground*; town (HUB_MAP) ground is all `TILE_FLOOR` — same id as the dungeon's dark floor. Wiring = either a Sanctum-only `inTown` branch in `gTileArt` (cobble in town, dark stone in dungeon) **or** replace `floor` globally. Pick up by deciding that fork.
+  - **Sanctum set-piece props** (`assets/world/`: well, fountain, barrel, banner-large/small, dungeon-gate, market-stall, target-stand, todust-sign, torch-post, training-dummy, weapon-rack — 12, `2da0b0a`) — **per-prop work**: each needs a draw hook (town props load via a separate pipeline, not the manifest). Some map to existing town objects (training-dummy, target-stand, weapon-rack, torch-post, well, fountain) — confirm the object + draw site before wiring; decide procedural-replace vs new object. Raster → `devicePixelRatio`. Best sized as its own focused session; *which* props matter is partly an art-direction/PM call.
+  - **Lesson:** always check a tile cut's alpha before assuming the tile-art path — opaque → `gTileArt` (blit-and-return); transparent cutout → an overlay path that draws ground first (`gTileProp`). (Rock/spike tiles already wired this way, `c7ddc67`.)
+  </details>
+
+- ⛔ 🟢 **Custom sprite invisible to self in singleplayer** (design-gated) — your custom sprite broadcasts to other players (live in MP via `df_player_sprite` + `ccPixelsToCanvas`) but your own local render + char/inventory previews still draw the knight. Cosmetic, not a bug. **Blocked on a PM/CD design call:** should the local hero reflect the custom sprite (route local draw + previews through `ccPixelsToCanvas(...)`, knight as fallback), or is the knight canonical (demote the creator to MP-cosmetic-only / cut it)? Not an engineer drive-by.
+
+- ◻️ 🔧 **CHANGELOG housekeeping** (↳ from PM, 2026-06-10) — (a) `docs/archive/changelog-dungeon-forge.md` (pre-rename v0.9–v0.11 era) is still **untracked** — fold into a `docs:` commit; pointer already left in `CHANGELOG.md`. (b) Fold the shipped items (0, 0b, 0c, 1, 3, 4) into the next tag. Going forward, sweep the changelog by era/half-year, not per release.
+
+---
+
+## 🟨 Artist lane
+
+- ◻️ 🟢 **Eye-glow difficulty tell — restyle spec** (↳ from PM, 2026-06-10) — enemy eyes glow yellow (mid) → red (top), additive draw-layer tint, **no new sprites**. Flag exists (`e.threatTier` 0/1/2, stamped in `_wildScaleEnt`, tiers at nights 4/8) and a **placeholder two-dot+halo render is already live** in `gDrawThreatGlow` (contract comment inline). Produce the final look as a spec handed back to the engineer (sole `index.html` editor). Polish — placeholder is shippable.
+
+---
+
+## ✅ Done (recent track record — prune to git history as it grows)
+
+- **2026-06-11 — Item 0 Player animation pass closed** (walk · dash · heavy windup all wired + playtested OK).
+- **2026-06-11 — Player WALK cutout halo + boot loss RESOLVED** (Artist) — defringe-v2 (full antialiased ramp to `α<245`) + `--shadow-bg`/`--shadow-lum 13 --shadow-band 0.90` boot-protected re-cut of E/NE/SE (+mirrors). All 8 dirs full-ring fringe ~12–17 (idle 18–22), boots intact, registration unchanged → no `index.html`/manifest change. Lessons crystallized in `agents/artist/memory.md`. *(Verify in-game with a hard-refresh; reopen here if a halo persists.)*
+- **2026-06-10 — Rock + spike-fence tiles wired** (`gTileProp` overlay path — cutouts, not opaque ground).
+- **2026-06-10 — Wolf camps stream packs by player proximity** (no more ~160 always-live wolves; per-camp clear/respawn survives unload).
+- **2026-06-09 — `slice-turnaround.py` path-native** (writes `assets/char/<id>-<dir>.png` + path snippet; base64 step removed).
+- **2026-06-09 — Wolf lunge-bite pose reads** (`_biteHold` 24f draw-only dwell).
+- **2026-06-09 — Inert STR/DEX/INT scaling shims removed**; `wildDmgMult` removed; %damage flows uniformly through `wildBuffs.damagePct`.
+- **2026-06-09 — Skill tooltips show live buffed damage**; bow kill drops an XP orb; vestigial sword-charge player state removed (wire-compat held).
+- **2026-06-09 — `DUNGEON_FORGE_CTO_DOC.md` → `TO_DUST_CTO_DOC.md`** (+ 14 referencing files; `DF1` seed prefix & localStorage key frozen for compat).

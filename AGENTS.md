@@ -43,7 +43,7 @@ Switch roles explicitly: **`/cto`**, **`/pm`**, **`/artist`**.
 
 From Dust compounds through documentation — a lesson not written down is re-paid-for next session.
 **During** a session, capture specifics where they belong (debugging → `docs/SESSION_JOURNAL.md`;
-deferred findings → `docs/CLEANUP_BACKLOG.md`; architecture → the relevant `docs/` reference). **At the
+deferred findings / to-dos → your lane in `docs/TASKS.md`; architecture → the relevant `docs/` reference). **At the
 end** of a substantive session, *crystallize* the highest-level, transferable lessons into your role's
 memory (engineer: `agents/engineer/memory.md`; PM: `agents/product/memory.md`; artist:
 `agents/artist/memory.md`). Read that file first when you start; compact it yourself when it grows past
@@ -55,7 +55,8 @@ The `docs/` tree is the authoritative project reference. Don't read these whole 
 relevant section when a task touches it:
 - The three role operating models are **folded into each agent's file** under `agents/<role>/` (no longer in `docs/`).
 - `TO_DUST_CTO_DOC.md` — system-by-system architecture (grep its `§` banner for the system you're touching).
-- `ROADMAP.md` — the build queue (read the *Now* block). `CHANGELOG.md` — what just shipped.
+- `ROADMAP.md` — product strategy: *what/why* + priority (read the *Now* block). `TASKS.md` — the shared
+  execution tracker: concrete to-dos per agent (read your lane). `CHANGELOG.md` — what just shipped.
 - `SESSION_JOURNAL.md` — recent sessions + the Debugging Heuristics table (older sessions in `docs/archive/`).
-- `CLEANUP_BACKLOG.md` · `WORKING_AGREEMENT.md` · `specs/` (per-feature specs) · `learnings/` (crystallized lessons).
+- `WORKING_AGREEMENT.md` · `specs/` (per-feature specs) · `learnings/` (crystallized lessons).
 - `Art_Designer_Agent.md` — the Artist's per-asset reference; open only when generating a specific asset.

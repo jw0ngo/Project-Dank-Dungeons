@@ -19,12 +19,13 @@
 - **How to apply:** (a) the moment a task is "report what's outstanding," reconcile each candidate against
   `index.html` (one grep per manifest key) before listing it — wiring presence is the truth, the doc is a
   hint (sibling to the engineer's "diagnose ownership before touching" reflex). (b) When you find a doc
-  stale, fix only the docs the Artist *owns* (this memory, the CLEANUP_BACKLOG art section, your
-  `docs/BOARD.md` lane) — **`docs/ROADMAP.md` is PM-owned and read-only**; flag a stale roadmap status to
-  the PM (log it on `docs/BOARD.md`, don't edit the roadmap). Don't let a known-false note re-mislead the
-  next session. (c) Source of truth for *outstanding* work is shifting to `docs/BOARD.md` (the shared
-  execution board, all three lanes); treat this memory + CLEANUP_BACKLOG as the artist's *live* index but
-  re-verify every claim against `index.html` + the board, never as settled fact.
+  stale, fix only the docs the Artist *owns* (this memory, your **Artist lane in `docs/TASKS.md`**) —
+  **`docs/ROADMAP.md` is PM-owned and read-only**; flag a stale roadmap status to the PM (log it in
+  `docs/TASKS.md`, don't edit the roadmap). Don't let a known-false note re-mislead the next session.
+  (c) Source of truth for *outstanding* work is **`docs/TASKS.md`** (the shared task tracker, owner-lanes
+  PM/Engineer/Artist — supersedes the old BOARD.md + CLEANUP_BACKLOG.md, merged 2026-06-11); treat this
+  memory as the artist's *live* index but re-verify every claim against `index.html` + the tracker, never
+  as settled fact.
 
 ### 2026-06-10 — Particle-system FX: hundreds of sliced sprites compose one skill, and a *scaling* effect scales by COUNT, not by upscale
 

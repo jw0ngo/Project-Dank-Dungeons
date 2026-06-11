@@ -426,11 +426,12 @@ two **product** lifecycle states the PM owns: `approved` (greenlit — engineer 
 to changelog, delete here). The other lifecycle states are PM-only too: `proposed` (PM idea, not yet seen by
 Josh) · `held` / `cut`.
 
-**Execution state and hand-offs live on the board, not here.** `in-progress`, blocked, sub-task progress, and
-the cross-role hand-off log are tracked in **[`BOARD.md`](BOARD.md)** — the shared doc all three roles write to.
-This keeps the roadmap a clean statement of *intent* that other roles read but don't edit. **One fact, one
-home:** the board references a roadmap item by # / name and never re-states its *why*; the roadmap never tracks
-execution churn. (The git-lane discipline, session-open ritual, and drift rules also live on the board.)
+**Execution to-dos and hand-offs live in the task tracker, not here.** The concrete work — feature sub-tasks
+(`in-progress`/`done`), cross-role hand-offs, deferred cruft/bugs — is tracked in **[`TASKS.md`](TASKS.md)**, the
+shared tracker all three roles write to (owner-lanes: PM / Engineer / Artist). This keeps the roadmap a clean
+statement of *intent* that other roles read but don't edit. **One fact, one home:** a task references its
+roadmap item by # / name and never re-states its *why*; the roadmap never tracks execution churn. (The git-lane
+discipline, session-open ritual, and drift rules live in the tracker.)
 
 **Source-of-truth rule (avoid drift):** for any item backed by a spec (`docs/specs/*.md`), the **spec is the
 source of truth** and the roadmap item is a thin **summary + pointer** — plain-English what/why + a link. Keep
@@ -438,6 +439,6 @@ build detail (line-refs, balance, phasing internals) in the spec. Items with no 
 detail inline in the 🔧 Build notes.
 
 _PM upkeep: keep this current. Every item carries pillar + plain-English what/why + size. On approval, move to
-**Now** and flip to `approved`; on ship, delete and let the changelog carry the record. Execution status →
-[`BOARD.md`](BOARD.md)._
+**Now** and flip to `approved`; on ship, delete and let the changelog carry the record. Execution to-dos →
+[`TASKS.md`](TASKS.md)._
 </details>

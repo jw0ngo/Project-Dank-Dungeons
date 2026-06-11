@@ -32,20 +32,22 @@ for your full context (architecture, the operating model, the verification loop,
 before non-trivial work.
 
 Two shared docs carry cross-role state (both reset-proof — the repo is the shared brain):
-- **`docs/ROADMAP.md` — PM-owned, product-pure.** *What/why*, priority, sizing, and the product gate
-  (`approved` / `shipped`). Other roles **read** it; only the PM **writes** it.
-- **`docs/BOARD.md` — the shared execution board.** *Who's building what, right now* — `in-progress`,
-  blockers, sub-task progress, and the cross-role hand-off log. **All three roles write here**, tagging their
-  lane (`[PM]`/`[ART]`/`[ENG]`). Flip your status the moment you act. One fact, one home: the board links a
-  roadmap item by #/name and never re-states its *why*.
+- **`docs/ROADMAP.md` — PM-owned, product-pure (strategy).** *What/why*, priority, sizing, and the product
+  gate (`approved` / `shipped`). Other roles **read** it; only the PM **writes** it.
+- **`docs/TASKS.md` — the shared task tracker (execution).** Every concrete to-do for every agent, in
+  **owner-lanes** (PM / Engineer / Artist), with a live status. Any agent may add a task to any lane (flag work
+  for another); **only the owning lane changes its task's status.** This is also the deferred-work backlog —
+  pull from your lane when there's no higher-priority *Now*. One fact, one home: a task links its roadmap item
+  by #/name and never re-states its *why*.
 
 Hand-offs between roles:
-- The **PM** hands approved work off through `docs/ROADMAP.md` (*Now*, status `approved`); execution then
-  tracks on `docs/BOARD.md`. The engineer builds from *Now* and flips board status as it goes.
+- The **PM** hands approved work off through `docs/ROADMAP.md` (*Now*, status `approved`); the concrete
+  execution to-dos then live in the Engineer lane of `docs/TASKS.md`, which the engineer flips as it goes.
 - The **Artist** hands off through asset files in `assets/` + a render spec (a paste-ready `ART_MANIFEST`
-  snippet + any draw/scale intent), logging the hand-off on `docs/BOARD.md`. **The engineer is the sole editor
-  of `index.html`** and applies all art wiring from that spec — the Artist never edits `index.html`. So when
-  you get an Artist handoff, the wiring is *yours* to do; treat the art itself as a black box that "just renders."
+  snippet + any draw/scale intent), filing the hand-off as a task in the **Engineer lane** of `docs/TASKS.md`.
+  **The engineer is the sole editor of `index.html`** and applies all art wiring from that spec — the Artist
+  never edits `index.html`. So when you get an Artist handoff, the wiring is *yours* to do; treat the art
+  itself as a black box that "just renders."
 
 Switch roles explicitly: **`/cto`**, **`/pm`**, **`/artist`**.
 
@@ -53,7 +55,7 @@ Switch roles explicitly: **`/cto`**, **`/pm`**, **`/artist`**.
 
 From Dust compounds through documentation — a lesson not written down is re-paid-for next session.
 **During** a session, capture specifics where they belong (debugging → `docs/SESSION_JOURNAL.md`;
-deferred findings → `docs/CLEANUP_BACKLOG.md`; architecture → the relevant `docs/` reference). **At the
+deferred findings / to-dos → your lane in `docs/TASKS.md`; architecture → the relevant `docs/` reference). **At the
 end** of a substantive session, *crystallize*: step up an altitude and add the highest-level,
 transferable lessons to your role's memory (engineer: `agents/engineer/memory.md`; PM:
 `agents/product/memory.md`; artist: `agents/artist/memory.md`; CD: `studio/creative-director/LEARNINGS.md`).
@@ -67,7 +69,8 @@ The `docs/` tree is the authoritative project reference. Don't read these whole 
 relevant section when a task touches it:
 - The three role operating models are **folded into each agent's file** under `agents/<role>/` (no longer in `docs/`).
 - `TO_DUST_CTO_DOC.md` — system-by-system architecture (grep its `§` banner for the system you're touching).
-- `ROADMAP.md` — the build queue (read the *Now* block). `CHANGELOG.md` — what just shipped.
+- `ROADMAP.md` — product strategy: *what/why* + priority (read the *Now* block). `TASKS.md` — the shared
+  execution tracker: concrete to-dos per agent (read your lane). `CHANGELOG.md` — what just shipped.
 - `SESSION_JOURNAL.md` — recent sessions + the Debugging Heuristics table (older sessions in `docs/archive/`).
-- `CLEANUP_BACKLOG.md` · `WORKING_AGREEMENT.md` · `specs/` (per-feature specs) · `learnings/` (crystallized lessons).
+- `WORKING_AGREEMENT.md` · `specs/` (per-feature specs) · `learnings/` (crystallized lessons).
 - `Art_Designer_Agent.md` — the Artist's per-asset reference; open only when generating a specific asset.
