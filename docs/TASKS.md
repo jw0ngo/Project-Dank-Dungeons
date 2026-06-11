@@ -37,6 +37,37 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 ## 🟧 Engineer / CTO lane
 
+- ◻️ 🎨 **Wire world TREE props — 9-variant scatter set** (↳ from ART, 2026-06-11) — 9 transparent tree
+  cutouts committed to `assets/world/`; new world prop, no draw hook/placement yet (systems work, not just
+  a manifest paste).
+  <details><summary>detail (render spec)</summary>
+
+  Art committed: `assets/world/tree-0..8.png` (9 interchangeable tree variants — oaks, a willow (#3),
+  banyans; each a transparent cutout incl. its own rocky/grass **base**). Sliced from `art/world/trees.png`
+  (3×3, `--bg white --frame cell --global`, source 1254² → 418px cells → resampled to **256×256**), magenta
+  + over-green QA CLEAN. ~96–119 KB each (~961 KB total).
+  - **Manifest keys** (paste as-is): `'world.tree.0':'assets/world/tree-0.png'` … `world.tree.8` (the new
+    **`world` keyspace** — a world-prop *variant set*, analogous to `tile.grass.<n>` but NOT a ground tile;
+    `gInitArt` loads them like any manifest path).
+  - **NOT a tile — overlay/world-prop path.** A tree is a tall transparent cutout drawn *over* ground, not a
+    `gTileArt` ground blit. Ground draws first; the tree composites on top (same family as the rock/spike
+    `gTileProp` overlay, but trees overflow a tile cell — they're scatter props, not cell-bound).
+  - **Placement (your call — the fork):** most natural is a **wilderness scatter** (Goblin Forest) — random
+    positions + **random variant** of the 9 (reuse the `gWallVar`-style table or a position hash `% 9`), drawn
+    feet-anchored. Alternative: discrete placed obstacles. Whether a tree **collides** (blocks movement at the
+    trunk base, ~not the full canopy bbox) is a gameplay/systems call — if it's décor, draw-only; if an
+    obstacle, add a small base-radius hitbox. **Size-coupling:** any collision radius ↔ draw scale move together.
+  - **Anchor:** cutouts are **cell-framed**, so within each 256² canvas the trunk base sits at the lower-middle
+    (transparent padding above canopy + below base), and **relative scale is preserved** (some trees are
+    naturally bigger — intended variety). Feet-anchor by the **bottom of the opaque pixels** (the base), not the
+    canvas bottom. Suggested draw size: tune in-game; start ~96–160 px tall over the wilderness grass.
+  - **Raster → HiDPI:** draw at `devicePixelRatio` (`_prepHiDPICanvas`/`<img>`, not an undersized backing
+    store). Source held to **256 px** for payload; that covers ~128 px render @2× DPR. If trees need to render
+    larger/crisper, ping Artist for a **`--size 0`** re-slice (418 px native, ~290 KB each).
+  - **Verify:** `node --check` + grep each `world.tree.<n>` key + `python dev.py` → trees scatter over the
+    wilderness, variants mix, feet sit on the ground, canopies composite cleanly over grass (no white halo).
+  </details>
+
 - ◻️ ✨ **Heavy charge locks out the normal swing** (↳ from PM playtest, 2026-06-11 · roadmap #6 `approved`) —
   while the heavy attack is charging (`p.heavyWindingUp === true`, `index.html:3327`) the player can still fire a
   normal swing; gate it out. Suppress the swing trigger (LMB→`gDoSwingAt`, dispatch `~index.html:3517`) whenever

@@ -14,11 +14,14 @@ Cutouts land in assets/<keyspace>/ as <id>-<n>.png and the snippet emits
 '<keyspace>.<id>.<n>' keys. --keyspace tile (default) is the auto-wiring
 keyspace (gInitArt counts tile.* into gTileVarCount; gTileArt picks the
 variant from the gWallVar random table) — for a NEW tile type the engineer
-adds one TILE_* → '<id>' mapping line in gTileArt. --keyspace fx is for
+adds one TILE_* -> '<id>' mapping line in gTileArt. --keyspace fx is for
 effect-sprite variant sets (explosions etc.); the engineer adds the draw
 hook. FX sheets usually also want --keep-specks (detached embers/debris are
 art, not noise) and --frame square (FX draw centred at a point, not as a
-tile cell).
+tile cell). --keyspace world is for a world-prop variant set (trees, bushes)
+— a tall transparent cutout placed/scattered & feet-anchored OVER ground (not
+a ground tile); files land in assets/world, keys 'world.<id>.<n>', and the
+engineer draws it via the world-prop/overlay path, not gTileArt.
 
 Background removal + the bg-leak QA metric are imported from
 slice-turnaround.py — that file stays the single source of truth for every
@@ -122,10 +125,13 @@ def main():
                     help='tighten the alpha mask N px to kill the edge halo')
     ap.add_argument('--sever', type=int, default=0,
                     help='HARD case: variant detail is the same colour as the bg (see slice-turnaround.py)')
-    ap.add_argument('--keyspace', choices=['tile', 'fx'], default='tile',
+    ap.add_argument('--keyspace', choices=['tile', 'fx', 'world'], default='tile',
                     help="manifest keyspace + default assets dir: 'tile' -> 'tile.<id>.<n>' in "
                          "assets/tile (auto-wired via gTileArt); 'fx' -> 'fx.<id>.<n>' in assets/fx "
-                         '(effect sprites — the engineer adds the draw hook)')
+                         "(effect sprites — the engineer adds the draw hook); 'world' -> "
+                         "'world.<id>.<n>' in assets/world (a world-prop VARIANT set — trees, bushes; "
+                         'a tall transparent cutout placed/scattered & feet-anchored over ground, NOT a '
+                         'ground tile, so the engineer draws it via the world-prop/overlay path, not gTileArt)')
     ap.add_argument('--keep-specks', action='store_true',
                     help="re-add small detached components cut_cell's speck filter dropped (>=40 px of "
                          'clearly non-bg core). FX sheets need this: detached flying embers/debris ARE '
