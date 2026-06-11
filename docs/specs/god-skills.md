@@ -94,6 +94,38 @@ safe zone) and burns enemies. There is **no generic lifesteal** — all healing 
 own dragonfire ground, so every 🐉 leaf must lay a dragonfire patch the player can occupy. This is unchanged
 by the pivot and **reused as-is.**
 
+> **🐉×🔥 Dragon–Chaos synergy — the cross-age meta-build (big-picture design, Josh 2026-06-12).**
+> Dragonfire and chaosfire are **opposite signs of the same owner-resource**: chaosfire ground *burns* the
+> player, dragonfire ground *heals* the player. **They cancel.** A player who builds toward **both ages across
+> their skills** — a 🔥 chaos ascension on one skill (the damage zone) + a 🐉 dragon ascension on another (the
+> heal carpet) — can **overlay the grounds** to stand inside a **massive, high-damage chaosfire field taking no
+> net self-damage**, because the dragonfire heal offsets the chaos self-burn tick-for-tick. Enemies in the zone
+> still eat the full chaosfire damage (dragonfire heals only the *owner*); the player has bought their way back
+> into their own devastation.
+> - **Why this matters (product):** it promotes the rank-10 fork from a *per-skill* either/or sidegrade into a
+>   **cross-skill build axis** — "go pure (all chaos = glass-cannon AOE, or all dragon = safe-but-lower-ceiling)
+>   vs. **go hybrid** (chaos for the kill-zone, dragon to live in it)." That's real build-craft depth with zero
+>   new content — it falls out of the two grounds already shipped. Serves **build-craft depth** (the heart).
+> - **Marquee co-op combo (pillar 4):** the two grounds needn't come from one player. **One player runs a chaos
+>   ascension, the ally runs a dragon ascension** → the dragon player's heal-carpet lets the chaos player live in
+>   their own firestorm. Two builds, one combo neither could solo — exactly the co-op bar. (Works same-element in
+>   co-op now; generalizes once a 2nd god/element lands.)
+> - **Balance — the lever to make "cancel" true (FLAG, not yet tuned):** at the shipped numbers they do **not**
+>   cancel — dragonfire heals **0.18×/tick**, chaosfire burns **0.35×/tick**, so a single dragon ground only
+>   offsets ~half a single chaos ground. That's arguably *correct* (full negation should require **committing**
+>   to the hybrid — stacking multiple dragon sources, or a dragon-heal rank investment, to fully fund the chaos
+>   cost), but the exact target is a design call: should **one** dragon ground fully cancel **one** chaos ground
+>   (raise dragon heal → ~0.35×, clean 1:1), or should negation **scale with investment** (keep heal < burn so
+>   you must build deep into dragon to zero it out)? **PM recommendation: investment-scaled** (heal stays below
+>   burn) — it keeps the hybrid a *real build commitment* with a cost, not a free default that strictly dominates
+>   pure chaos. Needs Josh's call before the dragon-ground heal coefficient is tuned.
+> - **Engineering note (likely near-free):** both grounds are independent substance-keyed fields that each tick
+>   their owner-effect on whoever stands in them, so **overlapping fields should already sum** (heal tick + burn
+>   tick both apply) — confirm both owner-effects fire simultaneously in an overlap (no "one field per tile"
+>   short-circuit), then it's purely a **coefficient-tuning** job, not new systems. Interaction with the footprint
+>   rule: the rule guarantees a *default* safe pocket for the solo-chaos player; this synergy is the *opt-in* way
+>   to safely occupy the **whole** chaos field (not just the center) by funding it with dragonfire.
+
 ---
 
 ## The launch loadout — Cilia's three God Skills
@@ -293,6 +325,10 @@ The pivot removes the *active-skill* fire imbues from the live build. Engineer o
 - **The two-age fork is sustain-vs-burst, not a power tier.** 🐉 Dragon (heal) deals **lower** damage than 🔥
   Chaos — you trade ceiling for survivability; never "heals AND hits hardest." 🔥 Chaos (self-burn) is power +
   cost — the self-burn **must be a genuine threat**, or the cost is fake and it's strictly better than Dragon.
+  **Third path — the 🐉×🔥 hybrid** (mix ages across skills to cancel chaos self-burn with dragonfire heal): a
+  *real build commitment*, not a free default — tune so funding the chaos cost via dragonfire costs you the
+  investment (see the **Dragon–Chaos synergy** block under *The two-age peak*). Pure-chaos and pure-dragon must
+  stay viable against it.
 - **Floor/cap every numeric rank** (cadence floors especially — an uncapped `FR_INTERVAL`/`FP_INTERVAL` →0 is a
   perf/spam hazard). Mirror `SKILL_STAT_FLOOR`.
 - **Auto-fire cadence is the master DPS lever** — with no active-input gating, tune intervals so three
