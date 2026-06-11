@@ -27,6 +27,15 @@ Background removal + the bg-leak QA metric are imported from
 slice-turnaround.py — that file stays the single source of truth for every
 cutout edge case (--global pockets, --erode halos, --sever same-colour detail).
 
+--bleed N handles a variant drawn LARGER than its cell (a tall tree canopy
+overflowing UP into the cell above), which the rigid per-cell crop otherwise
+slices flat at the border: it cuts on a window expanded N px past each cell and
+keeps only the component owning the cell (keep_owner, also imported), dropping
+the neighbour pulled into the window. It implies a bottom-anchored square frame
+(--anchor bottom) so every recovered variant shares one foot baseline at
+fraction (1 - --foot-pad) — required for a feet-anchored world prop (tree/bush)
+whose engine draw uses a single foot fraction across all variants.
+
 Usage:
   python tools/slice-variants.py "art/tiles/rocks.png" rock --bg white
 """
@@ -37,7 +46,7 @@ _spec = importlib.util.spec_from_file_location(
     'slice_turnaround', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'slice-turnaround.py'))
 _st = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_st)
-cut_cell, bg_leak_px, is_bg = _st.cut_cell, _st.bg_leak_px, _st.is_bg
+cut_cell, bg_leak_px, is_bg, keep_owner = _st.cut_cell, _st.bg_leak_px, _st.is_bg, _st.keep_owner
 
 CELLS = [(r, c) for r in range(3) for c in range(3)]   # all 9, reading order
 
@@ -136,6 +145,23 @@ def main():
                     help="re-add small detached components cut_cell's speck filter dropped (>=40 px of "
                          'clearly non-bg core). FX sheets need this: detached flying embers/debris ARE '
                          'the art, not sheet noise.')
+    ap.add_argument('--bleed', type=int, default=0,
+                    help='variant drawn LARGER than its cell (a tall tree canopy overflowing UP into '
+                         'the cell above) gets sliced flat at the cell border. Cut on a window expanded '
+                         'N px past each cell, then keep only the component that owns the cell (neighbours '
+                         'pulled in are discarded). Set N a bit above the worst overflow. Forces a '
+                         'bottom-anchored square frame (see --anchor) so every recovered variant shares '
+                         'one foot baseline. Figures must not touch (clean bg gap) for owner-selection.')
+    ap.add_argument('--anchor', choices=['center', 'bottom'], default='center',
+                    help="how 'square'/bleed framing places each variant in the shared canvas: 'center' "
+                         '(default) for free-floating props; "bottom" puts every variant on a common foot '
+                         'baseline a fixed pad above the canvas bottom — required for a feet-anchored world '
+                         'prop (tree/bush) so the engine\'s foot fraction is identical across all variants. '
+                         '--bleed implies bottom.')
+    ap.add_argument('--foot-pad', type=float, default=0.07,
+                    help='for bottom-anchored framing: transparent margin below the feet as a fraction of '
+                         'the canvas side. The foot then sits at fraction (1 - foot_pad) of the canvas '
+                         '(0.07 -> 0.93, matching the trees\' TREE_FOOT). Report this to the engineer.')
     ap.add_argument('--assets-dir', default=None,
                     help='where the cutout PNGs are written (default assets/<keyspace>; git-tracked, '
                          'so a bad slice is recoverable via git checkout)')
@@ -154,15 +180,28 @@ def main():
     figs = {}
     worst_leak = 0
     for n, (r, c) in enumerate(CELLS):
-        cell = sheet.crop((c * cw, r * ch, (c + 1) * cw, (r + 1) * ch))
-        # --keep-specks needs cell-aligned coordinates, so cut uncropped and tight-crop after.
-        fig = cut_cell(cell, args.bg, args.thresh, args.feather, args.glob, args.erode, args.sever,
-                       crop=(args.frame == 'square' and not args.keep_specks))
+        if args.bleed > 0:
+            # Variant overflows its cell (tall tree canopy reaching up into the cell above): cut on a
+            # window expanded past the cell so the figure stays whole, then keep only the component that
+            # owns this cell — the upper tree's base pulled into the window is discarded by keep_owner.
+            x0, y0 = max(0, c * cw - args.bleed), max(0, r * ch - args.bleed)
+            x1, y1 = min(W, (c + 1) * cw + args.bleed), min(H, (r + 1) * ch + args.bleed)
+            cell = sheet.crop((x0, y0, x1, y1))
+            win = cut_cell(cell, args.bg, args.thresh, args.feather, args.glob, args.erode, args.sever,
+                           crop=False)
+            fig, ncomp = (None, 0) if win is None else keep_owner(
+                win, (c * cw - x0, r * ch - y0, (c + 1) * cw - x0, (r + 1) * ch - y0))
+        else:
+            cell = sheet.crop((c * cw, r * ch, (c + 1) * cw, (r + 1) * ch))
+            # --keep-specks needs cell-aligned coordinates, so cut uncropped and tight-crop after.
+            fig = cut_cell(cell, args.bg, args.thresh, args.feather, args.glob, args.erode, args.sever,
+                           crop=(args.frame == 'square' and not args.keep_specks))
+            ncomp = 1
         if fig is None:
             print(f"  WARN: variant {n} (r{r}c{c}) produced no figure")
             continue
         specks = 0
-        if args.keep_specks:
+        if args.keep_specks and args.bleed == 0:
             fig, specks = recover_specks(cell.convert('RGB'), fig, args.bg, args.thresh, args.feather)
             if args.frame == 'square':
                 bb = fig.split()[3].getbbox()
@@ -172,15 +211,22 @@ def main():
         worst_leak = max(worst_leak, leak)
         flag = '' if args.sever else ('  <-- WARN bg leak (try --erode / --global / --thresh / --sever)'
                                       if leak > max(60, fig.width * fig.height * 0.003) else '')
-        speck_note = f'  specks+{specks}' if args.keep_specks else ''
-        print(f"  {n}: r{r}c{c} bbox {fig.size}  bg-leak {leak}px{speck_note}{flag}")
+        speck_note = f'  specks+{specks}' if (args.keep_specks and args.bleed == 0) else ''
+        comp_note = f'  comps={ncomp}' if args.bleed > 0 else ''
+        print(f"  {n}: r{r}c{c} bbox {fig.size}  bg-leak {leak}px{speck_note}{comp_note}{flag}")
 
     # Frame. 'cell' keeps the native cell canvas (placement + relative scale preserved);
-    # 'square' centres tight crops in a shared square sized to the largest variant.
-    if args.frame == 'cell':
+    # 'square'/bleed centres (or bottom-anchors) tight crops in a shared square sized to the largest
+    # variant. --bleed returns tight-cropped owner components of varying size, so it always frames like
+    # 'square'; --anchor bottom (implied by --bleed) puts every variant's feet on one baseline a fixed
+    # pad above the canvas bottom, so a feet-anchored world prop shares one foot fraction (1 - foot_pad).
+    bottom = args.bleed > 0 or args.anchor == 'bottom'
+    square_frame = args.frame == 'square' or args.bleed > 0
+    if not square_frame and not bottom:
         side = cw
     else:
-        side = int(max(max(f.size) for f in figs.values()) * 1.04)
+        side = int(max(max(f.size) for f in figs.values()) * 1.06)
+    pad = int(round(side * args.foot_pad)) if bottom else 0
     S = side if args.size == 0 else args.size
     os.makedirs(args.assets_dir, exist_ok=True)
     rel = args.assets_dir.replace('\\', '/').rstrip('/')   # forward-slash path for the JS manifest
@@ -188,11 +234,13 @@ def main():
     paths = {}
     sizes_kb = {}
     for n, fig in figs.items():
-        if args.frame == 'cell':
+        if not square_frame and not bottom:
             sq = fig
         else:
             sq = Image.new('RGBA', (side, side), (0, 0, 0, 0))
-            sq.alpha_composite(fig, ((side - fig.width) // 2, (side - fig.height) // 2))
+            ox = (side - fig.width) // 2
+            oy = max(0, side - fig.height - pad) if bottom else (side - fig.height) // 2
+            sq.alpha_composite(fig, (ox, oy))
         if sq.size != (S, S):
             sq = sq.resize((S, S), Image.LANCZOS)
         framed[n] = sq
