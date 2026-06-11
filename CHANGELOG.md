@@ -31,9 +31,10 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
     and the HUD chip shows the **current evolution** name/icon plus its base chunk cost — turning **red ⛔ when
     your Max-MP can't cover it** (Burning Body → Firebloom → Dragonbreath…).
   - **Phase 3 — toggle your auto-casts on hotkeys 1–9 (and 0)** (in the order you acquire them; default ON),
-    shown on a **God-Skill Action Bar** — a **10-slot bar** (WoW-style) parked just to the right of the active
-    skill toolbar; owned skills fill the first slots, the rest show as empty placeholders. Each filled slot has
-    its hotkey, skill icon, and live per-second cost. The slot's **border is the patron's signature colour** when the skill is
+    shown on a **God-Skill Action Bar** — slotted icons (WoW-style) parked just to the right of the active
+    skill toolbar; **only acquired skills get a slot** (the bar grows as you acquire), wrapping to a **second
+    row of five** past five skills so it never runs off-screen. Each slot has its hotkey, skill icon, and live
+    per-second cost. The slot's **border is the patron's signature colour** when the skill is
     **active**, dims/greys with a ⚠ when **dormant** (toggled on but starved — auto-resumes when regen catches
     up), greys with a ✕ when **toggled off**, and turns **red ⛔ when your Max-MP can't cover the cost** (your
     cue to go build mana). When mana can't cover everything, skills **starve lowest-key-last** — your core (key 1)
