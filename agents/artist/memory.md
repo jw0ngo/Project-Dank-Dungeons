@@ -3,7 +3,57 @@
 
 ---
 
-### 2026-06-12 — Feet-anchored variant props (trees/bushes): recover cell overflow AND share one foot baseline — in the tool, not a one-off
+### 2026-06-12 — Organizing assets for an AI-native game: foldering is mostly human-readability; machine-value comes from where CODE reasons, or from DERIVING the dimension cheaply
+
+- **Principle:** Before a structural reorg, ask the AI-native question Josh asks — *"does this actually help the
+  agents/engine, or is it human cosmetics?"* — and **answer it honestly, don't defend your own work.** A folder
+  tree is navigated by humans; an AI navigates by **grep/glob and by the `ART_MANIFEST` *key*** (`world.foresttree.0`),
+  which is built by **string concatenation at each draw site** (`'world.tree.'+variant`) and almost never parsed.
+  So foldering `assets/` changes only the path *string* a key points at → **near-zero machine value on its own**
+  (the keys already gave perfect structure). The machine-useful fact a fold *can* add is **membership** (which
+  area/owner a thing belongs to) — but only if that membership lands somewhere code/agents read.
+- **Why — the resolution that beat both extremes (the "B+" call):** the honest options were (A) put area *in the
+  key* (`world.<area>.<id>`) — purest but a whole-keyspace rename + every concat site, deploy-gated, typo→silent
+  procedural fallback; (B) area in the *folder only* — cheap but invisible to anything reading keys, one `git mv`
+  from desync. The winner was **derive the dimension from what you already built**: keep keys flat, and at boot
+  parse the foldered **path** (`assets/world/<area>/…`) into a runtime `gAreaAssets` map (~5 lines, pure addition,
+  no key/draw churn) — making area queryable *and* unlocking per-area asset load/unload. The fold becomes the
+  *data source*, not the deliverable. **Corollary — don't fold what's redundant:** `tile/` by type is restating
+  the id (`tile.grass.*` already says "grass", and `gInitArt` reads it via `split('.')[1]`), so it stays FLAT.
+  Fold only where the folder adds a NEW machine-legible fact (area, for `world/`).
+- **How to apply:** (a) **assets/ upkeep is now a standing Artist responsibility** (`agents/artist/artist.md`):
+  keep it structured as areas multiply; the living scheme is `assets/README.md`; **per-kind axis** (`char/` by
+  faction→type, `fx/` by owner, `world/` by **area** + `_shared/`, `tile/` **flat**) — never one axis everywhere,
+  fold only at >~12 and kept shallow. (b) A code-referenced reorg is a **two-owner atomic op**: Artist owns the
+  scheme + tool + dry-run, the **engineer** runs `fold-assets.py --apply` (git mv + manifest rewrite in ONE
+  commit — sole `index.html` editor); half-done = 404'd art that silently falls back. (c) **Migrate the slicer
+  with the fold** (the recurring lesson): `slice-variants.py` now imports the `FAMILIES` map and auto-routes
+  `world` slices into `world/<area>/` + emits the foldered path, so new art doesn't re-flatten; an unmapped id
+  warns + falls back flat → add it to `FAMILIES` first. (d) When you reach for an art tool (Pillow, a fold
+  script), first check the deliverable's *medium* — here the real lever was a 5-line engine change + a spec, not
+  more asset moves (sibling to the 2026-06-12 "draw-effect is engineer-owned, hand off the look" lesson). Spec
+  the tradeoff (`docs/specs/asset-area-namespace.md`) and let Josh pick the altitude.
+
+### 2026-06-12 — Opaque ground tiles vs. transparent prop cutouts need OPPOSITE slicing; single props reuse the slicer's `cut_cell`
+
+- **Principle:** A 3×3 sheet's right treatment depends on what the cells *are*. **Opaque ground tiles** (forest
+  grass) must end up **full-bleed** (texture edge-to-edge so they tile seamlessly) — so if the sheet frames each
+  tile with a dark bushy fringe + margins, you **crop the inner solid square inset past the fringe** (measure the
+  content bbox per cell, inset ~11%, resize to the live tile res, output **opaque RGB**). Do NOT run the cutout/
+  bg-removal path on them — alpha-keying the fringe gives a tile with transparent edges that shows a grid when
+  tiled. **Transparent props** (barrel/crate) are the opposite: edge-seeded flood-fill the bg + erode the halo,
+  keep alpha. Match the **existing family's** treatment (the live `grass-*` are 96² opaque full-bleed — I matched
+  that, not the artist.md's stale "128" note).
+- **Why:** I nearly defaulted both to `slice-variants` (a cutout tool). The grass tiles needed a *custom* inner-
+  square crop (no tool flag fits "drop the framing fringe, stay opaque"); the single props needed bg-removal but
+  aren't a 3×3 sheet — so I **imported `cut_cell` from `slice-turnaround.py`** and ran it on the whole image
+  (a single prop = a one-cell sheet). Reusing the slicer's accumulated edge-case logic beat hand-rolling flood
+  fill.
+- **How to apply:** (a) **Verify tiling, not just the cutout** — render a 4×4 repeat of a ground tile and eyeball
+  for a dark-edge grid / seams; the magenta contact only proves the cutout, not that it *tiles*. (b) For a single
+  isolated prop on a plain bg, `import cut_cell` (+ `--erode`-equivalent) rather than reaching for `extract-town-
+  props.py` (that's for props fused to busy same-colour ground). (c) Trust the in-game/over-ground render over any
+  bg-leak number — bright foliage/grass over-reports leak (the metric counts near-white highlights as bg).
 
 - **Principle:** A 3×3 *variant* sheet of tall feet-anchored props (trees, bushes) has two failure modes the
   default `slice-variants.py --frame cell` path can't handle, and both must be fixed **in the slicer**:
