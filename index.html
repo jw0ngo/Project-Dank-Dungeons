@@ -2330,15 +2330,19 @@ function gRCRocks(wx,wy,r){
 // base draw scale and grows with bigger canopies; the circle sits at the tree's foot (t.wx,t.wy). gWildTrees
 // is empty outside the wilderness, so this is a no-op cost elsewhere.
 const TREE_TRUNK_FRAC = 0.055;  // trunk collision radius as a fraction of a tree's drawn width (knob)
+const TREE_TRUNK_RISE = 1.0;    // lift the trunk circle above the foot by this × its radius, so the circle's
+                                // BASE sits at the foot (where the wood meets the ground) instead of the
+                                // circle dipping a full radius below the tree base (raise for higher) (knob)
 function gRCTrees(wx,wy,r){
   let x=wx,y=wy;
   for(const t of gWildTrees){
     const kr=TREE_BASE*(t.scale||1)*TREE_TRUNK_FRAC;
+    const cy=t.wy - kr*TREE_TRUNK_RISE;   // collision centre on the lower trunk; its base coincides with the foot
     const minDist=r+kr;
-    if(Math.abs(x-t.wx)>minDist || Math.abs(y-t.wy)>minDist) continue;   // cheap AABB reject → scales to a mapful of trees
-    const dd=Math.hypot(x-t.wx,y-t.wy);
+    if(Math.abs(x-t.wx)>minDist || Math.abs(y-cy)>minDist) continue;   // cheap AABB reject → scales to a mapful of trees
+    const dd=Math.hypot(x-t.wx,y-cy);
     if(dd<minDist&&dd>0.001){
-      const nx=(x-t.wx)/dd,ny=(y-t.wy)/dd;
+      const nx=(x-t.wx)/dd,ny=(y-cy)/dd;
       x+=nx*(minDist-dd+0.5);
       y+=ny*(minDist-dd+0.5);
     }
