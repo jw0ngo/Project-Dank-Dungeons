@@ -14,10 +14,12 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
   most common is a **cluster of small trees** (occasionally a lone small tree); second is a **single large
   tree ringed by a small-tree cluster**; rare is a **lone large tree**. Formation anchors are spaced
   (min-separation) so clusters read as distinct stands rather than a uniform wash. Large trees become
-  occasional landmarks; the small understory carries the forest. **Per-set minimum spacing** keeps trees off
-  each other — small trees stay ≥2 tiles apart, large trees ≥7 (cross-set unconstrained, so a small tree can
-  sit at a large tree's foot), enforced with O(1) blocked-tile grids so the forest can fill densely.
-  Re-uses the occluding-prop system as-is
+  occasional landmarks; the small understory carries the forest. Tuned for **dense-but-walkable woods**: small
+  trees keep a ≥5-tile centre spacing (large ≥9), which is the sweet spot where the ~150px canopies still
+  **overlap into a lush continuous canopy** while the wide trunk hitboxes leave a player-width gap to weave
+  through — no impassable walls of trees. Density varies across the map (thick groves + open clearings)
+  because the larger clusters overlap in places and leave gaps in others. Spacing is a hard rule enforced with
+  O(1) blocked-tile grids. Re-uses the occluding-prop system as-is
   (`gWildTrees`/`gDrawTree`/`gRCTrees` — canopy fade + size-coupled trunk collision unchanged); small trees
   render smaller via a smaller draw scale (both sets are cell-framed to fill their 256² canvas). Seeded, so
   MP-deterministic. Re-sliced large-tree set also wired (canopy top-clip fix); `TREE_FOOT` 0.93→0.94 to

@@ -13148,13 +13148,21 @@ function generateWildernessMap(seed){
   //     per-set min-separation keeps trees off each other: small trees stay ≥ SMALL_MIN_SEP tiles apart,
   //     large trees ≥ LARGE_MIN_SEP (cross-set has no rule — a small tree may sit at a large tree's foot).
   //     Spacing is enforced with O(1) per-set "blocked" grids (each placed tree stamps a disk of its
-  //     separation radius), so a dense forest never triggers an O(n²) distance scan. Forest density is set by
-  //     the formation rate together with the spacing floors (which cap the max packing). Live knobs: formation
-  //     rate, the per-set separations, the three formation weights, cluster size/radius, and per-set scales.
+  //     separation radius), so a dense forest never triggers an O(n²) distance scan.
+  //     ── Walkability vs lushness (the key tuning): trunk collision (gRCTrees) is a WIDE ellipse,
+  //     rx = TREE_BASE·scale·0.30 (~45px for a small tree, ~90px for a large). The player is r=9 (18px wide),
+  //     T=24px. For two small trees not to wall the player, their centres need a gap > rx_a+rx_b+18 ≈ 108px,
+  //     i.e. ≥ ~5 tiles. But the canopy is ~150px wide, so at 5-tile (120px) spacing canopies still OVERLAP —
+  //     you get a DENSE, lush canopy overhead while the trunks below stay weave-through walkable (~30px gaps).
+  //     So SMALL_MIN_SEP is the dense-but-passable floor; don't drop it toward 2 (that walls the forest) and
+  //     don't raise it past ~6 (canopies stop touching → sparse field). To make it lusher *without* walling,
+  //     the lever is the trunk width TREE_BASE_RX_FRAC, not this spacing. Density VARIES across the map (some
+  //     parts thick, some open) because big clusters overlap in places and leave clearings in others.
+  //     Live knobs: formation rate, the per-set separations, the three formation weights, cluster size/radius.
   const treeEntities = [];
-  const TREE_FORMATION_RATE = 0.05;   // chance per forest tile to seed a formation (knob — forest density)
-  const SMALL_MIN_SEP = 2;            // small trees stay ≥2 tiles apart from each other (hard rule)
-  const LARGE_MIN_SEP = 7;            // large trees stay ≥7 tiles apart from each other (hard rule)
+  const TREE_FORMATION_RATE = 0.08;   // chance per forest tile to seed a formation (knob — forest density/coverage)
+  const SMALL_MIN_SEP = 5;            // small trees ≥5 tiles apart — dense overlapping canopy, walkable trunks (hard rule)
+  const LARGE_MIN_SEP = 9;            // large trees ≥9 tiles apart — their trunks are ~2× wider (hard rule)
   const treeMark   = new Uint8Array(W*H);  // tiles already carrying a tree (no two trees share a tile)
   const smallBlock = new Uint8Array(W*H);  // tiles too close to a placed SMALL tree (within SMALL_MIN_SEP)
   const largeBlock = new Uint8Array(W*H);  // tiles too close to a placed LARGE tree (within LARGE_MIN_SEP)
@@ -13171,14 +13179,14 @@ function generateWildernessMap(seed){
   const placeTree = (tx,ty,small) => {
     const block = small?smallBlock:largeBlock;
     if(!isForestTile(tx,ty) || treeMark[idx(tx,ty)] || block[idx(tx,ty)]) return false;
-    const wx=(tx+0.5)*T + (rng()-0.5)*T*0.8, wy=(ty+0.5)*T + (rng()-0.5)*T*0.8;
+    const wx=(tx+0.5)*T + (rng()-0.5)*T*0.4, wy=(ty+0.5)*T + (rng()-0.5)*T*0.4;  // mild jitter — keep the min-sep gap intact
     treeEntities.push({ kind:'tree', small, wx, wy, variant: Math.floor(rng()*9),
                         scale: small ? smallScale() : largeScale() });
     treeMark[idx(tx,ty)]=1; stampDisk(block, tx, ty, small?SMALL_MIN_SEP:LARGE_MIN_SEP); return true;
   };
   // scatter up to `n` small trees on forest tiles within `rad` tiles of (cx,cy)
   const smallCluster = (cx,cy,n,rad) => {
-    for(let i=0, placed=0; i<n*5 && placed<n; i++){
+    for(let i=0, placed=0; i<n*8 && placed<n; i++){
       const a=rng()*Math.PI*2, d=rng()*rad;
       if(placeTree(Math.round(cx+Math.cos(a)*d), Math.round(cy+Math.sin(a)*d), true)) placed++;
     }
@@ -13189,11 +13197,11 @@ function generateWildernessMap(seed){
       if(rng() >= TREE_FORMATION_RATE) continue;
       const roll=rng();
       if(roll < 0.60){            // (1) small-tree cluster — occasionally a lone small tree
-        if(rng() < 0.25) placeTree(x,y,true);
-        else smallCluster(x,y, 3+Math.floor(rng()*4), 3.5);     // tight clump of 3-6 small trees
+        if(rng() < 0.20) placeTree(x,y,true);
+        else smallCluster(x,y, 5+Math.floor(rng()*6), 9);       // large grove of 5-10 small trees (overlaps neighbours → dense wood)
       } else if(roll < 0.90){     // (2) a large tree ringed by a small-tree cluster
         placeTree(x,y,false);
-        smallCluster(x,y, 3+Math.floor(rng()*4), 4);            // ring of 3-6 small trees around the large one
+        smallCluster(x,y, 4+Math.floor(rng()*5), 9);            // grove of 4-8 small trees around the large one
       } else {                    // (3) a lone large tree
         placeTree(x,y,false);
       }
