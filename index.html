@@ -15170,21 +15170,20 @@ function gDrawVillages(){
       }
       gctx.restore();
     }
-    // Chests — once looted they fade out + sink, then despawn (one-time; see _chestDrawAlpha)
+    // Chests — once looted they hold, then fade out in place and despawn (one-time; see _chestDrawAlpha)
     for(const ch of vill.chests){
       const a = _chestDrawAlpha(ch);
       if(a <= 0) continue;
       const sx=ch.wx-camX, sy=ch.wy-camY;
       if(sx<-40||sx>VW+40||sy<-40||sy>VH+40) continue;
-      const sink=(1-a)*5;
       gctx.save();
       gctx.globalAlpha=a;
-      if(!_drawChestSprite(sx,sy,sink,ch.looted)){
+      if(!_drawChestSprite(sx,sy,ch.looted)){
         // Procedural fallback
-        gctx.fillStyle='#6b3a12'; gctx.fillRect(sx-8,sy-5+sink,16,10);
-        gctx.fillStyle='#8a4e1a'; gctx.fillRect(sx-8,sy-5+sink,16,5);
-        gctx.fillStyle='#7a4418'; gctx.fillRect(sx-8,sy-7+sink,16,4);
-        gctx.fillStyle='#ffd040'; gctx.fillRect(sx-2,sy-6+sink,4,3);
+        gctx.fillStyle='#6b3a12'; gctx.fillRect(sx-8,sy-5,16,10);
+        gctx.fillStyle='#8a4e1a'; gctx.fillRect(sx-8,sy-5,16,5);
+        gctx.fillStyle='#7a4418'; gctx.fillRect(sx-8,sy-7,16,4);
+        gctx.fillStyle='#ffd040'; gctx.fillRect(sx-2,sy-6,4,3);
       }
       // Glow — only the unopened "loot me" pulse
       if(!ch.looted){
@@ -15198,26 +15197,29 @@ function gDrawVillages(){
   }
 }
 
-// An opened chest (village or wolf-camp) lingers, fading out + sinking, then despawns — a
-// one-time reward. lootedAt is stamped (run clock) on open; returns 1 while unopened, fades
-// 1→0 over CHEST_FADE_SECS, and <=0 once fully despawned (callers skip drawing).
+// An opened chest (village or wolf-camp) holds fully visible for CHEST_HOLD_SECS, then fades
+// out **in place** (no sink) over CHEST_FADE_SECS and despawns — a one-time reward. lootedAt is
+// stamped (run clock) on open; returns 1 while unopened or holding, fades 1→0, <=0 once gone.
+const CHEST_HOLD_SECS = 3;     // stay fully opaque this long after looting before fading
 const CHEST_FADE_SECS = 2.2;
 function _chestDrawAlpha(ch){
   if(!ch.looted) return 1;
   if(ch.lootedAt==null) return 0;
-  return 1 - (wildRunTimer - ch.lootedAt) / CHEST_FADE_SECS;
+  const since = wildRunTimer - ch.lootedAt;
+  if(since < CHEST_HOLD_SECS) return 1;
+  return 1 - (since - CHEST_HOLD_SECS) / CHEST_FADE_SECS;
 }
 
 // Draw a chest sprite (open art once looted, else closed), feet-anchored so the base
 // rests at the world point (sx,sy) and the open lid grows upward. Caller sets globalAlpha
 // (fade + any guarded-chest dimming). Returns false if the art hasn't loaded → procedural fallback.
 const CHEST_PX = 30;   // on-ground chest width (px); height from art aspect
-function _drawChestSprite(sx, sy, sink, opened){
+function _drawChestSprite(sx, sy, opened){
   const rec = gArtReg[opened ? 'world.chest-open' : 'world.chest-closed'];
   if(!rec || !rec.ready || !rec.img) return false;
   gctx.imageSmoothingEnabled = true;
   const w = CHEST_PX, h = w * (rec.img.height/rec.img.width);
-  gctx.drawImage(rec.img, sx - w/2, (sy + 6 + sink) - h, w, h);
+  gctx.drawImage(rec.img, sx - w/2, (sy + 6) - h, w, h);
   return true;
 }
 
@@ -15235,17 +15237,16 @@ function gDrawWolfCamps(){
     const sx=ch.wx-camX, sy=ch.wy-camY;
     if(sx<-40||sx>VW+40||sy<-40||sy>VH+40) continue;
     const revealed = camp.cleared && !ch.locked;   // bright look (accessible, or just-looted & fading)
-    const sink=(1-a)*5;
     gctx.save();
     // A still-guarded chest reads dim/in-shadow (reduced alpha); revealed = full bright.
     gctx.globalAlpha = a * (revealed ? 1 : 0.5);
-    if(!_drawChestSprite(sx,sy,sink,ch.looted)){
+    if(!_drawChestSprite(sx,sy,ch.looted)){
       // Procedural fallback (color-dimmed instead of alpha-dimmed)
       gctx.globalAlpha = a;
-      gctx.fillStyle = revealed ? '#6b3a12' : '#4a3018'; gctx.fillRect(sx-8,sy-5+sink,16,10);
-      gctx.fillStyle = revealed ? '#8a4e1a' : '#5c3c1e'; gctx.fillRect(sx-8,sy-5+sink,16,5);
-      gctx.fillStyle = revealed ? '#7a4418' : '#523418'; gctx.fillRect(sx-8,sy-7+sink,16,4);
-      gctx.fillStyle = revealed ? '#ffd040' : '#8a7030'; gctx.fillRect(sx-2,sy-6+sink,4,3);
+      gctx.fillStyle = revealed ? '#6b3a12' : '#4a3018'; gctx.fillRect(sx-8,sy-5,16,10);
+      gctx.fillStyle = revealed ? '#8a4e1a' : '#5c3c1e'; gctx.fillRect(sx-8,sy-5,16,5);
+      gctx.fillStyle = revealed ? '#7a4418' : '#523418'; gctx.fillRect(sx-8,sy-7,16,4);
+      gctx.fillStyle = revealed ? '#ffd040' : '#8a7030'; gctx.fillRect(sx-2,sy-6,4,3);
     }
     // Glow — only the unopened "loot me" pulse on a cleared, un-looted chest
     if(revealed && !ch.looted){
