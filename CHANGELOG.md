@@ -30,11 +30,13 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
     A toggled god skill is **one evolving ability**: toggling it (or it going dormant) hides the **whole** skill,
     and the HUD chip shows the **current evolution** name/icon plus its base chunk cost — turning **red ⛔ when
     your Max-MP can't cover it** (Burning Body → Firebloom → Dragonbreath…).
-  - **Phase 3 — toggle your auto-casts on hotkeys 1–9** (in the order you acquire them; default ON). A small
-    **chip row by the MP bar** shows each owned god skill: its key, icon, live mp/s cost, and state. When mana
-    can't cover everything, skills **starve lowest-key-last** — your core (key 1) keeps running while the
-    marginal ones go **dormant** (stop firing + draining, chip dims with a ⚠) and **auto-resume** the moment
-    regen restores enough mana. Toggling stays your intent; mana gates the actual output.
+  - **Phase 3 — toggle your auto-casts on hotkeys 1–9** (in the order you acquire them; default ON), shown on a
+    **God-Skill Action Bar** by the MP bar — a row of **slotted icons** (WoW-style), each with its hotkey, skill
+    icon, and live per-second cost. The slot's **border is the patron's signature colour** when the skill is
+    **active**, dims/greys with a ⚠ when **dormant** (toggled on but starved — auto-resumes when regen catches
+    up), greys with a ✕ when **toggled off**, and turns **red ⛔ when your Max-MP can't cover the cost** (your
+    cue to go build mana). When mana can't cover everything, skills **starve lowest-key-last** — your core (key 1)
+    keeps running while the marginal ones drop. (Slot icons use real shared art once it lands; emoji for now.)
   - **MP-investment cards (`+Max MP`, `+MP regen`) now matter twice** — they fund both your manual bursts and
     how many auras you can keep lit, becoming the deliberate early→late loosening of the economy.
   - *Multiplayer/AI-native:* mana is per-player and god-skill firing is host-authoritative, so toggle/dormant
