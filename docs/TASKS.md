@@ -43,8 +43,10 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
     hardcoded-`'swing'` → keyed by god-skill id; draft cards registry-driven (`gGodSkillCards`); auto-fire
     dispatcher `gUpdateGodSkills` ticks owned skills from `gUpdatePlayer`. *Load-bearing — Trail/Pyroclasm are
     now ~a registry entry + one updater branch each.*
-  - [x] **Pyre Waltz** (2026-06-11) — auto-fires from `p._pwTimer` (decoupled from whirlwind), standalone
-    `FR_BASE_DMG`, full tree (1–4 → Form @5 Wildfire Bloom / Flame Vortex → 6–9 → Ascension @10 🐉/🔥). First-acquire guaranteed in draft (tuning knob).
+  - [x] **Burning Body** (2026-06-11, *redirected from "Pyre Waltz"* — Josh: fire = AOE burst + burn, not
+    movement/pull) — base **ignite-aura** + Form @5 **Firebloom** (ring/5s) / **Cinderburst** (nova/4s) → 6–9 →
+    Ascension @10 🐉 Dragonbreath/Dragonheart · 🔥 Chaos Crown/Cataclysm. `gTickBurningBody`, standalone dmg,
+    ring system extended (breathe/settle/healOwner). Logic-verified; **feel-tuning live in playtest**.
   - [x] **Migration** (2026-06-11) — whirlwind/dash/heavy revert to plain (3 fire-spawn blocks deleted); shrine
     pledge sets `gPlayer.patron` (`#g-imbue-overlay` parked); **Dance of Fire retired-and-parked** (`IMBUE_PATHS.cilia.swing` + wave FX kept, unreachable).
   - [ ] **Trail of Embers** — add `kind:'distance'` registry entry + a movement-accumulator branch in `gUpdateGodSkills` (dash trail spawn already removed; just the updater branch remains).
@@ -79,6 +81,19 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
   - **Lesson:** always check a tile cut's alpha before assuming the tile-art path — opaque → `gTileArt` (blit-and-return); transparent cutout → an overlay path that draws ground first (`gTileProp`). (Rock/spike tiles already wired this way, `c7ddc67`.)
   </details>
 
+- ◻️ 🎨 **Threat-tier EYE glow — restyle the placeholder** (↳ from ART, 2026-06-11) — refine `gDrawThreatGlow` from floating two-dots to an eye-anchored **subtle** tell: enemy eyes ignite yellow (tier 1) → red (tier 2). No new sprites; the look is decided (Artist) — this is the per-frame draw + the runtime-cheap eye-anchoring, which is engine-owned. **Evaluate in-game at true scale/motion behind a dev knob** (an offline still is the wrong medium for this — Artist mock discarded).
+  <details><summary>detail (Artist spec)</summary>
+
+  **The look (decided with Josh):** eyes **ONLY** — no body wash (a full-body tint was prototyped and rejected: "looks terrible"). A *subtle* "this one's harder" signal, escalating yellow→red. Tier flag already exists: `e.threatTier` 0/1/2, stamped in `_wildScaleEnt` (nights 4/8). Base goblin sprites already have glowing yellow eyes, so tier 1 = "ignite the existing eyes brighter," tier 2 = "shift them red."
+  - **Colours:** start from the placeholder's yellow `#ffd84d` / red `#ff4030` (or a hotter ignite — yellow ~`rgb(255,224,90)`, red ~`rgb(255,70,50)`). Additive (`globalCompositeOperation='lighter'`).
+  - **Subtle:** small tight eye glow + a faint soft halo; NOT a big bloom. Optional slow desynced pulse (reuse the existing `gFrame + per-enemy phase` sine; tier-2 ~1.5× faster for menace) — or steady; make it a knob.
+  - **Anchoring (the real work):** the placeholder draws two dots at a fixed head offset off the hitbox `e.r` — they don't sit on the real eyes and don't track facing. Two cheap options (engineer's call — **NOT** per-frame pixel detection, too costly at >100 sprites):
+    - **(preferred) Boot-time cached eye-mask:** at `gInitArt`, extract each char sprite's bright-yellow eye pixels ONCE into a small mask canvas cached in `gArtReg`; per frame blit it tinted to the tier colour, additively, at the sprite's transform. Pixel-accurate per facing, **auto-hides when the enemy faces away** (back facings have no eye pixels → empty mask), one cached blit/frame. Eye-key that works (validated in the Artist mock, reuse as the extraction filter): a pixel is an eye if `a>120 && r>200 && g>150 && b<110 && (r-b)>115`, within the upper-head band `y ∈ [0.12, 0.40]·H`, then dilate 1px to round the 2–3px blobs.
+    - **(simpler) Per-(enemy,octant) eye-anchor table:** offsets for eye positions per facing; draw 1–2 additive dots there, suppress on the 3 back octants. Less accurate, no boot step.
+  - **Hook:** `gDrawThreatGlow(e)` (already called post-draw for any `threatTier` enemy, ~`index.html:8729`) — refine in place. **Perf:** keep cheap (>100 sprites) — no per-sprite radial gradients / `shadowBlur`; cached-mask blit or a couple of `arc()` fills only.
+  - **Acceptance:** the tell reads as "harder" in a moving pack at game zoom *without* shouting — judge live, not on a still. If it can't read subtly at true scale, nudge intensity up (a hotter core) before adding size.
+  </details>
+
 - ⛔ 🟢 **Custom sprite invisible to self in singleplayer** (design-gated) — your custom sprite broadcasts to other players (live in MP via `df_player_sprite` + `ccPixelsToCanvas`) but your own local render + char/inventory previews still draw the knight. Cosmetic, not a bug. **Blocked on a PM/CD design call:** should the local hero reflect the custom sprite (route local draw + previews through `ccPixelsToCanvas(...)`, knight as fallback), or is the knight canonical (demote the creator to MP-cosmetic-only / cut it)? Not an engineer drive-by.
 
 - ◻️ 🔧 **CHANGELOG housekeeping** (↳ from PM, 2026-06-10) — (a) `docs/archive/changelog-dungeon-forge.md` (pre-rename v0.9–v0.11 era) is still **untracked** — fold into a `docs:` commit; pointer already left in `CHANGELOG.md`. (b) Fold the shipped items (0, 0b, 0c, 1, 3, 4) into the next tag. Going forward, sweep the changelog by era/half-year, not per release.
@@ -87,12 +102,13 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 ## 🟨 Artist lane
 
-- ◻️ 🟢 **Eye-glow difficulty tell — restyle spec** (↳ from PM, 2026-06-10) — enemy eyes glow yellow (mid) → red (top), additive draw-layer tint, **no new sprites**. Flag exists (`e.threatTier` 0/1/2, stamped in `_wildScaleEnt`, tiers at nights 4/8) and a **placeholder two-dot+halo render is already live** in `gDrawThreatGlow` (contract comment inline). Produce the final look as a spec handed back to the engineer (sole `index.html` editor). Polish — placeholder is shippable.
+- *(no open Artist tasks — eye-glow look **decided & handed to Engineer** 2026-06-11: eyes-only, subtle, yellow→red; full-body tint tried & rejected. See the Engineer-lane handoff + Done.)*
 
 ---
 
 ## ✅ Done (recent track record — prune to git history as it grows)
 
+- **2026-06-11 — Threat-tier glow look decided** (Artist) — eyes-only, subtle, yellow→red. A full-body tint was prototyped and rejected ("looks terrible"); the eyes-only direction is set and handed to Engineer (lane). *Process lesson: a runtime draw-effect is engineer-owned and must be prototyped in-canvas/in-game, not in an offline raster mock — the Artist sets the look direction + palette, not a simulated render.*
 - **2026-06-11 — Item 0 Player animation pass closed** (walk · dash · heavy windup all wired + playtested OK).
 - **2026-06-11 — Player WALK cutout halo + boot loss RESOLVED** (Artist) — defringe-v2 (full antialiased ramp to `α<245`) + `--shadow-bg`/`--shadow-lum 13 --shadow-band 0.90` boot-protected re-cut of E/NE/SE (+mirrors). All 8 dirs full-ring fringe ~12–17 (idle 18–22), boots intact, registration unchanged → no `index.html`/manifest change. Lessons crystallized in `agents/artist/memory.md`. *(Verify in-game with a hard-refresh; reopen here if a halo persists.)*
 - **2026-06-10 — Rock + spike-fence tiles wired** (`gTileProp` overlay path — cutouts, not opaque ground).
