@@ -21,10 +21,13 @@ so gods can no longer imbue active skills. Instead each god grants **class-agnos
 (Form @5, two-age Ascension @10) but cutting the tie to any active skill. **No element skin on the class kit.**
 
 **This supersedes the old "Imbue Paths" (active-skill) build.** New source of truth:
-[`specs/god-skills.md`](specs/god-skills.md). **The open approved build is item 2 (God Skills)** — convert
-Cilia's three best fire skills (**Pyre Waltz · Trail of Embers · Pyroclasm**) into auto-firing skills with
-their full trees. The core work is a **trigger swap** on FX systems that already exist + are tuned, so it's
-cheaper than it looks; **Pyre Waltz is already interval-based — build it first to prove the pattern.**
+[`specs/god-skills.md`](specs/god-skills.md). Burning Body (the first God Skill) shipped; the remaining two
+(**Trail of Embers · Pyroclasm**) are still approved — a **trigger swap** on already-tuned FX, cheaper than it looks.
+
+**🔝 Priority re-rank (Josh, 2026-06-11): the mana rework (item 7) goes FIRST, ahead of the new skills.** And
+**the new skills take direction from the mana rework** — Trail of Embers / Pyroclasm get designed + built *after*
+item 7 lands, so they're authored with their per-second `mpCost` + toggle behaviour from the start (not retrofitted).
+So the live build order is: **item 7 (mana) → item 6 (heavy-charge lockout, quick) → item 2 Trail/Pyroclasm.**
 Boreas (item 5) stays parked.
 
 ## ⚡ At a glance
@@ -220,6 +223,9 @@ juiced-up elites — hard, but fair and readable.
 
 `🔄 in-progress — slice 1 shipped (Unreleased)` (Josh-directed pivot 2026-06-10; **supersedes old "Imbue Paths" active-skill model**) · **Size:** large, phased · **Pillars:** build-craft depth, game feel, mastery
 **Source of truth:** [`specs/god-skills.md`](specs/god-skills.md). (Old active-skill design archived in [`specs/imbue-paths.md`](specs/imbue-paths.md).) **Build order:** ✅ **Burning Body** (slice 1, shipped+feel-tuning) → **Trail of Embers** (movement-emit) → **Pyroclasm** (interval + auto-target).
+> **⏸ Sequenced AFTER item 7 (Josh, 2026-06-11):** the remaining two skills are de-prioritized below the **mana
+> rework (item 7)** and **take direction from it** — design + build Trail/Pyroclasm once mana lands, so each is
+> authored with its `mpCost` + toggle from the start rather than retrofitted. Burning Body's mana cost is item 7 Phase 2.
 > **Redirect (Josh, 2026-06-11):** skill 1 "Pyre Waltz" → **Burning Body** — refocused on fire's true identity
 > (**AOE burst + burn → explosions**, *not* movement/pull). Base is an ignite-aura; Forms = **Firebloom** (rings)
 > / **Cinderburst** (detonations). Detail in the spec.

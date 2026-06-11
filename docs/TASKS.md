@@ -80,8 +80,10 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
   spec [`specs/mana-economy.md`](specs/mana-economy.md)) — make mana a real, shared resource. Phased:
   - [ ] **Phase 1 — class mana + cooldown rebalance** (quick, standalone) — tighten `WeaponRegistry.sword`
     costs/CDs (`index.html:2476-2495`) + the `sw.*` reset block (`:14583-14584`) so **1 leap + ~3s WW ≈ empties
-    the 100 pool**. Starting numbers in the spec (leap 35→45 & CD 200→150f; WW drain 4.8/s→18/s & CD 120→90f;
-    heavy 25→30; dash 15→18). Mana leads, CD is rhythm — don't double-gate. Confirm `SKILL_STAT_FLOOR` (`:2542`).
+    the 100 pool**. Starting numbers in the spec — **CDs LENGTHEN (Josh: too short)**: leap 35→45 & CD
+    200f→**900f (15s)**; WW drain 4.8/s→18/s & CD 120f→**300f (5s)**; heavy 25→30; dash 15→18. Per-skill one lever
+    leads (leap = CD; WW = mana). ⚠ **WW needs a power bump paired with its longer CD** (feels underpowered — spec
+    Balance). Dash/heavy CDs candidates to lengthen too (flagged). Confirm `SKILL_STAT_FLOOR` (`:2542`).
   - [ ] **Phase 2 — God Skills drain mana/sec, rank-scaled** — add an `mpCost` key to `IMBUE_PATHS.cilia.burningBody`
     `base`/`waveStep`/`formStep` (`:13527-13567`) so it auto-scales via `gGodFireParam`; subtract
     `gGodFireParam(p,id,'mpCost')*dt` in `gTickBurningBody` (`:3736`). Base ≈ 5mp/3s; curve in spec. Layered on
@@ -104,8 +106,8 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
     ring system extended (breathe/settle/healOwner). Logic-verified; **feel-tuning live in playtest**.
   - [x] **Migration** (2026-06-11) — whirlwind/dash/heavy revert to plain (3 fire-spawn blocks deleted); shrine
     pledge sets `gPlayer.patron` (`#g-imbue-overlay` parked); **Dance of Fire retired-and-parked** (`IMBUE_PATHS.cilia.swing` + wave FX kept, unreachable).
-  - [ ] **Trail of Embers** — add `kind:'distance'` registry entry + a movement-accumulator branch in `gUpdateGodSkills` (dash trail spawn already removed; just the updater branch remains).
-  - [ ] **Pyroclasm** — add `kind:'interval+autotarget'` entry + a nearest-cluster helper + updater branch (heavy spawn already removed).
+  - [ ] **Trail of Embers** ⏸ *(sequenced after item 7 — build with `mpCost` + toggle from the start)* — add `kind:'distance'` registry entry (incl. an `mpCost` per the item-7 model) + a movement-accumulator branch in `gUpdateGodSkills` (dash trail spawn already removed; just the updater branch remains).
+  - [ ] **Pyroclasm** ⏸ *(sequenced after item 7 — build with `mpCost` + toggle from the start)* — add `kind:'interval+autotarget'` entry (incl. `mpCost`) + a nearest-cluster helper + updater branch (heavy spawn already removed).
   - [ ] **Burning Body Ascension refinement — Eye of Chaos + leaf swap** (↳ from PM playtest, 2026-06-11 · spec [`specs/god-skills.md`](specs/god-skills.md) rank-10 table) — in `IMBUE_PATHS.cilia.burningBody` (`index.html:~13547–13563`): (1) **Firebloom 🔥** leaf `chaosCrown` → **`eyeOfChaos`** ('Eye of Chaos'), new **`ringMode:'ebb'`** — a slow chaosfire ring that ebbs net-outward → pauses at max → thickens/intensifies → dissipates (new branch in `gSpawnFireRing` alongside `breathe`/`settle`, `~index.html:6089–6193`); no permanent ground-circle. (2) **Cinderburst 🔥** leaf `cataclysm` → **`chaosCrown`** ('Chaos Crown'), keep `novaScale` colossal blast + route to settle a chaosfire ground-circle (`_laySettleRing`/`gLayChaosfireRing`). Net effect = the two 🔥 leaves trade Form slots; Cataclysm name retired. **Balance:** Eye of Chaos self-burn must stay a *real but readable* cost (ebb sweeps back over you). Tune ebb curve + thickness live.
   - **⚠ Verification gap:** `node --check` + greps + logic trace done; the **in-browser canary** (`await Sim.batch(3)` + manual pledge→acquire→rank→fork→ascension) is **not yet run** — needs a live browser. Run before tagging.
 

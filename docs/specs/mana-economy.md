@@ -66,14 +66,18 @@ progression. Starting numbers (tune by feel):
 | Swing | 0 → **0** | 60f → **60f** | Stays the free filler / mana-neutral baseline. |
 | Dash | 15 → **18** | 80f → **80f** | Small bump; mobility stays affordable. |
 | Heavy | 25 → **30** | 90f → **90f** | Modest; heavy is already gated by its windup. |
-| **Leap** | 35 → **45** | 200f → **150f** (2.5 s) | The big single commit. CD trimmed so **mana**, not CD, is the felt limiter. |
-| **Whirlwind** | 4.8/s → **18/s** (`mpCostWwTick 0.30`) | 120f → **90f** (1.5 s) | The mana sink. ~3 s of spin is a serious chunk of the pool. |
+| **Leap** | 35 → **45** | 200f → **900f (≥15 s)** | A rare, heavy nuke. CD is its **repeat-gate**; the 45 mana just makes the opening leap+WW burst bite. |
+| **Whirlwind** | 4.8/s → **18/s** (`mpCostWwTick 0.30`) | 120f → **300f (5 s)** | Mana-led **within** a burst; 5 s CD between spins. ⚠ **Feels underpowered on playtest (Josh)** — see Balance: pair the longer CD with a power bump (and re-check the 18/s drain isn't too steep on top). |
 
 - **Benchmark satisfied:** leap **45** + (18 × 3) = **99 ≈ empty** from 100. ✓
 - **Regen unchanged at 9/s** for now — the *standing* pressure comes from Phase 2's god-skill drain layered on top.
-- **Cooldown philosophy:** mana is now the **primary gate**; cooldowns are the **rhythm / anti-spam** gate, not
-  the resource gate. Trim leap/WW CDs so that *when you can afford it* the kit feels fluid and **running dry** is
-  what stops you — not a CD you're staring at with a full bar. Don't double-gate.
+- **Cooldown philosophy (REVISED — Josh, 2026-06-11: current CDs are too short; lengthen them):** big abilities are
+  **rare, deliberate plays** gated by a real cooldown, not spammable. **Leap → ≥15 s (900f)**, **Whirlwind → 5 s
+  (300f)**. Which lever *leads* differs per skill: **leap is CD-led** (15 s repeat-gate; its mana cost just makes
+  the opening burst bite), **whirlwind is mana-led within a burst** (18/s empties you mid-spin) with a 5 s CD
+  between spins. Heavy stays windup-gated; swing stays rate-gated. **Dash/heavy CDs:** Josh's "too short" read is
+  general — lengthen them on the same principle if playtest agrees (dash 1.33 s and heavy 1.5 s are candidates);
+  left at current values pending his call (flagged, not guessed).
 - **Floors:** add/confirm `mpCostWwTick`, `mpCostLeap` floors stay sane; `evasionCooldown`/`leapCooldown` already
   floored. The whirlwind auto-off at `mp ≤ 0` (`:4222`) is the model for starvation (see Phase 3).
 
@@ -138,8 +142,15 @@ progression. Starting numbers (tune by feel):
   god skills feel unusable. Tune so **one** aura is comfortably sustainable, **all** of them is not.
 - **Early vs late:** the base pool/costs are tuned tight for the early game; `mpRegenAdd` / `mpBonus` / maxMp cards
   are the deliberate loosening over a run. Don't make base regen so high it erases the early pinch.
-- **Don't double-gate:** if a skill is mana-gated hard, a long cooldown on top is redundant and feels bad — let one
-  system lead per skill (mana for leap/WW; windup for heavy; rate-CD for swing).
+- **One lever leads per skill (not double-gate):** leap = **CD-led** (15 s) with mana as the opening-burst cost;
+  whirlwind = **mana-led** within a burst with a 5 s CD between; heavy = windup-led; swing = rate-CD. Avoid making a
+  skill *both* mana-starved AND CD-locked such that a full bar still can't act — pick the limiter that fits the skill.
+- **⚠ Whirlwind feels underpowered (playtest, Josh 2026-06-11) — power pass REQUIRED with the CD change:** a longer
+  5 s cooldown on an already-weak-feeling skill makes it *worse* unless its **payoff rises**. Pair the CD with a
+  power bump — more damage per hit, larger radius, or longer spin per activation — and re-check that **18/s drain
+  isn't too steep on top** (a heavily mana-starved *and* rarer whirlwind reads as a double nerf). Tune drain ×
+  power × CD **together** so a 5-s-CD whirlwind feels like a worthwhile commitment, not a punishment. This is the
+  one place Phase 1 is more than a number tweak.
 
 ## Boundaries
 
