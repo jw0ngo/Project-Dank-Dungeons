@@ -229,11 +229,11 @@ button{font-family:inherit;cursor:pointer;}
 /* CSS-built framed portrait — the figure is an image cutout; the frame, glow and name are all CSS */
 /* Fills the full left panel; ornate metallic gradient border + inner hairline + corner studs + glow */
 .lvl-portrait{ position:absolute; inset:0; overflow:hidden; background:#08070c;
-  border:9px solid transparent;
+  border:2px solid transparent;
   border-image:linear-gradient(145deg, var(--lvl-frame-hi), var(--lvl-frame-lo) 20%, var(--lvl-frame-hi) 40%, var(--lvl-frame-lo) 58%, var(--lvl-frame-hi) 80%, var(--lvl-frame-lo)) 1;
   box-shadow:0 0 46px var(--lvl-glow), inset 0 0 70px rgba(0,0,0,.5); }
 .lvl-portrait>img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 12%; }
-.lvl-portrait::before{ content:''; position:absolute; inset:7px; border:1px solid var(--lvl-frame-hi); box-shadow:inset 0 0 0 3px rgba(0,0,0,.55), 0 0 9px var(--lvl-glow); opacity:.65; pointer-events:none; z-index:2; }
+.lvl-portrait::before{ content:''; position:absolute; inset:1px; border:1px solid var(--lvl-frame-hi); box-shadow:0 0 9px var(--lvl-glow); opacity:.45; pointer-events:none; z-index:2; }
 .lvl-portrait::after{ content:''; position:absolute; inset:0; pointer-events:none; z-index:2; box-shadow:inset 0 -120px 85px -26px rgba(0,0,0,.96), inset 0 70px 55px -28px rgba(0,0,0,.72), inset 0 0 95px rgba(0,0,0,.55); }
 .lvl-corner{ position:absolute; z-index:3; color:var(--lvl-frame-hi); font-size:13px; line-height:1; text-shadow:0 0 9px var(--lvl-glow); opacity:.9; pointer-events:none; }
 .lvl-corner.tl{ top:5px; left:6px; } .lvl-corner.tr{ top:5px; right:6px; }
