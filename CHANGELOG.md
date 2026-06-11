@@ -8,6 +8,18 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 ## [Unreleased]
 
 ### Changed
+- **Forest trees now generate as formations of small + large trees (was an even scatter of large trees).**
+  A new **smaller/bonsai tree set** (`world.treesmall.0..8`) joins the existing large trees, and the
+  wilderness forest is now grown from three weighted **formations** instead of an independent per-tile roll:
+  most common is a **cluster of small trees** (occasionally a lone small tree); second is a **single large
+  tree ringed by a small-tree cluster**; rare is a **lone large tree**. Formation anchors are spaced
+  (min-separation) so clusters read as distinct stands rather than a uniform wash. Large trees become
+  occasional landmarks; the small understory carries the forest. Re-uses the occluding-prop system as-is
+  (`gWildTrees`/`gDrawTree`/`gRCTrees` — canopy fade + size-coupled trunk collision unchanged); small trees
+  render smaller via a smaller draw scale (both sets are cell-framed to fill their 256² canvas). Seeded, so
+  MP-deterministic. Re-sliced large-tree set also wired (canopy top-clip fix); `TREE_FOOT` 0.93→0.94 to
+  match the new uniform foot. Live knobs: formation rate/spacing, the three formation weights, cluster
+  size/radius, and per-set draw scales.
 - **Level-up no longer pauses the game — it's now a non-blocking sidebar (MP-seamless).** Gaining a level
   no longer freezes the world and throws up a full-screen modal. Instead a **level-up icon pulses in the
   bottom-left** (with a count badge if several are queued); **click it to open a left-docked "Choose a

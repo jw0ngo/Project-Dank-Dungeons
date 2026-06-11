@@ -37,12 +37,14 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 ## 🟧 Engineer / CTO lane
 
-- ◻️ 🎨 **Wire SMALLER tree sprites (next set)** (Josh, 2026-06-12) — next session. The occluding-prop system
-  is already built and tuned (`gWildTrees`/`gDrawTree`/`gRCTrees`); a new/smaller tree set should **reuse it
-  as-is** and just re-tune the knobs: `TREE_BASE` (draw size), `TREE_DENSITY`, base-ellipse `TREE_BASE_RX_FRAC`
-  /`TREE_BASE_RY_FRAC`, `TREE_FADE_ALPHA`/`TREE_FADE_BLEND`, `PLAYER_VIS_H`. **Re-measure the new art's foot +
-  base footprint** (alpha bbox via PIL, as for the 256² set) and reset `TREE_FOOT` if proportions differ. Full
-  transferable rules in `agents/engineer/memory.md` (2026-06-12 occluding-env-sprites entry).
+- ✅ 🎨 **Wire SMALLER tree sprites + formation-based forest** (Josh, 2026-06-12) — **done 2026-06-12.**
+  Re-used the occluding-prop system as-is (`gWildTrees`/`gDrawTree`/`gRCTrees`). Wired the `world.treesmall.0..8`
+  set; small trees render smaller via a smaller draw `scale` (both sets are cell-framed to fill the 256²
+  canvas — measured: small art is NOT smaller within its canvas, so scale is the only lever). Replaced the
+  per-tile scatter with **three weighted formations** per Josh's rule (small-tree cluster ≫ large+cluster >
+  lone large), anchors min-separated so stands read as distinct. `TREE_FOOT` 0.93→0.94 (re-measured uniform
+  foot, both sets). Knobs documented inline. Verified: `node --check` + greps; visual check pending Josh's
+  eyeball (`python dev.py`).
 
 - ✅ 🎨 **Wire world TREE props — 9-variant scatter set** (↳ from ART, 2026-06-11) — **done 2026-06-11.**
   Wired as a new off-grid scatter-prop family mirroring `gRocks`: 9 `world.tree.<n>` manifest keys →
@@ -167,7 +169,7 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 - ✅ 🎨 **Burning Body fire-ring art upgrade — one-constant wiring** (↳ from ART, 2026-06-11 · **done ENG 2026-06-11**: `FR_RING_FRAC` set to 0.76; new ring art at `cilia/ring.png` live via the reorg) — `assets/fx/fr.png` replaced with a nicer hand-painted ring (wispier filaments + a subtle interior heat-haze, no longer hollow). **The only `index.html` change: `FR_RING_FRAC 0.59 → 0.76`**. The new ring's bright band sits at frac **0.759** of the half-width (old was 0.61); the draw already sizes `D = 2*traveled/FR_RING_FRAC` so the bright band lands at the damage radius — leave it at 0.59 and the visible ring renders ~29% larger than where it hits. No manifest/key/draw-loop change (same `FR_SPR`, now at `assets/fx/cilia/ring.png` — see the FX-reorg task for the `.src` path move; still black-bg `'lighter'`; background floored to true black so no square wash). Affects all ring modes (Firebloom / Dragonbreath breathe / Chaos Crown settle / remote-visual) — all fine. **Verify:** pledge Cilia → Burning Body → reach Form @5 Firebloom; confirm the bright band tracks the damage edge and the interior reads as warm haze. Source/tool: `tools/fx-ring-heatfill.py` (`--no-fill` cleans a baked-fill source), masters in `art/fx/cilia/burning-body-ring-*.png`.
 
-- ◻️ 🎨 **Wire the new `world.treesmall.*` tree set + verify re-sliced large trees** (↳ from ART, 2026-06-12) — second, smaller tree variety to mix into the wilderness alongside the existing large trees, **plus** the existing `tree-0..8` were re-sliced to recover clipped canopy tops.
+- ✅ 🎨 **Wire the new `world.treesmall.*` tree set + verify re-sliced large trees** (↳ from ART, 2026-06-12) — **done 2026-06-12** (same change as the formation-forest task above). Wired all 9 `world.treesmall.*` keys; re-sliced large `tree-0..8` are drop-in (same keys/paths); set `TREE_FOOT=0.94` (re-measured uniform foot via PIL, both sets); small trees render smaller via a smaller draw scale (both sets fill their canvas, so scale is the lever). Mixed small + large via the new formation generator. `node --check` + grep verified; full-canopy/feet-on-ground visual check pending Josh.
   <details><summary>detail (render spec)</summary>
 
   **Two deliverables, both in `assets/world/`:**

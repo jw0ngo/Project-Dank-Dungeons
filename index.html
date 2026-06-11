@@ -2018,7 +2018,7 @@ let gDestructibles=[], gEnemies=[], gTorches=[], gArrows=[], gPlayerArrows=[], g
 let gRocks=[];
 // Scatter tree props (off-grid decorative cutouts that overflow a cell, drawn over the ground and
 // depth-sorted with characters). Décor only — no collision. Placed deterministically per map seed.
-let gWildTrees=[]; // [{wx,wy,variant,scale}] — world.tree.<variant> art, drawn by gDrawTree
+let gWildTrees=[]; // [{wx,wy,variant,scale,small}] — world.tree[small].<variant> art, drawn by gDrawTree
 let gFireWaves=[]; // imbued-LMB fire arcs (Cilia's Fire)
 let gFireRings=[]; // imbued-whirlwind expanding fire rings (Cilia's Fire)
 let gFireCrosses=[]; // imbued-leap burning crosses (Cilia's Fire)
@@ -3213,7 +3213,7 @@ function gameLoad(mapData) {
     if(e.kind==='village') gVillages.push(e.data);
     if(e.kind==='wolfcamp') gWildCamps.push(e.data);
     if(e.kind==='rock') gRocks.push({wx:e.wx, wy:e.wy, r:e.r, scale:e.scale, vr:e.vr});
-    if(e.kind==='tree') gWildTrees.push({wx:e.wx, wy:e.wy, variant:e.variant, scale:e.scale});
+    if(e.kind==='tree') gWildTrees.push({wx:e.wx, wy:e.wy, variant:e.variant, scale:e.scale, small:e.small});
     if(e.kind==='shrine')  gShrine = {
       wx:(e.tx+0.5)*T, wy:(e.ty+0.5)*T, tx:e.tx, ty:e.ty,
       activated:false,  // lights up after first patron selection
@@ -7892,6 +7892,17 @@ const ART_MANIFEST = {
   'world.tree.6':'assets/world/tree-6.png',
   'world.tree.7':'assets/world/tree-7.png',
   'world.tree.8':'assets/world/tree-8.png',
+  // Smaller/bonsai tree set — the forest's common understory (large trees are occasional landmarks).
+  // Same 256² cell-framed cutouts, same foot fraction (0.94); rendered smaller via a smaller draw scale.
+  'world.treesmall.0':'assets/world/treesmall-0.png',
+  'world.treesmall.1':'assets/world/treesmall-1.png',
+  'world.treesmall.2':'assets/world/treesmall-2.png',
+  'world.treesmall.3':'assets/world/treesmall-3.png',
+  'world.treesmall.4':'assets/world/treesmall-4.png',
+  'world.treesmall.5':'assets/world/treesmall-5.png',
+  'world.treesmall.6':'assets/world/treesmall-6.png',
+  'world.treesmall.7':'assets/world/treesmall-7.png',
+  'world.treesmall.8':'assets/world/treesmall-8.png',
 };
 const gArtReg = Object.create(null);   // key → { img, baked, ready }
 const gTileVarCount = Object.create(null); // tile type name → number of art variants in the manifest
@@ -8882,7 +8893,7 @@ function gDrawRock(k){
 // depth-sorted with characters (so the player tucks behind a canopy / in front of a trunk). Mirrors
 // gDrawRock: HiDPI smooth draw, falls back to a simple blob until the art loads. Trunk collision is gRCTrees.
 const TREE_BASE = 300;        // px draw-width at scale 1.0 (visible tree ≈ 0.93× this tall — see TREE_FOOT)
-const TREE_FOOT = 0.93;       // share of drawn height ABOVE the foot line (measured: opaque base sits ~0.93 down)
+const TREE_FOOT = 0.94;       // share of drawn height ABOVE the foot line (measured: opaque base sits ~0.94 down, both sets)
 const TREE_FADE_ALPHA = 0.3;  // canopy alpha when it's occluding the player (so it never hides them) — knob
 const TREE_FADE_BLEND = 0.24; // height fraction over which faded canopy → opaque base blends on a gradient (knob)
 // Rule of thumb (applies to future occluding env sprites too): the TOP HALF of the player must always stay
@@ -8892,7 +8903,7 @@ const PLAYER_VIS_H = PSCALE*PLAYER_DRAW_SCALE*1.25;  // ≈ player's drawn heigh
 let _treeFadeCv = null, _treeFadeCx = null;  // reused offscreen for the canopy-fade gradient mask
 function gDrawTree(t){
   const sx=t.wx-camX, sy=t.wy-camY;
-  const rec = gArtReg['world.tree.'+t.variant];
+  const rec = gArtReg[(t.small?'world.treesmall.':'world.tree.')+t.variant];
   const ready = rec && rec.ready && rec.img;
   const w = TREE_BASE*t.scale;
   const h = ready ? w*(rec.img.height/rec.img.width) : w;
@@ -13125,19 +13136,61 @@ function generateWildernessMap(seed){
     for(const rk of _genRockOutcrop(_ox, _oy, rng, _n, _spread, 0.4, 1.6, 0.25, 2.6)) rockEntities.push(rk);
   }
 
-  // 4c. Paint the forest — emit a painted-tree prop (gWildTrees / gDrawTree) at a tuned fraction of the
-  //     FOREST tiles, so the new sprites ARE the forest (replacing the old procedural canopies, which now
-  //     render only as shaded forest floor). Single deterministic pass over the final tile grid: every
-  //     'T' tile that survived feature-carving rolls the seeded rng; rocks/feature tiles are skipped
-  //     (they override 'T' in the row build). Density + size are live knobs. Décor only (no collision).
+  // 4c. Paint the forest — FORMATION-based tree scatter (gWildTrees / gDrawTree). The painted sprites ARE
+  //     the forest (the old procedural canopies are gone; TILE_TREE now draws as shaded floor). A single
+  //     deterministic pass over the final tile grid: each forest ('T') tile rolls a low chance to *seed a
+  //     formation*, and an anchor is rejected if it sits within TREE_MIN_SEP of an already-placed tree, so
+  //     formations stay distinct clusters rather than an even wash. Three formations, weighted to favour the
+  //     small-tree understory with large trees as occasional landmarks (Josh's rule):
+  //       (1) most common — a cluster of small trees (sometimes a lone small tree),
+  //       (2) second      — a single large tree ringed by a small-tree cluster,
+  //       (3) rare        — a lone large tree.
+  //     Décor draw + trunk collision (gRCTrees) only; both are size-coupled to the drawn scale. Live knobs:
+  //     formation rate, spacing, the three formation weights, cluster size/radius, and the per-set scales.
   const treeEntities = [];
-  const TREE_DENSITY = 0.10;   // chance per forest tile to carry a painted tree — controls forest density (knob)
+  const TREE_FORMATION_RATE = 0.022;  // chance per forest tile to seed a formation (knob — forest density)
+  const TREE_MIN_SEP = 3;             // min tiles between formation anchors (knob — cluster spacing)
+  const treeMark = new Uint8Array(W*H);  // tiles already carrying a tree (anchor-spacing guard)
+  const smallScale = () => 0.42 + rng()*0.20;   // small-tree draw scale (knob)
+  const largeScale = () => 0.80 + rng()*0.30;   // large-tree draw scale (knob)
+  const isForestTile = (tx,ty) => tx>=2 && ty>=2 && tx<W-2 && ty<H-2 && tiles[idx(tx,ty)] && !rocks[idx(tx,ty)];
+  // place one tree of the given set at a forest tile (sub-tile jitter); marks the tile. Returns success.
+  const placeTree = (tx,ty,small) => {
+    if(!isForestTile(tx,ty) || treeMark[idx(tx,ty)]) return false;
+    const wx=(tx+0.5)*T + (rng()-0.5)*T*0.8, wy=(ty+0.5)*T + (rng()-0.5)*T*0.8;
+    treeEntities.push({ kind:'tree', small, wx, wy, variant: Math.floor(rng()*9),
+                        scale: small ? smallScale() : largeScale() });
+    treeMark[idx(tx,ty)]=1; return true;
+  };
+  // scatter up to `n` small trees on forest tiles within `rad` tiles of (cx,cy)
+  const smallCluster = (cx,cy,n,rad) => {
+    for(let i=0, placed=0; i<n*3 && placed<n; i++){
+      const a=rng()*Math.PI*2, d=rng()*rad;
+      if(placeTree(Math.round(cx+Math.cos(a)*d), Math.round(cy+Math.sin(a)*d), true)) placed++;
+    }
+  };
   for(let y=2; y<H-2; y++){
     for(let x=2; x<W-2; x++){
       if(!tiles[idx(x,y)] || rocks[idx(x,y)]) continue;          // forest ('T') tiles only, never under a rock
-      if(rng() >= TREE_DENSITY) continue;
-      const wx=(x+0.5)*T + (rng()-0.5)*T*0.8, wy=(y+0.5)*T + (rng()-0.5)*T*0.8;   // sub-tile jitter (organic)
-      treeEntities.push({ kind:'tree', wx, wy, variant: Math.floor(rng()*9), scale: 0.7+rng()*0.4 });
+      if(rng() >= TREE_FORMATION_RATE) continue;
+      // spacing guard — reject an anchor that's within TREE_MIN_SEP of an already-placed tree
+      let near=false;
+      for(let dy=-TREE_MIN_SEP; dy<=TREE_MIN_SEP && !near; dy++)
+        for(let dx=-TREE_MIN_SEP; dx<=TREE_MIN_SEP; dx++){
+          const nx=x+dx, ny=y+dy;
+          if(nx>=0 && ny>=0 && nx<W && ny<H && treeMark[idx(nx,ny)]){ near=true; break; }
+        }
+      if(near) continue;
+      const roll=rng();
+      if(roll < 0.60){            // (1) small-tree cluster — occasionally a lone small tree
+        if(rng() < 0.25) placeTree(x,y,true);
+        else smallCluster(x,y, 3+Math.floor(rng()*4), 2.2);     // 3-6 small trees, ~2-tile radius
+      } else if(roll < 0.90){     // (2) a large tree ringed by a small-tree cluster
+        placeTree(x,y,false);
+        smallCluster(x,y, 3+Math.floor(rng()*4), 2.8);          // ring of 3-6 small trees
+      } else {                    // (3) a lone large tree
+        placeTree(x,y,false);
+      }
     }
   }
 
