@@ -2332,7 +2332,8 @@ function gRCRocks(wx,wy,r){
 // The hitbox is a WIDE, SHORT ellipse covering the whole roots/rocks base (measured ~0.30-0.40 half-width,
 // ~0.20 tall) — a circle fits that footprint poorly. Sized as fractions of the drawn width; its base sits at
 // the foot. The same fractions drive the opaque base-band in gDrawTree, so the hitbox is visible when faded.
-const TREE_BASE_RX_FRAC = 0.30;  // base ellipse horizontal radius / drawn width (knob — root spread)
+const TREE_BASE_RX_FRAC = 0.22;  // base ellipse horizontal radius / drawn width (knob — root spread; also sets the
+                                 // walkable trunk gap, so it's coupled to SMALL/LARGE_MIN_SEP — see the §4c forest note)
 const TREE_BASE_RY_FRAC = 0.12;  // base ellipse vertical radius / drawn width (knob — base height; centre = foot - this)
 function gRCTrees(wx,wy,r){
   let x=wx,y=wy;
@@ -13149,20 +13150,20 @@ function generateWildernessMap(seed){
   //     large trees ≥ LARGE_MIN_SEP (cross-set has no rule — a small tree may sit at a large tree's foot).
   //     Spacing is enforced with O(1) per-set "blocked" grids (each placed tree stamps a disk of its
   //     separation radius), so a dense forest never triggers an O(n²) distance scan.
-  //     ── Walkability vs lushness (the key tuning): trunk collision (gRCTrees) is a WIDE ellipse,
-  //     rx = TREE_BASE·scale·0.30 (~45px for a small tree, ~90px for a large). The player is r=9 (18px wide),
-  //     T=24px. For two small trees not to wall the player, their centres need a gap > rx_a+rx_b+18 ≈ 108px,
-  //     i.e. ≥ ~5 tiles. But the canopy is ~150px wide, so at 5-tile (120px) spacing canopies still OVERLAP —
-  //     you get a DENSE, lush canopy overhead while the trunks below stay weave-through walkable (~30px gaps).
-  //     So SMALL_MIN_SEP is the dense-but-passable floor; don't drop it toward 2 (that walls the forest) and
-  //     don't raise it past ~6 (canopies stop touching → sparse field). To make it lusher *without* walling,
-  //     the lever is the trunk width TREE_BASE_RX_FRAC, not this spacing. Density VARIES across the map (some
-  //     parts thick, some open) because big clusters overlap in places and leave clearings in others.
+  //     ── Walkability vs lushness (the key tuning): trunk collision (gRCTrees) is an ellipse,
+  //     rx = TREE_BASE·scale·TREE_BASE_RX_FRAC (0.22 → ~33px for a small tree, ~66px for a large). The player
+  //     is r=9 (18px wide), T=24px. For two small trees not to wall the player, their centres need a gap >
+  //     rx_a+rx_b+18 ≈ 84px, i.e. ≥ ~4 tiles. But the canopy is ~150px wide, so at 4-tile (96px) spacing the
+  //     canopies overlap GENEROUSLY — a DENSE, lush canopy overhead while the trunks below stay weave-through
+  //     walkable (~30px gaps). SMALL_MIN_SEP and TREE_BASE_RX_FRAC are a coupled pair: this floor only stays
+  //     walkable because the trunk was thinned to 0.22. Drop the trunk thinner → can tighten spacing further
+  //     (lusher); widen it → must raise the spacing or risk walls. Density VARIES across the map (some parts
+  //     thick, some open) because the big clusters overlap in places and leave clearings in others.
   //     Live knobs: formation rate, the per-set separations, the three formation weights, cluster size/radius.
   const treeEntities = [];
   const TREE_FORMATION_RATE = 0.08;   // chance per forest tile to seed a formation (knob — forest density/coverage)
-  const SMALL_MIN_SEP = 5;            // small trees ≥5 tiles apart — dense overlapping canopy, walkable trunks (hard rule)
-  const LARGE_MIN_SEP = 9;            // large trees ≥9 tiles apart — their trunks are ~2× wider (hard rule)
+  const SMALL_MIN_SEP = 4;            // small trees ≥4 tiles apart — dense overlapping canopy, walkable trunks (coupled to RX_FRAC)
+  const LARGE_MIN_SEP = 7;            // large trees ≥7 tiles apart — their trunks are ~2× wider (coupled to RX_FRAC)
   const treeMark   = new Uint8Array(W*H);  // tiles already carrying a tree (no two trees share a tile)
   const smallBlock = new Uint8Array(W*H);  // tiles too close to a placed SMALL tree (within SMALL_MIN_SEP)
   const largeBlock = new Uint8Array(W*H);  // tiles too close to a placed LARGE tree (within LARGE_MIN_SEP)
