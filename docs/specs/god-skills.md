@@ -228,6 +228,9 @@ eruption, 22px radius.
 - **AI-native.** The two evolution events are game-pausing choices → each needs a `gSim*` hook (mirror
   `gSimDraft.pick`) or headless runs stall. `Sim.observe()` gains per-skill rank + pending evolution choice.
   Auto-firing skills need **no** new input hook (they fire themselves) — a net *simplification* for the harness.
+  **⚠ Superseded by item 7** ([`mana-economy.md`](mana-economy.md)): the toggle/hotkey system **re-introduces** an
+  input hook (`Sim.toggleGodSkill`) + per-skill toggle/mana state in `Sim.observe()`. The auto-fire itself still
+  needs none; managing *which auto-casts are active* does.
 
 ## Migration — retiring the active-skill imbues
 

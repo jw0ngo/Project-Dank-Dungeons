@@ -76,6 +76,22 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
   shouldn't let you also poke. Engineer owns whether to drop the input or queue it; product intent = no swing
   damage/animation while winding up a heavy.
 
+- ◻️ ✨ **Item 7 — Mana economy & skill management** (↳ from PM playtest, 2026-06-11 · roadmap #7 `approved` ·
+  spec [`specs/mana-economy.md`](specs/mana-economy.md)) — make mana a real, shared resource. Phased:
+  - [ ] **Phase 1 — class mana + cooldown rebalance** (quick, standalone) — tighten `WeaponRegistry.sword`
+    costs/CDs (`index.html:2476-2495`) + the `sw.*` reset block (`:14583-14584`) so **1 leap + ~3s WW ≈ empties
+    the 100 pool**. Starting numbers in the spec (leap 35→45 & CD 200→150f; WW drain 4.8/s→18/s & CD 120→90f;
+    heavy 25→30; dash 15→18). Mana leads, CD is rhythm — don't double-gate. Confirm `SKILL_STAT_FLOOR` (`:2542`).
+  - [ ] **Phase 2 — God Skills drain mana/sec, rank-scaled** — add an `mpCost` key to `IMBUE_PATHS.cilia.burningBody`
+    `base`/`waveStep`/`formStep` (`:13527-13567`) so it auto-scales via `gGodFireParam`; subtract
+    `gGodFireParam(p,id,'mpCost')*dt` in `gTickBurningBody` (`:3736`). Base ≈ 5mp/3s; curve in spec. Layered on
+    regen (net = regen − Σdrains), so over-committing bleeds the pool even idle.
+  - [ ] **Phase 3 — toggle/hotkey + HUD + Sim hooks** — per-player toggle state (acquisition-order key 1–9, default
+    ON, assign at acquire `:13691`); `keydown` 1–9 branch; gate `gUpdateGodSkills` (`:3719`) on active/not-dormant;
+    HUD row near the MP bar (`:4233`). **Starvation = dormant-resume, pay in key order** (spec; fork flagged for
+    Josh). **AI-native (required):** add `Sim.toggleGodSkill(n)` + expose per-skill `{key,active,dormant,mpCostPerSec}`
+    + `mp` in `Sim.observe()` — toggles re-add the input hook item 2 had dropped.
+
 - 🔄 ✨ **Item 2 — God Skills** (roadmap #2 `approved` · spec [`specs/god-skills.md`](specs/god-skills.md)) —
   phased trigger-swap, 3/5 done:
   - [x] **Architecture generalization** (2026-06-11) — imbue-path mastery machinery generalized from

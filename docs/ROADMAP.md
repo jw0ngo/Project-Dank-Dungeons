@@ -40,6 +40,7 @@ Boreas (item 5) stays parked.
 | **4** | **Wolves hit harder early** | ✅ Shipped (v0.5.0) | Quick | Makes a wolf camp a real risk, not free loot |
 | **5** | **Boreas** — a second god (ice/control) | ⏸️ Held | Multi-session | Parked — the playtest showed we don't need it yet |
 | **6** | **Heavy charge locks out the normal swing** — committing to a heavy means committing | ✅ Approved — cleared for build | Quick | Weighty-combat directive: a committed action must cost you other options |
+| **7** | **Mana economy & skill management** — costs/cooldowns rework so you run dry early; God Skills drain mana/sec; toggle auto-casts to keys 1–9 | ✅ Approved — cleared for build | Multi-session, phased | Makes mana a real resource + a live build-management decision (weighty combat + build depth) |
 
 ---
 
@@ -326,6 +327,36 @@ other options, so missing/committing has a real cost. Free-swinging mid-charge m
   suppress the LMB→`gDoSwingAt` dispatch (`~index.html:3517`). Engineer owns drop-vs-queue; product intent =
   no swing damage/animation while a heavy is winding up. Filed in the Engineer lane of `TASKS.md`.
 </details>
+
+---
+
+### 7. Mana economy & skill management
+
+`✅ approved` (Josh-directed, 2026-06-11) · **Size:** multi-session, phased · **Pillars:** game feel (weighty combat), build-craft depth · **Art:** none (HUD chips reuse existing styling; icon polish is a later Artist follow-up)
+**Source of truth:** [`specs/mana-economy.md`](specs/mana-economy.md).
+
+**What:** Mana is a non-issue today — skills cast over and over, and the auto-firing God Skills cost nothing
+and run forever. Make mana a **real, shared resource** that funds both the class kit and the god layer:
+1. **Rework class-skill costs + cooldowns** so the early pool empties (benchmark: **1 leap + ~3s whirlwind ≈
+   empty**).
+2. **God Skills drain mana per second** while active (Burning Body ≈ **5 mp/3s**, upgrades scale up).
+3. **Toggle auto-casts to keys 1–9** (acquisition order) — the player chooses which to keep lit and manages
+   mana against that choice.
+
+**Why:** Serves the weighty-combat directive (you can't spam; every cast is a decision) **and** adds an active
+**resource-management build axis** on top of the draft — "which skills do I keep running?" becomes live play.
+It's a deliberate, intentional divergence from pure VS auto-fire (re-adds the agency auto-fire removed) and
+**unifies** the class and god layers under one pool without breaking item 2's class-agnostic portability.
+
+**Phasing:** **Phase 1** (class mana+CD rebalance — *quick, standalone, delivers the core "run dry" feel*) →
+**Phase 2** (god-skill per-second drain, rank-scaled) → **Phase 3** (toggle/hotkey + HUD + Sim hooks). Detail,
+starting numbers, and the engineering grounding are in the spec.
+
+**Open forks (Josh's call — flagged in the spec, defaults chosen so engineering isn't blocked):** starvation
+behaviour (dormant-resume *[rec]* vs hard auto-off) and starve order (priority-by-key *[rec]* vs all-equal).
+
+> **Note vs item 2:** Phases 2–3 layer onto the live God-Skill system (item 2); the toggle re-introduces an
+> input hook that item 2's pure auto-fire had dropped — the spec updates the AI-native contract accordingly.
 
 ---
 
