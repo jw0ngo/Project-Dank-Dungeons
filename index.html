@@ -4363,7 +4363,7 @@ function gUpdatePlayer(dt=1){
     if(p.mp <= 0) gToggleWhirlwind();
   } else {
     const _mpAdd = (p.wildBuffs&&p.wildBuffs.mpRegenAdd||0) / 60; // HP/s → per frame
-    p.mp = Math.min(p.maxMp, p.mp + (W().mpRegen + _mpAdd) * dt);
+    p.mp = Math.min(p.maxMp, p.mp + ((W().mpRegen||0) + _mpAdd) * dt);  // ||0: bow has no mpRegen key → guard against NaN mp (matches the char-screen display's guard)
   }
   // obelisk + card hp regen (flat addition)
   const _hpAdd = (p.wildBuffs&&p.wildBuffs.hpRegenAdd||0) / 60;
