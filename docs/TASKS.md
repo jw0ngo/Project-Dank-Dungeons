@@ -85,19 +85,19 @@ refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 
     mp/s figure (`gGodSkillDrainPerSec`) updates for free. **Trail/Pyroclasm (item 2) inherit this two-table model**
     when built — fixed per-rank cost + damage tables, not a flat ramp and not a formula.
 
-- ◻️ ✨ **#8.8 — Default out-of-combat MANA regen: 10 mp/s after 10 s of no mana use AND no damage** (↳ from
-  PM playtest, Josh 2026-06-12) — mirror of the HP-regen #8.2, and the **relief valve for #8.7** (recharge by
-  disengaging → leap into the next horde). Today base mana regen is tight (`mpRegen 0.01667/f ≈ 1/s`, `:2545`,
-  applied `:4502–4509`). Add: stamp **`p._lastMpUseFrame = gFrame`** at every mana-spend site (dash `:4115`,
-  leap `:4208`, heavy `:4002/4337` + emit `:4044`, whirlwind per-frame `:4506`, **and the god-skill per-second
-  drain** in `gUpdateGodSkills`) — cleanest via a tiny `gSpendMana(p,amt)` helper all sites route through, or
-  stamp inline. Then in the regen block, when **`gFrame - (p._lastMpUseFrame||0) ≥ 600` AND
-  `gFrame - (p._lastDmgFrame||0) ≥ 600`** (10 s; `_lastDmgFrame` already added by #8.2), regen at **10 mp/s**
-  (overrides the base ~1/s; card `mpRegenAdd` still stacks). Clamp to `maxMp`. Per-player local, MP-safe. Knobs:
-  rate (10), delay (10 s). **⚠ Design default to confirm w/ Josh:** an **active god-skill aura drains mana every
-  frame → continuously stamps `_lastMpUseFrame` → ooc regen won't fire while a skill is lit** (you must toggle it
-  off to fast-recharge). Consistent with the toggle-management design — but flag it so it's intended, not a
-  surprise. *(Whirlwind spinning likewise counts as "using mana" — correct.)*
+- ✅ ✨ **#8.8 — Default out-of-combat MANA regen: 10 mp/s after 10 s of no mana use AND no damage** — **done
+  ENG 2026-06-12.** Added a tiny **`gSpendMana(p,amt)`** helper (clamps to 0, stamps `p._lastMpUseFrame = gFrame`)
+  and routed **all 6 spend sites** through it (god-skill base chunk + emit in `gTickBurningBody`, dash, leap, heavy,
+  whirlwind per-frame). `gDamagePlayer` now stamps `p._lastDmgFrame = gFrame` (shared infra #8.2 reuses). In
+  `gUpdatePlayer`'s regen `else`-branch: when `gFrame-(_lastMpUseFrame||0) ≥ OOC_REGEN_DELAY` **AND**
+  `gFrame-(_lastDmgFrame||0) ≥ OOC_REGEN_DELAY` (600f/10s), base regen swaps to **`OOC_MP_REGEN` (10/60 = 10 mp/s)**
+  instead of `W().mpRegen` (~1/s); card `mpRegenAdd` still stacks; clamped to `maxMp`. Per-player local, MP-safe.
+  Knobs: `OOC_REGEN_DELAY`, `OOC_MP_REGEN`. `node --check` + grep verified (helper declared once, all spend sites
+  routed, no stray `p.mp -=`). **⚠ Design default IN EFFECT (flag for Josh):** an active god-skill charges its chunk
+  every ~3 s → re-stamps `_lastMpUseFrame` → **ooc fast-regen won't fire while a skill is lit** (toggle it off to
+  fast-recharge). Consistent with toggle-management; whirlwind likewise counts as "using mana." *(orig detail below.)*
+  - **(orig)** mirror of HP-regen #8.2, relief valve for #8.7. Stamp `_lastMpUseFrame` at every mana-spend site;
+    regen 10 mp/s after 10 s of no mana use AND no damage (`_lastDmgFrame`); overrides base ~1/s, `mpRegenAdd` stacks.
 
 - ◻️ 🟢 **#8.7 — Early-game difficulty too hard with the new mana economy; scale back the first night(s)** (↳ from
   PM playtest, Josh 2026-06-12 · revisits roadmap #1 + #7) — with the tighter mana (can't spam leap to clear a
@@ -163,21 +163,15 @@ refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 
   several seconds of the phase) + curve. **Visual-only** — the gameplay/spawn `fogVisRadius :15332` may keep
   snapping (Josh's note is about the *vision effect* appearance). Knob: transition duration.
 
-- ◻️ ✨ **#8.2 — Default out-of-combat HP regen: 3 HP/s after 10 s without taking damage** — in
-  `gDamagePlayer` (`:5176`, the central player-damage entry that already stamps `_hitFlash`) stamp
-  `p._lastDmgFrame = gFrame` on every hit. In the passive-regen block (`:4502–4511`, beside the card
-  `hpRegenAdd` flat regen at `:4511`) add a **base 3 HP/s** (=0.05/frame ×dt) **only when**
-  `gFrame - (p._lastDmgFrame||0) ≥ 600` (10 s @60). Stacks additively on the `hpRegenAdd` cards; clamp to
-  `maxHp`. Per-player local, MP-safe. Knobs: rate (3), delay (10 s). *(Small new mechanic — Josh-directed
-  with numbers; flag if the 10 s gate should reset on chip damage vs only real hits.)*
-  - **Regen juice tell (↳ Josh 2026-06-12):** **while the regen is active**, emit gentle **green upward-drifting
-    particles** around the player so the heal reads. Use `spawnGPCustom(x,y,col,vx,vy,life)` (`:2664` — takes an
-    explicit velocity) with the existing heal-green `#7CFC9E`, an **upward** `vy` (negative, small drift), a slight
-    `vx` spread, and a longer `life`; spawn at random offsets around the player body. **Throttle** to a gentle
-    ambient rise (a few motes every ~10–15 frames — *not* a burst), and **stop the moment regen stops** (damage
-    taken or HP full). Local/render-only; reuse the existing `gParticles` budget (`MAX_PARTICLES` guarded in
-    `spawnGPCustom`). Knobs: spawn rate, `vy`/spread, life. *(`spawnGP` `:2662` is the radial-burst variant — use
-    `spawnGPCustom` here for the directional upward motion.)*
+- ✅ ✨ **#8.2 — Default out-of-combat HP regen: 3 HP/s after 10 s without taking damage** — **done ENG
+  2026-06-12** (alongside #8.8 — shares the `_lastDmgFrame` stamp added to `gDamagePlayer`). In `gUpdatePlayer`'s
+  HP-regen block: `_hpOoc = (gFrame-(_lastDmgFrame||0) ≥ OOC_REGEN_DELAY) ? OOC_HP_REGEN : 0` (**3/60 = 3 HP/s**,
+  gated on **no damage only** — not mana use), added to the card `hpRegenAdd` flat regen; clamped to `maxHp`.
+  Per-player local, MP-safe. Knobs: `OOC_HP_REGEN`, `OOC_REGEN_DELAY` (shared 10 s delay w/ #8.8). **Juice tell:**
+  `gSpawnRegenMote(p)` spawns one heal-green `#7CFC9E` mote per 12 frames (~5/s) at a random lower-body offset with
+  an upward `vy` (−0.6…−1.0) + longer `life`, via `spawnGPCustom`; fires only while `_hpOoc>0 && _healing` so it
+  **stops the instant** a hit lands (resets `_lastDmgFrame`) or HP fills. Reuses the `gParticles`/`MAX_PARTICLES`
+  budget. `node --check` ok. **10 s gate resets on ANY hit (incl. chip)** — flag for Josh if real-hits-only wanted.
 
 - ◻️ 🟢 **#8.1 — LOS reveal: fade trees that hide enemies near the player** — extend the canopy-fade in
   `gDrawTree` (`:9214`; the want-fade test `:9226` currently only checks the **player's** foot `px,py`;

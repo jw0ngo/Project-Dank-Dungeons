@@ -4060,7 +4060,7 @@ function gTickBurningBody(p, dt, id, tree){
   p._bbCostTimer = (p._bbCostTimer || 0) - dt;
   if(p._bbCostTimer <= 0){
     if(p.mp < baseChunk){ if(p.godSkillDormant) p.godSkillDormant[id] = true; return; }   // can't afford base chunk → dormant
-    p.mp -= baseChunk;
+    gSpendMana(p, baseChunk);
     p._bbCostTimer = BB_AURA_INTERVAL;
   }
 
@@ -4112,7 +4112,7 @@ function gTickBurningBody(p, dt, id, tree){
   // paid above, keeps running). Uses the shared helper so the charge equals the HUD/Sim figure.
   const emitCost = gGodSkillEmitCost(p, id);
   if(p.mp < emitCost) return;       // can't afford the emit → skip it (no fire, no charge)
-  if(emitCost > 0) p.mp -= emitCost;
+  gSpendMana(p, emitCost);
 
   const novaScale  = (leaf && leaf.novaScale) || 1;
   const dmg        = Math.max(1, Math.round(gGodFireParam(p, id, 'emitDmg') * FR_DMG_MULT * dbuf * novaScale));
@@ -4191,7 +4191,7 @@ function gDoEvasion(){
   if(traveled < 4) return; // no room to dash
   p.evasionActive = { angle: ang, traveled: 0, dist: traveled, hitSet: new Set() };
   p.evasionCooldown = Math.round(pSkillStat(p,'evasionCooldown') * wildDexCdMult());
-  p.mp = Math.max(0, p.mp - W().mpCostEvasion);
+  gSpendMana(p, W().mpCostEvasion);
   p.iFrames = 999; // invulnerable for entire dash duration
   p.swinging = false; p.smear = null;
   spawnGP(p.wx, p.wy, '#ffffff', 6, 2.5);
@@ -4284,7 +4284,7 @@ function gFireLeap(){
   if(dist < 8){ p.leapTargeting = false; return; }
   const flight = W().leapFlight;
   p.leapTargeting = false;
-  p.mp = Math.max(0, p.mp - pSkillStat(p,'mpCostLeap'));
+  gSpendMana(p, pSkillStat(p,'mpCostLeap'));
   gGritGain(); // Grit
   p.leapActive = {
     originX: p.wx, originY: p.wy,
@@ -4413,7 +4413,7 @@ function _fireHeavyAtk(p){
   p.heavyTimer      = 0;
   p._heavyX0 = p.wx; p._heavyY0 = p.wy;   // lunge START — the hit zone spans from here through the lunge + stab
   p.heavyHitRegistry = new Set();
-  p.mp = Math.max(0, p.mp - W().mpCostHeavy * p.heavyChargeRatio); // cost SCALES with charge (full = mpCostHeavy); the windup capped the ratio to what you can afford, so this never goes below 0
+  gSpendMana(p, W().mpCostHeavy * p.heavyChargeRatio); // cost SCALES with charge (full = mpCostHeavy); the windup capped the ratio to what you can afford, so this never goes below 0
   p.heavyCooldown = Math.round(W().heavyCooldown * wildDexCdMult()); // CD begins on RELEASE, not at charge-start
   const r = p.heavyChargeRatio;
   const chargedLen = pSkillStat(p,'heavyLen') * (1 + r);
@@ -4569,6 +4569,28 @@ function gUpdateHeavyAtk(p, dt){
     p._heavyChargedLen = null; p._heavyChargedDmg = null;
   }
 }
+// Out-of-combat fast recharge (#8.8 / #8.2): after OOC_REGEN_DELAY frames with no mana use AND no
+// damage taken, regen jumps to the fast rate (the relief valve that makes the scaled-back early game
+// survivable — disengage to recharge, then re-engage). Shared delay; per-resource rates.
+const OOC_REGEN_DELAY = 600;   // frames (10s @60) of no mana-use AND no damage before fast regen kicks in
+const OOC_MP_REGEN    = 10/60; // mp/frame (10 mp/s) fast recharge
+const OOC_HP_REGEN    = 3/60;  // hp/frame (3 HP/s) out-of-combat base heal (#8.2; gated on no damage only)
+
+// #8.2 juice tell — one gentle green mote drifting up from the player body while out-of-combat HP regen mends.
+function gSpawnRegenMote(p){
+  const ox = (Math.random()-0.5) * p.r * 1.8;
+  const oy = (Math.random()-0.5) * p.r * 0.6 + p.r * 0.3;   // clustered around the lower body
+  spawnGPCustom(p.wx + ox, p.wy + oy, '#7CFC9E', 0, -0.6 - Math.random()*0.4, 1.6);  // upward drift, longer life
+}
+
+// Every mana-spend routes through here: clamp to 0 and stamp the frame so out-of-combat regen
+// (gUpdatePlayer) knows when mana was last used. A continuous drain (whirlwind, an active god-skill
+// chunk) keeps re-stamping → ooc regen stays suppressed until you stop spending.
+function gSpendMana(p, amt){
+  if(!(amt > 0)) return;
+  p.mp = Math.max(0, p.mp - amt);
+  p._lastMpUseFrame = gFrame;
+}
 function gUpdatePlayer(dt=1){
   const p = gPlayer;
   if(!p||p.dead||exitReached||gPaused)return;
@@ -4582,17 +4604,26 @@ function gUpdatePlayer(dt=1){
   gWildTick(dt); // wilderness run timer + threat scaling
   // Mana regen (passive) — whirlwind drains instead of regens while active
   if(p.wwActive){
-    p.mp = Math.max(0, p.mp - pSkillStat(p,'mpCostWwTick') * dt);
+    gSpendMana(p, pSkillStat(p,'mpCostWwTick') * dt);
     if(p.mp <= 0) gToggleWhirlwind();
   } else {
-    const _mpAdd = (p.wildBuffs&&p.wildBuffs.mpRegenAdd||0) / 60; // HP/s → per frame
-    p.mp = Math.min(p.maxMp, p.mp + ((W().mpRegen||0) + _mpAdd) * dt);  // ||0: bow has no mpRegen key → guard against NaN mp (matches the char-screen display's guard)
+    const _mpAdd = (p.wildBuffs&&p.wildBuffs.mpRegenAdd||0) / 60; // card flat regen, per frame
+    // Out-of-combat fast recharge (#8.8): no mana use AND no damage for OOC_REGEN_DELAY → 10 mp/s,
+    // overriding the tight base ~1/s (card mpRegenAdd still stacks). An active god-skill aura keeps
+    // re-stamping _lastMpUseFrame (charges its chunk every few sec), so you must toggle it off to fast-recharge.
+    const _ooc  = (gFrame - (p._lastMpUseFrame||0) >= OOC_REGEN_DELAY) && (gFrame - (p._lastDmgFrame||0) >= OOC_REGEN_DELAY);
+    const _base = _ooc ? OOC_MP_REGEN : (W().mpRegen||0);  // ||0: bow has no mpRegen key → guard against NaN mp
+    p.mp = Math.min(p.maxMp, p.mp + (_base + _mpAdd) * dt);
   }
-  // obelisk + card hp regen (flat addition)
-  const _hpAdd = (p.wildBuffs&&p.wildBuffs.hpRegenAdd||0) / 60;
-  const _hpReg = _hpAdd;
-  if(p.hp < p.maxHp && _hpReg > 0)
-    p.hp = Math.min(p.maxHp, p.hp + _hpReg * dt);
+  // obelisk + card hp regen (flat addition) + out-of-combat base heal (#8.2)
+  const _hpAdd = (p.wildBuffs&&p.wildBuffs.hpRegenAdd||0) / 60; // card flat regen, per frame
+  const _hpOoc = (gFrame - (p._lastDmgFrame||0) >= OOC_REGEN_DELAY) ? OOC_HP_REGEN : 0; // 3 HP/s after 10s w/o damage
+  const _hpReg = _hpAdd + _hpOoc;
+  const _healing = p.hp < p.maxHp && _hpReg > 0;
+  if(_healing) p.hp = Math.min(p.maxHp, p.hp + _hpReg * dt);
+  // Juice tell: gentle green motes rise while the out-of-combat heal is actively mending — stops the instant
+  // it stops (a hit resets _lastDmgFrame → _hpOoc 0; HP full → !_healing). Throttled to an ambient drift.
+  if(_hpOoc > 0 && _healing && (gFrame % 12 === 0)) gSpawnRegenMote(p);
   // Update MP bar
   const mpEl = document.getElementById('gmp');
   if(mpEl) mpEl.style.width = Math.max(0, p.mp / p.maxMp * 100) + '%';
@@ -5268,6 +5299,7 @@ function gDamagePlayer(dmg, opts){
   // Dash/leap/roll still set iFrames directly as a deliberate evasion tool; continuous hazards
   // self-throttle with their own cooldowns — see the fire-beam _beamCd and the fire-zone accum.)
   gPlayer._hitFlash = HIT_FLASH_DUR;   // red damage-flash — visual only, grants NO invulnerability
+  gPlayer._lastDmgFrame = gFrame;      // stamp for out-of-combat regen gating (#8.8 mana; #8.2 HP)
   if(opts.shake)    gShake(opts.shake[0], opts.shake[1]);
   if(opts.particle) spawnGP(gPlayer.wx, gPlayer.wy, opts.particle.col, opts.particle.n, opts.particle.spd);
   if(opts.number)   addGDmg(gPlayer.wx, gPlayer.wy + (opts.number.y ?? -18), opts.number.val ?? dmg, opts.number.col);
