@@ -18,6 +18,21 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 
 ---
 
+### 2026-06-12 — A well-factored registry makes a new content variant DATA + one function, not a feature
+- **Principle:** Cilia's 2nd & 3rd God Skills (Trail of Embers, Pillars of Fire) — full 10-rank trees with Form @5
+  / Ascension @10 forks — cost only a **pool entry + one `gTick<Skill>` updater + one dispatcher `case`**. The
+  draft acquire/rank-up cards, the evolution overlays (+ headless `gSimEvolution` hook), the toggle, the action-bar
+  HUD, and `gGodFireParam`'s per-rank `<key>ByRank` tables ALL came free — they iterate the registry generically
+  (`gOwnedGodSkills`/`gGodSkillCards`/`gPendingEvolution`), never hardcoding a skill.
+- **Why:** `IMBUE_PATHS[patron][id]` (with a `fire` block) is the single extension point the whole pipeline reads.
+  So "build another god skill" ≈ author its entry + its one behavior fn; engine code is needed only for genuinely
+  new *behavior* (the cone emitter, the mouse-aim telegraph, the rift).
+- **How to apply:** before building "another X", confirm X is registry-driven; if a new entry lights up the
+  pipeline, scope the work as *entry + one tick fn*. **Corollary — keep a preview and its real effect in sync from
+  ONE function:** `gPyroPlan` computes the pillar layout for both the aim telegraph and the actual fire; diverge
+  only via an explicit flag (`forTelegraph` → straight-circle preview vs jagged-condensed actual). Two code paths
+  for "where it lands" guarantees indicator/hitbox drift.
+
 ### 2026-06-12 — `git push` ships the whole ancestor chain — a "docs-only" lane push can silently deploy un-pushed `index.html` underneath it
 
 - **Principle:** Push gating is per-*commit* in our heads but per-*ref* in git. `origin/main` advancing to a docs
