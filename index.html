@@ -6411,7 +6411,8 @@ function gBurnExplode(src){
     if(!gWithin(o.wx - src.wx, o.wy - src.wy, BURN_EXPLODE_R + (o.r || 11))) continue;
     o.hp -= dmg; o.hitFlash = 8;
     addGDmg(o.wx, o.wy - 12, dmg, '#ff8833');
-    gApplyEnemyBurn(o, BURN_EXPLODE_FRAMES, (src._burnTickDmg || 1) * 3);   // chain the burn
+    gApplyEnemyBurn(o, BURN_EXPLODE_FRAMES, dmg);   // spread fire — burn TOTAL = the AoE damage this enemy took (so the blast ignites the pack per its damage)
+    spawnGP(o.wx, o.wy, '#ff7a22', 6, 2.8);          // visible ignite on each enemy the blast catches
     if(o.hp <= 0) gKillEnemy(o);
   }
 }
@@ -6428,14 +6429,17 @@ function gUpdateEnemyBurn(dt){
       en.hp -= d; en.hitFlash = 6;
       spawnGP(en.wx, en.wy, '#ff7a22', 4, 2.2);
       addGDmg(en.wx, en.wy-12, d, '#ff7a33');
-      // Conflagration (item 0c): chance per tick to detonate — AoE + re-ignite chain.
+      // Conflagration (item 0c): chance per tick to detonate — AoE + re-ignite chain. An enemy may detonate
+      // at most ONCE per 10 burn ticks (per-enemy lockout, ticks down each tick), so a high explode-chance
+      // doesn't chain-pop the same target every tick.
+      if(en._explodeCd > 0) en._explodeCd -= 1;
       const ec = (gPlayer && gPlayer.wildBuffs && gPlayer.wildBuffs.burnExplodeChance) || 0;
-      if(ec > 0 && Math.random() < ec) gBurnExplode(en);
+      if(ec > 0 && (en._explodeCd|0) <= 0 && Math.random() < ec){ gBurnExplode(en); en._explodeCd = 10; }
       if(en.hp <= 0){
         gKillEnemy(en);
       }
     }
-    if(en._burnTimer <= 0){ en._burnTimer = 0; en._burnTickDmg = 0; }
+    if(en._burnTimer <= 0){ en._burnTimer = 0; en._burnTickDmg = 0; en._explodeCd = 0; }   // burn over → reset the explode lockout for a fresh burn
   }
 }
 

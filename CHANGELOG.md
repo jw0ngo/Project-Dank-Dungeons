@@ -18,6 +18,10 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
   doing nothing. (Throttled so holding a key doesn't spam it.)
 
 ### Changed
+- **Conflagration explosions are rate-limited and spread fire.** A burning enemy can now detonate **at most once
+  per 10 burn ticks** (a per-enemy lockout), so a high explode-chance no longer chain-pops the same target every
+  tick. Each blast now **ignites every enemy in its radius** with a burn scaled to the AoE damage it dealt — so
+  the fire genuinely spreads pack-to-pack.
 - **Heavy attack mana cost now scales with charge (full charge = 10), and you can always start charging.** The
   cost rises with how far you charge, so the windup **caps at what you can afford** and silently stalls there
   rather than refusing to start. Because mana regens while you hold, the affordable cap keeps rising — hold
