@@ -10,8 +10,9 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 ### Added
 - **Fire-explosion sprite on Conflagration detonations.** When a burning enemy's tick triggers the
   Conflagration explosion, a hand-painted fire burst now **blooms outward from the centre** (additive, sized to
-  the AoE) and fades, replacing the bare particle pop. **Synced in co-op** — the host broadcasts each detonation
-  over a new `world/fx` stream so every player sees the burst (deduped by id; history skipped on join).
+  the AoE) and fades, replacing the bare particle pop. A **soft explosion sound** (placeholder — a muffled low
+  boom) plays with it, throttled so chains don't stack. **Synced in co-op** — the host broadcasts each detonation
+  over a new `world/fx` stream so every player sees + hears the burst (deduped by id; history skipped on join).
 - **"Not Enough Mana!" feedback.** Trying to cast a class skill (heavy/dash/leap/whirlwind) without the mana now
   floats a red **"Not Enough Mana!"** over your head and **flashes the MP bar outline red**, instead of silently
   doing nothing. (Throttled so holding a key doesn't spam it.)

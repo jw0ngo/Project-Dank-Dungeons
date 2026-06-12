@@ -2512,6 +2512,29 @@ function gPlayWoodBreak(){gpfx(ac=>{
   src2.connect(f2);f2.connect(g2);g2.connect(ac.destination);src2.start(t);src2.stop(t+dur2+.01);
 });}
 
+// Soft explosion (placeholder) — a muffled low boom: filtered noise sweeping down for a soft body + a gentle
+// low sine thump. No harsh highs (lowpass), modest gains → reads "soft". Throttled so chained Conflagration
+// detonations in the same beat don't stack into a clap.
+let _explosionSfxAt = -999;
+function gPlayExplosion(){
+  if(gFrame - _explosionSfxAt < 4) return;
+  _explosionSfxAt = gFrame;
+  gpfx(ac=>{
+    const t=ac.currentTime, dur=.5;
+    const b=ac.createBuffer(1,ac.sampleRate*dur,ac.sampleRate);
+    const d=b.getChannelData(0);
+    for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,1.5);
+    const src=ac.createBufferSource();src.buffer=b;
+    const f=ac.createBiquadFilter();f.type='lowpass';f.frequency.setValueAtTime(650,t);f.frequency.exponentialRampToValueAtTime(90,t+dur);
+    const g=ac.createGain();g.gain.setValueAtTime(.26,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+    src.connect(f);f.connect(g);g.connect(ac.destination);src.start(t);src.stop(t+dur+.01);
+    // gentle low-sine body
+    const o=ac.createOscillator();o.type='sine';o.frequency.setValueAtTime(105,t);o.frequency.exponentialRampToValueAtTime(45,t+.18);
+    const og=ac.createGain();og.gain.setValueAtTime(.2,t);og.gain.exponentialRampToValueAtTime(.001,t+.24);
+    o.connect(og);og.connect(ac.destination);o.start(t);o.stop(t+.26);
+  });
+}
+
 function gPlayWoodHit(){gpfx(ac=>{const t=ac.currentTime,dur=.22;const b=ac.createBuffer(1,ac.sampleRate*dur,ac.sampleRate);const d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,1.2)*.7;const s=ac.createBufferSource();s.buffer=b;const f=ac.createBiquadFilter();f.type='lowpass';f.frequency.value=550;const g=ac.createGain();g.gain.setValueAtTime(.45,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);s.connect(f);f.connect(g);g.connect(ac.destination);s.start(t);s.stop(t+dur+.01);});}
 // Subtle fire sizzle — quiet high-freq crackle, no grunt, signals DoT tick
 function gPlayFireTick(){gpfx(ac=>{const t=ac.currentTime,dur=.12;const b=ac.createBuffer(1,ac.sampleRate*dur,ac.sampleRate);const d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2.2);const s=ac.createBufferSource();s.buffer=b;const f=ac.createBiquadFilter();f.type='bandpass';f.frequency.setValueAtTime(3600,t);f.frequency.exponentialRampToValueAtTime(1800,t+dur);f.Q.value=0.8;const g=ac.createGain();g.gain.setValueAtTime(.027,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);s.connect(f);f.connect(g);g.connect(ac.destination);s.start(t);s.stop(t+dur);});}
@@ -6382,6 +6405,7 @@ function gBurnExplode(src){
   spawnGP(src.wx, src.wy, '#ff5512', 18, 4.5);
   spawnGP(src.wx, src.wy, '#ffcc33', 10, 3);
   gShake(2, 4);
+  gPlayExplosion();   // host/SP — clients play it in the FX replay (_onFxUpdate)
   for(const o of gEnemies){
     if(o.dead || o === src) continue;
     if(!gWithin(o.wx - src.wx, o.wy - src.wy, BURN_EXPLODE_R + (o.r || 11))) continue;
@@ -10532,7 +10556,7 @@ if (!room || room.started !== true) return;
     if (Net._fxSeen == null) { Net._fxSeen = maxId; return; }   // join baseline — don't replay history
     for (const e of list) {
       if ((e.id || 0) <= Net._fxSeen) continue;
-      if (e.t === 'burst') gSpawnFireBurst(e.x, e.y, e.r);
+      if (e.t === 'burst') { gSpawnFireBurst(e.x, e.y, e.r); gPlayExplosion(); }
     }
     Net._fxSeen = Math.max(Net._fxSeen, maxId);
   },
