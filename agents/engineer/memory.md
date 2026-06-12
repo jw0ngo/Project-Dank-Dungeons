@@ -18,6 +18,19 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 
 ---
 
+### 2026-06-12 — A proven function can still break at a NEW lifecycle phase; mirror the working call-site's timing
+- **Principle:** `goWilderness()` worked everywhere it was called (town→portal, etc.) but **black-screened** when I
+  called it at **module-eval boot** to drop the deployed build straight into a run. The function carried implicit
+  timing assumptions about *when* it runs (game screen shown, loop ticking, art loaded) — the portal satisfies all
+  of them by construction (it fires from inside the running loop, post-load); boot-eval satisfies none.
+- **Why:** reuse ≠ relocation. Moving a call to a new lifecycle point silently violates the timing/state the
+  function assumed. node --check passes; the breakage is purely runtime-ordering, invisible to syntax checks.
+- **How to apply:** (1) when triggering a working function from a NEW point, **replicate the proven call-site's
+  lifecycle** — here, defer to `window.load` + one rAF *after* `goTown()` set up the screen/loop (same timing as a
+  portal click). (2) For a **live-only** bug, add a **local repro hook before re-deploying** — a `?wild=1` query
+  flag reproduced the live direct-boot path on the dev build, so I could verify the fix in-browser instead of
+  deploy-guessing (I'd already shipped one black-screen build by guessing). Verify, then deploy.
+
 ### 2026-06-12 — A well-factored registry makes a new content variant DATA + one function, not a feature
 - **Principle:** Cilia's 2nd & 3rd God Skills (Trail of Embers, Pillars of Fire) — full 10-rank trees with Form @5
   / Ascension @10 forks — cost only a **pool entry + one `gTick<Skill>` updater + one dispatcher `case`**. The
