@@ -442,7 +442,12 @@ engine. Small, host-side, reuses the live burn system. The `cil-conflag` patron 
 **Ikras / Boreas / Bhumi (design-ahead, not engineer work yet):** their stat-synergy mechanics are PM-proposed in
 the spec (e.g. Ikras chain-arc count ← move speed; Boreas frost-field size ← pickup range; Bhumi thorns ← max HP)
 and land **with their gods** — authored into these identities from the start. Boreas (#5) is the next to benefit
-when it unholds. **One gap flagged:** Attack Speed isn't a character-stat card today (Ikras would need one).
+when it unholds.
+
+**Attack Speed → first-class character stat (Josh 2026-06-12, approved — buildable now):** promote attack speed
+to a real `wildBuffs` stat + passive card that **speeds the normal attack (more swings) and the heavy charge**.
+Works on the base sword kit immediately; **Ikras inherits it** as its identity stat. Resolves the gap above —
+filed to the Engineer lane.
 
 ---
 

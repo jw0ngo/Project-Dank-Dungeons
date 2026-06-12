@@ -38,9 +38,11 @@ patrons. (See [`mana-economy.md`](mana-economy.md) "build variety lives in the c
 
 **Stat keys (grounded, `wildBuffs.*`):** `critChance` (clamp 0.75), `critDamage` (added to `CRIT_BASE_MULT`),
 `speedPct` (move speed), `cdPct` (cooldown, clamp 99), `pickupRange`, `mpRegenAdd`, `hpBonus`/`maxHp`,
-`hpRegenAdd`. **⚠ Gap: there is no character-stat card for *Attack Speed*** — move speed is `speedPct`; "attack
-speed" today exists only as a per-skill `swingSpeed` skill-stat. Ikras's attack-speed identity needs a new
-character stat/card (or an explicit mapping to the swing-speed stat) — decide when Ikras is built.
+`hpRegenAdd`. **Attack Speed — RESOLVED (Josh 2026-06-12): being promoted to a first-class character stat**
+(`wildBuffs.attackSpeed`) that speeds the normal attack (more swings, ↓`swingCd`) and the heavy charge
+(↓`heavyMaxWindup`), with its own passive card. Filed to the Engineer lane; buildable now on the base kit,
+**Ikras inherits it** when built. (Was a gap — move speed is `speedPct`; attack speed previously existed only as
+the swing-only `swingSpdPct` skill-stat.)
 
 ---
 
@@ -88,7 +90,8 @@ recorded now so each god's kit is *authored into* its stat identity from the sta
 - **Attack Speed → chain frequency.** How fast the chains re-fire / re-arc scales with attack speed.
 - **Lead mechanic (rec):** a lightning/wind chain that leaps between nearby enemies — *arc count ← move speed,
   re-arc cadence ← attack speed.* A pure mobility build = more, faster chains across the pack.
-- **Blocked on:** the Attack-Speed stat-card gap above + Ikras existing at all.
+- **Blocked on:** Ikras existing at all. (The Attack-Speed character stat — its other half — is being built now,
+  so the stat will be live and tuned on the base kit before Ikras lands.)
 
 ### Boreas (Ice · defense/control/zoning) — Mana Regen + Pickup Range + Cooldown Reduction
 - **Pickup Range → frost-field size** (Josh's seed). Bigger magnet = bigger control zone. Zoning identity made a

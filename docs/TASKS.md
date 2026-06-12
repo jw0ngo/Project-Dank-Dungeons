@@ -179,6 +179,32 @@ refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 
   - Host-authoritative (burn resolves host-side) → no MP change. **Verify** on the training dummy / a burning pack:
     crit cards now drive detonation frequency + blast size; zero-crit Cilia still chains modestly.
 
+- ◻️ ✨ **Attack Speed — promote to a first-class CHARACTER stat** (↳ from PM, Josh 2026-06-12 · resolves the
+  item-9 Ikras gap, spec [`specs/god-stat-identities.md`](specs/god-stat-identities.md)) — add a new
+  `wildBuffs.attackSpeed` (%) character stat that **(1) speeds the normal attack** (more swings — reduces
+  `swingCd`) and **(2) speeds the heavy charge** (faster windup — reduces `heavyMaxWindup`). The engine already
+  has both pct-reduction hooks routed through **`pSkillSpeed` (`:2650`)**: swing rate at `:4597`
+  (`pSkillSpeed(p,'swingCd','swingSpdPct')`), heavy charge at `:4392`
+  (`pSkillSpeed(p,'heavyMaxWindup','heavyChgPct')`). **Cleanest wiring:** fold the character `attackSpeed` % into
+  `pSkillSpeed`'s divisor for those two keys (`v = base / (1 + (skillPct + attackSpeed)/100)`) so it **stacks**
+  with the existing skill-stats and the `SKILL_STAT_FLOOR` clamps (`swingCd:18`, `heavyMaxWindup:36`) keep it from
+  zeroing out. Affects **swing + heavy only** — *not* cooldowns (CDR/`cdPct` owns those); heavy = charge speed,
+  not its post-fire `heavyCooldown`.
+  - **New passive card** (mirror Precision/Swiftness shape): e.g. **"Frenzy"** (⚡/⚔) **"+X% Attack Speed"**,
+    ~**+7%/pick** (tune), **uncapped** (pool-wide caps removed). Add to `PASSIVE_CARDS` + the town/dev card list
+    (`:15221`-area) + factory init (`:3422`) + run-start reset (`:15175`) + the Statforge dev block.
+  - **Char-screen display:** add an "ATK SPD" stat to the character panel alongside CRIT/MOVE/CD (~`:12535–12554`).
+  - **Forks to flag (Josh's feel call):** **(a)** the swing *cooldown* (`swingCd`) is the primary "more swings"
+    lever, but at high attack speed the swing *animation* (`swingDur 10f`) becomes the floor of the cycle — to keep
+    scaling past ~2.5×, optionally also scale `swingDur` lightly (engineer judges feel; don't over-shorten the
+    anim). **(b)** card value/curve — +7%/pick is a starting guess; tune so a committed attack-speed build feels
+    fast but the floors keep it sane. **(c)** name — "Frenzy" proposed (Precision/Savagery/Swiftness/Alacrity taken).
+  - **Ikras tie-in:** this IS the stat Ikras's identity pulls (item 9) — works on the base sword kit now; Ikras
+    inherits it. **Note vs Swing: Tempo** (`swingSpdPct`, swing-only skill card): they coexist & stack — Attack
+    Speed is the broad character stat (swing + heavy), Tempo the swing-only specialist. Host/local; the swing/heavy
+    timing is already local → no MP change. **Verify:** `node --check`; stack Frenzy → confirm faster swings + faster
+    heavy charge, both clamped at the floors; char screen shows ATK SPD.
+
 - ◻️ 🔧 **Apply the `assets/world` fold (atomic move + manifest rewrite)** (↳ from ART, 2026-06-12 ·
   Josh-approved) — `assets/world/` is flat and filling up (one area's set-dressing so far). Scheme
   (`assets/README.md`): **`world/` by AREA + `_shared/`**. **`tile/` stays FLAT** — decided, not foldered (spec
