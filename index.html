@@ -2057,6 +2057,7 @@ let gRocks=[];
 let gWildTrees=[]; // [{wx,wy,variant,scale,small}] — world.tree[small].<variant> art, drawn by gDrawTree
 let gFireWaves=[]; // imbued-LMB fire arcs (Cilia's Fire)
 let gFireRings=[]; // imbued-whirlwind expanding fire rings (Cilia's Fire)
+let gFireBursts=[]; // one-shot fire-explosion sprites that bloom centre→edge then fade (Conflagration detonation)
 let gFireCrosses=[]; // imbued-leap burning crosses (Cilia's Fire)
 let gFireTrails=[]; // imbued-dash flame trail (Cilia's Fire)
 let gTrailHits=new WeakMap(); // shared per-enemy trail hit cooldown (overlap-proof)
@@ -3222,6 +3223,7 @@ function gameLoad(mapData) {
   gDestructibles=[]; gEnemies=[]; gTorches=[]; gArrows=[]; gPlayerArrows=[]; gTraps=[]; gPotions=[]; gBombs=[]; gXPOrbs=[]; gFavorOrbs=[]; gObelisks=[]; gWildCamps=[]; gRocks=[]; gWildTrees=[];
   gFireWaves=[];
   gFireRings=[];
+  gFireBursts=[];
   gFireCrosses=[];
   gFireTrails=[]; gTrailHits=new WeakMap();
   gFirePillars=[];
@@ -6373,6 +6375,7 @@ const BURN_EXPLODE_R      = 60;    // px AoE radius
 const BURN_EXPLODE_FRAMES = 120;   // re-ignite duration on caught enemies (before the player's durMult)
 function gBurnExplode(src){
   const dmg = Math.max(4, Math.round((src._burnTickDmg || 1) * 4));
+  gSpawnFireBurst(src.wx, src.wy, BURN_EXPLODE_R * 1.15);   // bloom sized just over the AoE so flames cover the kill zone
   spawnGP(src.wx, src.wy, '#ff5512', 18, 4.5);
   spawnGP(src.wx, src.wy, '#ffcc33', 10, 3);
   gShake(2, 4);
@@ -6615,6 +6618,33 @@ function gDrawFireRings(){
       gctx.save(); gctx.globalAlpha = 0.5 * fade; gctx.strokeStyle = '#ff7a22'; gctx.lineWidth = 6;
       gctx.beginPath(); gctx.arc(ox, oy, w.traveled, 0, Math.PI*2); gctx.stroke(); gctx.restore();
     }
+  }
+  gctx.globalAlpha = 1;
+}
+
+// ── Fire-explosion BURST — a one-shot sprite that blooms from centre to edge, then fades (additive) ──
+// Spawned by the Conflagration burn-tick detonation (gBurnExplode), sized to the AoE radius. Host-spawned
+// like the explosion's particles (cosmetic — no MP sync), so it shows for whoever triggers the detonation.
+const FIREEXPLOSION_SPR = new Image(); FIREEXPLOSION_SPR.src = 'assets/fx/cilia/fireexplosion.png';
+const FIREBURST_LIFE = 22;   // frames (~0.37s) — a quick bloom
+function gSpawnFireBurst(x, y, r){ gFireBursts.push({ x, y, r, t: 0, rot: Math.random() * Math.PI * 2 }); }
+function gUpdateFireBursts(dt){
+  for(let i = gFireBursts.length - 1; i >= 0; i--){ if((gFireBursts[i].t += dt) >= FIREBURST_LIFE) gFireBursts.splice(i, 1); }
+}
+function gDrawFireBursts(){
+  if(!gFireBursts.length) return;
+  const haveSpr = FIREEXPLOSION_SPR.complete && FIREEXPLOSION_SPR.naturalWidth;
+  for(const b of gFireBursts){
+    const p = Math.min(1, b.t / FIREBURST_LIFE);                  // 0→1 progress
+    const D = 2 * b.r * (0.15 + 0.85 * (1 - (1 - p) * (1 - p)));  // ease-out bloom: a small core grows to the full diameter (2r)
+    const ox = b.x - camX, oy = b.y - camY;
+    gctx.save();
+    gctx.globalCompositeOperation = 'lighter';                    // additive — transparent/dark drops out, flame glows over the scene
+    gctx.globalAlpha = Math.min(1, 1.6 * (1 - p));                // hold bright through the bloom, then fade out
+    gctx.imageSmoothingEnabled = true;
+    if(haveSpr){ gctx.translate(ox, oy); gctx.rotate(b.rot); gctx.drawImage(FIREEXPLOSION_SPR, -D/2, -D/2, D, D); }
+    else { gctx.fillStyle = '#ff7a22'; gctx.beginPath(); gctx.arc(ox, oy, D/2, 0, Math.PI*2); gctx.fill(); }   // procedural fallback
+    gctx.restore();
   }
   gctx.globalAlpha = 1;
 }
@@ -9366,6 +9396,7 @@ function gRender(){
   for(const d of drawables){ d.draw(d.arg); if(d.arg&&d.arg.threatTier&&!d.arg.dead) gDrawThreatGlow(d.arg); }
   gDrawFireFields(); // Cinder Ring ascension — solid burning-ground discs (under the rings/entities)
   gDrawFireRings(); // expanding fire rings (imbued whirlwind + Cinder Ring Form)
+  gDrawFireBursts(); // fire-explosion sprite blooms (Conflagration detonation)
   gDrawFireWaves(); // fire arcs + burning-enemy flames, over entities
   gDrawEmberShots(); // Emberlance Form — travelling fireballs (item 2)
   gDrawFireJets(); // Dragonfire ascension — horizontal fire-jet beams (item 2 Slice C)
@@ -9965,7 +9996,7 @@ function gSimUpdate(dt){
     if(gPlayer)gUpdateShamanBuffs(dt);
     if(gPlayer)gUpdateBurn(dt);
     if(gPlayer)gUpdateShield(dt);
-    if(gPlayer&&!gPlayer.dead){gUpdateFireWaves(dt);gUpdateFireRings(dt);gUpdateFireCrosses(dt);gUpdateFireTrails(dt);gUpdateEmberShots(dt);gUpdateFireJets(dt);gUpdateFireFields(dt);}
+    if(gPlayer&&!gPlayer.dead){gUpdateFireWaves(dt);gUpdateFireRings(dt);gUpdateFireBursts(dt);gUpdateFireCrosses(dt);gUpdateFireTrails(dt);gUpdateEmberShots(dt);gUpdateFireJets(dt);gUpdateFireFields(dt);}
     if(gPlayer&&!gPlayer.dead)gUpdateFirePillars(dt);
     if(gPlayer&&!gPlayer.dead)gUpdateEnemyBurn(dt);
     if(gPlayer)gFogReveal(); // wilderness fog of war — throttled inside

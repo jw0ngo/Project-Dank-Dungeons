@@ -191,9 +191,17 @@ drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 wolf 
   grass.png`, `art/world/barrel.png`, `art/world/crate.png`.
   </details>
 
-- ◻️ 🎨 **Wire `fx.fireexplosion` — single fire-burst FX sprite** (↳ from ART, 2026-06-12) — one new transparent
-  FX cutout committed at `assets/fx/cilia/fireexplosion.png` (256², ~88 KB; radial fire burst, bright white-hot
-  core, flying embers/debris). A **single key** like `fx.thrust`/`fx.slash` (not a numbered variant set). Paste:
+- ✅ 🎨 **Wire `fx.fireexplosion` — single fire-burst FX sprite** (↳ from ART, 2026-06-12 · **done ENG
+  2026-06-12**) — wired as a one-shot **bloom** FX on the **Conflagration burn-tick detonation** (`gBurnExplode`,
+  Josh's call): `gFireBursts` list + `gSpawnFireBurst`/`gUpdateFireBursts`/`gDrawFireBursts` (mirrors `gFireRings`).
+  Sprite blooms **centre→edge** (ease-out, diameter `0.3r→2r`) then fades, **additive** (`'lighter'`), sized to
+  `BURN_EXPLODE_R×1.15`. Loaded via a direct `Image` const (`FIREEXPLOSION_SPR`) like the fire-FX family — **not
+  the manifest** (the fire-draw code uses direct consts). Host-spawned (cosmetic, no MP sync — matches the
+  explosion particles); procedural-disc fallback. `node --check` + asset-resolves verified.
+  <details><summary>original handoff (Artist)</summary>
+
+  one new transparent FX cutout committed at `assets/fx/cilia/fireexplosion.png` (256², ~88 KB; radial fire burst,
+  bright white-hot core, flying embers/debris). A **single key** like `fx.thrust`/`fx.slash`. Original paste:
   ```
   'fx.fireexplosion':'assets/fx/cilia/fireexplosion.png',
   ```
@@ -211,6 +219,7 @@ drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 wolf 
   - *Tool:* new `tools/slice-single-fx.py` (one-cell `cut_cell`+`recover_specks` wrapper; slice-variants is
     3×3-only). Source master `art/fx/cilia/fire-explosion.png`. *(The older 9-variant `art/fx/cilia/fire-explosions.png`
     sheet is separate and unsliced — ping ART if a full explosion variant set is wanted too.)*
+  </details>
 
 - ◻️ 🎨 **Wire `fx.jumpimpact` — leap-landing impact shockwave** (↳ from ART, Josh 2026-06-12) — Josh: the
   `jump-impact` sprite should play on the **leap (`gFireLeap`) landing**. Verified it was **never wired** (master
