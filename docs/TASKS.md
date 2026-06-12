@@ -57,6 +57,16 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 ## 🟧 Engineer / CTO lane
 
+- ◻️ 🎨 **Wire the temporary title/landing screen (Pages deploy)** (↳ from ART + Josh, 2026-06-12) — two prepped title logos for a **temporary landing screen on the Pages deployment** (a splash shown on load, dismissed into the game). Both are transparent cutouts, bg-removed + halo-cleaned (QA'd over dark), HiDPI source. Committed under the new **`assets/ui/title/`** kind:
+  | Asset | px | role |
+  |---|---|---|
+  | `assets/ui/title/welcome.png` | 1280×703, ~1019 KB | **hero** — "Welcome / To Dust" ornate gold-iron logo (the centerpiece) |
+  | `assets/ui/title/survive.png` | 1280×451, ~529 KB | **tagline/banner** — "Try To Survive" (sits below the hero) |
+  - **Composition intent** (mock looked right): dark/near-black bg (`~#14100f`, optional vignette), **hero centered upper-middle** (~620 px CSS wide on a ~960-wide viewport, scale to taste), **`survive` centered below it** (~420 px wide) as the tagline, with an **Enter / Play** affordance to dismiss into the game. The logos already carry all the fire/filigree ornament — keep the bg plain so they read.
+  - **Raster → HiDPI:** these are photographic-style raster art — render via a plain `<img>` (DOM overlay is simplest for a landing screen) or `_prepHiDPICanvas` if canvas-composited; the 1280-px sources give ~2× HiDPI at the suggested display widths. Don't draw into an undersized backing store.
+  - **Behaviour is your/Josh's call** (not an art decision): whether the splash auto-dismisses, waits for a click/key, or gates the existing hub flow; where it mounts (a new `#g-landing` overlay over everything at boot). Transparent PNGs → composite over any bg you choose.
+  - **Load-weight note:** ~1.5 MB for the pair (detailed gold gradients + smoke don't PNG-compress well). Fine for a one-time splash; **if you want it lighter, ping ART** — I can flatten each onto the landing's solid bg colour as JPG (~10× smaller) since transparency isn't strictly needed once the bg is fixed. Source masters: `art/reference images/title screen {welcome,survive}.png`. New `assets/ui/` kind documented in `assets/README.md` (folds by UI surface → `title/`). Deploy-affecting → push with Josh's auth.
+
 ### God Skills — item 2 (↳ roadmap #2 · spec [`specs/god-skills.md`](specs/god-skills.md))
 
 - ✅ ✨ **Trail of Embers — built, then REWORKED to the new evolution tree** — **done ENG 2026-06-12.** The 2nd
@@ -78,6 +88,36 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
     `gSpawnFireTrail` (legacy callers fall back). `node --check` + economy extract-eval verified.
   - **⚠ Tuning watch (Josh):** Chaoswake self-burn (walk back into your wake) + Chaos-Steps blast (810 dmg rk10) +
     cone perf (~6 patches/tick) — tune by feel on the dummy. **Next God Skill: Pyroclasm** (interval + auto-target).
+
+- ◻️ 🔴 **Village goblins should leash home like wolf camps (closes the alerted-then-abandoned despawn exploit)**
+  (↳ Josh 2026-06-12) — alerted village defenders **never disengage**: once `_villageAlert` flips them
+  `activated=true; isHeld=false` (`index.html:16440`; damage-alert path `_villageCheckDamageAlert :16582`), they run
+  the goblin AI's **non-ambient branch** (`:5739–5742`) which has **no de-aggro and no leash-home** — they chase to
+  300px, then `wantRoam`-wander aimlessly, and the moment one drifts past the 85-tile despawn radius it gets culled
+  (`gUpdateEnemies :8023` — exempt only while `isHeld`/`campId` set, both now cleared). So you can alert a village,
+  sprint away, and its defenders quietly **despawn without being killed**. **Fix: give them the wolf leash, same
+  logic + range.**
+  <details><summary>detail (wiring spec)</summary>
+
+  Mirror `_aiWolf`'s leash (`:5831–5851`), anchored to the **village centre** instead of the den:
+  - **Anchor at spawn** — in the village-enemy spawn loop (`:14316–14324`) stamp `e.homeWx = vill.cx*T; e.homeWy =
+    vill.cy*T` (village centre; `vill.cx/cy` are tile coords). The goblin AI **already walks toward `homeWx/homeWy`**
+    when `wantHome` (`:5784`) — village goblins just never had a home set, so it was a no-op.
+  - **Leash check** — in the non-ambient branch (or just before it), when `e.villageId!==undefined && e.activated`
+    and the player is pulled farther than the leash radius from the anchor, disengage exactly like the wolf
+    (`:5832–5839`): `e.activated=false; e.hp=e.maxHp` (full-heal) `; e.isHeld=true` (re-hold **and** re-exempt from the
+    `:8023` despawn) `;` clear any pending swing (`e._atkPending=false; e.atkWindup=0; e.atkStrike=0`). The held branch
+    (`:5704`) then walks/holds it home and re-wakes it on the next approach.
+  - **Range** — reuse **`WOLF_LEASH_R` (22.6·T, `:5808`)** verbatim per Josh ("same range"); if a village-named
+    constant reads cleaner, alias `const VILLAGE_LEASH_R = WOLF_LEASH_R`. Use the **village centre** for the distance,
+    same shape as the wolf's `Math.hypot(gPlayer.wx-cx, gPlayer.wy-cy) > WOLF_LEASH_R`.
+  - **Re-arm the village** — on full disengage reset `vill.alerted=false` (find via `gVillages.find(v=>v.id===
+    e.villageId)`) so re-entering the radius re-alerts (`gUpdateVillages :16468`), mirroring the wolf den re-arm.
+    Idempotent if each leashing goblin resets it. Don't touch `vill.cleared`.
+  - **MP/Sim:** host-authoritative enemy AI — no MP/Sim change (same as the wolf leash). **Verify:** alert a village,
+    run >23 tiles from its centre → defenders full-heal, walk back, re-hold, and are still there (not despawned) when
+    you return; re-approaching re-alerts. Pairs with the despawn behaviour I documented in chat.
+  </details>
 
 ### Playtest feel/readability batch (↳ from PM playtest, Josh 2026-06-12 · roadmap #8)
 *Nine developer-directed game-feel / readability / balance / bug fixes from the first mana-economy playtest.
@@ -711,6 +751,14 @@ refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 
 
 ## ✅ Done (recent track record — prune to git history as it grows)
 
+- **2026-06-12 — Title/landing-screen logos prepped (2)** (Artist, ↳ from Josh) — bg-removed + halo-cleaned the two
+  new title masters (`art/reference images/title screen {welcome,survive}.png`) for a **temporary Pages landing
+  screen**. Same opaque-painted-checkerboard gen art as the FX → real `--bg white` edge-seeded cut + `--dewhite`
+  (the ornate logos have black smoke + dark iron filigree = the neutral-halo case); light `--erode 1` to spare the
+  sharp filigree spikes; no `--global` needed (open spiky frame → all gaps border-connected, no enclosed pockets).
+  Downscaled to 1280-px longest side + optimized (welcome 1019 KB, survive 529 KB). New **`assets/ui/` kind**
+  (`ui/title/welcome.png` + `survive.png`), documented in `assets/README.md` (folds by UI surface). Engineer handoff
+  filed (Engineer lane) with composition intent + the HiDPI/load-weight notes. Committed (deploy-affecting — push w/ Josh).
 - **2026-06-12 — Dragonfire/chaosfire FX sprite set sliced (6 sprites)** (Artist, ↳ from Josh) — cut six per-substance
   fire FX from new masters for the 3 Cilia God Skills: **pillars** (`dragonfire-/chaosfire-pillar`, tight-AR, reskin
   `FP_SPR`/`gFirePillars`), **bursts** (`-explosion`, reskin `FIREEXPLOSION_SPR`), **ground decals** (`-ground`,

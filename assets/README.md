@@ -19,7 +19,7 @@ durable thing it's naturally born of:
 | `fx/` | **owner** (FX belong to a god's kit *or a character class*) | `_shared/` · `knight/` · `cilia/` · `boreas/` · `ikras/` · `bhumi/` |
 | `world/` | **area** (set-dressing is born of an area) + `_shared/` for cross-area props | `goblin-forest/` · `sanctum/` · `_shared/` |
 | `tile/` | **flat — deliberately NOT foldered** (type is already in the id) | `tile.grass.*`, `tile.rock.*`, … (no subfolders) |
-| `ui/` | **UI surface** | `skill-icons/` · `frames/` … |
+| `ui/` | **UI surface** | `title/` (landing/title-screen logos) · `skill-icons/` · `frames/` … |
 | `gods/`, `portraits/` | — (too few to fold) | flat |
 
 Pick the **durable** axis: areas/factions/types rarely churn; *skill names* churn constantly, so we never
