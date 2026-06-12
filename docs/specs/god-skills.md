@@ -192,6 +192,13 @@ take burn DoT each `AURA_TICK`. Standalone damage (`AURA_DMG`/`FR_BASE_DMG`-scal
 
 ### 2. Trail of Embers — *movement-as-weapon / zone* (the native VS verb)
 
+> **Evolution rework (Josh, 2026-06-12):** the rank-5 Forms + rank-10 ascensions were redefined. **Form A · Inferno
+> Wake** now lays a **wide cone** of fire behind you (was a hotter single lane); **Form B** swaps from the cut
+> **Ember Shroud** aura to **Firesteps**, a **single high-damage line**. Ascensions: **Wyrmwake** (dragonfire cone,
+> heals) · **Chaoswake** (new — chaosfire cone, never under the player) · **Dragonfeet** (new — line → dragonflame
+> pillars @2s, heals) · **Chaos Steps** (unchanged, relocated from Inferno Wake). **Phoenix Mantle / Immolation
+> cut.** Full tree below. The contrast is now clean **wide-area (Wake) vs narrow-concentrated (Firesteps)**.
+
 **Base today:** `gFireTrails` (~L3707, params `FT_*`). Patches **every 18px while you dash**, radius 26, 1.6s
 (96f) life, ticks every 0.4s (24f) at base 10 (buff-scaled), 3s burn. **Does NOT hurt the caster.**
 
@@ -203,30 +210,39 @@ take burn DoT each `AURA_TICK`. Standalone damage (`AURA_DMG`/`FR_BASE_DMG`-scal
 
 - **Ranks 1–4:** +trail damage (`FT_DMG_BASE`) · +trail width (`FT_REACH`) · +patch duration (`FT_LIFE`) ·
   +burn duration (`FT_BURN_FRAMES`).
-- **Rank 5 — Form:**
-  - **A · Inferno Wake** *(aggressive)* — trail runs hotter / wider / longer; carve burning lanes through packs.
-  - **B · Ember Shroud** *(defensive)* — instead of a ground trail, a **persistent burning aura wraps the
-    player**, burning adjacent enemies (a moving bubble vs. ground patches). *(Reframed from "on dash-end aura"
-    → an always-on aura, since there's no dash trigger.)*
-- **Ranks 6–9:** Wake → +length / +damage / +width · Shroud → +aura radius / +damage / +tick rate.
-- **Rank 10 — Ascension:**
-  - **Wake →** 🐉 **Wyrmwake** (trail is dragonfire; weaving back through your lanes heals you) · 🔥 **Chaos
-    Steps** *(redesign, Josh 2026-06-12 — was "Scorched Earth")* — **every 2s you drop a patch of burnt chaos
-    ground that detonates into a chaosfire explosion ~1s later** (a fused delayed blast). Keep moving and your
-    bombs bloom *behind* you — a chasing trail of explosions that clears your wake; linger on a patch and you eat
-    your own detonation. The 1s fuse is the readable telegraph + the self-burn cost, perfectly on the movement
-    identity (move = safe + devastation behind you; stand still = caught). Reuses the chaosfire explosion FX
-    (Conflagration/Cinderburst-style nova). *Engineering when built: a 2s emit timer (not the pure
-    distance-accumulator the base trail uses) dropping a fused-patch entity → chaosfire explosion on fuse-end.*
-  - **Shroud →** 🐉 **Phoenix Mantle** (persistent dragonfire aura heals you continuously) · 🔥 **Immolation**
-    (permanent self-immolation aura: huge constant AOE that drains your own HP).
-  - **✅ RESOLVED (Josh, 2026-06-12) — option (b): Trail keeps its movement identity, exempt from the footprint
-    rule.** Trail of Embers is the **movement-as-weapon** skill, so chaosfire here means "burn the path," not
-    "anchor and devastate." Its 🔥 cost is **movement-keyed**: **Chaos Steps** detonates fused chaos patches 1s
-    after you drop them (move = blasts bloom behind you; linger = caught in your own detonation); **Immolation**
-    stays a self-burn aura centered on you (drains your HP by design). The stand-still footprint
-    rule is confined to the *area/burst* chaos leaves (Burning Body's Chaos Crown, Pyroclasm's Hellfront) — Trail
-    and Eye of Chaos are the two exceptions.
+- **Rank 5 — Form** *(the contrast is **wide-area vs narrow-concentrated** — Josh 2026-06-12):*
+  - **A · Inferno Wake** *(wide / area-denial)* — widens the trail into a **cone of fire laid behind you** as you
+    move: a **widening wake** — apex at your feet, fanning wider the further back it trails (a comet/boat wake,
+    Josh's call). Broad floor coverage, **lower damage per patch** — paint a whole lane through a pack. *(New cone
+    emitter; replaces the old "hotter/longer single lane" framing.)*
+  - **B · Firesteps** *(narrow / concentrated)* — keeps the base trail's **single line** but it does **extra
+    damage** — a focused, higher-damage strip. **Fewer targets, more each** — the *concentrate* to Wake's
+    *distribute*. *(Replaces the cut "Ember Shroud" defensive aura — see Cut, below.)*
+- **Ranks 6–9:** Wake → +cone width / +damage / +length · Firesteps → +line damage / +width / +patch duration.
+- **Rank 10 — Ascension** *(each Form's two leaves keep its **shape**; only substance + payoff differ):*
+
+  | Form | 🐉 sustain (old-god) | 🔥 power+cost (new-god) |
+  |---|---|---|
+  | **Inferno Wake** *(cone)* | **Wyrmwake** — the cone becomes **dragonfire**; weave back through your own wake to **heal** (band-contact heal — the dragon canon: heal only by standing in your dragonfire). Lower damage; sustain is what you bought. | **Chaoswake** *(new)* — the cone becomes **chaosfire**: it **spawns behind you and NEVER on the player's tile** (Josh — a hard build rule). Burns enemies caught in your wake; reverse/back into your own cone and *you* burn. Movement-keyed self-burn (don't walk back into your fire). |
+  | **Firesteps** *(single line)* | **Dragonfeet** *(new)* — the single trail **erupts into pillars of dragonflame 2s after each patch is laid** (delayed burst). The pillars are **dragonfire → stand in them to heal** (sustain pole confirmed, Josh 2026-06-12). Reuses `gFirePillars` FX, dragonfire substance. | **Chaos Steps** *(unchanged — relocated here from Inferno Wake)* — **every 2s drop a fused patch of burnt chaos ground that detonates ~1s later.** Keep moving → bombs bloom *behind* you (a chasing trail of explosions); linger on a patch → you eat your own detonation. The 1s fuse is the telegraph + the self-burn cost. Reuses the chaosfire explosion FX. |
+
+  - **✅ Footprint rule — Trail stays EXEMPT (Josh, 2026-06-12).** Trail of Embers is the **movement-as-weapon**
+    skill, so chaosfire here = "burn the path," not "anchor and devastate." Both 🔥 leaves are **movement-keyed**:
+    **Chaoswake** never spawns on the player's tile (cost = don't reverse into your own wake); **Chaos Steps**
+    detonates 1s after a patch is dropped (cost = don't linger). The stand-still footprint rule stays confined to
+    the *area/burst* chaos leaves (Burning Body's Chaos Crown, Pyroclasm's Hellfront); Trail + Eye of Chaos are the
+    exceptions.
+  - **The cone emitter (the one genuinely new behaviour)** — Inferno Wake / Wyrmwake / Chaoswake lay patches across
+    a **widening arc behind the movement vector** (apex at the player, fanning out the further back), substance
+    swapping per ascension (plain fire → dragonfire → chaosfire). Cone half-angle + length are tunable knobs; floor
+    the emit cadence (spam/perf). Chaoswake's "never under the player" is **by construction** (every patch is offset
+    *behind* the apex, so none lands on the player's tile).
+  - **Dragonfeet's delayed pillars** — single-line patches that, **2s after each is laid**, erupt into a dragonflame
+    **pillar** (reuse `gFirePillars` FX, dragonfire substance → the pillar is heal-ground). A per-patch fuse timer,
+    same shape as Chaos Steps' 1s fuse but dragon-substance + longer + no self-burn.
+  - **Cut from the launch tree (Josh, 2026-06-12):** **Ember Shroud** (defensive moving aura) + its ascensions
+    **Phoenix Mantle** / **Immolation** are removed. Nothing was built → no parking needed; the "moving burning
+    aura" concept is logged as **deferred design** (could return as a later Cilia god skill — see Deferred).
 
 **Mana cost (item 7 — author from the start, NOT retrofitted).** Trail uses the **#8.9 cost+damage model**
 ([`mana-economy.md`](mana-economy.md) "Burning Body cost curve — RESCALED"), authored from rank 1 rather than
@@ -238,23 +254,23 @@ cost** (⚠ an earlier draft said "dps ∝ cost^1.5 as a mechanic" — wrong; re
 of the chosen numbers, not code). **NOT** the flat `base + inc·(rank−1)` ramp the original Phase-2 grounding implied.
 
 > **✅ RESOLVED (Josh, 2026-06-12) — a movement skill charges only upon movement: cost follows emission shape.**
-> Burning Body is a clean continuous aura, so its drain is naturally **per-second** (mp/s) and the whole #8.9
-> curve is expressed that way. Trail is *not* one shape — its tree mixes emission modes, and a flat per-second
-> drain is **structurally wrong for the movement Forms** (it would charge you mana while standing still doing
-> nothing, against the movement-as-weapon identity). So the cost is **keyed to how each Form actually emits**:
+> With the evolution rework cutting Ember Shroud, **the entire Trail tree is now emission-keyed — there is no
+> continuous-aura Form left, so no per-second cost anywhere in Trail.** That's the cleanest possible fit for the
+> movement-as-weapon identity: you **never pay mana standing still.** Cost is **per-emit, keyed to how each part
+> emits:**
 >
 > | Part of the tree | Emits | Cost model |
 > |---|---|---|
-> | Base / **Inferno Wake** | a patch per distance moved | **per-patch** — you pay only as you move (Josh's call) |
+> | Base / **Inferno Wake** / **Wyrmwake** / **Chaoswake** | a line or a **cone** of patches per distance moved | **per-emit-tick** — **one** charge per emit-tick as you move, *not* per individual patch (a cone-tick lays several patches for one charge, so a wide cone ≠ runaway cost). Author the per-rank cost so the wide cone reads as pricier-but-not-punishing vs the line. |
+> | **Firesteps** | one patch per distance moved | **per-emit** (= per patch) — the concentrated line |
+> | **Dragonfeet** (asc.) | a patch per distance moved → erupts to a pillar @2s | **per-emit** — pay when the patch is laid; the delayed pillar is free follow-through |
 > | **Chaos Steps** (asc.) | a fused patch every 2 s | **per-emit** — pay per patch dropped |
-> | **Ember Shroud** | continuous aura (works while still) | **per-second** — it's an aura, not a movement emit, so charging only-on-move would make a stationary Shroud free (breaks the economy). Per-second like Burning Body. |
-> | **Phoenix Mantle / Immolation** (asc.) | continuous aura | **per-second** |
 >
-> So: **movement/patch Forms charge per-patch** (movement = the weapon *and* the cost — on-identity, on the
-> weighty-combat directive), **continuous-aura Forms charge per-second.** The #8.9 per-rank cost+damage tables
-> apply either way — a per-patch cost and a per-patch damage, each authored per rank with the evolution steps.
-> **HUD note:** the action bar shows `mpCostPerSec`; for a per-patch Form, display an honest **effective mp/s
-> while moving** (cost-per-patch × emit-rate at normal move speed) — engineer's representation call.
+> So **every Trail Form charges per-emit as you move** — movement is the weapon *and* the cost (on-identity, on the
+> weighty-combat directive). The #8.9 per-rank cost+damage tables apply: a per-emit cost and a per-emit damage, each
+> authored per rank with the evolution steps, **damage climbing faster than cost.** **HUD note:** the action bar
+> shows `mpCostPerSec`; for these per-emit Forms display an honest **effective mp/s while moving**
+> (cost-per-emit × emit-rate at normal move speed) — engineer's representation call.
 
 ---
 
@@ -381,3 +397,8 @@ The pivot removes the *active-skill* fire imbues from the live build. Engineer o
   second god. Full design in [`imbue-paths.md`](imbue-paths.md) ("Elemental Fusion") — adapt to the god-skill
   frame when built.
 - **Dance of Fire / Sunfall** as later Cilia god skills (see Migration).
+- **Ember Shroud (the moving burning aura)** — cut from the Trail tree in the 2026-06-12 evolution rework (Trail
+  is now all ground-trails: cone + line). The "persistent burning bubble that wraps the player" idea is sound and
+  could return as its own later Cilia god skill (a defensive *around-you* aura distinct from Burning Body's burst),
+  with 🐉 Phoenix Mantle (continuous dragonfire heal-aura) / 🔥 Immolation (self-draining AOE aura) as its
+  ascensions. Not built — pure deferred design.
