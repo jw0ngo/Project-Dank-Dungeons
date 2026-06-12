@@ -14581,16 +14581,13 @@ const SKILL_CARDS = [
     apply(p,v){ _applyMastery(p, DASH_MASTERY, v); } },
 ];
 
-// GRIT pool (cat:'grit') — writes per-player gritMods; gated on the Grit unlock (level 5).
+// GRIT pool (cat:'grit') — item 10: ONE Grit Mastery card bundling all four grit upgrades (step-set pour into
+// gritMods, same pattern as the skill Masteries); gated on the Grit unlock (level 5).
+const GRIT_MASTERY = { shield:6, capPct:4, duration:30, streakReduce:1 };
 const GRIT_CARDS = [
-  { id:'grit-shield', cat:'grit', req:gGritUnlocked, icon:'🛡', name:'Grit: Bulwark',   base:6,  frac:false, fmt:v=>`Grit +${v} shield/trigger`,
-    apply(p,v){ _addGritMod(p,'shield', v); } },
-  { id:'grit-cap',    cat:'grit', req:gGritUnlocked, icon:'🛡', name:'Grit: Resolve',   base:4,  frac:false, fmt:v=>`Grit +${v}% shield cap`,
-    apply(p,v){ _addGritMod(p,'capPct', v); } },
-  { id:'grit-dur',    cat:'grit', req:gGritUnlocked, icon:'🛡', name:'Grit: Endurance', base:30, frac:false, fmt:v=>`Grit +${(v/60).toFixed(1)}s shield duration`,
-    apply(p,v){ _addGritMod(p,'duration', v); } },
-  { id:'grit-streak', cat:'grit', req:gGritUnlocked, icon:'🛡', name:'Grit: Instinct',  base:1,  frac:false, fmt:v=>`Grit triggers ${v} hit${v>1?'s':''} sooner`,
-    apply(p,v){ _addGritMod(p,'streakReduce', v); } },
+  { id:'grit-mastery', cat:'grit', req:gGritUnlocked, icon:'🛡', name:'Grit Mastery', base:1, frac:false,
+    fmt:v=>`Grit +${GRIT_MASTERY.shield*v} shield · +${GRIT_MASTERY.capPct*v}% cap · +${(GRIT_MASTERY.duration*v/60).toFixed(1)}s · ${GRIT_MASTERY.streakReduce*v} hit${GRIT_MASTERY.streakReduce*v>1?'s':''} sooner`,
+    apply(p,v){ for(const k in GRIT_MASTERY) _addGritMod(p, k, GRIT_MASTERY[k] * v); } },
 ];
 
 // ── PATRON pool (item 0c) — patron-gated cards that ONLY appear when you've pledged to that god,

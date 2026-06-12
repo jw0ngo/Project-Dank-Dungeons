@@ -28,8 +28,8 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
   folds into broad **character stats** — **Strength** (+% melee damage, swing & heavy), **Ferocity** (crit chance
   + crit damage in one), **Dexterity** (+% attack speed — faster swings & heavy charge), **Reach** (swing & heavy
   reach) — and each active skill now has a single **Mastery** card (**Whirlwind / Leap / Dash Mastery**) that
-  bundles its damage/size/range/cooldown. Bloodlust, the regen/pool/utility passives, Grit, and the Cilia patron
-  cards are unchanged.
+  bundles its damage/size/range/cooldown. The four Grit cards likewise fold into a single **Grit Mastery**. Bloodlust,
+  the regen/pool/utility passives, and the Cilia patron cards are unchanged. (~33 → ~20 cards.)
 - **Obelisks now always offer the same three boons — Max Mana, Mana Regen, Max Health — and the % scales with your
   level.** Instead of three random buffs from a big pool, every obelisk lets you pick which of the three to invest
   in, and the bonus grows the higher your level (so obelisks found deeper into a run pay out bigger).
