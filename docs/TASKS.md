@@ -40,10 +40,32 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 ## 🟧 Engineer / CTO lane
 
 ### Playtest feel/readability batch (↳ from PM playtest, Josh 2026-06-12 · roadmap #8)
-*Eight developer-directed game-feel / readability / balance / bug fixes from the first mana-economy playtest.
+*Nine developer-directed game-feel / readability / balance / bug fixes from the first mana-economy playtest.
 All pre-greenlit (bug-driven + balance/polish on shipped systems). Mostly quick; grounding/anchors inline (line
 refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 wolf leap, #8.4a colour split,
-#8.5 fog shake) — tiny, and they clean up every playtest. #8.7/#8.8 are the mana-balance pair (do #8.8 first).*
+#8.5 fog shake) — tiny, and they clean up every playtest. **#8.7/#8.8/#8.9 are the mana-balance cluster** — do
+#8.9 (cost/dps rescale) + #8.8 (ooc mana regen) before #8.7 (early difficulty), then re-judge night 1 with all three in.*
+
+- ◻️ ✨ **#8.9 — Rescale Burning Body's mana-to-dps economy (step-changes + superlinear dps/mana)** (↳ from PM,
+  Josh 2026-06-12 · spec [`specs/mana-economy.md`](specs/mana-economy.md) "Burning Body cost curve — RESCALED") —
+  the shipped curve is **flat-linear in cost, gentler-linear in dps** → efficiency runs backwards (rank 1→2 = cost
+  ×3.7 for dps ×1.5; dps/mana falls ~4× over ranks 1→10) and **evolution adds no step**. Retune to the spec's target
+  curve. Josh-locked principles: **(1) rank 1 = 2 mp/s** (from 3.33); **(2) step-change in cost AND dps at each
+  evolution** (rank 5 Form, rank 10 Ascension), gentle within a tier; **(3) `dps ∝ cost^1.5`** so dps-per-mana
+  *rises* with investment (20 mp/s ≫ 5× the dps of 4 mp/s). Target table (cost mp/s + dps × rank-1) in the spec.
+  - **Levers:** replace the flat `mpChunkInc:27` (`:14150`) with a **tiered per-rank cost schedule + explicit
+    evolution cost-steps** at ranks 5/10 — `gGodSkillBaseChunk` (`:3888`) becomes a per-tier table / rank→cost
+    lookup (cost is now piecewise, not `base + inc·(rank−1)`); keep the 3 s chunk cadence. Steepen the
+    `auraDmg`/`emitDmg` `waveStep`/`formStep` (`:14155/14161/14174`) + add evolution dps-steps so realized dps
+    tracks the target × multiples.
+  - **Two tunables for Josh** (flag, don't guess): **efficiency exponent `k`** (1.5 proposed; 2.0 = steeper
+    specialist reward) and the **rank-10 cost ceiling** (~45 mp/s proposed, down from ~88; lift if maxed BB should
+    stay a Max-MP-gated monster).
+  - **Verify on the training dummy** (`hitTrainingDummy` path already wired in `gTickBurningBody :4021`): measure
+    realized dps at ranks 1/5/10 per Form and confirm the dps/mp ratio climbs + the evolution steps read. Pairs
+    with #8.7/#8.8 (this lowers early cost too — re-judge early difficulty together). Host-authoritative; the HUD
+    mp/s figure (`gGodSkillDrainPerSec`) updates for free. **Trail/Pyroclasm (item 2) inherit this curve shape**
+    when built — author their cost/dps with the same step+superlinear model, not a flat ramp.
 
 - ◻️ ✨ **#8.8 — Default out-of-combat MANA regen: 10 mp/s after 10 s of no mana use AND no damage** (↳ from
   PM playtest, Josh 2026-06-12) — mirror of the HP-regen #8.2, and the **relief valve for #8.7** (recharge by
