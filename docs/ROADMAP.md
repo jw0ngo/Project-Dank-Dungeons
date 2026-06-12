@@ -9,6 +9,15 @@ engineering builds **approved** items from *Now*, top-down ([`agents/engineer/en
 
 ## 📍 Where we are (June 12, 2026)
 
+**🎯 Vertical slice ~90% done (Josh, 2026-06-12).** The build-craft spine is complete: **all three Cilia God Skills
+are now built** — Burning Body (shipped) + **Trail of Embers** (reworked tree: Inferno Wake/Firesteps + cone emitter)
+and **Pillars of Fire** (formerly Pyroclasm — mouse-aimed lane; **Riftmaw** the map-crossing chaos rift is the
+session standout) both built this session and **committed but unpushed** (awaiting Josh's deploy auth — a 9-commit
+local stack). **Remaining 10% = a god-skill feel-tuning pass** (intensity/variety per capstone — *not* uniform
+"epic"; some capstones stay modest by design) **+ the queued ascension refinements + Dragon–Chaos synergy tune**,
+then an in-browser canary before the tag.
+
+
 **v0.5.0 is live; a large `[Unreleased]` block is staged** (fix it into the next tag). Both weak points
 the first slice playtest surfaced now have their fixes in the build (item 1 difficulty curve **playtested
 OK**; item 0b/0c level-up depth shipped).
@@ -53,7 +62,7 @@ three cheap irritant-fixers (wolf leap whiffing, XP/Favor popups jumbling, fog-e
 | **0b** | **Combat card pass** — per-skill dmg cards (Swing/Heavy) + Heavy: Reach + **pool-wide cap removal** | ✅ Shipped (v0.5.0) | Quick | Build identity in the draft + lucky-run variance; RNG governs (caps removed) |
 | **0c** | **Patron Cards** — patron-gated draft cards (Cilia burn set: explode / duration / tick dmg) | ✅ Shipped (Unreleased) | Session | Your god choice reshapes your draft; reusable per-god system serving god-identity |
 | **1** | **Make late-game dangerous** — enemies scale harder + glow yellow→red as they get deadly | ✅ Shipped (Unreleased) — playtested OK | Multi-session | Fixes the flat difficulty curve (playtest weak point #1) |
-| **2** | **God Skills** — Cilia's 3 best fire skills become **auto-firing (VS-style)** abilities, class-agnostic, keeping the 10-rank binary-tree evolution | 🔄 In-progress — **Burning Body + action bar shipped; Trail of Embers · Pyroclasm + ascension refinements remain** | Large, phased | The build-craft spine, now portable across platform modes; fixes boring level-ups (#2) |
+| **2** | **God Skills** — Cilia's 3 best fire skills become **auto-firing (VS-style)** abilities, class-agnostic, keeping the 10-rank binary-tree evolution | 🔄 **All 3 built** (Burning Body shipped; Trail of Embers + Pillars of Fire built 2026-06-12, unpushed/mid-tuning) — **remaining = feel-tuning + queued refinements** (ascension refinement, Dragon–Chaos synergy) | Large, phased | The build-craft spine, now portable across platform modes; fixes boring level-ups (#2) |
 | **3** | **Wolves stop getting stuck** on their dens + ignore forest slow | ✅ Shipped (v0.5.0) | Quick | Bug fix — unblocks wolf playtesting |
 | **4** | **Wolves hit harder early** | ✅ Shipped (v0.5.0) | Quick | Makes a wolf camp a real risk, not free loot |
 | **5** | **Boreas** — a second god (ice/control) | ⏸️ Held | Multi-session | Parked — the playtest showed we don't need it yet |

@@ -18,6 +18,25 @@ lesson: **the principle → why → how to apply.** Quality over volume.
 
 ---
 
+### 2026-06-12 — A benchmark is ONE good example, not a uniform mandate; variety + restraint are what make standouts land
+
+- **Principle:** Josh praised **Riftmaw** (a map-crossing chaos rift) as a benchmark for rank-10 "epic-ness." I
+  over-read it as *"every rank-10 must be map-scale epic"* and re-spec'd two other capstones to also span the map.
+  Wrong direction — Josh: you can't have many abilities, **especially within one god**, all become "epic" via the
+  *same lever* ("affect the whole map"); it reads as repetitive soup AND it stops the genuine standout from
+  standing out. **One great example is an example, not a template** — and **not everything must be maxed; restraint
+  on most is what lets the loud ones land.**
+- **Why:** *"make it a benchmark" ≠ "make everything hit it."* Memorability comes from a **distinct creative idea
+  per item**, not a shared ceiling everything is raised to; uniformity flattens the contrast that makes a peak feel
+  like a peak. Same family as open-vs-close build space + "distinct identity, not stat-sprawl" — **variety is the
+  value.** (I also reflexively reached for an AskUserQuestion-driven *full re-spec* before Josh confirmed the
+  direction was even right — momentum toward sweeping change is its own bias.)
+- **How to apply:** When Josh holds something up as a "bar," capture **why it's good** (its specific creative idea),
+  then ask *"the bar everything must hit, or one good example among varied others?"* — **default to the latter** for
+  flavour/intensity across a set. Don't mass-apply; propose the *principle* + at most one or two genuine candidates,
+  and preserve variety of **kind AND intensity** (let most things be modest). Beware the tidy-symmetry pull (the
+  "chaos rift ↔ dragon spine" mirror was elegant *and* exactly the wrong over-generalization).
+
 ### 2026-06-12 — A spec hands the engineer tunable DATA + feel targets, never a FORMULA that derives one game quantity from another
 
 - **Principle:** I wrote "DPS scales superlinearly with cost: `dps ∝ cost^1.5` (the efficiency exponent, the
@@ -230,11 +249,8 @@ lesson: **the principle → why → how to apply.** Quality over volume.
   unless they have strong conviction. **Fold a workflow-friction check into session-end crystallization:**
   "what cost us a turn today, and what doc change prevents it next time?"
 
-### 2026-06-09 — Ground every pitch in the shipped game and the feel target
+### 2026-06-09 — Ground every pitch in the shipped game + the feel target
 
-- **Principle:** Proposals land when they're grounded in what *actually* shipped and serve the
-  Creative Director's feel/story pillars — not when they're clever in the abstract.
-- **Why:** This is a pre-1.0, one-file game directed toward a specific feel. Ideas that ignore the
-  current build or the soul of the game cost trust and rework.
-- **How to apply:** Before pitching, read `CHANGELOG.md`, skim the relevant systems, and name which
-  Creative Manifesto principle the idea serves. Arrive with a decision-ready one-pager, not a question.
+- Proposals land when grounded in what *actually* shipped and serving the CD's feel/story pillars, not clever in
+  the abstract — read the build + name the Creative Manifesto principle the idea serves before pitching, and arrive
+  with a decision-ready one-pager. *(Now baked into the operating model + the Asset Audit; kept as the origin note.)*
