@@ -228,6 +228,32 @@ take burn DoT each `AURA_TICK`. Standalone damage (`AURA_DMG`/`FR_BASE_DMG`-scal
     rule is confined to the *area/burst* chaos leaves (Burning Body's Chaos Crown, Pyroclasm's Hellfront) — Trail
     and Eye of Chaos are the two exceptions.
 
+**Mana cost (item 7 — author from the start, NOT retrofitted).** Trail inherits the **#8.9 rescaled cost/dps
+model** ([`mana-economy.md`](mana-economy.md) "Burning Body cost curve — RESCALED"), baked in from rank 1 rather
+than shipped flat-and-rescaled-later (the lesson Burning Body paid for): a **low rank-1 anchor**, a
+**step-change in cost AND dps at each evolution** (rank 5 Form, rank 10 Ascension), and **`dps ∝ cost^1.5`** so
+dps-per-mana *rises* with investment. **NOT** the flat `base + inc·(rank−1)` ramp the original Phase-2 grounding
+implied ("get an `mpCost` for free via the same path" — that path is exactly what #8.9 condemned).
+
+> **✅ RESOLVED (Josh, 2026-06-12) — a movement skill charges only upon movement: cost follows emission shape.**
+> Burning Body is a clean continuous aura, so its drain is naturally **per-second** (mp/s) and the whole #8.9
+> curve is expressed that way. Trail is *not* one shape — its tree mixes emission modes, and a flat per-second
+> drain is **structurally wrong for the movement Forms** (it would charge you mana while standing still doing
+> nothing, against the movement-as-weapon identity). So the cost is **keyed to how each Form actually emits**:
+>
+> | Part of the tree | Emits | Cost model |
+> |---|---|---|
+> | Base / **Inferno Wake** | a patch per distance moved | **per-patch** — you pay only as you move (Josh's call) |
+> | **Chaos Steps** (asc.) | a fused patch every 2 s | **per-emit** — pay per patch dropped |
+> | **Ember Shroud** | continuous aura (works while still) | **per-second** — it's an aura, not a movement emit, so charging only-on-move would make a stationary Shroud free (breaks the economy). Per-second like Burning Body. |
+> | **Phoenix Mantle / Immolation** (asc.) | continuous aura | **per-second** |
+>
+> So: **movement/patch Forms charge per-patch** (movement = the weapon *and* the cost — on-identity, on the
+> weighty-combat directive), **continuous-aura Forms charge per-second.** The #8.9 step+superlinear shape applies
+> either way: a per-patch cost and per-patch damage both step at evolution, with dmg ∝ cost^1.5.
+> **HUD note:** the action bar shows `mpCostPerSec`; for a per-patch Form, display an honest **effective mp/s
+> while moving** (cost-per-patch × emit-rate at normal move speed) — engineer's representation call.
+
 ---
 
 ### 3. Pyroclasm — *ranged / heavy-hitter burst* (auto-aimed)

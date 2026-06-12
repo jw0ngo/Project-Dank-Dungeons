@@ -196,7 +196,13 @@ cards push on either:
   (`:14583-14584`) + `SKILL_STAT_FLOOR` (`:2542`). No new systems.
 - **Phase 2** = add `mpCost` to the `IMBUE_PATHS.cilia.burningBody` registry `base`/`waveStep`/`formStep`
   (`:13527-13567`); subtract `gGodFireParam(p,id,'mpCost')*dt` in `gTickBurningBody` (`:3736`). Trail/Pyroclasm
-  (when built) get an `mpCost` in their registry entries for free via the same path.
+  (when built) author their `mpCost` via the **#8.9 step+superlinear curve from the start** — **not** the flat
+  `base+inc` path this line originally implied (#8.9 condemned it). **Pyroclasm** is a clean interval skill →
+  per-second drain like Burning Body. **Trail** mixes movement-emit + aura Forms, so its cost **follows emission
+  shape** (✅ Josh 2026-06-12, "a movement skill charges only upon movement"): **per-patch** for the movement/patch
+  Forms (base / Inferno Wake / Chaos Steps — you pay as you move), **per-second** for the continuous-aura Forms
+  (Ember Shroud / Phoenix Mantle / Immolation). Detail in [`god-skills.md`](god-skills.md) → *Trail of Embers → Mana
+  cost*. Both still inherit the #8.9 curve shape.
 - **Phase 3** = per-player toggle state (parallel to the god-skill map; e.g. `p.godSkillActive[id]` +
   `p.godSkillKey[id]` assigned in acquisition order at the acquire site `:13691`); a `keydown` branch for `'1'`–`'9'`
   (new handler or extend `:3416`/`:3521`); a gate in `gUpdateGodSkills` (`:3719`) skipping inactive/dormant skills;
