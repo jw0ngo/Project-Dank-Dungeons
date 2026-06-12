@@ -9,13 +9,13 @@ engineering builds **approved** items from *Now*, top-down ([`agents/engineer/en
 
 ## 📍 Where we are (June 12, 2026)
 
-**🎯 Vertical slice ~90% done (Josh, 2026-06-12).** The build-craft spine is complete: **all three Cilia God Skills
-are now built** — Burning Body (shipped) + **Trail of Embers** (reworked tree: Inferno Wake/Firesteps + cone emitter)
-and **Pillars of Fire** (formerly Pyroclasm — mouse-aimed lane; **Riftmaw** the map-crossing chaos rift is the
-session standout) both built this session and **committed but unpushed** (awaiting Josh's deploy auth — a 9-commit
-local stack). **Remaining 10% = a god-skill feel-tuning pass** (intensity/variety per capstone — *not* uniform
-"epic"; some capstones stay modest by design) **+ the queued ascension refinements + Dragon–Chaos synergy tune**,
-then an in-browser canary before the tag.
+**🎯 Vertical slice ~90% done (Josh, 2026-06-12).** The build-craft spine is complete and **now LIVE (deployed
+2026-06-12)**: **all three Cilia God Skills** — Burning Body + **Trail of Embers** (reworked tree: Inferno
+Wake/Firesteps + cone emitter) + **Pillars of Fire** (formerly Pyroclasm — mouse-aimed lane; **Riftmaw**, the
+map-crossing chaos rift, the session standout) — plus the **card-pool consolidation** (item 10) and the
+dragonfire/chaosfire FX set, all on `origin/main`. **Remaining 10% = a god-skill feel-tuning pass**
+(intensity/variety per capstone — *not* uniform "epic"; some capstones stay modest by design) **+ the queued
+ascension refinements + Dragon–Chaos synergy tune.**
 
 
 **v0.5.0 is live; a large `[Unreleased]` block is staged** (fix it into the next tag). Both weak points
@@ -62,13 +62,13 @@ three cheap irritant-fixers (wolf leap whiffing, XP/Favor popups jumbling, fog-e
 | **0b** | **Combat card pass** — per-skill dmg cards (Swing/Heavy) + Heavy: Reach + **pool-wide cap removal** | ✅ Shipped (v0.5.0) | Quick | Build identity in the draft + lucky-run variance; RNG governs (caps removed) |
 | **0c** | **Patron Cards** — patron-gated draft cards (Cilia burn set: explode / duration / tick dmg) | ✅ Shipped (Unreleased) | Session | Your god choice reshapes your draft; reusable per-god system serving god-identity |
 | **1** | **Make late-game dangerous** — enemies scale harder + glow yellow→red as they get deadly | ✅ Shipped (Unreleased) — playtested OK | Multi-session | Fixes the flat difficulty curve (playtest weak point #1) |
-| **2** | **God Skills** — Cilia's 3 best fire skills become **auto-firing (VS-style)** abilities, class-agnostic, keeping the 10-rank binary-tree evolution | 🔄 **All 3 built** (Burning Body shipped; Trail of Embers + Pillars of Fire built 2026-06-12, unpushed/mid-tuning) — **remaining = feel-tuning + queued refinements** (ascension refinement, Dragon–Chaos synergy) | Large, phased | The build-craft spine, now portable across platform modes; fixes boring level-ups (#2) |
+| **2** | **God Skills** — Cilia's 3 best fire skills become **auto-firing (VS-style)** abilities, class-agnostic, keeping the 10-rank binary-tree evolution | 🔄 **All 3 LIVE** (Burning Body + Trail of Embers + Pillars of Fire — deployed 2026-06-12) — **remaining = feel-tuning + queued refinements** (ascension refinement, Dragon–Chaos synergy) | Large, phased | The build-craft spine, now portable across platform modes; fixes boring level-ups (#2) |
 | **3** | **Wolves stop getting stuck** on their dens + ignore forest slow | ✅ Shipped (v0.5.0) | Quick | Bug fix — unblocks wolf playtesting |
 | **4** | **Wolves hit harder early** | ✅ Shipped (v0.5.0) | Quick | Makes a wolf camp a real risk, not free loot |
 | **5** | **Boreas** — a second god (ice/control) | ⏸️ Held | Multi-session | Parked — the playtest showed we don't need it yet |
 | **6** | **Heavy charge locks out the normal swing** — committing to a heavy means committing | ✅ Shipped (2026-06-11) | Quick | Weighty-combat directive: a committed action must cost you other options |
 | **7** | **Mana economy & skill management** — costs/cooldowns rework so you run dry early; God Skills drain mana/sec; toggle auto-casts to keys 1–9 + WoW-style action bar | ✅ Shipped (2026-06-12, all 3 phases + action bar) | Multi-session, phased | Makes mana a real resource + a live build-management decision (weighty combat + build depth) |
-| **10** | **Card-pool consolidation** — collapse ~33 draft cards → ~23: per-skill sprawl folds into broad character stats (Strength = melee dmg, Ferocity = crit+critdmg, Dexterity = atk speed, Reach = swing+heavy reach) + one **Mastery** card per active skill (Whirlwind/Leap/Dash) | ◻️ Approved (2026-06-12) — Engineer lane | Session | Build-craft + game feel — every draft pick becomes a real, legible build choice |
+| **10** | **Card-pool consolidation** — collapse ~33 draft cards → ~23: per-skill sprawl folds into broad character stats (Strength = melee dmg, Ferocity = crit+critdmg, Dexterity = atk speed, Reach = swing+heavy reach) + one **Mastery** card per active skill (Whirlwind/Leap/Dash) + **Grit Mastery** (4 Grit cards → 1) | ✅ Shipped (deployed 2026-06-12) | Session | Build-craft + game feel — every draft pick becomes a real, legible build choice |
 | **9** | **God Stat Identities** — each god's mechanics read the character stats that express its identity (Cilia ← crit; Ikras ← atk/move speed; Boreas ← mana-regen/pickup/CDR; Bhumi ← HP/regen), so generic stat cards become build-defining per patron | ◻️ Cilia slice approved; rest design-ahead | System (Cilia slice quick) | Build-craft depth + god identity — generic stats gain god-specific meaning, near-zero new content |
 | **8** | **Playtest feel/readability/balance batch** — wolf-leap fix · XP/Favor colour split + aggregated XP counter · fog-edge smoothing · gradual night-vision · out-of-combat HP **&** mana regen · LOS tree-reveal · early-game difficulty scale-back · **Burning Body mana→dps rescale** | ◻️ Approved (2026-06-12) — 9 tasks in Engineer lane | Quick (batch ≈ 1 session) | Game feel + readability + early-game balance (pillar 1) — fixes the irritants the first mana playtest surfaced |
 
