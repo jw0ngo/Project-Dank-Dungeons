@@ -83,6 +83,14 @@ drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 wolf 
   `gFrame - (p._lastDmgFrame||0) ≥ 600` (10 s @60). Stacks additively on the `hpRegenAdd` cards; clamp to
   `maxHp`. Per-player local, MP-safe. Knobs: rate (3), delay (10 s). *(Small new mechanic — Josh-directed
   with numbers; flag if the 10 s gate should reset on chip damage vs only real hits.)*
+  - **Regen juice tell (↳ Josh 2026-06-12):** **while the regen is active**, emit gentle **green upward-drifting
+    particles** around the player so the heal reads. Use `spawnGPCustom(x,y,col,vx,vy,life)` (`:2664` — takes an
+    explicit velocity) with the existing heal-green `#7CFC9E`, an **upward** `vy` (negative, small drift), a slight
+    `vx` spread, and a longer `life`; spawn at random offsets around the player body. **Throttle** to a gentle
+    ambient rise (a few motes every ~10–15 frames — *not* a burst), and **stop the moment regen stops** (damage
+    taken or HP full). Local/render-only; reuse the existing `gParticles` budget (`MAX_PARTICLES` guarded in
+    `spawnGPCustom`). Knobs: spawn rate, `vy`/spread, life. *(`spawnGP` `:2662` is the radial-burst variant — use
+    `spawnGPCustom` here for the directional upward motion.)*
 
 - ◻️ 🟢 **#8.1 — LOS reveal: fade trees that hide enemies near the player** — extend the canopy-fade in
   `gDrawTree` (`:9214`; the want-fade test `:9226` currently only checks the **player's** foot `px,py`;

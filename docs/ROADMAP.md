@@ -394,7 +394,8 @@ clearly and feeling fair:
 2. **XP vs Favor readability** — XP text turns **white**, Favor stays **gold** (both are gold today, so multi-pickup
    popups jumble into noise); plus a **single aggregated `+N XP`** counter above the player that grows over a 5 s
    window then fades, instead of one floating number per orb.
-3. **Out-of-combat HP regen** — **3 HP/s after 10 s without taking damage** (a base regen on top of the regen cards).
+3. **Out-of-combat HP regen** — **3 HP/s after 10 s without taking damage** (a base regen on top of the regen
+   cards), with **green upward-drifting particles** around the player while it's active so the heal reads.
 4. **LOS reveal** — an invisible sightline circle around the player fades any tree canopy hiding an enemy inside it,
    so threats can't lurk invisibly behind trunks.
 5. **Fog-edge smoothing** — the shroud edge shimmers/shakes as you explore new ground; smooth it to a calm reveal.
