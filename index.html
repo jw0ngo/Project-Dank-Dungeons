@@ -14318,7 +14318,29 @@ function gShowTitleCard(){
   requestAnimationFrame(() => { ov.style.opacity = '1'; welcome.style.opacity = '1'; });  // backdrop + welcome in
   setTimeout(() => { survive.style.opacity = '1'; }, 1500);                                // survive fades in beneath
   setTimeout(() => { ov.style.opacity = '0'; }, 4800);                                     // both fade out together
-  setTimeout(() => { ov.remove(); }, 6400);
+  setTimeout(() => { ov.remove(); gShowHintCard(); }, 6400);                               // → hand off to the hint card
+}
+
+// Centered hint shown once the title card finishes — a quick "how to play" nudge that fades in, holds, fades out.
+function gShowHintCard(){
+  const host = document.querySelector('#game .game-inner');
+  if(!host) return;
+  const ov = document.createElement('div');
+  ov.id = 'hint-card';
+  ov.style.cssText = 'position:absolute;inset:0;z-index:29;pointer-events:none;display:flex;flex-direction:column;'
+    + 'align-items:center;justify-content:center;gap:12px;opacity:0;transition:opacity .8s ease;text-align:center;'
+    + 'text-shadow:0 2px 6px rgba(0,0,0,.95),0 0 16px rgba(0,0,0,.85);';
+  const l1 = document.createElement('div');
+  l1.textContent = 'Press Tab to open the map';
+  l1.style.cssText = 'color:#ffe8b0;font:600 22px/1.3 sans-serif;letter-spacing:.5px;';
+  const l2 = document.createElement('div');
+  l2.textContent = 'Explore, Level Up, Survive!';
+  l2.style.cssText = 'color:#dfe6f5;font:500 16px/1.3 sans-serif;letter-spacing:1.5px;';
+  ov.appendChild(l1); ov.appendChild(l2);
+  host.appendChild(ov);
+  requestAnimationFrame(() => { ov.style.opacity = '1'; });
+  setTimeout(() => { ov.style.opacity = '0'; }, 6000);
+  setTimeout(() => { ov.remove(); }, 7000);
 }
 
 function goWilderness(){

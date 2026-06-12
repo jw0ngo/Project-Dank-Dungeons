@@ -11,7 +11,8 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 - **Title/welcome card + straight-to-the-wild web build.** Dropping into the wilderness now plays a title overlay —
   **"Welcome to To Dust"** fades in, then **"Try to Survive"** fades in beneath it, then both fade out together. On
   the live (GitHub Pages) build the game now **drops you straight into a wilderness run** on load with the card
-  playing; local dev still opens in the Sanctum hub.
+  playing; local dev still opens in the Sanctum hub. After the card, a centered hint reads *"Press Tab to open the
+  map / Explore, Level Up, Survive!"* before fading.
 - **Trail of Embers — Cilia's second God Skill.** A movement-as-weapon aura that lays burning ground as you
   move (you pay mana only while moving). **Form @5:** *Inferno Wake* (a wide cone of fire fanning behind you) or
   *Firesteps* (a single, hotter line). **Ascension @10:** 🐉 *Wyrmwake* / *Dragonfeet* (dragonfire that heals you —
