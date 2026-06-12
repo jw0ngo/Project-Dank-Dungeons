@@ -16858,13 +16858,20 @@ buildEdPalette();
 refreshHub();
 // Go straight to the town world on page load
 // Firebase must be ready first — _fbInit sets up window._FB
-// goTown() is safe to call immediately; presence defers gracefully if Firebase isn't ready.
-// goTown sets up the game screen + loop; on the DEPLOYED build (GitHub Pages) we then drop straight into the
-// wilderness (with the title card) before the first frame renders — so no town flash. Local dev (localhost /
-// file://) stays in the town hub for editing/testing.
+// goTown() is safe to call immediately; presence defers gracefully if Firebase isn't ready. goTown sets up the
+// game screen + loop. On the DEPLOYED build (GitHub Pages) we then drop into the wilderness (with the title card)
+// — but DEFERRED to the `load` event, not synchronously: calling goWilderness() at module-eval (before assets +
+// layout settle) black-screened. After `load` the loop is running and art is ready, so it renders correctly
+// (this is the same timing as the town→portal→wilderness transition, which already works). Local dev
+// (localhost / file://) stays in the town hub for editing/testing.
 goTown();
 const _onPages = !/^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])$/.test(location.hostname) && location.protocol !== 'file:';
-if(_onPages) goWilderness();
+const _wildBoot = _onPages || /[?&]wild=1/.test(location.search);   // ?wild=1 reproduces the live direct-boot locally
+if(_wildBoot){
+  const drop = () => requestAnimationFrame(() => { if(!inWilderness) goWilderness(); });
+  if(document.readyState === 'complete') drop();
+  else window.addEventListener('load', drop);
+}
 
 
 // ── Shrine patron god menu ────────────────────────────────────────
