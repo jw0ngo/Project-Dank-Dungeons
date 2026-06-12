@@ -131,6 +131,32 @@ by the pivot and **reused as-is.**
 
 ---
 
+## The Rank-10 Epic-ness Bar (Josh, 2026-06-12) — Riftmaw is the benchmark
+
+A rank-10 Ascension is the **capstone of a 10-rank investment + the "turning of the age" myth** — it must land as
+a **"holy shit" moment**, not a bigger rank-9. The benchmark Josh set is **Riftmaw** (Pillars of Fire's 🔥 leaf):
+place a chaos rift at the cursor and a **jagged chaosfire fissure TEARS open across the entire visible map, both
+directions**, erupting outward over time, then **lingering ~20s** as a battlefield-reshaping hazard. What makes it
+epic — the **ingredients every rank-10 leaf should hit (most of):**
+
+1. **Map-scale footprint** — it fills the screen / spans the battlefield, not a local AoE. The capstone changes how
+   the *whole field* reads, not just the pack in front of you.
+2. **A dramatic reveal** — it *tears / blooms / erupts open over time* (Riftmaw rips outward from the cursor; the
+   telegraph sells the scale first), not an instant pop.
+3. **It lingers + reshapes the battlefield** — a terrain event you live with for many seconds (Riftmaw's 20s), not
+   a one-frame flash. The arena is *different* after you cast it.
+4. **Player agency in placement / shape** — you *aim and place* the spectacle (Riftmaw is cursor-placed), so the
+   epic moment is yours, authored — not an automatic pop.
+5. **Tonal identity, both poles** — 🔥 leaves read **cataclysm / dread** (Riftmaw); 🐉 leaves read **majestic /
+   ancient** — *both* clear the spectacle bar, in their own register (a vast dragonfire cathedral of healing flame
+   is as epic as a chaos rift). **Epic-ness is a scale/presentation bar, NOT a damage bar** — it applies to the
+   sustain leaves too; 🐉 trades *damage* for sustain, never *spectacle*.
+
+**This is the bar for every rank-10 leaf — this god and every future god.** A capstone that reads as "rank 9 + a
+bit" has failed the tier; measure each rank-10 against these five. (See the per-leaf audit / gaps in `TASKS.md`.)
+
+---
+
 ## The launch loadout — Cilia's three God Skills
 
 Chosen from Cilia's five fire skills (Josh, 2026-06-10) for **clean auto-fire conversion + archetype spread**:
@@ -302,21 +328,30 @@ eruption, 22px radius.
 - **Ranks 6–9:** Eruption → +finale size/damage / +lane range / +mid-pillar count · Firewall → +wall count /
   +wall length / +travel distance.
 - **Rank 10 — Ascension** *(the pillars become a sustained volcanic terrain event):*
-  - **Eruption →** 🐉 **Wyrmspine** (finale pillar **re-erupts 3× at intervals** + standing in it heals you —
-    *already an interval-based, VS-perfect peak*) · 🔥 **Riftmaw** (a run-long chaosfire fissure erupting
-    erratically past your aim, burning you when near). **⟵ INTENTIONALLY diverges from Eruption's concentrated
-    shape (Josh, 2026-06-12):** chaos here = *uncontrolled sprawl* past where you aimed — the one deliberate
-    exception to the "both of a Form's ascensions keep its shape" principle (its 🐉 sibling Wyrmspine keeps the
-    concentrated re-erupting pillar; Riftmaw is meant to feel like the power slipping its leash). **Footprint rule:
-    EXEMPT** — like Eye of Chaos / Trail, the fissure is a *travelling/erratic* hazard, not settled ground planted
-    under you; the self-burn cost is lingering near the erupting cracks, not a kite-check.
-  - **Firewall →** 🐉 **Dragonmarch** (walls turn to dragonfire and lay a healing carpet in their wake) ·
-    🔥 **Hellfront** *(reshaped Josh 2026-06-12 — keeps Firewall's wall shape)* — the walls **multiply and march
-    outward relentlessly as chaosfire walls**: an advancing firewall that doesn't stop, and **caught ahead of or
-    between the walls, you burn.** The cost is **movement/position-relative** (outrun or thread the walls — the
-    same "movement is the cost" logic as Trail), **not** a settled field-around-you. **Footprint rule: EXEMPT** —
-    it lays no settled ground under you; the walls advance *away*. *(Was an omnidirectional field-around-you under
-    the footprint rule; reshaped to walls to keep its Form's shape — so it leaves the footprint scope.)*
+  - **Eruption →** 🐉 **Wyrmspine** *(re-spec'd to the epic bar, Josh 2026-06-12 — the dragon-spine MIRROR of
+    Riftmaw)* — at the cursor, a **colossal line of giant dragonfire pillars erupts in sequence ACROSS the map**
+    (the wyrm's spine surfacing, both directions like Riftmaw), each laying a **dragonfire heal-carpet** → a vast
+    map-spanning **healing spine** you stand in / weave along to heal. Majestic register; the same map-scale +
+    tear-open + lingering-carpet ingredients as Riftmaw, but ordered/ancient and it *heals* instead of *burns*.
+    *(Was "finale re-erupts 3× in place" — a clear below-bar miss; raised to the benchmark.)* · 🔥 **Riftmaw** (a
+    run-long chaosfire fissure erupting erratically past your aim, burning you when near).
+    **⟵ Eruption's two capstones BOTH transcend the concentrated finale into a map-scale line at the age-turning
+    (Josh, 2026-06-12):** the chaos **rift** (jagged, erratic, *burns*) vs the dragon **spine** (ordered, majestic,
+    *heals*) — a symmetric pair, the *unleashing* of the disciplined nuke. **Footprint rule: both EXEMPT**
+    (travelling map-lines, not settled ground under you). *(Eruption is the one Form whose rank-10 capstones
+    supersede the "keep the Form's shape" rule — when shape-coherence and the **Epic-ness Bar** tension at the
+    capstone, **the Epic-ness Bar wins.** Eruption stays the concentrated nuke through rank 9; the age-turning
+    unleashes it beyond all bounds.)*
+  - **Firewall →** 🐉 **Dragonmarch** (walls turn to dragonfire and lay a healing carpet in their wake — **raise to
+    match Hellfront's map-sweep** during the feel-pass: a dragonfire **wall-tide** laying a heal-carpet across the
+    whole battlefield, the dragon mirror of Hellfront) · 🔥 **Hellfront** *(re-spec'd to the epic bar, Josh
+    2026-06-12 — keeps Firewall's wall shape, now map-scale)* — the firewall becomes a **relentless TIDE of
+    chaosfire walls that sweeps across the entire battlefield** (wall after wall marching from your aim line out to
+    the screen edges over ~1–2s), **leaving a lingering chaosfire field in its wake.** Map-scale + dramatic sweep +
+    lingering wake + player-aimed direction — the cataclysm register. *(Was "+2 advancing walls" — the clearest
+    below-bar miss; raised to the benchmark.)* **Cost** movement/position-relative (don't get caught in the
+    advancing tide / standing in the wake). **Footprint rule: EXEMPT** (advancing walls; the field settles *behind*
+    the sweep, never under you on cast).
 
 **Mana cost (item 7 — author from the start, NOT retrofitted).** Pyroclasm fires in **discrete bursts on an
 interval** (a pillar lane every ~`FP_INTERVAL`), so — like Trail's emitted patches, unlike Burning Body's
