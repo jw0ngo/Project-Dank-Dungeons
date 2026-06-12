@@ -246,6 +246,5 @@ lesson: **the principle → why → how to apply.** Quality over volume.
 
 ### 2026-06-09 — Ground every pitch in the shipped game + the feel target
 
-- Proposals land when grounded in what *actually* shipped and serving the CD's feel/story pillars, not clever in
-  the abstract — read the build + name the Creative Manifesto principle the idea serves before pitching, and arrive
-  with a decision-ready one-pager. *(Now baked into the operating model + the Asset Audit; kept as the origin note.)*
+- Grounded-in-what-*shipped* + serving the CD's feel pillars beats clever-in-the-abstract — read the build, name
+  the Creative Manifesto principle, bring a decision-ready one-pager. *(Now baked into the operating model.)*
