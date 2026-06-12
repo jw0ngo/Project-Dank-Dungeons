@@ -7,6 +7,23 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+### Changed
+- **Burning Body mana economy rescaled — cost and damage are now independent per-rank tables.** Each rank reads a
+  fixed mana cost (`mpChunkByRank`) and a fixed damage (`auraDmgByRank`/`emitDmgByRank`) straight off a table — no
+  formula coupling the two. The early ranks are **cheaper** (rank 1 = 2 mp/s), both tables **step up** at the Form
+  (rank 5) and Ascension (rank 10) evolutions, and the damage table climbs **faster than** the cost table, so
+  pouring mana into one skill is rewarded (dps-per-mana rises with investment — specialization pays off).
+- **Cataclysm scatters burning ground instead of laying a ring.** The Cinderburst 🔥 ascension now drops random
+  chaosfire patches spread across the whole detonation area (organic burning ground filling the blast) rather than
+  a clean ring, keeping a small bare footprint at your feet so the self-burn stays an avoidable hazard.
+- **Firebloom's ring now emerges from your aura ring, not the centre.** When Firebloom (and Chaos Crown) release a
+  wave, the always-on aura ring itself **gathers in, surges out, and flings off** the expanding ring of the same
+  fire sprite — so it reads as one unified ring pulsing and releasing, instead of a second ring popping up at your
+  feet and growing past the aura.
+- **Dragonbreath is now a single breathing ring.** Instead of an aura ring *plus* a separate wave, the aura ring
+  **itself breathes** — a small prep pulse, then a slow expand out to full range, then back — igniting enemies out
+  to the breath's reach and **healing you** while it burns (the 🐉 sustain leaf made literal).
+
 ## [0.0.2] - 2026-06-12
 
 ### Added

@@ -64,7 +64,7 @@ refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 
 #8.5 fog shake) — tiny, and they clean up every playtest. **#8.7/#8.8/#8.9 are the mana-balance cluster** — do
 #8.9 (cost/dps rescale) + #8.8 (ooc mana regen) before #8.7 (early difficulty), then re-judge night 1 with all three in.*
 
-- ◻️ ✨ **#8.9 — Rescale Burning Body's mana-to-dps economy (step-changes + superlinear dps/mana)** (↳ from PM,
+- ✅ ✨ **#8.9 — Rescale Burning Body's mana-to-dps economy (two independent per-rank tables)** — **done ENG 2026-06-12** (pushed; numbers tunable by feel). Built the corrected **model B**: `mpChunkByRank` (cost) + `auraDmgByRank`/`emitDmgByRank` (damage), each read straight off its table — no `gGodSkillDpsScale`/exponent. Low rank-1 anchor (2 mp/s), steps at the Form/Ascension forks, damage authored to climb faster than cost (dps/mana rises 5.0→11.9 over ranks 1→10, verified by extract-eval). Original detail below. (↳ from PM,
   Josh 2026-06-12 · spec [`specs/mana-economy.md`](specs/mana-economy.md) "Burning Body cost curve — RESCALED") —
   the shipped curve is **flat-linear in cost, gentler-linear in dps** → efficiency runs backwards (rank 1→2 = cost
   ×3.7 for dps ×1.5; dps/mana falls ~4× over ranks 1→10) and **evolution adds no step**. Retune to the spec's target

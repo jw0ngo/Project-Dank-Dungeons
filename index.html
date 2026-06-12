@@ -3936,13 +3936,16 @@ function gGodSkillDisplay(p, id){
   }
   return { name: tree.art || id, icon: tree.icon || '✦' };
 }
-// The CURRENT base-aura mana CHUNK (MP) — charged every BB_AURA_INTERVAL (3s). GROWS per rank (Josh: the
-// base cost rises every level alongside damage/area). rank 1 = base.mpChunk; +mpChunkInc per level. NO cap —
-// at high rank this can exceed a base pool, gating the skill until the player builds Max-MP. Single source
-// for the charge (gTickBurningBody), the HUD, and Sim.
+// The CURRENT base-aura mana CHUNK (MP) — charged every BB_AURA_INTERVAL (3s). GROWS per rank. item 8.9: a fixed
+// per-rank COST table base.mpChunkByRank[rank-1] (gentle within a tier, a step at the Form/Ascension forks) —
+// falling back to the old flat base.mpChunk + base.mpChunkInc·(rank-1) for any skill without a table. Cost and
+// DAMAGE (auraDmgByRank/emitDmgByRank, read by gGodFireParam) are INDEPENDENT per-rank tables — no formula ties
+// them. NO cap — at high rank the chunk can exceed a base pool, gating the skill until the player builds Max-MP.
 function gGodSkillBaseChunk(p, id){
   const tree = gGodSkillTree(p, id); if(!tree || !tree.fire) return 0;
   const b = tree.fire.base, rank = Math.max(1, gImbueRank(p, id));
+  const tbl = b.mpChunkByRank;
+  if(tbl && tbl.length) return tbl[Math.min(rank, tbl.length) - 1];   // clamp past max-rank to the last tier
   return (b.mpChunk || 0) + (b.mpChunkInc || 0) * (rank - 1);
 }
 // The CURRENT emit cadence (frames between this skill's auto-cast emits) — mirrors gTickBurningBody's
@@ -4044,7 +4047,7 @@ function gUpdateGodSkills(p, dt){
 // an expanding ring, Cinderburst detonates a fast nova. (3) The rank-10 Ascension reshapes the emit:
 // Dragonbreath = a dragonfire breathing ring that heals on contact; Chaos Crown = a chaosfire ring that
 // settles into a burning ground-circle; Dragonheart/Cataclysm pool dragonfire-heal / chaosfire-self-burn
-// ground at your feet. All damage is standalone (FR_BASE_DMG-scaled), reusing the shipped ring + grounds.
+// ground at your feet. Damage is the per-rank auraDmgByRank/emitDmgByRank tables, reusing the shipped ring + grounds.
 function gTickBurningBody(p, dt, id, tree){
   const dbuf = (p.wildBuffs && (1 + (p.wildBuffs.damagePct || 0) / 100)) || 1;
 
@@ -4061,11 +4064,21 @@ function gTickBurningBody(p, dt, id, tree){
     p._bbCostTimer = BB_AURA_INTERVAL;
   }
 
-  // (1) Base ignite-aura — runs from rank 1, independent of any Form.
+  // Form / ascension context — needed by BOTH the aura tick (Dragonbreath makes the aura breathe) and the emit.
+  const form = gImbueForm(p, id);
+  const fdef = form && tree.forms[form];
+  const e    = gImbuePath(p, id);
+  const asc  = gImbueAscension(p, id);
+  const leaf = (fdef && asc && fdef.ascensions[asc]) || null;
+  const ground = (leaf && leaf.ground) || null;
+  const isDragonbreath = !!(leaf && leaf.ringMode === 'breathe');
+
+  // (1) Base ignite-aura — runs from rank 1. Dragonbreath makes the aura ring BREATHE out to the full range (ONE
+  //     ring, no separate wave — gDragonbreathRadius); every other path keeps the fixed aura radius.
   p._bbAura = (p._bbAura || 0) - dt;
   if(p._bbAura <= 0){
     p._bbAura = AURA_TICK;
-    const radius = gGodFireParam(p, id, 'auraRadius');
+    const radius = isDragonbreath ? gDragonbreathRadius(p, id) : gGodFireParam(p, id, 'auraRadius');
     const admg   = Math.max(1, Math.round(gGodFireParam(p, id, 'auraDmg') * dbuf));
     const aburn  = gGodFireParam(p, id, 'auraBurn');
     for(const en of gEnemies){
@@ -4075,18 +4088,18 @@ function gTickBurningBody(p, dt, id, tree){
     }
     if(inTown && gTrainingDummy && Math.hypot(p.wx - gTrainingDummy.wx, p.wy - gTrainingDummy.wy) <= radius + gTrainingDummy.r)
       hitTrainingDummy(admg, '#ffaa00', p.wx, p.wy);
+    // Dragonbreath SUSTAIN: standing in your own dragonfire breath mends you (the 🐉 leaf's heal).
+    if(isDragonbreath && p.hp < p.maxHp){
+      const heal = Math.max(1, Math.round(admg * DRAGONFIRE_HEAL_RATIO));
+      p.hp = Math.min(p.maxHp, p.hp + heal);
+      addGDmg(p.wx, p.wy - 22, '+' + heal, '#7CFC9E');
+    }
     const a = gFrame * 0.2;                                  // aura shimmer ring
     spawnGP(p.wx + Math.cos(a) * radius * 0.85, p.wy + Math.sin(a) * radius * 0.85, '#ff7a22', 1, 2);
   }
 
   // (2) Form emit — nothing more until a Form is chosen @5.
-  const form = gImbueForm(p, id);
   if(!form) return;
-  const fdef = tree.forms[form];
-  const e    = gImbuePath(p, id);
-  const asc  = gImbueAscension(p, id);
-  const leaf = (asc && fdef.ascensions[asc]) || null;
-  const ground = (leaf && leaf.ground) || null;
   const interval = Math.max((tree.fire.floors && tree.fire.floors.emitInterval) || 60,
                             ((leaf && leaf.interval) || fdef.fire.interval) + ((e.mods && e.mods.emitInterval) || 0));
   p._bbTimer = (p._bbTimer || 0) - dt;
@@ -4108,30 +4121,38 @@ function gTickBurningBody(p, dt, id, tree){
 
   if(fdef.fire.emit === 'ring'){
     const mode = leaf && leaf.ringMode;                     // 'breathe' (Dragonbreath) | 'settle' (Chaos Crown)
+    if(mode === 'breathe'){
+      // Dragonbreath: NO separate wave — the aura ring itself breathes (one continuous ring). This emit just
+      // (re)starts the breath cycle; the damage + heal ride the breathing aura tick above (gDragonbreathRadius).
+      p._bbBreathStart = gFrame;
+      return;
+    }
+    // UNIFIED EMIT (Firebloom base + Chaos Crown): the released ring IS the aura ring flinging off — it begins ON
+    // the aura ring (same sprite, same radius) and holds a beat while the aura ring gathers→surges (the pulse),
+    // then peels off and expands. No separate ring spawns at the centre.
+    p._bbPulseStart = gFrame;                               // stamp the aura-ring gather→surge pulse
     gSpawnFireRing(p.wx, p.wy, dmg, {
       rangeTiles, burnFrames,
-      speed:     mode === 'breathe' ? BB_BREATH_SPEED : (fdef.fire.speed || FR_SPEED),
-      breathe:   mode === 'breathe',
-      follow:    mode === 'breathe',                         // Dragonbreath emanates from the moving player
+      speed:     fdef.fire.speed || FR_SPEED,
       settle:    mode === 'settle' ? 'chaosfire' : null,
-      healOwner: (mode === 'breathe' && ground === 'dragonfire') ? Math.max(1, Math.round(dmg * DRAGONFIRE_HEAL_RATIO)) : 0,
-      // Ascension reskins the ring to its substance: Dragonbreath → dragonfire circle · Chaos Crown → chaosfire circle.
+      startRadius: gGodFireParam(p, id, 'auraRadius'), windup: BB_RING_WINDUP,  // begin ON the aura ring, then release
+      // Ascension reskins the ring to its substance: Chaos Crown → chaosfire circle.
       spr:       ground === 'dragonfire' ? DRAGONFIRE_CIRCLE_SPR : ground === 'chaosfire' ? CHAOSFIRE_CIRCLE_SPR : null,
     });
     gShake && gShake(3, 5);
-  } else {                                                  // 'nova' — a fast fixed-radius detonation
+  } else {                                                  // 'nova' — a fast fixed-radius detonation FROM the centre
     // Ascension reskins the nova to its substance: Dragonheart → dragonfire circle · Cataclysm → chaosfire circle.
     const novaSpr = ground === 'dragonfire' ? DRAGONFIRE_CIRCLE_SPR : ground === 'chaosfire' ? CHAOSFIRE_CIRCLE_SPR : null;
     gSpawnFireRing(p.wx, p.wy, dmg, { rangeTiles, burnFrames, speed: fdef.fire.speed || BB_NOVA_SPEED, spr: novaSpr });
     // Cinderburst Ascension grounds. Dragonheart pools dragonfire HEAL at your feet (stand in it to mend).
-    // Cataclysm lays chaosfire as a RING around you — never under you — so the self-burn is a hazard you
-    // can avoid by holding the safe centre, not instant death (matches Chaos Crown).
+    // Cataclysm SCATTERS random chaosfire patches across the detonation area (the nova reach) — organic burning
+    // ground filling the blast, leaving a bare footprint at your feet so the self-burn stays an avoidable hazard.
     if(ground === 'dragonfire'){
       const heal = Math.max(1, Math.round(dmg * DRAGONFIRE_HEAL_RATIO));
       gSpawnFireTrail(p.wx, p.wy, Math.round(dmg * 0.5), false,
         { substance:'dragonfire', heal, life: Math.max(120, interval), reach: FT_REACH * 2 });
     } else if(ground === 'chaosfire'){
-      gLayChaosfireRing(p.wx, p.wy, CATACLYSM_RING_TILES * T, dmg);
+      gScatterChaosfireGround(p.wx, p.wy, rangeTiles * T, dmg);
     }
     gShake && gShake(5, 7);                                 // detonation punch
   }
@@ -6494,25 +6515,30 @@ FW_SPR.src = 'assets/fx/cilia/wave.png';
 const FR_INTERVAL    = 120;   // frames between auto-fired rings (2s @ 60fps) — legacy base cadence
 const FR_RANGE_TILES = 6;     // how far a ring expands (tiles)
 const FR_SPEED       = 4.5;   // px/frame expansion
-const FR_DMG_MULT    = 1.5;   // ring impact = this x the standalone base (FR_BASE_DMG)
-const FR_BASE_DMG    = 20;    // Burning Body standalone per-emit base damage (ring/nova), grows via the
-                              // emitDmg rank mods, scaled by the global damagePct buff.
+const FR_DMG_MULT    = 1.5;   // ring/nova impact = this × the per-rank emitDmgByRank base (item 8.9)
 const FR_BURN_FRAMES = 180;   // 3s burn @ 60fps
 const FR_BURN_RATIO  = 0.6;   // burn total = this x impact damage
 const FR_BURN_MIN    = 5;
 // ── Burning Body (god skill) — base ignite-aura + form-emit feel knobs ────────────────────────────
 const AURA_RADIUS       = 64;   // base ignite-aura radius (px ~2 tiles): enemies inside catch fire
-const AURA_DMG          = 4;    // aura contact damage per tick
-const AURA_TICK         = 24;   // frames between aura ticks (~0.4s)
+const AURA_TICK         = 24;   // frames between aura ticks (~0.4s); per-tick damage = auraDmgByRank (item 8.9)
 const AURA_BURN_FRAMES  = 120;  // burn duration the aura applies (2s)
 const BB_AURA_INTERVAL  = 180;  // item 7: FIXED 3s cadence of Burning Body's base-aura mana chunk. The interval never changes; the CHUNK grows per rank (gGodSkillBaseChunk) so leveling the skill costs more — at high rank the chunk can exceed a base 100-MP pool, gating the skill to dormant until you build Max-MP (intended: "grow into your power"). NO cost cap.
 const BB_RING_INTERVAL  = 300;  // Firebloom: an expanding ring every 5s
 const BB_BURST_INTERVAL = 240;  // Cinderburst: a detonation nova every 4s
+const BB_AURA_PULSE_DUR = 22;   // Firebloom emit: frames the always-on aura ring GATHERS-in then SURGES-out as it
+                                // releases a wave (the brief "breath" that unifies the aura ring with the Firebloom ring)
+const BB_RING_WINDUP    = 8;    // Firebloom emit: frames the released wave HOLDS on the aura ring (same sprite, same
+                                // radius — reads as one ring) before peeling off and expanding outward
+const BB_BREATH_DUR     = 130;  // Dragonbreath: frames for one full BREATH of the aura ring (small prep pulse, then a
+                                // slow expand to full range, then return). ≈ the Dragonbreath emit interval so it loops
+                                // seamlessly. The aura ring IS the breath — ONE ring, no separate wave.
 const BB_NOVA_SPEED     = 13;   // Cinderburst nova expansion (fast = a detonation read, not a slow sweep)
 const BB_BREATH_SPEED   = 3.2;  // Dragonbreath breathing ring (slower, so the expand→contract reads)
 const CHAOS_CROWN_LIFE  = 240;  // Chaos Crown: chaosfire ground-circle lifetime (frames)
-const CATACLYSM_RING_TILES = 3; // Cataclysm: chaosfire ground laid as a ring THIS many tiles out (a real,
-                                // navigable danger ring with a safe centre — not at the far nova edge)
+const CATACLYSM_SAFE_R  = 38;   // Cataclysm: random chaosfire patches scatter across the detonation area but
+                                // leave THIS bare radius (px) around the player's feet — the self-burn stays an
+                                // avoidable hazard you weave through, not fire planted under you (footprint rule).
 const FR_RING_FRAC   = 0.76;  // sprite's bright-ring radius as a fraction of its half-width (new ring art: band at 0.759)
 const FR_SPR = new Image();
 FR_SPR.src = 'assets/fx/cilia/ring.png';
@@ -6530,14 +6556,16 @@ function gSpawnFireRing(x, y, dmg, opts){
   opts = opts || {};
   const range = (opts.rangeTiles || FR_RANGE_TILES) * T;
   const invert = !!opts.invert;
+  const start = invert ? range : (opts.startRadius || 6);    // a wave may begin out on the aura ring, not the centre
   gFireRings.push({
     x, y,
-    traveled:     invert ? range : 6,
-    prevTraveled: invert ? range : 0,
+    traveled:     start,
+    prevTraveled: start,
     range, speed: (opts.speed != null ? opts.speed : FR_SPEED), invert, dmg,
     burnTotal: Math.max(FR_BURN_MIN, Math.round(dmg * FR_BURN_RATIO)),
     _hit: new Set(),
     _burnFrames: opts.burnFrames || FR_BURN_FRAMES,
+    windup: opts.windup || 0,                    // hold on the aura ring this many frames before expanding (the gather beat)
     breathe: !!opts.breathe, _exhaling: false,   // breathe: expand to max, then contract back to centre
     settle: opts.settle || null,                 // on reaching max, lay a ground-circle of this substance
     healOwner: opts.healOwner || 0,              // heal the local player when the ring band crosses them
@@ -6563,6 +6591,7 @@ function gUpdateFireRings(dt){
   for(let i=gFireRings.length-1; i>=0; i--){
     const w = gFireRings[i];
     if(w.follow && gPlayer && !gPlayer.dead){ w.x = gPlayer.wx; w.y = gPlayer.wy; }  // emanate from the moving player
+    if(w.windup > 0){ w.windup -= dt; w.prevTraveled = w.traveled; continue; }       // gather beat: hold on the aura ring (no sweep) then release
     w.prevTraveled = w.traveled;
     const _dir = (w.invert || w._exhaling) ? -1 : 1;        // invert collapses; breathe contracts past its peak
     w.traveled += _dir * w.speed * dt;
@@ -6629,8 +6658,38 @@ function gLayChaosfireRing(x, y, radius, dmg){
   }
 }
 function _laySettleRing(w){ gLayChaosfireRing(w.x, w.y, w.range, w.dmg); }   // Chaos Crown peak → settle
+// Cataclysm (Cinderburst 🔥): instead of a clean ring, SCATTER random chaosfire ground patches across the whole
+// detonation area — organic burning ground filling the blast. Distance uses √(rand) so patches spread uniformly
+// over the AREA (not bunched at the centre); a bare CATACLYSM_SAFE_R footprint around the player keeps the
+// self-burn an avoidable hazard you weave through, not fire under your feet.
+function gScatterChaosfireGround(x, y, radius, dmg){
+  const inner = Math.min(CATACLYSM_SAFE_R, radius * 0.5);
+  const n = Math.max(8, Math.round(radius / 22));
+  const selfDmg = Math.max(1, Math.round(dmg * CHAOSFIRE_SELF_RATIO));
+  const burn    = Math.max(1, Math.round(dmg * 0.4));
+  for(let k = 0; k < n; k++){
+    const a = Math.random() * Math.PI * 2;
+    const r = inner + Math.sqrt(Math.random()) * (radius - inner);
+    gSpawnFireTrail(x + Math.cos(a) * r, y + Math.sin(a) * r, burn, false,
+      { substance:'chaosfire', selfDmg, life: CHAOS_CROWN_LIFE, reach: FT_REACH * 1.5 });
+  }
+}
 
 // Burning Body's base ignite-AURA, drawn as the fr.png fire-ring sprite around the player so the always-on
+// Dragonbreath: the aura ring BREATHES — its radius oscillates between the aura radius and the full emit range on
+// a slow cycle (re)started each emit (_bbBreathStart). One continuous ring (no separate wave): a small prep pulse
+// (expand slightly, contract), then a slow expand to full range, then a slow return — "out and back", a breath.
+// Shared by the draw AND the aura-damage tick so what you see is exactly what ignites.
+function gDragonbreathRadius(p, id){
+  const auraR = gGodFireParam(p, id, 'auraRadius');
+  const range = gGodFireParam(p, id, 'emitRange') * T;
+  const t = Math.min(1, Math.max(0, (gFrame - (p._bbBreathStart != null ? p._bbBreathStart : -1e9)) / BB_BREATH_DUR));
+  const f = t < 0.15 ? (t / 0.15) * 0.18              // small expand (the inhale prep)
+          : t < 0.30 ? 0.18 * (1 - (t - 0.15) / 0.15) // contract back
+          : t < 0.72 ? (t - 0.30) / 0.42              // slow expand to the full range (the exhale)
+          :            1 - (t - 0.72) / 0.28;         // slow return to the aura ring
+  return auraR + (range - auraR) * Math.max(0, f);
+}
 // AOE is visible — a slow-churning additive ring sized to the live aura radius (what you see is what burns).
 // Floor decal: called before the character draw so the player stands inside their own fire.
 function gDrawBurningBodyAura(){
@@ -6638,17 +6697,31 @@ function gDrawBurningBodyAura(){
   // Gate on the WHOLE-skill predicate, not mere ownership — so toggling the skill off (or it going dormant
   // on starvation) hides the base aura too, not just the emit. The aura is one half of the single skill.
   if(!p || p.dead || !gGodSkillRunning(p, 'burningBody')) return;
-  const radius = gGodFireParam(p, 'burningBody', 'auraRadius');
+  let radius = gGodFireParam(p, 'burningBody', 'auraRadius');
   if(!(radius > 0)) return;
-  // Pick the aura skin: once a rank-10 Ascension is chosen, the leaf's substance reskins the aura —
-  // 🐉 dragonfire → the dragonfire circle, 🔥 chaosfire → the chaosfire circle; otherwise the base fire ring.
-  let spr = FR_SPR;
+  // Pick the aura skin + detect Dragonbreath: once a rank-10 Ascension is chosen, the leaf's substance reskins the
+  // aura (🐉 dragonfire / 🔥 chaosfire); Dragonbreath additionally makes the aura ring BREATHE (one ring, no wave).
+  let spr = FR_SPR, isDragonbreath = false;
   const ascId = gImbueAscension(p, 'burningBody');
   if(ascId){
     const tree = gGodSkillTree(p, 'burningBody'), form = gImbueForm(p, 'burningBody');
     const leaf = tree && form && tree.forms[form] && tree.forms[form].ascensions[ascId];
     if(leaf && leaf.ground === 'dragonfire') spr = DRAGONFIRE_CIRCLE_SPR;
     else if(leaf && leaf.ground === 'chaosfire') spr = CHAOSFIRE_CIRCLE_SPR;
+    isDragonbreath = !!(leaf && leaf.ringMode === 'breathe');
+  }
+  if(isDragonbreath){
+    radius = gDragonbreathRadius(p, 'burningBody');          // the aura ring BREATHES out to range — ONE ring
+  } else if(p._bbPulseStart != null){
+    // Firebloom emit pulse: as the aura ring releases a wave it GATHERS in then SURGES out, so the wave reads as
+    // the aura ring itself flinging off — not a separate ring. Stamped (_bbPulseStart) by gTickBurningBody.
+    const t = (gFrame - p._bbPulseStart) / BB_AURA_PULSE_DUR;
+    if(t >= 0 && t < 1){
+      const m = t < 0.35 ? 1 - 0.20 * (t / 0.35)              // contract to 0.80
+              : t < 0.70 ? 0.80 + 0.30 * ((t - 0.35) / 0.35)  // surge out to 1.10
+              :            1.10 - 0.10 * ((t - 0.70) / 0.30); // settle back to 1.0
+      radius *= m;
+    }
   }
   const ox = p.wx - camX, oy = p.wy - camY;
   if(spr.complete && spr.naturalWidth){
@@ -12447,12 +12520,16 @@ function gOwnedGodSkills(p){
   const pool = gGodPool(p); if(!pool || !p || !p.imbuePaths) return [];
   return Object.keys(pool).filter(id => gIsGodSkill(pool[id]) && gOwnsGodSkill(p, id));
 }
-// Effective magnitude of a god skill's `fire` param: base + this player's rank mods, floored/capped.
-// (Mirrors gFireWaveParams' base+mods+clamp pattern; the only place the updater reads tuned numbers.)
+// Effective magnitude of a god skill's `fire` param: per-rank value + this player's rank mods, floored/capped.
+// item 8.9: if base has a fixed per-rank table `<key>ByRank` (e.g. auraDmgByRank/emitDmgByRank — the damage
+// tables, independent of the cost table), the value is read straight off it by rank; otherwise it's the flat
+// base[key]. Either way + the additive mods (waveStep/formStep grow area/burn), then floored/capped.
 function gGodFireParam(p, id, key){
   const tree = gGodSkillTree(p, id); if(!tree || !tree.fire) return 0;
-  const e = p && p.imbuePaths && p.imbuePaths[id];
-  let v = (tree.fire.base[key] || 0) + ((e && e.mods && e.mods[key]) || 0);
+  const e = p && p.imbuePaths && p.imbuePaths[id], base = tree.fire.base;
+  const tbl = base[key + 'ByRank'];
+  const perRank = (tbl && tbl.length) ? tbl[Math.min(Math.max(1, gImbueRank(p, id)), tbl.length) - 1] : (base[key] || 0);
+  let v = perRank + ((e && e.mods && e.mods[key]) || 0);
   const fl = tree.fire.floors && tree.fire.floors[key]; if(fl != null) v = Math.max(fl, v);
   const cp = tree.fire.caps   && tree.fire.caps[key];   if(cp != null) v = Math.min(cp, v);
   return v;
@@ -14211,20 +14288,30 @@ const IMBUE_PATHS = {
       acquireDesc:'Your body burns — enemies that come near catch fire and take damage over time.',
       fire: {
         kind:'burningBody', timerKey:'_bbTimer',
-        base:   { auraRadius:AURA_RADIUS, auraDmg:AURA_DMG, auraBurn:AURA_BURN_FRAMES,
-                  emitDmg:FR_BASE_DMG, emitRange:FR_RANGE_TILES, burnFrames:FR_BURN_FRAMES,
-                  mpChunk:10, mpChunkInc:27 },  // item 7: base-aura mana COST, charged as a chunk every BB_AURA_INTERVAL (3s). rank 1 = 10 MP; +27 MP per level → rank 10 ≈ 253 MP/3s (~84/s). With the evolved emit (mpEmit) the rank-10 skill averages in the ~80-100 MP/s benchmark. NO cap — exceeds a base pool at high rank by design (build Max-MP to wield it).
+        base:   { auraRadius:AURA_RADIUS, auraBurn:AURA_BURN_FRAMES,
+                  emitRange:FR_RANGE_TILES, burnFrames:FR_BURN_FRAMES,
+                  // item 8.9 — THREE independent per-rank tables (read straight off by rank; no formula couples them):
+                  // (1) COST: base-aura mana chunk (MP), charged every BB_AURA_INTERVAL (3s). base mp/s = chunk/3 =
+                  //     [2,3,4,5.5,9,12,16,21,27,45]. Gentle within a tier; STEP at the Form fork (5) and Ascension (10).
+                  mpChunkByRank:[6, 9, 12, 16.5, 27, 36, 48, 63, 81, 135],
+                  // (2) DAMAGE — aura contact per tick (every AURA_TICK ~0.4s). The only damage at ranks 1–4.
+                  // (3) DAMAGE — per-emit base (ring/nova), ×FR_DMG_MULT at the emit site; 0 until a Form @5 turns it on.
+                  // Damage is authored to climb FASTER than cost (specialization rewarded — Josh's call). STARTING
+                  // numbers — tune by feel on the training dummy; steps at rank 5/10 mirror the cost steps.
+                  auraDmgByRank:[ 4,  6,  9, 14, 24, 34, 48, 68,  95, 180],
+                  emitDmgByRank:[ 0,  0,  0,  0, 30, 45, 65, 95, 135, 280] },
         floors: { auraRadius:40, emitInterval:90 },
         caps:   { emitRange:12 },
       },
-      // ranks 1–4: grow the base aura (bigger / hotter / longer ignite) + seed the emit's damage.
-      waveStep: { auraRadius:6, auraDmg:2, auraBurn:12, emitDmg:4 },  // (no mpCost step — base aura drain is flat; dynamism is in mpEmit)
+      // ranks 1–4: grow the base aura's AREA + ignite duration. (Damage is the auraDmgByRank/emitDmgByRank tables
+      // above — per-rank, NOT additive here.)
+      waveStep: { auraRadius:6, auraBurn:12 },
       forms: {
         firebloom: {
           name:'Firebloom', tag:'RHYTHM · REACH', icon:'🔥',
           desc:'Releases an expanding ring of fire every few seconds — timed waves sweep outward and ignite all they cross.',
-          // ranks 6–9: harder / wider / longer-burning rings (+ a touch of aura).
-          formStep: { emitDmg:5, emitRange:0.6, burnFrames:18, auraDmg:1 },  // ranks 6–9: harder/wider/longer rings
+          // ranks 6–9: wider / longer-burning rings (damage is the per-rank emitDmgByRank table, not additive here).
+          formStep: { emitRange:0.6, burnFrames:18 },
           fire: { emit:'ring', interval:BB_RING_INTERVAL, speed:FR_SPEED, mpEmit:8 },  // item 7: +8 MP per ring emit — the chunk you SEE drain when a wave fires
           ascensions: {
             dragonbreath: { name:'Dragonbreath', icon:'🐉', age:'old', tag:'OLD · DRAGON · SUSTAIN', ground:'dragonfire', ringMode:'breathe', interval:130, mpEmit:6,
@@ -14236,8 +14323,8 @@ const IMBUE_PATHS = {
         cinderburst: {
           name:'Cinderburst', tag:'BURST · STAND', icon:'🔥',
           desc:'The burning aura swells and detonates every few seconds — a fixed-radius nova centred on you that erupts and ignites the pack.',
-          // ranks 6–9: bigger / harder / longer-burning detonations.
-          formStep: { emitDmg:7, emitRange:0.5, burnFrames:18, auraDmg:1 },  // ranks 6–9: bigger/harder detonations
+          // ranks 6–9: bigger / longer-burning detonations (damage is the per-rank emitDmgByRank table, not additive here).
+          formStep: { emitRange:0.5, burnFrames:18 },
           fire: { emit:'nova', interval:BB_BURST_INTERVAL, speed:BB_NOVA_SPEED, mpEmit:10 },  // item 7: +10 MP per nova detonation (Josh's anchor — the burst you SEE drain)
           ascensions: {
             dragonheart: { name:'Dragonheart', icon:'🐉', age:'old', tag:'OLD · DRAGON · SUSTAIN', ground:'dragonfire', mpEmit:12,
