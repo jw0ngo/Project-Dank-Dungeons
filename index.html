@@ -16411,6 +16411,9 @@ const STAT_FORGE_STATS = [
     add:v=>{ const b=gPlayer.wildBuffs; b.critChance=Math.max(0,Math.min(75,(b.critChance||0)+v)); } },
   { label:'Crit damage %', step:25, get:()=>Math.round(gPlayer.wildBuffs.critDamage||0),
     add:v=>{ const b=gPlayer.wildBuffs; b.critDamage=Math.max(0,(b.critDamage||0)+v); } },
+  // Conflagration explode chance per burn tick (item 0c) — stored 0..1, shown as %, clamps at 100%.
+  { label:'Burn explode %', step:10, get:()=>Math.round((gPlayer.wildBuffs.burnExplodeChance||0)*100),
+    add:v=>{ const b=gPlayer.wildBuffs; b.burnExplodeChance=Math.max(0,Math.min(1,(b.burnExplodeChance||0)+v/100)); } },
 ];
 function gRenderStatForge(){
   const wrap = document.getElementById('statforge-rows');
@@ -16445,7 +16448,7 @@ function gRenderStatForge(){
   ubtns.appendChild(mkBtn('Reset all', () => {
     const b = gPlayer.wildBuffs;
     b.mpBonus = b.hpBonus = b.mpRegenAdd = b.hpRegenAdd = 0;
-    b.damagePct = b.speedPct = b.cdPct = b.critChance = b.critDamage = 0;
+    b.damagePct = b.speedPct = b.cdPct = b.critChance = b.critDamage = b.burnExplodeChance = 0;
     _wildApplyStats(); gPlayer.hp = gPlayer.maxHp; gPlayer.mp = gPlayer.maxMp;
   }));
   util.appendChild(uleft); util.appendChild(ubtns);
