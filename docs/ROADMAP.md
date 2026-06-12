@@ -40,6 +40,11 @@ their `mpCost` + toggle from the start, as planned) **+ the queued Burning Body 
 refinement: Eye of Chaos + Chaos Steps + Chaos Crown footprint fix; Dragon–Chaos synergy tune). Boreas (item 5)
 stays parked — its unhold trigger ("once God Skills proves out in playtest") nears once item 2 completes + plays well.
 
+**🆕 First mana-economy playtest landed 6 game-feel / readability / bug calls (Josh, 2026-06-12) → item 8, a
+quick polish batch (all `approved`, developer-directed).** Pillar-1 work, so it interleaves with item 2: the
+three cheap irritant-fixers (wolf leap whiffing, XP/Favor popups jumbling, fog-edge shimmer) are worth grabbing
+*first* — tiny, and they clean up every subsequent playtest. Detail + anchors in the Engineer lane of [`TASKS.md`](TASKS.md).
+
 ## ⚡ At a glance
 
 | # | What we're building | Status | Size | Why it matters |
@@ -54,6 +59,7 @@ stays parked — its unhold trigger ("once God Skills proves out in playtest") n
 | **5** | **Boreas** — a second god (ice/control) | ⏸️ Held | Multi-session | Parked — the playtest showed we don't need it yet |
 | **6** | **Heavy charge locks out the normal swing** — committing to a heavy means committing | ✅ Shipped (2026-06-11) | Quick | Weighty-combat directive: a committed action must cost you other options |
 | **7** | **Mana economy & skill management** — costs/cooldowns rework so you run dry early; God Skills drain mana/sec; toggle auto-casts to keys 1–9 + WoW-style action bar | ✅ Shipped (2026-06-12, all 3 phases + action bar) | Multi-session, phased | Makes mana a real resource + a live build-management decision (weighty combat + build depth) |
+| **8** | **Playtest feel/readability batch** — wolf-leap range fix · XP/Favor colour split + aggregated XP counter · fog-edge smoothing · gradual night-vision fade · out-of-combat HP regen · LOS reveal of enemies behind trees | ◻️ Approved (2026-06-12) — 6 tasks in Engineer lane | Quick (batch ≈ 1 session) | Game feel + readability (pillar 1) — fixes the irritants the first mana playtest surfaced |
 
 ---
 
@@ -373,6 +379,31 @@ starve **lowest-key-first** (your core skills keep running, marginal ones cut ou
 
 > **Note vs item 2:** Phases 2–3 layer onto the live God-Skill system (item 2); the toggle re-introduces an
 > input hook that item 2's pure auto-fire had dropped — the spec updates the AI-native contract accordingly.
+
+---
+
+### 8. Playtest feel/readability batch (first mana-economy playtest)
+
+`✅ approved` (Josh-directed, 2026-06-12) · **Size:** quick (batch ≈ 1 session) · **Pillar:** game feel (the
+moment-to-moment + readability) · **Art:** none · **Detail + line-anchors:** Engineer lane of [`TASKS.md`](TASKS.md) (#8.1–#8.6)
+
+**What:** Six fixes from the first playtest of the live mana economy — all small, all about the game *reading*
+clearly and feeling fair:
+1. **Wolf leap range fix** — wolves commit to the leap from too far and whiff; +30% range and only fire within
+   70% of max range (mirrors the goblin-warrior charge AI). *(bug)*
+2. **XP vs Favor readability** — XP text turns **white**, Favor stays **gold** (both are gold today, so multi-pickup
+   popups jumble into noise); plus a **single aggregated `+N XP`** counter above the player that grows over a 5 s
+   window then fades, instead of one floating number per orb.
+3. **Out-of-combat HP regen** — **3 HP/s after 10 s without taking damage** (a base regen on top of the regen cards).
+4. **LOS reveal** — an invisible sightline circle around the player fades any tree canopy hiding an enemy inside it,
+   so threats can't lurk invisibly behind trunks.
+5. **Fog-edge smoothing** — the shroud edge shimmers/shakes as you explore new ground; smooth it to a calm reveal.
+6. **Gradual night-vision** — the night vision-shrink eases in/out as night nears/lifts instead of snapping.
+
+**Why:** Pillar 1 is the top priority, and these are the irritants the live mana playtest surfaced — readability
+(can't tell XP from Favor; popups jumble), fairness (wolves whiff; enemies hide behind trees), and polish (fog
+shimmer; vision snap). All cheap, all developer-directed (numbers given). **Sequencing:** interleaves with item 2 —
+grab the three cheapest (wolf leap · colour split · fog shake) first; they improve every subsequent playtest.
 
 ---
 

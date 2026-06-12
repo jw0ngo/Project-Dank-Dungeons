@@ -39,6 +39,59 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 ## 🟧 Engineer / CTO lane
 
+### Playtest feel/readability batch (↳ from PM playtest, Josh 2026-06-12 · roadmap #8)
+*Six developer-directed game-feel / readability / bug fixes from the first mana-economy playtest. All
+pre-greenlit (bug-driven + polish on shipped systems). Mostly quick; grounding/anchors inline (line refs
+drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 wolf leap, #8.4a colour split,
+#8.5 fog shake) — tiny, and they clean up every playtest.*
+
+- ◻️ 🔴 **#8.3 — Wolf leap fires out of range; widen + gate like the warrior charge** — in `_aiWolf`
+  (`index.html:5392`) + the wolf leap range (`leapRange:200`, `:2555` — confirm this is the wolf's def, not
+  the player's `:15088`): (a) **+30% range** 200→**260**. (b) **Only initiate the leap within 70% of max
+  range** (≤182px) — mirror `_aiWarrior`'s true-proximity firing gate (`:5521–5524`, the real-range check
+  that ignores the night-aggro override, vs `chargeRange :2740`). Today the wolf commits from too far and
+  lands short/whiffs. Pure AI/number; host-authoritative, no MP/Sim change.
+
+- ◻️ 🟢 **#8.4 — XP/Favor pickup text: colour split + aggregated XP counter** — two parts:
+  - **(a) Colour split** (trivial): XP pickup text → **white** (`addGDmg` at `:13858`, today gold `#ffd040`
+    → `#ffffff` / soft `#eef2ff`); Favor pickup text **stays gold** (`:13782`, `#ffd040`). They're
+    indistinguishable today because *both* are gold — this is the core "I can't read the popups" fix.
+  - **(b) Aggregated XP counter:** replace the per-orb `+N XP` spam (they jumble on multi-pickup) with a
+    **single** `+<total> XP` text above the player's head that **grows** as more XP is collected within a
+    **5 s window** (each pickup adds to the running total + refreshes the window), then fades when the
+    window lapses. Engineer's call on impl (a small persistent `gXpPopup{total,expiry}` drawn above
+    `gPlayer`, vs the transient `addGDmg` list at `:13858`). **Favor stays per-pickup gold** (aggregate is
+    XP-only per Josh) — flag if he wants Favor aggregated too. Render/HUD-only.
+
+- ◻️ 🟢 **#8.5 — Smooth the fog-of-war edge shake at the explore frontier** — the low-res fog (`_fogLow`,
+  1 px/tile, bilinear-upscaled `:15306–15309`; composed in `gDrawFog :9446`, revealed `gFogReveal :9971`)
+  makes the shroud edge **jitter/shimmer** as new tiles reveal while exploring. Smooth it — temporal ease
+  on the per-tile fog alpha (lerp toward target instead of snapping), or higher-res reveal sampling —
+  engineer's call. Intent: a calm, smoothly-growing reveal edge, no shake. Render-only.
+
+- ◻️ 🟢 **#8.6 — Night vision radius should ease in/out, not snap** — `fogVisRadiusVisualPx()` (`:15337`)
+  snaps between day (`dayR`) and night (`FOG_VIS_NIGHT*T`) the instant `wildIsNight` flips (`:14761`). Make
+  the vision circle **ramp** as night nears/lifts — ease the visual radius over a transition window around
+  the phase boundary (phase clock `:14758`, `WILD_DAY/NIGHT_DURATION`). Engineer picks the window (~last
+  several seconds of the phase) + curve. **Visual-only** — the gameplay/spawn `fogVisRadius :15332` may keep
+  snapping (Josh's note is about the *vision effect* appearance). Knob: transition duration.
+
+- ◻️ ✨ **#8.2 — Default out-of-combat HP regen: 3 HP/s after 10 s without taking damage** — in
+  `gDamagePlayer` (`:5176`, the central player-damage entry that already stamps `_hitFlash`) stamp
+  `p._lastDmgFrame = gFrame` on every hit. In the passive-regen block (`:4502–4511`, beside the card
+  `hpRegenAdd` flat regen at `:4511`) add a **base 3 HP/s** (=0.05/frame ×dt) **only when**
+  `gFrame - (p._lastDmgFrame||0) ≥ 600` (10 s @60). Stacks additively on the `hpRegenAdd` cards; clamp to
+  `maxHp`. Per-player local, MP-safe. Knobs: rate (3), delay (10 s). *(Small new mechanic — Josh-directed
+  with numbers; flag if the 10 s gate should reset on chip damage vs only real hits.)*
+
+- ◻️ 🟢 **#8.1 — LOS reveal: fade trees that hide enemies near the player** — extend the canopy-fade in
+  `gDrawTree` (`:9214`; the want-fade test `:9226` currently only checks the **player's** foot `px,py`;
+  `TREE_FADE_ALPHA :9207`) so a tree also fades when its canopy box covers **any live enemy within an LOS
+  radius of the player** (an invisible reveal circle ~the player's head, `LOS_R` ~3 tiles/~110 px — knob).
+  Reuse the existing fade mechanism (don't outline the enemy — just fade the occluding canopy, same as
+  player-occlusion). Keep it cheap: only for trees already in the draw cull, iterate `gEnemies` once.
+  Render-only, no sim/MP impact. *(Small new mechanic — Josh-directed; combat-readability, pillar 1.)*
+
 - ◻️ 🔧 **Apply the `assets/world` fold (atomic move + manifest rewrite)** (↳ from ART, 2026-06-12 ·
   Josh-approved) — `assets/world/` is flat and filling up (one area's set-dressing so far). Scheme
   (`assets/README.md`): **`world/` by AREA + `_shared/`**. **`tile/` stays FLAT** — decided, not foldered (spec
