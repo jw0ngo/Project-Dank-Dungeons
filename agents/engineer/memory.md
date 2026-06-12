@@ -18,6 +18,25 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 
 ---
 
+### 2026-06-12 — `git push` ships the whole ancestor chain — a "docs-only" lane push can silently deploy un-pushed `index.html` underneath it
+
+- **Principle:** Push gating is per-*commit* in our heads but per-*ref* in git. `origin/main` advancing to a docs
+  commit carries **every ancestor**, including an Engineer `index.html` commit that was committed-locally-but-
+  deliberately-unpushed (deploy-gated). It happened: I committed the three #8 fixers locally (`index.html`, awaiting
+  Josh's deploy auth); the pm-bot then committed a docs-only card change *on top of mine* and pushed it (PM docs
+  pushes are pre-authorized) — which deployed my `index.html` to Pages with no explicit OK. The "docs-only pushes
+  are pre-authorized" rule silently assumes the PM commit sits on a *clean* base; stacked on an un-pushed
+  deploy-affecting commit, the assumption breaks.
+- **Why:** A single shared `main` with two lanes committing freely + one lane allowed to push = the pushing lane
+  owns the deploy decision for *everything below its commit*, not just its own diff. Order of commits, not
+  authorship of the top commit, decides what deploys.
+- **How to apply:** (1) **Before any pre-authorized push, gate on the whole delta, not your own commit:** only
+  push if `git log --oneline origin/main..HEAD -- index.html assets/` is **empty** (no deploy-affecting commit in
+  the range). If it's non-empty, the push is deploy-affecting regardless of who authored the top commit → needs
+  Josh. (2) As the Engineer, assume *any* local `index.html` commit can be swept to the remote by a later lane
+  push — so a local commit is **not** a safe "hold"; if work must not deploy yet, keep it **uncommitted** (stash/
+  worktree) or on a non-`main` branch, not just unpushed on `main`. (3) Fix filed for the pm-bot in the PM lane.
+
 ### 2026-06-12 — Sync a host-decided event to co-op clients by its ORIGIN shape: per-player seq · bounded set-stream · push
 
 - **Principle:** To replay a host-authoritative event on clients, pick the sync primitive that matches the
@@ -199,54 +218,32 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   effect fire**, not reading the script (a `[string]$P=$null` PowerShell param silently becomes `''`). Full entry:
   `agents/engineer/archive/2026-06-11-syntax-pass-not-behavior-pass.md`.
 
-### 2026-06-10 — De-risk a large spec'd feature: sub-slice on rails, dev harness, named knobs — archived
-- Land a big spec'd feature as independently-verified **sub-slices on rails built once**, plus a `_DEV`-gated
-  harness that drives the *real* systems (one click to any deep state) and placeholder FX on named const knobs
-  (feel-iteration = edit-a-number). Build the system + its highest-feedback instance first; fan the rest out as
-  registry data + per-instance FX. Centralize a shape into one source of truth read by both hitbox and draw.
-  Split intermixed commits by snapshot→scripted-revert-one-concern→commit→restore. `node --check` is blind to
-  boot-path TDZ — declare cross-cutting flags early, verify behavior. Full entry:
-  `agents/engineer/archive/2026-06-10-de-risk-spec-feature-rails-harness-knobs.md`.
-
-### 2026-06-10 — Measure sprite scale & art quality; never trust a handoff figure or an eyeball — archived
-- Sprite-art numbers (draw-mult, edge quality, facing scale) are **measured against known-good art**, never
-  trusted from a handoff or eyeballed: match idle *apparent* size by the **head/shoulder-width ratio mean**
-  (pose-invariant) via `tools/check-pose-scale.py`, not bbox/body-fill; gauge cutout keying by the alpha-fringe
-  brightness vs a clean sibling. `gDrawSprite` couples the mult to cell size (re-cut cell → rescale mult
-  `new/old`). When a shaky metric and the user's eye disagree, **let the user's reports bracket and the metric
-  interpolate** (two opposite reports = binary search → midpoint). Full entry:
-  `agents/engineer/archive/2026-06-10-measure-sprite-scale-and-quality.md`.
-
-### 2026-06-10 — A user blaming a visual bug on your edits is a hypothesis to test, not a fact to accept — archived
-- Prove causation with two cheap checks before accepting/denying: (1) `git diff <session-base>..HEAD -- <artifact>`
-  filtered to the relevant render path (often **zero** matches), (2) measure the suspect asset vs a known-good
-  sibling. Separate **render-path regression** (your lane — the diff decides) from **asset defect** (measure →
-  owning role's lane) and route it with the data. Full entry:
-  `agents/engineer/archive/2026-06-10-visual-bug-blame-is-a-hypothesis.md`.
+### 2026-06-10 — Three archived lessons (one-line index; full entries in `agents/engineer/archive/2026-06-10-*.md`)
+- **De-risk a large spec'd feature: sub-slices on rails + dev harness + named knobs** — land it as independently-
+  verified sub-slices, a `_DEV`-gated harness driving the *real* systems (one click to any deep state), placeholder
+  FX on const knobs (feel-iteration = edit-a-number); system + highest-feedback instance first, fan the rest out as
+  registry data; one shape → one source read by hitbox AND draw; split intermixed commits by snapshot→revert-one→
+  commit→restore; `node --check` is blind to boot-path TDZ. `…-de-risk-spec-feature-rails-harness-knobs.md`.
+- **Measure sprite scale & quality; never trust a handoff figure or an eyeball** — match idle *apparent* size by the
+  head/shoulder-width ratio mean (pose-invariant, `tools/check-pose-scale.py`), not bbox; gauge keying by alpha-fringe
+  brightness vs a clean sibling; `gDrawSprite` couples mult to cell size (re-cut → rescale `new/old`); when metric and
+  eye disagree, let the user's reports bracket and the metric interpolate. `…-measure-sprite-scale-and-quality.md`.
+- **A user blaming a visual bug on your edits is a hypothesis to test** — (1) `git diff <base>..HEAD -- <artifact>`
+  filtered to the render path (often zero), (2) measure the suspect asset vs a sibling; separate render-path
+  regression (your lane) from asset defect (owning role) and route with data. `…-visual-bug-blame-is-a-hypothesis.md`.
 
 ---
 
-### 2026-06-09 — A deferred entry's "Fix:" is a hypothesis, not an instruction — re-verify its premise — archived
-- A backlog/spec "Fix:" premise rots between writing and acting; re-confirm against *current* code before
-  executing — especially destructive prescriptions ("just delete it"). Grep the symbols it names, trace
-  reachability + every consumer; if the premise is false, reframe the entry and report, don't proceed. Full
-  entry: `agents/engineer/archive/2026-06-09-deferred-fix-is-a-hypothesis.md`.
-
-### 2026-06-09 — A mode-global flipped for a special mode must be torn down symmetrically — archived
-- A sub-mode (headless sim/debug/replay) that flips a *shared global* must restore it on exit
-  (save-at-entry / restore-in-`finally`), or the mutation leaks and silently breaks the default mode far
-  from the toggle (`Sim.startRun` left `_SIM.muted` set → game mute after any `Sim.batch`). Mirror a sibling
-  global already toggled correctly in the same scope; treat the AI-native harness as production code. Full
-  entry: `agents/engineer/archive/2026-06-09-symmetric-teardown-of-mode-globals.md`.
-
-### 2026-06-09 — A new standing entity population is a hidden input to every global census — archived
-- Adding a large *persistent* cohort to a shared collection (`gEnemies`) silently breaks any unfiltered
-  scan/count over it (the ~160 neutral wolves pinned the night-siege live-cap). Give cohorts a
-  discriminator and make each census express *intent* ("threat-relevant"), not mere liveness. Full entry:
-  `agents/engineer/archive/2026-06-09-standing-population-global-census.md`.
-
-### 2026-06-09 — A repo-wide rename is two categories (display text vs frozen compat tokens) — archived
-- Split occurrences into rename-freely **display text** vs **never-touch frozen tokens** (seed prefix `DF1`,
-  storage keys, many-reference filenames, `docs/archive/` snapshots) — renaming a frozen token silently breaks
-  live data; triage every variant before a find/replace. Full entry:
-  `agents/engineer/archive/2026-06-09-repo-rename-two-categories.md`.
+### 2026-06-09 — Four archived lessons (one-line index; full entries in `agents/engineer/archive/2026-06-09-*.md`)
+- **A deferred "Fix:" is a hypothesis, not an instruction** — its premise rots between writing and acting;
+  re-confirm against *current* code (grep symbols, trace reachability + consumers) before executing, especially
+  destructive prescriptions; if false, reframe and report. `…-deferred-fix-is-a-hypothesis.md`.
+- **A mode-global flipped for a special mode must be torn down symmetrically** — save-at-entry / restore-in-
+  `finally`, or the mutation leaks into the default mode far from the toggle (`Sim.startRun` left `_SIM.muted`
+  set → game mute). Treat the AI-native harness as production code. `…-symmetric-teardown-of-mode-globals.md`.
+- **A new standing entity population is a hidden input to every global census** — a large *persistent* cohort in
+  a shared collection (`gEnemies`) silently breaks unfiltered scans/counts (~160 neutral wolves pinned the
+  siege cap); give cohorts a discriminator, make each census express *intent*. `…-standing-population-global-census.md`.
+- **A repo-wide rename is two categories** — rename-freely **display text** vs never-touch **frozen tokens** (seed
+  prefix `DF1`, storage keys, many-ref filenames, `docs/archive/` snapshots); triage every variant before a
+  find/replace. `…-repo-rename-two-categories.md`.

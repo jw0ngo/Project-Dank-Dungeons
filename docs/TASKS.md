@@ -29,6 +29,18 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 ## 🟦 PM lane
 
+- ◻️ 🔴 **pm-bot deploy-gating bug: a "docs-only" push can carry an un-pushed `index.html` commit to the remote**
+  (↳ from ENG, 2026-06-12) — **it happened today:** ENG committed the three #8 fixers locally (`index.html`,
+  deliberately *unpushed*, awaiting Josh's deploy auth); the pm-bot then committed a docs-only card change **on top
+  of** that commit and pushed it (PM docs pushes are pre-authorized) → my `index.html` deployed to Pages with no
+  explicit OK. Root cause: `git push` advances `origin/main` over the **whole ancestor chain**, not just the PM's
+  own diff — "docs-only push" silently assumes the PM commit sits on a clean base. **Fix (pm-bot guard):** before any
+  pre-authorized push, check the *whole* outgoing delta, not just the top commit — only auto-push if
+  `git log --oneline origin/main..HEAD -- index.html assets/` is **empty**. If it's non-empty, the push is
+  deploy-affecting regardless of who authored the tip → **hold for Josh's auth** (or push only the PM commit via a
+  separate path). Mirror of the ENG-memory learning (2026-06-12). *(Heads-up to Josh: the three #8 fixers — `1f41da0`
+  — are therefore already live; the follow-up wolf-leap-through + favor-coin tweak `78cd9b2` is correctly still local.)*
+
 - ◻️ ✨ **Finalize Ikras / Boreas / Bhumi stat-synergy mechanics when each god is built** (↳ Josh 2026-06-12 ·
   spec [`specs/god-stat-identities.md`](specs/god-stat-identities.md) "design-ahead") — the per-god mechanics are
   PM-proposed (Ikras chain-arc ← move/atk speed; Boreas frost-field ← pickup range, CC uptime ← CDR, sustain ←
