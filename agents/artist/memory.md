@@ -35,6 +35,26 @@
   light you want to keep glowing, or a coloured object with edges?** Light→keep-black-additive; object→cut.
   (Proven on the leap-landing `jump-impact` shockwave — 1254² master, never wired; the win was choosing the
   *medium*, not running a slicer.)
+  **(e) "Transparent" gen art is often an OPAQUE painted near-white checkerboard — check the corner alpha first.**
+  ChatGPT/diffusion FX exports frequently *draw* a grey/white checkerboard to look transparent; the corner pixel is
+  `(254,254,254,255)`, not `(_,_,_,0)`. So it's a real bg-removal job, not a trim — sample a corner, find the two
+  checker shades (here white 254 / grey 241), set `--thresh` to catch the darker shade (`255-thresh <= 241` → ~16+).
+  **(f) Fire/smoke defringe is NOT character defringe — the white-bg sibling of the (d) split.** A black-smoke FX on
+  white (chaosfire) leaves a pale *neutral* halo: the AA edge is figure-blended-with-white (grey ~`(185,169,164)`),
+  bright enough to survive the brightness key but not white enough to flood. `defringe-sprite.py` is WRONG here — it
+  clamps edges to a DARK outline tone (right for a knight, it would *blacken* the glow). Fire halo must fade to
+  **transparent**, not dark → new `slice-single-fx.py --dewhite` = neutral-gated white-spill alpha suppression
+  (`a *= (255-min)/255` only where low-saturation, so coloured flame wisps are untouched). Diagnose first: split edge
+  pixels into *neutral-bright* (halo → dewhite) vs *saturated* (real flame → leave) — the dragonfire pillar's edge was
+  saturated orange `(246,148,129)` → no halo, untouched, while the grounds' neutral edge needed it.
+  **(g) QA over the DARK game bg, not just magenta — a white halo's worst-contrast case is near-black, which magenta
+  hides.** I passed all 6 on the magenta contact; Josh saw halos on 3 over the real dark scene. Composite over
+  `(26,26,28)` (paste-with-alpha) and eyeball. (Sibling to "every QA metric can lie; the render is the truth.")
+  **(h) COMPOSITING is part of the spec and splits by substance:** additive `'lighter'` erases black → chaosfire's
+  black smoke vanishes if drawn additively. So **chaosfire = NORMAL alpha, dragonfire = additive** (bright, no black)
+  — same draw entity, opposite blend; name the op per substance in the handoff. **(i) Tall FX keep native AR
+  (`--frame tight`, not square pad):** the engine draws pillars at a fixed `FP_SPRITE_AR`, so square padding squishes
+  them; deliver bbox-AR + report the ratio so the engineer uses `naturalWidth/Height` or a per-substance AR.
 
 ### 2026-06-12 — Organizing assets for an AI-native game: foldering is mostly human-readability; machine-value comes from where CODE reasons, or from DERIVING the dimension cheaply
 
