@@ -57,6 +57,26 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 ## 🟧 Engineer / CTO lane
 
+### God Skills — item 2 (↳ roadmap #2 · spec [`specs/god-skills.md`](specs/god-skills.md))
+
+- ✅ ✨ **Trail of Embers — built (full 10-rank tree)** — **done ENG 2026-06-12.** The 2nd Cilia god skill: a
+  movement-as-weapon auto-fire. Added as a generic pool entry `IMBUE_PATHS.cilia.trailOfEmbers` (`fire` block) +
+  `gTickTrailOfEmbers` + a `case 'trailOfEmbers'` in `gUpdateGodSkills` — so acquire/rank-up cards, the Form @5 &
+  Ascension @10 forks (+ headless `gSimEvolution` hook), the toggle, and the action-bar HUD all come **free** from
+  the generic machinery. **Trigger swap:** lays a burning `gFireTrails` patch every `TOE_PATCH_DIST` of distance
+  *moved* (decoupled from dash). **Cost follows emission shape (#8.9 two-table model, Josh-confirmed numbers):**
+  movement Forms charge **per-patch** (`mpPatchByRank`, ~0.7× Burning-Body parity — pay only as you move);
+  Ember Shroud aura charges **per-second** (`mpPerSecByRank`, BB parity); damage is the independent
+  `trailDmgByRank` (rank 1→10 = 45× vs cost 21.7× → dps/mana rises). `gGodSkillDrainPerSec` made Trail-aware (HUD
+  shows honest effective mp/s while moving). **Forms:** Inferno Wake (hotter/wider lanes) · Ember Shroud (continuous
+  burning aura). **Ascensions** reuse the shipped substance grounds: 🐉 Wyrmwake/Phoenix Mantle (dragonfire heal) ·
+  🔥 Chaos Steps (per-patch trail **+** a fused chaos bomb every 2s → detonates ~1s later via new global
+  `gTrailBombs`/`gUpdateTrailBombs`) / Immolation (chaosfire self-burn aura). Plumbed a ranked `burnDur` through
+  `gSpawnFireTrail` (legacy callers fall back to `FT_BURN_FRAMES`). `node --check` + economy extract-eval verified.
+  **⚠ Tuning watch (flag for Josh):** Immolation self-burn ≈ 80 self-dps at rank 10 (chaosfire 0.07× × 450 dmg ×
+  2.5/s) — very punishing solo; intended to be funded by a dragon ground (the hybrid synergy). Tune by feel /
+  on the dummy. **Next God Skill: Pyroclasm** (interval + auto-target).
+
 ### Playtest feel/readability batch (↳ from PM playtest, Josh 2026-06-12 · roadmap #8)
 *Nine developer-directed game-feel / readability / balance / bug fixes from the first mana-economy playtest.
 All pre-greenlit (bug-driven + balance/polish on shipped systems). Mostly quick; grounding/anchors inline (line

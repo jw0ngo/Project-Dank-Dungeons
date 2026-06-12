@@ -2061,7 +2061,8 @@ let gFireBursts=[]; // one-shot fire-explosion sprites that bloom centre→edge 
 let gNetFx=[];      // host: rolling list of one-shot world FX (fire bursts) broadcast to clients via world/fx (cosmetic, bounded)
 let _netFxSeq=0;    // host: monotonic id for net FX events (clients dedupe on it)
 let gFireCrosses=[]; // imbued-leap burning crosses (Cilia's Fire)
-let gFireTrails=[]; // imbued-dash flame trail (Cilia's Fire)
+let gFireTrails=[]; // imbued-dash flame trail (Cilia's Fire) + Trail of Embers god-skill patches
+let gTrailBombs=[]; // Trail of Embers · Chaos Steps — fused chaosfire bombs (drop → detonate ~1s later)
 let gTrailHits=new WeakMap(); // shared per-enemy trail hit cooldown (overlap-proof)
 let gFirePillars=[]; // imbued-RMB fire pillars (Cilia's Fire heavy)
 let gEmberShots=[]; // Dance of Fire · Emberlance Form — volley of travelling fireballs (item 2)
@@ -3283,7 +3284,7 @@ function gameLoad(mapData) {
   gFireBursts=[];
   gNetFx=[];   // host: clear the broadcast FX list (next sendFx writes null, clearing world/fx for the new run)
   gFireCrosses=[];
-  gFireTrails=[]; gTrailHits=new WeakMap();
+  gFireTrails=[]; gTrailHits=new WeakMap(); gTrailBombs=[];
   gFirePillars=[];
   gEmberShots=[];
   gFireJets=[];
@@ -3971,6 +3972,17 @@ function gGodSkillEmitCost(p, id){
 // Time-AVERAGED total drain (MP/sec) while the skill auto-fires = base chunk/3s + emit/cadence. The
 // "~80-100/s at rank 10" benchmark figure the HUD shows.
 function gGodSkillDrainPerSec(p, id){
+  const tree = gGodSkillTree(p, id);
+  // Trail of Embers: cost follows emission shape. The aura Form drains per-second; the movement Forms
+  // charge per-patch → show an HONEST effective mp/s WHILE MOVING (per-patch × patches/sec at the player's
+  // speed), plus the Chaos Steps bomb's per-emit cost averaged over its interval.
+  if(tree && tree.fire && tree.fire.kind === 'trailOfEmbers'){
+    const form = gImbueForm(p, id), fdef = form && tree.forms[form];
+    if(fdef && fdef.fire && fdef.fire.emit === 'aura') return gGodFireParam(p, id, 'mpPerSec');
+    let rate = gGodFireParam(p, id, 'mpPatch') * ((p.speed || 2.4) * 60 / TOE_PATCH_DIST);
+    if(gImbueAscension(p, id) === 'chaosSteps') rate += gGodSkillEmitCost(p, id) * 60 / TOE_BOMB_INTERVAL;
+    return rate;
+  }
   const baseRate = gGodSkillBaseChunk(p, id) * 60 / BB_AURA_INTERVAL;
   const ei = gGodSkillEmitInterval(p, id);
   return baseRate + (ei > 0 ? gGodSkillEmitCost(p, id) * 60 / ei : 0);
@@ -4035,9 +4047,10 @@ function gUpdateGodSkills(p, dt){
     if(off[id]){ p.godSkillDormant[id] = false; continue; }   // toggled OFF → not running (distinct from dormant)
     p.godSkillDormant[id] = false;                            // default running; the tick flips it true if it can't pay its base
     switch(tree.fire.kind){
-      case 'burningBody': gTickBurningBody(p, dt, id, tree); break;
-      // 'distance' (Trail of Embers) and 'interval+autotarget' (Pyroclasm) land in the next slice — each
-      // charges its own gated chunks the same way, so this dispatcher needs no per-skill change.
+      case 'burningBody':   gTickBurningBody(p, dt, id, tree); break;
+      case 'trailOfEmbers': gTickTrailOfEmbers(p, dt, id, tree); break;
+      // 'interval+autotarget' (Pyroclasm) lands in the next slice — it charges its own gated chunks the
+      // same way, so this dispatcher needs no per-skill change.
     }
   }
 }
@@ -4155,6 +4168,126 @@ function gTickBurningBody(p, dt, id, tree){
       gScatterChaosfireGround(p.wx, p.wy, rangeTiles * T, dmg);
     }
     gShake && gShake(5, 7);                                 // detonation punch
+  }
+}
+
+// Trail of Embers — the movement-as-weapon god skill. (1) The movement path (base / Inferno Wake +
+// its 🐉 Wyrmwake / 🔥 Chaos Steps ascensions) lays a burning patch every TOE_PATCH_DIST of distance
+// MOVED, charging a per-patch chunk (mpPatchByRank) as it goes — you pay only while moving. (2) The
+// Ember Shroud Form (+ 🐉 Phoenix Mantle / 🔥 Immolation) drops the ground trail for a continuous
+// burning AURA that drains per-second (mpPerSecByRank). Ascensions reskin to the shipped substance
+// grounds: dragonfire heals the owner, chaosfire self-burns. Chaos Steps additionally drops a fused
+// chaos bomb every TOE_BOMB_INTERVAL that detonates after TOE_BOMB_FUSE (gUpdateTrailBombs). Damage is
+// the per-rank trailDmgByRank table; cost + damage are independent tables (the #8.9 model).
+function gTickTrailOfEmbers(p, dt, id, tree){
+  const dbuf   = (p.wildBuffs && (1 + (p.wildBuffs.damagePct || 0) / 100)) || 1;
+  const form   = gImbueForm(p, id);
+  const fdef   = form && tree.forms[form];
+  const asc    = gImbueAscension(p, id);
+  const leaf   = (fdef && asc && fdef.ascensions[asc]) || null;
+  const ground = (leaf && leaf.ground) || null;             // 'dragonfire' | 'chaosfire' | null
+  const emit   = (fdef && fdef.fire && fdef.fire.emit) || 'trail';  // pre-Form = the base movement trail
+  const dmg    = Math.max(1, Math.round(gGodFireParam(p, id, 'trailDmg') * dbuf));
+  const reach  = gGodFireParam(p, id, 'reach');
+  const life   = gGodFireParam(p, id, 'life');
+  const burnDur= gGodFireParam(p, id, 'burnFrames');
+
+  if(emit === 'aura'){
+    // ── Ember Shroud: a continuous burning aura that drains PER-SECOND (works while standing still) ──
+    const auraR    = TOE_AURA_RADIUS + (reach - FT_REACH);  // grows with the reach mods
+    const costThis = (gGodFireParam(p, id, 'mpPerSec') / 60) * dt;
+    if(p.mp < costThis){ p.godSkillDormant[id] = true; return; }   // can't pay → dormant (auto-resumes on regen)
+    gSpendMana(p, costThis);
+    p._toeAuraTick = (p._toeAuraTick || 0) - dt;
+    if(p._toeAuraTick <= 0){
+      p._toeAuraTick = FT_TICK;
+      const burn = Math.max(FT_BURN_MIN, Math.round(dmg * FT_BURN_RATIO));
+      for(const en of gEnemies){
+        if(en.dead) continue;
+        if(Math.hypot(en.wx - p.wx, en.wy - p.wy) > auraR + en.r) continue;
+        gDealEnemyDamage(en, dmg, { hitFlash: 8, burn, burnDur });
+        addGDmg(en.wx, en.wy - 16, dmg, '#ff9a3a');
+      }
+      if(inTown && gTrainingDummy && Math.hypot(p.wx - gTrainingDummy.wx, p.wy - gTrainingDummy.wy) <= auraR + gTrainingDummy.r)
+        hitTrainingDummy(dmg, '#ffaa00', p.wx, p.wy);
+      // Ascension owner-effect (every AURA tick): 🐉 Phoenix Mantle heals · 🔥 Immolation burns you.
+      if(ground === 'dragonfire' && p.hp < p.maxHp){
+        const heal = Math.max(1, Math.round(dmg * DRAGONFIRE_HEAL_RATIO));
+        p.hp = Math.min(p.maxHp, p.hp + heal);
+        addGDmg(p.wx, p.wy - 22, '+' + heal, '#7CFC9E');
+      } else if(ground === 'chaosfire'){
+        gDamagePlayer(Math.max(1, Math.round(dmg * CHAOSFIRE_SELF_RATIO)), { number:{ col:'#ff8a3a', y:-22 } });
+      }
+    }
+    const a   = gFrame * 0.25;                               // aura shimmer ring of embers
+    const col = ground === 'dragonfire' ? '#ffd27a' : ground === 'chaosfire' ? '#ff4a2a' : '#ff7a22';
+    spawnGP(p.wx + Math.cos(a) * auraR * 0.9, p.wy + Math.sin(a) * auraR * 0.9, col, 1, 2);
+    return;
+  }
+
+  // ── Movement path: lay a patch every TOE_PATCH_DIST of DISTANCE MOVED, paying per-patch as you go ──
+  if(p._toeLastX == null){ p._toeLastX = p.wx; p._toeLastY = p.wy; p._toeDist = 0; }
+  else {
+    p._toeDist = (p._toeDist || 0) + Math.hypot(p.wx - p._toeLastX, p.wy - p._toeLastY);
+    p._toeLastX = p.wx; p._toeLastY = p.wy;
+    let guard = 0;                                            // safety: never lay more than a few patches/frame
+    while(p._toeDist >= TOE_PATCH_DIST && guard++ < 6){
+      p._toeDist -= TOE_PATCH_DIST;
+      const cost = gGodFireParam(p, id, 'mpPatch');
+      if(p.mp < cost){ p.godSkillDormant[id] = true; p._toeDist = 0; break; }  // broke → dormant, drop the backlog
+      gSpendMana(p, cost);
+      const opts = { reach, life, burnFrames: burnDur };
+      if(ground === 'dragonfire'){ opts.substance = 'dragonfire'; opts.heal    = Math.max(1, Math.round(dmg * DRAGONFIRE_HEAL_RATIO)); }
+      else if(ground === 'chaosfire'){ opts.substance = 'chaosfire'; opts.selfDmg = Math.max(1, Math.round(dmg * CHAOSFIRE_SELF_RATIO)); }
+      gSpawnFireTrail(p.wx, p.wy, dmg, false, opts);
+    }
+  }
+
+  // ── Chaos Steps (🔥 Inferno Wake ascension): a fused chaos bomb every TOE_BOMB_INTERVAL ──
+  if(asc === 'chaosSteps'){
+    p._toeBombT = (p._toeBombT || 0) - dt;
+    if(p._toeBombT <= 0){
+      const emitCost = gGodSkillEmitCost(p, id);            // leaf.mpEmit
+      if(p.mp >= emitCost){
+        gSpendMana(p, emitCost);
+        p._toeBombT = TOE_BOMB_INTERVAL;
+        gTrailBombs.push({ x: p.wx, y: p.wy, fuse: TOE_BOMB_FUSE, dmg: Math.round(dmg * TOE_BOMB_DMG_MULT) });
+      } else { p._toeBombT = 12; }                          // can't afford the bomb this beat → retry shortly
+    }
+  }
+}
+
+// Fused chaosfire bombs dropped by Trail of Embers · Chaos Steps. Telegraph with escalating embers over
+// the fuse, then detonate: AoE chaosfire damage + a synced burst FX + a lingering chaosfire patch (the
+// self-burn ground — linger on it and you're caught). Global so a dropped bomb still resolves if the skill
+// is toggled off mid-fuse; ticked from the main update loop alongside gUpdateFireTrails.
+function gUpdateTrailBombs(dt){
+  if(!gTrailBombs.length) return;
+  for(let i = gTrailBombs.length - 1; i >= 0; i--){
+    const b = gTrailBombs[i];
+    b.fuse -= dt;
+    if(b.fuse > 0){
+      const prog = 1 - b.fuse / TOE_BOMB_FUSE;              // 0→1 telegraph; embers pulse faster as it nears
+      if(gFrame % Math.max(2, Math.round(6 - prog * 4)) === 0){
+        const a = Math.random() * Math.PI * 2, rr = TOE_BOMB_R * (0.3 + 0.5 * prog);
+        spawnGP(b.x + Math.cos(a) * rr, b.y + Math.sin(a) * rr, '#ff4a2a', 1, 1.5);
+      }
+      continue;
+    }
+    gBurstAndSync(b.x, b.y, TOE_BOMB_R * 1.1);              // detonation bloom (synced to co-op)
+    const burn = Math.max(FT_BURN_MIN, Math.round(b.dmg * FT_BURN_RATIO));
+    for(const en of gEnemies){
+      if(en.dead) continue;
+      if(Math.hypot(en.wx - b.x, en.wy - b.y) > TOE_BOMB_R + en.r) continue;
+      gDealEnemyDamage(en, b.dmg, { hitFlash: 12, burn, burnDur: FT_BURN_FRAMES, deathParticles: 8 });
+      addGDmg(en.wx, en.wy - 16, b.dmg, '#ff5a18');
+    }
+    if(inTown && gTrainingDummy && Math.hypot(b.x - gTrainingDummy.wx, b.y - gTrainingDummy.wy) <= TOE_BOMB_R + gTrainingDummy.r)
+      hitTrainingDummy(b.dmg, '#ff5a18', b.x, b.y);
+    gSpawnFireTrail(b.x, b.y, b.dmg, false,                 // the chaosfire ground the blast leaves behind
+      { substance:'chaosfire', selfDmg: Math.max(1, Math.round(b.dmg * CHAOSFIRE_SELF_RATIO)), reach: TOE_BOMB_R * 0.7, life: FT_LIFE });
+    gShake && gShake(4, 6);
+    gTrailBombs.splice(i, 1);
   }
 }
 
@@ -6967,6 +7100,16 @@ const DANCE_GROUND_LIFE     = 150;  // climax ground lifetime (frames) ~2.5s —
 const DRAGONFIRE_HEAL_RATIO = 0.18; // dragonfire per-tick HEAL to owner   = this × climax damage
 const CHAOSFIRE_SELF_RATIO  = 0.07; // chaosfire  per-tick SELF-DAMAGE      = this × emit damage (was 0.35 —
                                     // lethal once Burning Body's emit damage scaled up; the cost stays real, not instant death)
+// ── Trail of Embers (god skill) tuning ──────────────────────────────────────────────────────────
+// Movement-as-weapon: lay a burning patch per distance moved. Cost FOLLOWS emission shape (god-skills.md):
+// movement Forms charge per-patch (mpPatchByRank, ~0.7× Burning-Body parity — you pay only as you move),
+// the Ember Shroud aura charges per-second (mpPerSecByRank, BB parity — it drains even standing still).
+const TOE_PATCH_DIST    = FT_SPACING; // px of movement per laid patch (reuse the dash-trail spacing = 18)
+const TOE_AURA_RADIUS   = 70;         // Ember Shroud base aura radius (px) — a moving burning bubble; grows with reach
+const TOE_BOMB_INTERVAL = 120;        // Chaos Steps: a fused chaos bomb every ~2s (frames)
+const TOE_BOMB_FUSE     = 60;         // Chaos Steps: drop→detonation delay (~1s telegraph)
+const TOE_BOMB_R        = 84;         // Chaos Steps detonation radius (px)
+const TOE_BOMB_DMG_MULT = 1.8;        // bomb blast damage = trailDmg × this
 // Flame of Chaos (Emberfan 🔥 leaf) — the massive slow ball that lays a chaosfire wake the whole way.
 const FLAMEOFCHAOS_TILES    = 20;   // how far the chaos ball travels (tiles) — a long lane of fire
 const FLAMEOFCHAOS_SPEED    = 4.5;  // px/frame — deliberately slow & lumbering (~3.6s to cross 20 tiles)
@@ -7002,6 +7145,7 @@ function gSpawnFireTrail(x, y, dmg, visual, opts){
     heal: visual ? 0 : (opts.heal || 0),
     selfDmg: visual ? 0 : (opts.selfDmg || 0),
     maxLife: opts.life || FT_LIFE,
+    burnDur: opts.burnFrames || FT_BURN_FRAMES,   // ranked burn duration (Trail of Embers); legacy callers fall back
   });
 }
 
@@ -7019,7 +7163,7 @@ function gUpdateFireTrails(dt){
         // overlapping patches cover it (the dense trail would otherwise multi-hit ~3x).
         if((gTrailHits.get(en) || 0) > gFrame) continue;
         gTrailHits.set(en, gFrame + FT_TICK);
-        gDealEnemyDamage(en, ft.dmg, { hitFlash: 8, burn: ft.burn, burnDur: FT_BURN_FRAMES });
+        gDealEnemyDamage(en, ft.dmg, { hitFlash: 8, burn: ft.burn, burnDur: ft.burnDur || FT_BURN_FRAMES });
         addGDmg(en.wx, en.wy - 16, ft.dmg, '#ff9a3a');
         gPlayHit && gPlayHit();
       }
@@ -10187,7 +10331,7 @@ function gSimUpdate(dt){
     if(gPlayer)gUpdateShamanBuffs(dt);
     if(gPlayer)gUpdateBurn(dt);
     if(gPlayer)gUpdateShield(dt);
-    if(gPlayer&&!gPlayer.dead){gUpdateFireWaves(dt);gUpdateFireRings(dt);gUpdateFireBursts(dt);gUpdateFireCrosses(dt);gUpdateFireTrails(dt);gUpdateEmberShots(dt);gUpdateFireJets(dt);gUpdateFireFields(dt);}
+    if(gPlayer&&!gPlayer.dead){gUpdateFireWaves(dt);gUpdateFireRings(dt);gUpdateFireBursts(dt);gUpdateFireCrosses(dt);gUpdateFireTrails(dt);gUpdateTrailBombs(dt);gUpdateEmberShots(dt);gUpdateFireJets(dt);gUpdateFireFields(dt);}
     if(gPlayer&&!gPlayer.dead)gUpdateFirePillars(dt);
     if(gPlayer&&!gPlayer.dead)gUpdateEnemyBurn(dt);
     if(gPlayer)gFogReveal(); // wilderness fog of war — throttled inside
@@ -14371,6 +14515,58 @@ const IMBUE_PATHS = {
               desc:'Each detonation blooms dragonfire at your feet that HEALS while you stand in it — your burning core mends as it erupts.' },
             cataclysm:   { name:'Cataclysm',   icon:'🔥', age:'new', tag:'NEW · CHAOS · POWER+COST', ground:'chaosfire', novaScale:1.7, mpEmit:16,
               desc:'Detonations become colossal chaosfire blasts — huge radius, devastating, leaving chaosfire that burns enemies AND you.' },
+          },
+        },
+      },
+    },
+    // ── God Skill: Trail of Embers (item 2) ── movement-as-weapon. gTickTrailOfEmbers ticks it from
+    // gUpdateGodSkills. Base = a burning patch laid every TOE_PATCH_DIST of distance MOVED (per-patch mana
+    // cost — you pay only while moving). Form @5 forks movement (Inferno Wake — hotter/wider lanes) vs aura
+    // (Ember Shroud — a continuous burning bubble, per-SECOND cost); rank-10 Ascension reskins to the shipped
+    // substance grounds (🐉 dragonfire heal · 🔥 chaosfire self-burn). #8.9 cost model: cost FOLLOWS emission
+    // shape (per-patch movement / per-second aura), damage is an independent per-rank table climbing faster than cost.
+    trailOfEmbers: {
+      art:'Trail of Embers', icon:'🔥', maxRank:10, formRank:5, chaosRank:10,
+      acquireDesc:'You leave a trail of burning embers as you move — anything that follows you through it catches fire and burns.',
+      fire: {
+        kind:'trailOfEmbers', timerKey:'_toeBombT',
+        base: { reach:FT_REACH, life:FT_LIFE, burnFrames:FT_BURN_FRAMES,
+                // #8.9 — THREE independent per-rank tables (read by rank; no formula couples them):
+                // (1) COST per PATCH (MP) for the movement Forms — ~0.7× Burning-Body parity (you pay only as you
+                //     move). ×patches-per-sec (~8 @ base speed) ≈ [1.4,2.2,2.8,4,6.2,8.4,11,15,19,31] effective mp/s.
+                mpPatchByRank:[0.18, 0.28, 0.35, 0.50, 0.77, 1.05, 1.40, 1.85, 2.40, 3.90],
+                // (2) COST per SECOND (MP/s) for the Ember Shroud aura Form — BB parity (it drains even standing still).
+                //     Ranks 1–4 unused (the aura only exists rank 5+); kept full-length for clean by-rank indexing.
+                mpPerSecByRank:[1.4, 2.2, 2.8, 4.0, 9, 12, 16, 21, 27, 45],
+                // (3) DAMAGE per tick — authored to climb FASTER than cost (rank 1→10 = 45× vs cost 22×).
+                trailDmgByRank:[10, 15, 22, 33, 55, 78, 110, 155, 220, 450] },
+        floors: { reach:20 },
+      },
+      // ranks 1–4: grow patch reach + duration + ignite (damage is trailDmgByRank, not additive here).
+      waveStep: { reach:3, life:8, burnFrames:12 },
+      forms: {
+        infernoWake: {
+          name:'Inferno Wake', tag:'AGGRESSIVE · LANES', icon:'🔥',
+          desc:'Your trail runs hotter, wider and longer — carve burning lanes straight through the pack.',
+          formStep: { reach:4, life:10, burnFrames:14 },
+          fire: { emit:'trail' },
+          ascensions: {
+            wyrmwake:   { name:'Wyrmwake',   icon:'🐉', age:'old', tag:'OLD · DRAGON · SUSTAIN', ground:'dragonfire',
+              desc:'Your trail becomes dragonfire — weave back through your own burning lanes and the dragon’s breath mends you.' },
+            chaosSteps: { name:'Chaos Steps', icon:'🔥', age:'new', tag:'NEW · CHAOS · POWER+COST', ground:'chaosfire', mpEmit:30,
+              desc:'Every couple of seconds you drop a patch of chaos ground that erupts a heartbeat later. Keep moving and the blasts bloom behind you; linger and you are caught in your own detonation.' },
+          },
+        },
+        emberShroud: {
+          name:'Ember Shroud', tag:'DEFENSIVE · AURA', icon:'🔥',
+          desc:'Instead of a ground trail, a burning aura wraps your body, scorching everything that comes close — wherever you go.',
+          formStep: { reach:6, burnFrames:14 },               // reach grows the aura radius
+          fire: { emit:'aura' },
+          ascensions: {
+            phoenixMantle: { name:'Phoenix Mantle', icon:'🐉', age:'old', tag:'OLD · DRAGON · SUSTAIN', ground:'dragonfire',
+              desc:'The mantle becomes dragonfire — a constant healing flame that mends you while it burns your foes.' },
+            immolation:    { name:'Immolation',     icon:'🔥', age:'new', tag:'NEW · CHAOS · POWER+COST', ground:'chaosfire',
+              desc:'You ignite — a roaring chaosfire aura of massive constant damage that devours your own flesh to fuel it.' },
           },
         },
       },
