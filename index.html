@@ -4307,21 +4307,21 @@ function gUpdateTrailBombs(dt){
   }
 }
 
-// Pyroclasm — the ranged heavy-hitter god skill. Every PYRO_INTERVAL it AUTO-AIMS at the nearest enemy and
-// fires a lane of fire pillars (reuses gFirePillars). ALL per-emit: ONE mana charge per lane fired (no
-// per-second; nothing ticks between volleys). Form @5: Eruption (the last pillar is a colossal finale) vs
-// Firewall (advancing perpendicular walls). Rank-10 Ascension keeps the Form's shape, swapping substance:
-// 🐉 Wyrmspine (finale re-erupts + dragonfire heal) · 🔥 Riftmaw (erratic chaos sprawl past your aim) ·
+// Pillars of Fire (id "pyroclasm") — the actively MOUSE-AIMED ranged heavy-hitter. The lane fires every
+// PYRO_INTERVAL (7s); for the last PYRO_TELEGRAPH frames a pulsing hitbox indicator (gDrawPyroTelegraph)
+// shows where each pillar will erupt, rotating with the mouse (p.angle), then it fires THERE. Reuses
+// gFirePillars. ALL per-emit: ONE mana charge per lane (no per-second). Form @5: Eruption (last pillar = a
+// colossal finale) vs Firewall (advancing perpendicular walls). Rank-10 Ascension keeps the Form's shape,
+// swapping substance: 🐉 Wyrmspine (finale re-erupts + dragonfire heal) · 🔥 Riftmaw (erratic chaos sprawl) ·
 // 🐉 Dragonmarch (dragonfire walls + heal carpet) · 🔥 Hellfront (extra advancing chaos walls). Cost =
 // mpLaneByRank per lane; damage = the independent pillarDmgByRank table climbing faster than cost (#8.9).
 function gTickPyroclasm(p, dt, id, tree){
   const interval = gGodFireParam(p, id, 'interval');
-  p._pyroT = (p._pyroT || 0) - dt;
-  if(p._pyroT > 0) return;
-  const tgt = gPyroTarget(p);
-  if(!tgt){ p._pyroT = 15; return; }                         // nothing in range → wait briefly, no cost
+  if(p._pyroT == null) p._pyroT = interval;                  // first cycle telegraphs before the first fire
+  p._pyroT -= dt;
+  if(p._pyroT > 0) return;                                    // cooling down / telegraphing (gDrawPyroTelegraph draws it)
   const cost = gGodFireParam(p, id, 'mpLane');
-  if(p.mp < cost){ p.godSkillDormant[id] = true; p._pyroT = 15; return; }   // can't pay → dormant, retry soon
+  if(p.mp < cost){ p.godSkillDormant[id] = true; p._pyroT = PYRO_TELEGRAPH; return; }  // starved → re-telegraph & retry
   gSpendMana(p, cost);
   p._pyroT = interval;
 
@@ -4336,29 +4336,35 @@ function gTickPyroclasm(p, dt, id, tree){
   const radius  = gGodFireParam(p, id, 'pillarRadius');
   const count   = Math.max(1, Math.round(gGodFireParam(p, id, 'pillarCount')));
   const burnDur = gGodFireParam(p, id, 'burnFrames');
-  const ang     = Math.atan2(tgt.y - p.wy, tgt.x - p.wx);
 
-  if(shape === 'firewall') gPyroFireWalls(p, ang, dmg, count, radius, burnDur, ground, asc);
-  else                     gPyroFireLane(p, ang, dmg, count, radius, burnDur, ground, shape, asc);
+  gPyroFire(p, p.angle, dmg, count, radius, burnDur, ground, shape, asc);   // fire toward the mouse aim
   gShake && gShake(4, 6);
 }
-// Auto-target: nearest live enemy within PYRO_RANGE (training dummy in town as a fallback). null = hold fire.
-function gPyroTarget(p){
-  let best = null, bd = PYRO_RANGE * PYRO_RANGE;
-  for(const en of gEnemies){
-    if(en.dead || !Number.isFinite(en.wx)) continue;
-    const dx = en.wx - p.wx, dy = en.wy - p.wy, d = dx*dx + dy*dy;
-    if(d < bd){ bd = d; best = en; }
+// The deterministic pillar footprints for a lane/walls aimed at `ang` — the SINGLE source of layout truth,
+// shared by the actual fire (gPyroFire) and the aim indicator (gDrawPyroTelegraph) so they always match.
+// Returns [{x, y, r, finale, delay}] (the erratic Riftmaw scatter is random → not part of the plan).
+function gPyroPlan(p, ang, shape, count, radius, asc){
+  const out = [], start = FP_START_TILES * T, step = FP_STEP_TILES * T;
+  if(shape === 'firewall'){
+    const perp = ang + Math.PI / 2, walls = PYRO_WALL_COUNT + (asc === 'hellfront' ? 2 : 0), wstart = start + radius * 1.5;
+    for(let w = 0; w < walls; w++){
+      const fwd = wstart + w * PYRO_WALL_GAP, cx = p.wx + Math.cos(ang) * fwd, cy = p.wy + Math.sin(ang) * fwd;
+      for(let j = 0; j < PYRO_WALL_SPAN; j++){
+        const t = PYRO_WALL_SPAN === 1 ? 0 : (j / (PYRO_WALL_SPAN - 1)) * 2 - 1;
+        const off = t * (PYRO_WALL_SPAN - 1) * 0.5 * radius * 1.6;
+        out.push({ x: cx + Math.cos(perp) * off, y: cy + Math.sin(perp) * off, r: radius, finale: false, delay: w * PYRO_WALL_STAGGER + j });
+      }
+    }
+  } else {
+    for(let i = 0; i < count; i++){
+      const d = start + i * step, finale = (shape === 'eruption' && i === count - 1);
+      out.push({ x: p.wx + Math.cos(ang) * d, y: p.wy + Math.sin(ang) * d, r: finale ? radius * PYRO_FINALE_SCALE : radius, finale, delay: i * FP_STEP_DELAY });
+    }
   }
-  if(best) return { x: best.wx, y: best.wy };
-  if(inTown && gTrainingDummy){
-    const dx = gTrainingDummy.wx - p.wx, dy = gTrainingDummy.wy - p.wy;
-    if(dx*dx + dy*dy < PYRO_RANGE * PYRO_RANGE) return { x: gTrainingDummy.wx, y: gTrainingDummy.wy };
-  }
-  return null;
+  return out;
 }
-// Push one Pyroclasm pillar (reusing the gFirePillars entity) + the ascension substance ground (dragonfire
-// heal-patch / chaosfire self-burn patch) it stands on — mirrors Dragonfeet's pillar+ground pattern.
+// Push one pillar (reusing the gFirePillars entity) + the ascension substance ground (dragonfire heal-patch
+// / chaosfire self-burn patch) it stands on — mirrors Dragonfeet's pillar+ground pattern.
 function gPyroPushPillar(x, y, dmg, radius, burnDur, delay, scale, ground){
   gFirePillars.push({ x, y, delay: delay || 0, life: 0, erupted: false,
     dmg, burn: Math.max(FP_BURN_MIN, Math.round(dmg * FP_BURN_RATIO)), burnDur, radius, hits: new Set(), scale: scale || 1 });
@@ -4367,25 +4373,21 @@ function gPyroPushPillar(x, y, dmg, radius, burnDur, delay, scale, ground){
   else if(ground === 'chaosfire')
     gSpawnFireTrail(x, y, 1, false, { substance:'chaosfire', selfDmg: Math.max(1, Math.round(dmg * CHAOSFIRE_SELF_RATIO)), reach: radius, life: FT_LIFE });
 }
-// A LANE of pillars from the player toward the aim (base + Eruption). Eruption's last pillar is a colossal
-// finale (PYRO_FINALE_SCALE/DMG); Wyrmspine re-erupts that finale; Riftmaw scatters erratic chaos past the aim.
-function gPyroFireLane(p, ang, dmg, count, radius, burnDur, ground, shape, asc){
-  const start = FP_START_TILES * T, step = FP_STEP_TILES * T;
-  for(let i = 0; i < count; i++){
-    const d = start + i * step;
-    const x = p.wx + Math.cos(ang) * d, y = p.wy + Math.sin(ang) * d;
-    const finale = (shape === 'eruption' && i === count - 1);
-    if(finale){
-      const fr = radius * PYRO_FINALE_SCALE, fd = Math.round(dmg * PYRO_FINALE_DMG);
-      gPyroPushPillar(x, y, fd, fr, burnDur, i * FP_STEP_DELAY, PYRO_FINALE_SCALE, ground);
-      if(asc === 'wyrmspine')                               // the finale re-erupts in place (free follow-through)
-        for(let k = 1; k < PYRO_REERUPT; k++) gPyroPushPillar(x, y, fd, fr, burnDur, i * FP_STEP_DELAY + k * PYRO_REERUPT_GAP, PYRO_FINALE_SCALE, ground);
+// Erupt the planned pillars. Eruption's finale hits PYRO_FINALE_DMG× (Wyrmspine re-erupts it); Riftmaw adds
+// an erratic chaos sprawl past the aim (random → outside the deterministic plan/indicator).
+function gPyroFire(p, ang, dmg, count, radius, burnDur, ground, shape, asc){
+  for(const q of gPyroPlan(p, ang, shape, count, radius, asc)){
+    if(q.finale){
+      const fd = Math.round(dmg * PYRO_FINALE_DMG);
+      gPyroPushPillar(q.x, q.y, fd, q.r, burnDur, q.delay, PYRO_FINALE_SCALE, ground);
+      if(asc === 'wyrmspine')
+        for(let k = 1; k < PYRO_REERUPT; k++) gPyroPushPillar(q.x, q.y, fd, q.r, burnDur, q.delay + k * PYRO_REERUPT_GAP, PYRO_FINALE_SCALE, ground);
     } else {
-      gPyroPushPillar(x, y, dmg, radius, burnDur, i * FP_STEP_DELAY, 1, ground);
+      gPyroPushPillar(q.x, q.y, dmg, q.r, burnDur, q.delay, 1, ground);
     }
   }
-  if(asc === 'riftmaw'){                                     // chaos sprawls erratically past where you aimed
-    const end = start + count * step;
+  if(asc === 'riftmaw'){
+    const end = (FP_START_TILES + count * FP_STEP_TILES) * T, step = FP_STEP_TILES * T;
     for(let k = 0; k < PYRO_RIFT_SCATTER; k++){
       const d = end + Math.random() * 4 * step, spread = (Math.random() - 0.5) * 1.2;
       gPyroPushPillar(p.wx + Math.cos(ang + spread) * d, p.wy + Math.sin(ang + spread) * d,
@@ -4393,21 +4395,39 @@ function gPyroFireLane(p, ang, dmg, count, radius, burnDur, ground, shape, asc){
     }
   }
 }
-// Advancing WALLS (Firewall): PYRO_WALL_COUNT perpendicular rows that erupt in succession, each further
-// forward (the sweep toward the target). Hellfront fields extra walls; substance per ascension.
-function gPyroFireWalls(p, ang, dmg, count, radius, burnDur, ground, asc){
-  const perp  = ang + Math.PI / 2;
-  const walls = PYRO_WALL_COUNT + (asc === 'hellfront' ? 2 : 0);
-  const start = FP_START_TILES * T + radius * 1.5;
-  for(let w = 0; w < walls; w++){
-    const fwd = start + w * PYRO_WALL_GAP;
-    const cx = p.wx + Math.cos(ang) * fwd, cy = p.wy + Math.sin(ang) * fwd;
-    for(let j = 0; j < PYRO_WALL_SPAN; j++){
-      const t   = PYRO_WALL_SPAN === 1 ? 0 : (j / (PYRO_WALL_SPAN - 1)) * 2 - 1;   // -1..1 across the wall
-      const off = t * (PYRO_WALL_SPAN - 1) * 0.5 * radius * 1.6;
-      gPyroPushPillar(cx + Math.cos(perp) * off, cy + Math.sin(perp) * off, dmg, radius, burnDur, w * PYRO_WALL_STAGGER + j, 1, ground);
-    }
+// The aim indicator — drawn (gctx, world space) for the last PYRO_TELEGRAPH frames before a lane fires:
+// a pulsing footprint ring at each planned pillar, rotating with the mouse so the player can place the lane.
+function gDrawPyroTelegraph(p){
+  p = p || gPlayer; if(!p || p.dead) return;
+  const id = 'pyroclasm';
+  if(!gGodSkillRunning(p, id)) return;
+  const t = p._pyroT || 0;
+  if(t <= 0 || t > PYRO_TELEGRAPH) return;                    // only during the aim window
+  const tree = gGodSkillTree(p, id); if(!tree) return;
+  const form = gImbueForm(p, id), fdef = form && tree.forms[form];
+  const asc = gImbueAscension(p, id), leaf = (fdef && asc && fdef.ascensions[asc]) || null;
+  const ground = (leaf && leaf.ground) || null;
+  const shape = (fdef && fdef.fire && fdef.fire.shape) || 'lane';
+  const radius = gGodFireParam(p, id, 'pillarRadius');
+  const count  = Math.max(1, Math.round(gGodFireParam(p, id, 'pillarCount')));
+  const prog  = 1 - t / PYRO_TELEGRAPH;                       // 0→1 across the window
+  const pulse = (prog * PYRO_TELE_PULSES) % 1;                // 0→1 within each of PYRO_TELE_PULSES pulses
+  const baseA = 0.10 + 0.20 * prog;                           // footprint firms up as the eruption nears
+  const col = ground === 'dragonfire' ? '#ffcc55' : ground === 'chaosfire' ? '#ff3a2a' : '#ff7a22';
+  gctx.save();
+  for(const q of gPyroPlan(p, p.angle, shape, count, radius, asc)){
+    const sx = q.x - camX, sy = q.y - camY;
+    if(sx < -80 || sx > VW + 80 || sy < -120 || sy > VH + 80) continue;
+    gctx.globalAlpha = baseA;                                 // solid footprint disc
+    gctx.fillStyle = col;
+    gctx.beginPath(); gctx.ellipse(sx, sy, q.r, q.r * 0.45, 0, 0, Math.PI * 2); gctx.fill();
+    const rr = q.r * (0.35 + 0.75 * pulse);                   // expanding pulse ring
+    gctx.globalAlpha = 0.6 * (1 - pulse);
+    gctx.strokeStyle = col; gctx.lineWidth = 2;
+    gctx.beginPath(); gctx.ellipse(sx, sy, rr, rr * 0.45, 0, 0, Math.PI * 2); gctx.stroke();
   }
+  gctx.restore();
+  gctx.globalAlpha = 1;
 }
 
 // ── §6b-iii  EVASION DASH ─────────────────────────────────────────
@@ -7234,14 +7254,17 @@ const TOE_DRAGONFEET_FUSE = 120;      // Dragonfeet: frames a laid patch waits b
 const TOE_BOMB_FUSE     = 60;         // Chaos Steps: drop→detonation delay (~1s telegraph)
 const TOE_BOMB_R        = 84;         // Chaos Steps detonation radius (px)
 const TOE_BOMB_DMG_MULT = 1.8;        // bomb blast damage = trailDmg × this
-// ── Pyroclasm (god skill) tuning ─────────────────────────────────────────────────────────────────
-// Ranged heavy-hitter: every PYRO_INTERVAL it AUTO-AIMS at the nearest enemy and fires a lane of fire
-// pillars (reusing gFirePillars). All per-emit (one mana charge per lane fired — no per-second). Form @5:
-// Eruption (the last pillar is a colossal finale) vs Firewall (advancing perpendicular walls). Ascensions:
-// Wyrmspine (🐉 finale re-erupts + heal) · Riftmaw (🔥 erratic chaos sprawl past your aim) · Dragonmarch
+// ── Pillars of Fire (god skill, id "pyroclasm") tuning ───────────────────────────────────────────
+// Actively MOUSE-AIMED ranged heavy-hitter: every PYRO_INTERVAL the lane fires, but for the last
+// PYRO_TELEGRAPH frames before it does, a pulsing hitbox indicator (PYRO_TELE_PULSES pulses) shows
+// exactly where each pillar will erupt, rotating around the player to follow the mouse (p.angle). At
+// fire it erupts a lane of pillars (reuses gFirePillars). All per-emit (one mana charge per lane —
+// no per-second). Form @5: Eruption (last pillar = colossal finale) vs Firewall (advancing walls).
+// Ascensions: Wyrmspine (🐉 finale re-erupts + heal) · Riftmaw (🔥 erratic chaos sprawl) · Dragonmarch
 // (🐉 dragonfire walls + heal carpet) · Hellfront (🔥 extra advancing chaos walls). (god-skills.md "Pyroclasm")
-const PYRO_INTERVAL     = 180;        // base lane cadence (frames, ~3s) — the slow heavy-hitter rhythm
-const PYRO_RANGE        = 620;        // auto-target acquisition range (px) — fire only with an enemy in reach
+const PYRO_INTERVAL     = 420;        // lane cadence (frames, 7s) — the slow, deliberate heavy-hitter rhythm
+const PYRO_TELEGRAPH    = 180;        // frames (3s) of pulsing aim-indicator BEFORE the lane fires
+const PYRO_TELE_PULSES  = 3;          // indicator pulses across the telegraph window
 const PYRO_FINALE_SCALE = 2.2;        // Eruption finale pillar: radius + flame visual ×
 const PYRO_FINALE_DMG   = 3.0;        // Eruption finale pillar: damage ×
 const PYRO_WALL_COUNT   = 5;          // Firewall: advancing wall-rows per fire (Hellfront adds +2)
@@ -9880,6 +9903,7 @@ function gRender(){
   gDrawFireWaves(); // fire arcs + burning-enemy flames, over entities
   gDrawEmberShots(); // Emberlance Form — travelling fireballs (item 2)
   gDrawFireJets(); // Dragonfire ascension — horizontal fire-jet beams (item 2 Slice C)
+  gDrawPyroTelegraph(); // Pillars of Fire — pulsing aim indicator before the lane erupts
   gDrawFirePillars(); // Cilia heavy fire pillars
   if(inTown) townDrawHubPlayers();
   if(inTown) townDrawPortal();
