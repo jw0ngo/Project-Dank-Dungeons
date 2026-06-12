@@ -59,6 +59,7 @@ three cheap irritant-fixers (wolf leap whiffing, XP/Favor popups jumbling, fog-e
 | **5** | **Boreas** — a second god (ice/control) | ⏸️ Held | Multi-session | Parked — the playtest showed we don't need it yet |
 | **6** | **Heavy charge locks out the normal swing** — committing to a heavy means committing | ✅ Shipped (2026-06-11) | Quick | Weighty-combat directive: a committed action must cost you other options |
 | **7** | **Mana economy & skill management** — costs/cooldowns rework so you run dry early; God Skills drain mana/sec; toggle auto-casts to keys 1–9 + WoW-style action bar | ✅ Shipped (2026-06-12, all 3 phases + action bar) | Multi-session, phased | Makes mana a real resource + a live build-management decision (weighty combat + build depth) |
+| **9** | **God Stat Identities** — each god's mechanics read the character stats that express its identity (Cilia ← crit; Ikras ← atk/move speed; Boreas ← mana-regen/pickup/CDR; Bhumi ← HP/regen), so generic stat cards become build-defining per patron | ◻️ Cilia slice approved; rest design-ahead | System (Cilia slice quick) | Build-craft depth + god identity — generic stats gain god-specific meaning, near-zero new content |
 | **8** | **Playtest feel/readability/balance batch** — wolf-leap fix · XP/Favor colour split + aggregated XP counter · fog-edge smoothing · gradual night-vision · out-of-combat HP **&** mana regen · LOS tree-reveal · early-game difficulty scale-back · **Burning Body mana→dps rescale** | ◻️ Approved (2026-06-12) — 9 tasks in Engineer lane | Quick (batch ≈ 1 session) | Game feel + readability + early-game balance (pillar 1) — fixes the irritants the first mana playtest surfaced |
 
 ---
@@ -417,6 +418,34 @@ so we don't double-nerf the early game.
 
 ---
 
+### 9. God Stat Identities — each god synergizes with its own character stats
+
+`✅ Cilia slice approved` · rest `proposed` (design-ahead) · Josh-directed 2026-06-12 · **Size:** system (Cilia
+slice quick) · **Pillars:** build-craft depth (the heart) + god identity · **Art:** none · **Source of truth:**
+[`specs/god-stat-identities.md`](specs/god-stat-identities.md)
+
+**What:** Each patron god **owns a set of character stats**, and the god's signature mechanics *read / scale with*
+those stats — so a generic stat card becomes a **build-defining choice under that patron**, with near-zero new
+content. Cilia ← **Crit Chance + Crit Dmg**; Ikras ← **Attack + Move Speed**; Boreas ← **Mana Regen + Pickup
+Range + CDR**; Bhumi ← **Health + HP Regen**.
+
+**Why:** the cheapest high-identity build-craft lever — it makes the *whole shared stat pool deeper* (the same
+stat means different things under different patrons) instead of adding bespoke content. It also gives the gods
+**archetype flavour for the mana economy** (Boreas = the sustain/regen god, Cilia = burst) and makes generic
+crit/regen/pickup cards matter per-build. Serves the god-identity north star directly.
+
+**Cilia slice (approved, buildable now):** rewire the Conflagration burn-explosion to run on crit — **explosion
+chance per burn tick ← crit chance, explosion damage ← crit damage**. Crit cards become Cilia's chain-detonation
+engine. Small, host-side, reuses the live burn system. The `cil-conflag` patron card gets repurposed (PM rec:
+"+explosion radius & chain"). Filed to the Engineer lane (#8.10... see TASKS).
+
+**Ikras / Boreas / Bhumi (design-ahead, not engineer work yet):** their stat-synergy mechanics are PM-proposed in
+the spec (e.g. Ikras chain-arc count ← move speed; Boreas frost-field size ← pickup range; Bhumi thorns ← max HP)
+and land **with their gods** — authored into these identities from the start. Boreas (#5) is the next to benefit
+when it unholds. **One gap flagged:** Attack Speed isn't a character-stat card today (Ikras would need one).
+
+---
+
 ### 5. Boreas — a second god (held)
 
 `⏸️ held` (Josh's call 2026-06-06, reaffirmed 2026-06-09) · **Size:** multi-session · **Pillars:** build-craft depth, game feel
@@ -533,12 +562,15 @@ cheaper once Boreas ships. **Needs ≥2 gods with imbues** — unblocked once Bo
 Each patron is a **distinct combat identity** — expressed through genuinely different mechanics, never a
 recolor. Co-op synergy falls out of the contrast (Boreas freezes → Cilia shatters).
 
-| God | Element | Identity |
-|-----|---------|----------|
-| **Cilia** *(live)* | Fire | Offense, area damage |
-| **Boreas** *(held)* | Ice | Defense, control, freezing, slowing |
-| **Ikras** *(future)* | Wind | Mobility, chaining attacks & skills |
-| **Bhumi** *(future)* | Earth | Tanking, reflecting damage (thorns), healing |
+Each god also **owns a set of character stats** its mechanics synergize with (item 9 /
+[`specs/god-stat-identities.md`](specs/god-stat-identities.md)) — so generic stat cards become build-defining per patron.
+
+| God | Element | Identity | Owned stats (item 9) |
+|-----|---------|----------|----------------------|
+| **Cilia** *(live)* | Fire | Offense, area damage | Crit Chance + Crit Dmg |
+| **Boreas** *(held)* | Ice | Defense, control, freezing, slowing | Mana Regen + Pickup Range + CDR |
+| **Ikras** *(future)* | Wind | Mobility, chaining attacks & skills | Attack Speed + Move Speed |
+| **Bhumi** *(future)* | Earth | Tanking, reflecting damage (thorns), healing | Health + HP Regen |
 
 ---
 

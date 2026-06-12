@@ -29,6 +29,13 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 ## 🟦 PM lane
 
+- ◻️ ✨ **Finalize Ikras / Boreas / Bhumi stat-synergy mechanics when each god is built** (↳ Josh 2026-06-12 ·
+  spec [`specs/god-stat-identities.md`](specs/god-stat-identities.md) "design-ahead") — the per-god mechanics are
+  PM-proposed (Ikras chain-arc ← move/atk speed; Boreas frost-field ← pickup range, CC uptime ← CDR, sustain ←
+  mana regen; Bhumi thorns ← max HP, heal-engine ← HP regen). Confirm/redirect with Josh + author into each god's
+  kit **when that god lands** (Boreas #5 is next — fold its hooks into the Frost-kit design at unhold). **Resolve
+  the Attack-Speed stat gap** (no character-stat card exists for it — add one or map to swing-speed) before Ikras.
+
 - ◻️ 🔧 **Re-rank after item 2's first slice lands** — once God Skills proves out in playtest, re-sequence *Next*:
   the Boreas unhold is the keystone (lights up Elemental Fusion + co-op synergy + its own Frost kit at once).
   Define the unhold trigger then. (roadmap #5 / *Next*)
@@ -151,6 +158,24 @@ refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 
   Reuse the existing fade mechanism (don't outline the enemy — just fade the occluding canopy, same as
   player-occlusion). Keep it cheap: only for trees already in the draw cull, iterate `gEnemies` once.
   Render-only, no sim/MP impact. *(Small new mechanic — Josh-directed; combat-readability, pillar 1.)*
+
+- ◻️ ✨ **Item 9 (Cilia slice) — God Stat Identities: wire Cilia's burn-explosion to crit** (↳ from PM,
+  Josh 2026-06-12 · spec [`specs/god-stat-identities.md`](specs/god-stat-identities.md)) — rewire the
+  Conflagration burn-explosion (item 0c) to run on **crit stats** instead of the bespoke `burnExplodeChance`:
+  - **(1) Explosion chance per burn tick ← `critChance`** — in `gUpdateEnemyBurn` (`index.html:6419`, roll at
+    `:6432`) source the per-tick detonation chance from `gPlayer.wildBuffs.critChance` (0–0.75) instead of
+    `wildBuffs.burnExplodeChance`. **Tune:** 75%/tick (~every 0.4 s) is very chainy — likely scale it
+    (`critChance × f`) so it reads as a satisfying cascade, not a constant chain. Judge live.
+  - **(2) Explosion damage ← crit damage** — in `gBurnExplode` (`:6396`) the blast is `max(4, round(_burnTickDmg
+    × 4))` (`:6403`); scale by the crit multiplier `(CRIT_BASE_MULT + wildBuffs.critDamage)` instead of the flat
+    ×4 (pick a coefficient so a no-crit Cilia still detonates modestly, a crit build detonates hard).
+  - **(3) Repurpose the now-redundant `cil-conflag` "Conflagration" patron card** (`:14103`, its only job was
+    `burnExplodeChance`) — **PM rec: repurpose to "+explosion radius & chain re-ignite"** so the Cilia patron card
+    still deepens the crit-fire build rather than vanishing (retire-vs-repurpose is Josh's call; flag in playtest).
+    Searing Heat / Lingering Flame unaffected. **Decide `burnExplodeChance`'s fate** (remove the buff + its dev
+    Statforge row `:16439`, or keep as a small additive-on-top-of-crit bonus the repurposed card feeds).
+  - Host-authoritative (burn resolves host-side) → no MP change. **Verify** on the training dummy / a burning pack:
+    crit cards now drive detonation frequency + blast size; zero-crit Cilia still chains modestly.
 
 - ◻️ 🔧 **Apply the `assets/world` fold (atomic move + manifest rewrite)** (↳ from ART, 2026-06-12 ·
   Josh-approved) — `assets/world/` is flat and filling up (one area's set-dressing so far). Scheme
