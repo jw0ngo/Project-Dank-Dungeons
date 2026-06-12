@@ -83,10 +83,13 @@ The rank-10 fork is the *turning of the age* myth made playable (Creative Manife
 > This reframes the cost from "keep moving to dodge the hazard" → "you're committed to your ground; leaving it
 > burns you."
 >
-> **Scope (resolved Josh, 2026-06-12):** the footprint rule governs the **area/burst** chaos leaves that lay
-> *settled ground* — **Chaos Crown** (Burning Body) and **Hellfront** (Pyroclasm). **Two exceptions:** **Eye of
-> Chaos** (a travelling *band*, lays no ground — keeps its sweep-over-you cost) and **all of Trail of Embers**
-> (the movement skill — chaosfire = "burn the path," cost is movement-keyed). See the per-leaf notes.
+> **Scope (resolved Josh, 2026-06-12 · updated 2026-06-12):** the footprint rule governs **settled-ground** chaos
+> leaves — the ones that anchor a field *around* the player. For Cilia that is now **only Chaos Crown** (Burning
+> Body); the rule stands as the standing principle for any *future* settled-field chaos leaf (other gods).
+> **Everything else is movement/travel-shaped → EXEMPT:** **Eye of Chaos** (a travelling *band*, no ground),
+> **all of Trail of Embers** (movement skill — "burn the path"), **Riftmaw** (an erratic run-long fissure), and
+> **Hellfront** (reshaped to advancing chaos *walls* — its cost is movement-relative like Trail). See the per-leaf
+> notes.
 
 **Both grounds already exist and are tuned in the shipped build** (Slice C): dragonfire heals the owner
 **0.18× the climax damage per tick**; chaosfire hurts the owner **0.35× per tick** (outside a 38px bare-center
@@ -301,11 +304,31 @@ eruption, 22px radius.
 - **Rank 10 — Ascension** *(the pillars become a sustained volcanic terrain event):*
   - **Eruption →** 🐉 **Wyrmspine** (finale pillar **re-erupts 3× at intervals** + standing in it heals you —
     *already an interval-based, VS-perfect peak*) · 🔥 **Riftmaw** (a run-long chaosfire fissure erupting
-    erratically past your aim, burning you when near).
+    erratically past your aim, burning you when near). **⟵ INTENTIONALLY diverges from Eruption's concentrated
+    shape (Josh, 2026-06-12):** chaos here = *uncontrolled sprawl* past where you aimed — the one deliberate
+    exception to the "both of a Form's ascensions keep its shape" principle (its 🐉 sibling Wyrmspine keeps the
+    concentrated re-erupting pillar; Riftmaw is meant to feel like the power slipping its leash). **Footprint rule:
+    EXEMPT** — like Eye of Chaos / Trail, the fissure is a *travelling/erratic* hazard, not settled ground planted
+    under you; the self-burn cost is lingering near the erupting cracks, not a kite-check.
   - **Firewall →** 🐉 **Dragonmarch** (walls turn to dragonfire and lay a healing carpet in their wake) ·
-    🔥 **Hellfront** (walls break loose omnidirectionally, blanketing a chaosfire field **around** you —
-    **footprint rule (2026-06-12): leave a clear bare pocket on the player's position; the field blankets
-    around them, never under their feet.** Was "including under you" — changed).
+    🔥 **Hellfront** *(reshaped Josh 2026-06-12 — keeps Firewall's wall shape)* — the walls **multiply and march
+    outward relentlessly as chaosfire walls**: an advancing firewall that doesn't stop, and **caught ahead of or
+    between the walls, you burn.** The cost is **movement/position-relative** (outrun or thread the walls — the
+    same "movement is the cost" logic as Trail), **not** a settled field-around-you. **Footprint rule: EXEMPT** —
+    it lays no settled ground under you; the walls advance *away*. *(Was an omnidirectional field-around-you under
+    the footprint rule; reshaped to walls to keep its Form's shape — so it leaves the footprint scope.)*
+
+**Mana cost (item 7 — author from the start, NOT retrofitted).** Pyroclasm fires in **discrete bursts on an
+interval** (a pillar lane every ~`FP_INTERVAL`), so — like Trail's emitted patches, unlike Burning Body's
+continuous aura — its drain is **per-emit: one charge each time the interval fires a lane**, not a per-second
+tax (nothing ticks between volleys → like Trail, Pyroclasm has **no per-second cost anywhere**). Use the **#8.9
+two-table model** ([`mana-economy.md`](mana-economy.md)): two independent per-rank tables — a fixed **cost per
+lane** and a fixed **damage per lane** — low rank-1 anchor, a **step-change in both at each evolution** (rank 5
+Form, rank 10 Ascension), the **damage table authored to climb faster than the cost table** so specialization
+pays off. **No formula coupling damage to cost** (the reverted #8.9 lesson). Follow-through eruptions (Wyrmspine's
+3× re-erupt; any delayed re-detonation) are **free** — you pay once when the lane fires, not per re-erupt. Floor
+`FP_INTERVAL` (cadence floor — perf/spam, per Balance). **HUD:** the action bar's `mpCostPerSec` shows the honest
+effective mp/s (cost-per-lane ÷ interval-seconds).
 
 ---
 
