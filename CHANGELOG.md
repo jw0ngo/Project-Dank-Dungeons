@@ -7,6 +7,8 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+## [0.0.2] - 2026-06-12
+
 ### Added
 - **Fire-explosion sprite on Conflagration detonations.** When a burning enemy's tick triggers the
   Conflagration explosion, a hand-painted fire burst now **blooms outward from the centre** (additive, sized to
@@ -27,6 +29,20 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
   rather than refusing to start. Because mana regens while you hold, the affordable cap keeps rising — hold
   through it and the charge resumes, reaching full at the pace of your regen. (Full-charge cost lowered 30 → 10
   under the tighter mana economy.)
+- **Wolves now leap _through_ you.** Their lunge reach grew ~30% while the distance they commit from stayed the
+  same, so instead of stopping on you a wolf **overshoots and passes through**, ending up on the far side (exposed,
+  a window to punish). A hard backpedal during the wind-up still makes the leap fall short, so the dodge still works.
+- **Favor coins are smaller on the ground (−40%).** A cluster of dropped coins reads more cleanly; the pickup
+  range is unchanged.
+
+### Fixed
+- **Wolf pounce no longer whiffs.** Wolves used to commit their leap-bite from too far and land short of you;
+  they now commit only when close enough that the pounce reliably connects.
+- **XP and Favor pickups are finally distinguishable.** Both numbers used to be gold and jumbled together on a
+  multi-pickup. XP now reads as a **single white "+N XP" counter** above your head that totals up over a few
+  seconds then fades, while Favor stays its gold coin number.
+- **Fog edge no longer shimmers as you explore.** The shroud frontier now eases open smoothly instead of
+  jittering one tile at a time when new ground is revealed.
 
 ## [0.0.1] - 2026-06-12
 
