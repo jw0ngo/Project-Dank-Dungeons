@@ -406,9 +406,11 @@ clearly and feeling fair:
    is too hard.** Push the difficulty curve later (lower the early bases, keep item 1's late-game ramp).
 8. **Out-of-combat mana regen** — **10 mp/s after 10 s of no mana use and no damage** (mirrors the HP regen; also the
    relief valve that makes the scaled-back early game survivable — disengage to recharge, then re-engage).
-9. **Burning Body mana→dps rescale** — the shipped cost curve runs efficiency *backwards* (you pay ~4× more per rank
-   for ~1.5× the damage). Rescale so rank 1 = 2 mp/s, evolutions are a **step-change** in cost+dps, and **dps scales
-   superlinearly with cost** (pour mana in → disproportionately more dps). Spec'd in [`specs/mana-economy.md`](specs/mana-economy.md).
+9. **Burning Body mana→dps rescale** *(shipped — `3cf4bb9`)* — the old cost curve ran efficiency *backwards* (you
+   paid ~4× more per rank for ~1.5× the damage). Rescaled to **two independent per-rank tables** — fixed cost and
+   fixed damage per level, set separately — with a **step-change** at each evolution, and the **damage table climbing
+   faster than the cost table** so going deep on one skill pays off (no cost→dps formula). Spec'd in
+   [`specs/mana-economy.md`](specs/mana-economy.md).
 
 **Why:** Pillar 1 is the top priority, and these are the irritants the live mana playtest surfaced — readability
 (can't tell XP from Favor; popups jumble), fairness (wolves whiff; enemies hide behind trees), polish (fog shimmer;
