@@ -32,6 +32,9 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
   recover, then dive back in.
 
 ### Changed
+- **New obelisk art.** Wilderness obelisks now use a proper stone sprite (~2× the old placeholder), stand on the
+  ground with a solid base you can't walk through, and **fade out like trees** when one would block your view of
+  the player. The channel ring/prompt are unchanged.
 - **Dragonfire & chaosfire now have their own pillar and ground art.** The dragon (🐉) and chaos (🔥) ascensions
   render distinct flame-pillar and burning-ground sprites — Wyrmspine/Dragonfeet/Wyrmwake read as iridescent
   dragonfire, Riftmaw/Chaos Steps/Chaoswake/Chaos Crown as dark chaosfire — replacing the old generic flame + tint.

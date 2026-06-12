@@ -2393,6 +2393,17 @@ function gRCTrees(wx,wy,r){
   }
   return[x,y];
 }
+// Obelisk base collision — a small solid circle at each obelisk's foot (you still channel from the wider
+// OBELISK_RADIUS ring, you just can't walk through the stone). Mirrors gRCTrees' point-vs-shape push.
+function gRCObelisks(wx,wy,r){
+  let x=wx,y=wy;
+  if(typeof gObelisks==='undefined') return[x,y];
+  for(const ob of gObelisks){
+    const rr=OBELISK_COLLIDE_R+r, dx=x-ob.wx, dy=y-ob.wy, d=Math.hypot(dx,dy);
+    if(d<rr && d>0.001){ x=ob.wx+dx/d*rr; y=ob.wy+dy/d*rr; }
+  }
+  return[x,y];
+}
 function gSep(ax,ay,ar,bx,by,br){const d=Math.hypot(ax-bx,ay-by),m=ar+br+2;if(d<m&&d>0.01){const p=(m-d)/2;return{x:(ax-bx)/d*p,y:(ay-by)/d*p};}return null;}
 
 // Player-enemy collision — resolves player position out of enemy circles.
@@ -4508,7 +4519,7 @@ function gUpdateEvasion(p, dt){
   p.wx += Math.cos(ev.angle) * step;
   p.wy += Math.sin(ev.angle) * step;
   let[rx,ry] = gRC(p.wx,p.wy,p.r);
-  [rx,ry] = gRCDestructibles(rx,ry,p.r);[rx,ry]=gRCRocks(rx,ry,p.r);[rx,ry]=gRCTrees(rx,ry,p.r);
+  [rx,ry] = gRCDestructibles(rx,ry,p.r);[rx,ry]=gRCRocks(rx,ry,p.r);[rx,ry]=gRCTrees(rx,ry,p.r);[rx,ry]=gRCObelisks(rx,ry,p.r);
   [rx,ry] = gRCTraps(rx,ry,p.r);
   [rx,ry] = gRCEnemies(rx,ry,p.r);
   p.wx = rx; p.wy = ry;
@@ -4779,7 +4790,7 @@ function gUpdateHeavyAtk(p, dt){
     p.wx += Math.cos(p.heavyAngle) * lungeSpeed * dt;
     p.wy += Math.sin(p.heavyAngle) * lungeSpeed * dt;
     // Clamp to walls
-    let[lx,ly]=gRC(p.wx,p.wy,p.r);[lx,ly]=gRCDestructibles(lx,ly,p.r);[lx,ly]=gRCRocks(lx,ly,p.r);[lx,ly]=gRCTrees(lx,ly,p.r);[lx,ly]=gRCEnemies(lx,ly,p.r);p.wx=lx;p.wy=ly;
+    let[lx,ly]=gRC(p.wx,p.wy,p.r);[lx,ly]=gRCDestructibles(lx,ly,p.r);[lx,ly]=gRCRocks(lx,ly,p.r);[lx,ly]=gRCTrees(lx,ly,p.r);[lx,ly]=gRCObelisks(lx,ly,p.r);[lx,ly]=gRCEnemies(lx,ly,p.r);p.wx=lx;p.wy=ly;
   }
 
   // Blade edge particles — stream along both edges of sword during extend
@@ -4974,7 +4985,7 @@ function gUpdatePlayer(dt=1){
   const tsm = gTreeSlow(p.wx, p.wy);                  // 0.75 inside tree tiles
   const dsm = ((p.wildBuffs&&(1+(p.wildBuffs.speedPct||0)/100))||1);  // obelisk + card speed
   p.wx+=dx*p.speed*csm*tsm*dsm*dt;p.wy+=dy*p.speed*csm*tsm*dsm*dt;
-  let[rx,ry]=gRC(p.wx,p.wy,p.r);[rx,ry]=gRCDestructibles(rx,ry,p.r);[rx,ry]=gRCRocks(rx,ry,p.r);[rx,ry]=gRCTrees(rx,ry,p.r);[rx,ry]=gRCTraps(rx,ry,p.r);[rx,ry]=gRCEnemies(rx,ry,p.r);p.wx=rx;p.wy=ry;
+  let[rx,ry]=gRC(p.wx,p.wy,p.r);[rx,ry]=gRCDestructibles(rx,ry,p.r);[rx,ry]=gRCRocks(rx,ry,p.r);[rx,ry]=gRCTrees(rx,ry,p.r);[rx,ry]=gRCObelisks(rx,ry,p.r);[rx,ry]=gRCTraps(rx,ry,p.r);[rx,ry]=gRCEnemies(rx,ry,p.r);p.wx=rx;p.wy=ry;
   gUpdateGodSkills(p,dt);  // patron auto-fire abilities (Burning Body etc.) — after move so position is current
   // Swing lunge: a normal swing steps the player forward in the committed aim direction. Free movement is
   // off during the swing (csm=0), so this push is the only motion — the strike carries you (weighty combat).
@@ -4984,7 +4995,7 @@ function gUpdatePlayer(dt=1){
       const _ls = SWING_LUNGE_SPEED * (1 - _sp / SWING_LUNGE_FRAC);         // decelerating forward push
       let lx = p.wx + Math.cos(p.swingAimAngle) * _ls * dt;
       let ly = p.wy + Math.sin(p.swingAimAngle) * _ls * dt;
-      [lx,ly]=gRC(lx,ly,p.r);[lx,ly]=gRCDestructibles(lx,ly,p.r);[lx,ly]=gRCRocks(lx,ly,p.r);[lx,ly]=gRCTrees(lx,ly,p.r);[lx,ly]=gRCTraps(lx,ly,p.r);[lx,ly]=gRCEnemies(lx,ly,p.r);
+      [lx,ly]=gRC(lx,ly,p.r);[lx,ly]=gRCDestructibles(lx,ly,p.r);[lx,ly]=gRCRocks(lx,ly,p.r);[lx,ly]=gRCTrees(lx,ly,p.r);[lx,ly]=gRCObelisks(lx,ly,p.r);[lx,ly]=gRCTraps(lx,ly,p.r);[lx,ly]=gRCEnemies(lx,ly,p.r);
       p.wx=lx; p.wy=ly;
     }
   }
@@ -8803,6 +8814,7 @@ const ART_MANIFEST = {
   'world.treesmall.6':'assets/world/treesmall-6.png',
   'world.treesmall.7':'assets/world/treesmall-7.png',
   'world.treesmall.8':'assets/world/treesmall-8.png',
+  'world.obelisk':'assets/world/obelisk.png',   // wilderness channel obelisk (tall stone)
 };
 const gArtReg = Object.create(null);   // key → { img, baked, ready }
 const gTileVarCount = Object.create(null); // tile type name → number of art variants in the manifest
@@ -15971,6 +15983,10 @@ function gWildReset(){
 
 const OBELISK_RADIUS  = 3 * 32;   // 3 tiles in px
 const OBELISK_CHANNEL = 600;       // frames to channel (10s at 60fps)
+const OBELISK_DRAW_H   = 80;       // sprite draw height (px) — ~2× the old placeholder; width follows the art's aspect
+const OBELISK_FOOT     = 0.94;     // share of height ABOVE the foot line (base sits on the ground at ob.wy) — like trees
+const OBELISK_FADE_ALPHA = 0.4;    // alpha when the obelisk would cover the player (tree-style fade) — knob
+const OBELISK_COLLIDE_R = 11;      // solid base radius (px) — blocks movement; you still channel from within OBELISK_RADIUS
 
 // ── Buff pool ────────────────────────────────────────────────
 // Vertical-slice tuning: an obelisk ALWAYS offers the same three axes (Max Mana · Mana Regen · Max Health) —
@@ -16057,60 +16073,55 @@ function gUpdateObelisks(dt){
 function gDrawObelisks(){
   if(!gObelisks.length) return;
   const now = Date.now();
+  const rec = gArtReg['world.obelisk'];
+  const ready = rec && rec.ready && rec.img;
   for(const ob of gObelisks){
     const sx = ob.wx - camX, sy = ob.wy - camY;
-    if(sx<-100||sx>VW+100||sy<-100||sy>VH+100) continue;
+    if(sx<-140||sx>VW+140||sy<-160||sy>VH+140) continue;
 
-    if(ob.used){
-      // Used — dark inert stone
-      gctx.save();
-      gctx.globalAlpha = 0.4;
-      _drawObeliskStone(sx, sy, '#444', '#222', now);
-      gctx.restore();
-      continue;
+    // ── Ground rings (under the stone) — glow + channel progress, unused obelisks only ──
+    if(!ob.used){
+      const pulse = 0.3 + 0.15*Math.sin(now*0.002+ob.wx);
+      gctx.save(); gctx.globalAlpha=pulse; gctx.strokeStyle='#44ffcc'; gctx.lineWidth=1; gctx.setLineDash([4,4]);
+      gctx.beginPath(); gctx.arc(sx,sy,OBELISK_RADIUS,0,Math.PI*2); gctx.stroke(); gctx.setLineDash([]); gctx.restore();
+      if(ob.channelTimer > 0){
+        const ratio = ob.channelTimer / OBELISK_CHANNEL;
+        gctx.save(); gctx.strokeStyle='#44ffcc'; gctx.lineWidth=4; gctx.globalAlpha=0.7;
+        gctx.beginPath(); gctx.arc(sx,sy,OBELISK_RADIUS,-Math.PI/2,-Math.PI/2+ratio*Math.PI*2); gctx.stroke(); gctx.restore();
+      }
     }
 
-    // Glow ring — always visible
-    const pulse = 0.3 + 0.15*Math.sin(now*0.002+ob.wx);
-    gctx.save();
-    gctx.globalAlpha = pulse;
-    gctx.strokeStyle = '#44ffcc'; gctx.lineWidth = 1;
-    gctx.setLineDash([4,4]);
-    gctx.beginPath(); gctx.arc(sx,sy,OBELISK_RADIUS,0,Math.PI*2); gctx.stroke();
-    gctx.setLineDash([]);
-    gctx.restore();
-
-    // Channel fill ring
-    if(ob.channelTimer > 0){
-      const ratio = ob.channelTimer / OBELISK_CHANNEL;
-      gctx.save();
-      gctx.strokeStyle = '#44ffcc'; gctx.lineWidth = 4; gctx.globalAlpha = 0.7;
-      gctx.beginPath();
-      gctx.arc(sx, sy, OBELISK_RADIUS, -Math.PI/2, -Math.PI/2 + ratio*Math.PI*2);
-      gctx.stroke();
-      gctx.restore();
+    // ── The stone — new sprite, ~2× the old placeholder, feet-anchored at ob.wy. Tree-style fade: when it
+    //    draws in front of the player and would cover them, ease its alpha down so they stay visible. ──
+    if(ready){
+      const h = OBELISK_DRAW_H, w = h * (rec.img.width / rec.img.height);
+      const dx = sx - w/2, dy = sy - h*OBELISK_FOOT;
+      let want = 1;
+      if(gPlayer && !gPlayer.dead && ob.wy > gPlayer.wy){
+        const px = gPlayer.wx-camX, py = gPlayer.wy-camY;
+        if(px > dx && px < dx+w && py > dy && py < dy+h) want = OBELISK_FADE_ALPHA;
+      }
+      ob._a = (ob._a==null ? 1 : ob._a) + (want - (ob._a==null ? 1 : ob._a))*0.18;   // ease toward target
+      const prevA = gctx.globalAlpha;
+      gctx.globalAlpha = ob.used ? prevA*0.45 : prevA*ob._a;   // used obelisks read dim/inert
+      gctx.imageSmoothingEnabled = true;
+      gctx.drawImage(rec.img, dx, dy, w, h);
+      gctx.globalAlpha = prevA;
+    } else if(ob.used){
+      gctx.save(); gctx.globalAlpha=0.4; _drawObeliskStone(sx, sy, '#444', '#222', now); gctx.restore();
+    } else {
+      _drawObeliskStone(sx, sy, '#6688aa', '#334455', now);
+      const rPulse = 0.5 + 0.4*Math.sin(now*0.003+ob.wy);
+      gctx.save(); gctx.globalAlpha=rPulse*0.8; gctx.fillStyle='#44ffcc'; gctx.font='bold 10px monospace'; gctx.textAlign='center';
+      gctx.fillText('᚛᚜', sx, sy-22); gctx.textAlign='left'; gctx.restore();
     }
 
-    // Obelisk stone
-    _drawObeliskStone(sx, sy, '#6688aa', '#334455', now);
-
-    // Rune glow on top
-    const rPulse = 0.5 + 0.4*Math.sin(now*0.003+ob.wy);
-    gctx.save();
-    gctx.globalAlpha = rPulse * 0.8;
-    gctx.fillStyle = '#44ffcc';
-    gctx.font = 'bold 10px monospace';
-    gctx.textAlign = 'center';
-    gctx.fillText('᚛᚜', sx, sy - 22);
-    gctx.textAlign = 'left';
-    gctx.restore();
-
-    // Proximity prompt
-    if(ob.channelTimer === 0 && Math.hypot(gPlayer.wx-ob.wx,gPlayer.wy-ob.wy)<=OBELISK_RADIUS){
+    // ── Proximity prompt (above the stone) ──
+    if(!ob.used && ob.channelTimer === 0 && Math.hypot(gPlayer.wx-ob.wx,gPlayer.wy-ob.wy)<=OBELISK_RADIUS){
+      const topY = (ready ? sy - OBELISK_DRAW_H*OBELISK_FOOT : sy-30) - 8;
       gctx.save(); gctx.globalAlpha=0.7+0.3*Math.sin(now*0.005);
       gctx.fillStyle='#88ffcc'; gctx.font='bold 8px monospace'; gctx.textAlign='center';
-      gctx.fillText('STAND TO CHANNEL', sx, sy-38);
-      gctx.textAlign='left'; gctx.restore();
+      gctx.fillText('STAND TO CHANNEL', sx, topY); gctx.textAlign='left'; gctx.restore();
     }
   }
 }
