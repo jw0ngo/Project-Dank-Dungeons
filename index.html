@@ -4569,12 +4569,19 @@ function gUpdateHeavyAtk(p, dt){
     p._heavyChargedLen = null; p._heavyChargedDmg = null;
   }
 }
-// Out-of-combat fast recharge (#8.8 / #8.2): after OOC_REGEN_DELAY frames with no mana use AND no
-// damage taken, regen jumps to the fast rate (the relief valve that makes the scaled-back early game
-// survivable — disengage to recharge, then re-engage). Shared delay; per-resource rates.
-const OOC_REGEN_DELAY = 600;   // frames (10s @60) of no mana-use AND no damage before fast regen kicks in
+// Out-of-combat fast recharge (#8.8 / #8.2): after OOC_REGEN_DELAY frames of no combat — no damage
+// TAKEN and no damage DEALT to an enemy — regen jumps to the fast rate (the relief valve that makes the
+// scaled-back early game survivable — disengage to recharge, then re-engage). Shared delay; per-resource rates.
+const OOC_REGEN_DELAY = 600;   // frames (10s @60) out of combat before fast regen kicks in
 const OOC_MP_REGEN    = 10/60; // mp/frame (10 mp/s) fast recharge
-const OOC_HP_REGEN    = 3/60;  // hp/frame (3 HP/s) out-of-combat base heal (#8.2; gated on no damage only)
+const OOC_HP_REGEN    = 3/60;  // hp/frame (3 HP/s) out-of-combat base heal (#8.2)
+
+// "Out of combat" = no damage taken AND none dealt for OOC_REGEN_DELAY. Mana regen layers a
+// no-mana-use clause on top of this; HP regen uses it directly.
+function gOutOfCombat(p){
+  return (gFrame - (p._lastDmgFrame  ||0) >= OOC_REGEN_DELAY)
+      && (gFrame - (p._lastDealtFrame||0) >= OOC_REGEN_DELAY);
+}
 
 // #8.2 juice tell — one gentle green mote drifting up from the player body while out-of-combat HP regen mends.
 function gSpawnRegenMote(p){
@@ -4608,16 +4615,16 @@ function gUpdatePlayer(dt=1){
     if(p.mp <= 0) gToggleWhirlwind();
   } else {
     const _mpAdd = (p.wildBuffs&&p.wildBuffs.mpRegenAdd||0) / 60; // card flat regen, per frame
-    // Out-of-combat fast recharge (#8.8): no mana use AND no damage for OOC_REGEN_DELAY → 10 mp/s,
+    // Out-of-combat fast recharge (#8.8): out of combat AND no mana use for OOC_REGEN_DELAY → 10 mp/s,
     // overriding the tight base ~1/s (card mpRegenAdd still stacks). An active god-skill aura keeps
     // re-stamping _lastMpUseFrame (charges its chunk every few sec), so you must toggle it off to fast-recharge.
-    const _ooc  = (gFrame - (p._lastMpUseFrame||0) >= OOC_REGEN_DELAY) && (gFrame - (p._lastDmgFrame||0) >= OOC_REGEN_DELAY);
+    const _ooc  = gOutOfCombat(p) && (gFrame - (p._lastMpUseFrame||0) >= OOC_REGEN_DELAY);
     const _base = _ooc ? OOC_MP_REGEN : (W().mpRegen||0);  // ||0: bow has no mpRegen key → guard against NaN mp
     p.mp = Math.min(p.maxMp, p.mp + (_base + _mpAdd) * dt);
   }
   // obelisk + card hp regen (flat addition) + out-of-combat base heal (#8.2)
   const _hpAdd = (p.wildBuffs&&p.wildBuffs.hpRegenAdd||0) / 60; // card flat regen, per frame
-  const _hpOoc = (gFrame - (p._lastDmgFrame||0) >= OOC_REGEN_DELAY) ? OOC_HP_REGEN : 0; // 3 HP/s after 10s w/o damage
+  const _hpOoc = gOutOfCombat(p) ? OOC_HP_REGEN : 0; // 3 HP/s after 10s out of combat (no damage taken or dealt)
   const _hpReg = _hpAdd + _hpOoc;
   const _healing = p.hp < p.maxHp && _hpReg > 0;
   if(_healing) p.hp = Math.min(p.maxHp, p.hp + _hpReg * dt);
@@ -6037,6 +6044,7 @@ function gDealEnemyDamage(e, dmg, opts){
   if(!e || e.dead) return;
   const idx = gEnemies.indexOf(e);
   if(idx < 0) return;
+  if(gPlayer) gPlayer._lastDealtFrame = gFrame;   // local player dealt damage → keeps out-of-combat regen suppressed (remote players' hits apply on a separate host path, so this is local-only)
   const flash = opts.hitFlash || 12;
   if(MP.active && !MP.isHost){
     // Client: the host owns hp + status. Report it; show only local flash.

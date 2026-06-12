@@ -88,9 +88,10 @@ refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 
 - ✅ ✨ **#8.8 — Default out-of-combat MANA regen: 10 mp/s after 10 s of no mana use AND no damage** — **done
   ENG 2026-06-12.** Added a tiny **`gSpendMana(p,amt)`** helper (clamps to 0, stamps `p._lastMpUseFrame = gFrame`)
   and routed **all 6 spend sites** through it (god-skill base chunk + emit in `gTickBurningBody`, dash, leap, heavy,
-  whirlwind per-frame). `gDamagePlayer` now stamps `p._lastDmgFrame = gFrame` (shared infra #8.2 reuses). In
-  `gUpdatePlayer`'s regen `else`-branch: when `gFrame-(_lastMpUseFrame||0) ≥ OOC_REGEN_DELAY` **AND**
-  `gFrame-(_lastDmgFrame||0) ≥ OOC_REGEN_DELAY` (600f/10s), base regen swaps to **`OOC_MP_REGEN` (10/60 = 10 mp/s)**
+  whirlwind per-frame). `gDamagePlayer` stamps `p._lastDmgFrame`; `gDealEnemyDamage` stamps `p._lastDealtFrame`
+  (local player only — remote hits apply on a separate host path). A shared **`gOutOfCombat(p)`** = no damage
+  **taken AND none dealt** for `OOC_REGEN_DELAY`. In `gUpdatePlayer`'s regen `else`-branch: when
+  `gOutOfCombat(p)` **AND** `gFrame-(_lastMpUseFrame||0) ≥ OOC_REGEN_DELAY` (600f/10s), base regen swaps to **`OOC_MP_REGEN` (10/60 = 10 mp/s)**
   instead of `W().mpRegen` (~1/s); card `mpRegenAdd` still stacks; clamped to `maxMp`. Per-player local, MP-safe.
   Knobs: `OOC_REGEN_DELAY`, `OOC_MP_REGEN`. `node --check` + grep verified (helper declared once, all spend sites
   routed, no stray `p.mp -=`). **⚠ Design default IN EFFECT (flag for Josh):** an active god-skill charges its chunk
@@ -165,8 +166,8 @@ refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 
 
 - ✅ ✨ **#8.2 — Default out-of-combat HP regen: 3 HP/s after 10 s without taking damage** — **done ENG
   2026-06-12** (alongside #8.8 — shares the `_lastDmgFrame` stamp added to `gDamagePlayer`). In `gUpdatePlayer`'s
-  HP-regen block: `_hpOoc = (gFrame-(_lastDmgFrame||0) ≥ OOC_REGEN_DELAY) ? OOC_HP_REGEN : 0` (**3/60 = 3 HP/s**,
-  gated on **no damage only** — not mana use), added to the card `hpRegenAdd` flat regen; clamped to `maxHp`.
+  HP-regen block: `_hpOoc = gOutOfCombat(p) ? OOC_HP_REGEN : 0` (**3/60 = 3 HP/s**, gated on **no damage taken AND
+  none dealt** — mana use irrelevant), added to the card `hpRegenAdd` flat regen; clamped to `maxHp`.
   Per-player local, MP-safe. Knobs: `OOC_HP_REGEN`, `OOC_REGEN_DELAY` (shared 10 s delay w/ #8.8). **Juice tell:**
   `gSpawnRegenMote(p)` spawns one heal-green `#7CFC9E` mote per 12 frames (~5/s) at a random lower-body offset with
   an upward `vy` (−0.6…−1.0) + longer `life`, via `spawnGPCustom`; fires only while `_hpOoc>0 && _healing` so it
