@@ -27,6 +27,9 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
   recover, then dive back in.
 
 ### Changed
+- **Dragonfire & chaosfire now have their own pillar and ground art.** The dragon (🐉) and chaos (🔥) ascensions
+  render distinct flame-pillar and burning-ground sprites — Wyrmspine/Dragonfeet/Wyrmwake read as iridescent
+  dragonfire, Riftmaw/Chaos Steps/Chaoswake/Chaos Crown as dark chaosfire — replacing the old generic flame + tint.
 - **Level-up draft consolidated (~33 → 23 cards) so every pick is build-defining.** The per-skill stat sprawl
   folds into broad **character stats** — **Strength** (+% melee damage, swing & heavy), **Ferocity** (crit chance
   + crit damage in one), **Dexterity** (+% attack speed — faster swings & heavy charge), **Reach** (swing & heavy
