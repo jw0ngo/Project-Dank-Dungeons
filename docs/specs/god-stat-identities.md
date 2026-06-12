@@ -64,12 +64,15 @@ into a pack-clearing explosion cascade. Crit *is* fire's build axis.
 - Crit chance caps at 0.75 → up to 75% detonate **per burn tick** (~every 0.4 s) is very chainy; tune the
   coefficient (e.g. explosion chance = `critChance × f`) so it reads as a satisfying cascade, not a constant
   screen-wide chain. Judge live.
-- **The `cil-conflag` "Conflagration" patron card (`:14103`) becomes redundant** (its whole job was
-  `burnExplodeChance`). **Decision (Josh):** retire it, or **repurpose** as a Cilia card that *amplifies the
-  crit→explosion conversion* (e.g. +explosion radius / +chain re-ignite count / +a flat explosion-chance bonus
-  on top of crit). PM rec: **repurpose to "+explosion radius & chain"** so the Cilia patron card still exists and
-  deepens the crit-fire build rather than vanishing. Searing Heat (burn tick dmg) + Lingering Flame (burn
-  duration) are unaffected and still feed the blast.
+- **The `cil-conflag` "Conflagration" patron card (`:14103`) — REPURPOSED to "+explosion radius & chain"
+  (DECIDED, Josh 2026-06-12).** Its old job (`burnExplodeChance`) is gone (chance is now crit). It instead
+  amplifies the *crit-fed* explosion: **+explosion AoE radius** (bigger blast in `gBurnExplode`) **and +chain
+  re-ignite** (the detonation re-ignites a wider/stronger chain — e.g. larger chain radius and/or the re-applied
+  burn is stronger/longer at `:6414`). New buffs (e.g. `wildBuffs.burnExplodeRadius` +X / `burnExplodeChain` +X,
+  engineer picks the knobs); **remove the now-dead `burnExplodeChance` buff** (factory init `:3424`/`:15177`,
+  reset `:16475`) **and its dev Statforge row** (`:16439`). So a Cilia crit build stacks Precision/Savagery for
+  *frequency + power* and Conflagration for *reach + chain* — the patron card still deepens the build, doesn't
+  vanish. Searing Heat (burn tick dmg) + Lingering Flame (burn duration) unaffected, still feed the blast.
 - Host-authoritative (burn/explosion already resolve host-side, `:6419`) → no MP-protocol change.
 
 ---

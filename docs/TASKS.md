@@ -169,11 +169,13 @@ refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 
   - **(2) Explosion damage ← crit damage** — in `gBurnExplode` (`:6396`) the blast is `max(4, round(_burnTickDmg
     × 4))` (`:6403`); scale by the crit multiplier `(CRIT_BASE_MULT + wildBuffs.critDamage)` instead of the flat
     ×4 (pick a coefficient so a no-crit Cilia still detonates modestly, a crit build detonates hard).
-  - **(3) Repurpose the now-redundant `cil-conflag` "Conflagration" patron card** (`:14103`, its only job was
-    `burnExplodeChance`) — **PM rec: repurpose to "+explosion radius & chain re-ignite"** so the Cilia patron card
-    still deepens the crit-fire build rather than vanishing (retire-vs-repurpose is Josh's call; flag in playtest).
-    Searing Heat / Lingering Flame unaffected. **Decide `burnExplodeChance`'s fate** (remove the buff + its dev
-    Statforge row `:16439`, or keep as a small additive-on-top-of-crit bonus the repurposed card feeds).
+  - **(3) Repurpose the `cil-conflag` "Conflagration" patron card** (`:14103`) to **"+explosion radius & chain"**
+    (DECIDED, Josh 2026-06-12 — not a fork). Old job (`burnExplodeChance`) is gone (chance = crit now). It now
+    adds **+explosion AoE radius** (bigger blast in `gBurnExplode`) **and +chain re-ignite** (wider/stronger
+    re-ignite at `:6414` — e.g. larger chain radius and/or stronger/longer re-applied burn). New buff(s) (e.g.
+    `burnExplodeRadius` / `burnExplodeChain`, your knobs). **Remove the now-dead `burnExplodeChance` buff**
+    (factory `:3424`/`:15177`, reset `:16475`) **and its Statforge row** (`:16439`). Result: crit cards →
+    detonation frequency + power; Conflagration → reach + chain. Searing Heat / Lingering Flame unaffected.
   - Host-authoritative (burn resolves host-side) → no MP change. **Verify** on the training dummy / a burning pack:
     crit cards now drive detonation frequency + blast size; zero-crit Cilia still chains modestly.
 
