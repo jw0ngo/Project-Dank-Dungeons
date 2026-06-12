@@ -7,6 +7,22 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+### Added
+- **Trail of Embers — Cilia's second God Skill.** A movement-as-weapon aura that lays burning ground as you
+  move (you pay mana only while moving). **Form @5:** *Inferno Wake* (a wide cone of fire fanning behind you) or
+  *Firesteps* (a single, hotter line). **Ascension @10:** 🐉 *Wyrmwake* / *Dragonfeet* (dragonfire that heals you —
+  Dragonfeet's steps erupt into healing pillars) · 🔥 *Chaoswake* (a chaosfire cone that never spawns under you) /
+  *Chaos Steps* (a trail of exploding footsteps dropped behind you).
+- **Pillars of Fire — Cilia's third God Skill.** An actively **mouse-aimed** ranged barrage: every 7s, a 3-second
+  pulsing indicator shows where the pillars will land (rotating with your mouse), then a lane of fire erupts there.
+  **Form @5:** *Eruption* (a colossal finale pillar landing at your cursor — at full evolution it reaches the
+  screen's edge) or *Firewall* (advancing walls of fire). **Ascension @10:** 🐉 *Wyrmspine* (the finale re-erupts +
+  heals) / *Dragonmarch* (dragonfire walls + a healing carpet) · 🔥 *Riftmaw* (place a jagged chaos rift at your
+  cursor that tears **across the map** and burns for 20s) / *Hellfront* (extra advancing chaos walls).
+- **Out-of-combat recovery.** After 10s without taking *or dealing* damage, you regain **3 HP/s** (with a gentle
+  green heal shimmer); mana also fast-recharges at **10 MP/s** after 10s with no mana use either — disengage to
+  recover, then dive back in.
+
 ### Changed
 - **Burning Body mana economy rescaled — cost and damage are now independent per-rank tables.** Each rank reads a
   fixed mana cost (`mpChunkByRank`) and a fixed damage (`auraDmgByRank`/`emitDmgByRank`) straight off a table — no
