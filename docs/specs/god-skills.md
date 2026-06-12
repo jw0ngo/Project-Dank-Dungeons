@@ -228,12 +228,14 @@ take burn DoT each `AURA_TICK`. Standalone damage (`AURA_DMG`/`FR_BASE_DMG`-scal
     rule is confined to the *area/burst* chaos leaves (Burning Body's Chaos Crown, Pyroclasm's Hellfront) — Trail
     and Eye of Chaos are the two exceptions.
 
-**Mana cost (item 7 — author from the start, NOT retrofitted).** Trail inherits the **#8.9 rescaled cost/dps
-model** ([`mana-economy.md`](mana-economy.md) "Burning Body cost curve — RESCALED"), baked in from rank 1 rather
-than shipped flat-and-rescaled-later (the lesson Burning Body paid for): a **low rank-1 anchor**, a
-**step-change in cost AND dps at each evolution** (rank 5 Form, rank 10 Ascension), and **`dps ∝ cost^1.5`** so
-dps-per-mana *rises* with investment. **NOT** the flat `base + inc·(rank−1)` ramp the original Phase-2 grounding
-implied ("get an `mpCost` for free via the same path" — that path is exactly what #8.9 condemned).
+**Mana cost (item 7 — author from the start, NOT retrofitted).** Trail uses the **#8.9 cost+damage model**
+([`mana-economy.md`](mana-economy.md) "Burning Body cost curve — RESCALED"), authored from rank 1 rather than
+shipped flat-and-rescaled-later (the lesson Burning Body paid for): **two independent per-rank tables — a fixed
+cost per rank and a fixed damage per rank** — with a low rank-1 anchor and a **step-change in both at each
+evolution** (rank 5 Form, rank 10 Ascension). Author the **damage table to climb faster than the cost table** so
+dps-per-mana rises with investment (specialization rewarded), tuned by feel. **NO formula coupling damage to
+cost** (⚠ an earlier draft said "dps ∝ cost^1.5 as a mechanic" — wrong; reverted. The relationship is a property
+of the chosen numbers, not code). **NOT** the flat `base + inc·(rank−1)` ramp the original Phase-2 grounding implied.
 
 > **✅ RESOLVED (Josh, 2026-06-12) — a movement skill charges only upon movement: cost follows emission shape.**
 > Burning Body is a clean continuous aura, so its drain is naturally **per-second** (mp/s) and the whole #8.9
@@ -249,8 +251,8 @@ implied ("get an `mpCost` for free via the same path" — that path is exactly w
 > | **Phoenix Mantle / Immolation** (asc.) | continuous aura | **per-second** |
 >
 > So: **movement/patch Forms charge per-patch** (movement = the weapon *and* the cost — on-identity, on the
-> weighty-combat directive), **continuous-aura Forms charge per-second.** The #8.9 step+superlinear shape applies
-> either way: a per-patch cost and per-patch damage both step at evolution, with dmg ∝ cost^1.5.
+> weighty-combat directive), **continuous-aura Forms charge per-second.** The #8.9 per-rank cost+damage tables
+> apply either way — a per-patch cost and a per-patch damage, each authored per rank with the evolution steps.
 > **HUD note:** the action bar shows `mpCostPerSec`; for a per-patch Form, display an honest **effective mp/s
 > while moving** (cost-per-patch × emit-rate at normal move speed) — engineer's representation call.
 

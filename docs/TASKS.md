@@ -68,22 +68,22 @@ refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 
   Josh 2026-06-12 · spec [`specs/mana-economy.md`](specs/mana-economy.md) "Burning Body cost curve — RESCALED") —
   the shipped curve is **flat-linear in cost, gentler-linear in dps** → efficiency runs backwards (rank 1→2 = cost
   ×3.7 for dps ×1.5; dps/mana falls ~4× over ranks 1→10) and **evolution adds no step**. Retune to the spec's target
-  curve. Josh-locked principles: **(1) rank 1 = 2 mp/s** (from 3.33); **(2) step-change in cost AND dps at each
-  evolution** (rank 5 Form, rank 10 Ascension), gentle within a tier; **(3) `dps ∝ cost^1.5`** so dps-per-mana
-  *rises* with investment (20 mp/s ≫ 5× the dps of 4 mp/s). Target table (cost mp/s + dps × rank-1) in the spec.
-  - **Levers:** replace the flat `mpChunkInc:27` (`:14150`) with a **tiered per-rank cost schedule + explicit
-    evolution cost-steps** at ranks 5/10 — `gGodSkillBaseChunk` (`:3888`) becomes a per-tier table / rank→cost
-    lookup (cost is now piecewise, not `base + inc·(rank−1)`); keep the 3 s chunk cadence. Steepen the
-    `auraDmg`/`emitDmg` `waveStep`/`formStep` (`:14155/14161/14174`) + add evolution dps-steps so realized dps
-    tracks the target × multiples.
-  - **Two tunables for Josh** (flag, don't guess): **efficiency exponent `k`** (1.5 proposed; 2.0 = steeper
-    specialist reward) and the **rank-10 cost ceiling** (~45 mp/s proposed, down from ~88; lift if maxed BB should
-    stay a Max-MP-gated monster).
-  - **Verify on the training dummy** (`hitTrainingDummy` path already wired in `gTickBurningBody :4021`): measure
+  curve. **⚠ MODEL CORRECTED (Josh 2026-06-12):** an earlier draft said "dps ∝ cost^1.5 as a runtime formula"; the
+  engineer built `gGodSkillDpsScale` and it was **reverted**. Correct model = **two INDEPENDENT per-rank lookup
+  tables, no coupling formula**: **(1)** `mpChunkByRank:[…]` (fixed cost per rank, charged every 3 s, low rank-1
+  anchor ~2 mp/s, step at the Form/Ascension forks); **(2)** `auraDmgByRank:[…]` / `emitDmgByRank:[…]` (fixed damage
+  per rank). **Author the damage table to climb faster than the cost table** so dps-per-mana rises with investment
+  (Josh-chosen, model B) — but as *numbers*, NOT an exponent. Remove `gGodSkillDpsScale` + `GOD_DPS_EXP` + the
+  `* dps` multipliers. Starting tables in the spec; tune by feel.
+  - **Levers:** `gGodSkillBaseChunk` (`:~3943`) reads `mpChunkByRank` (already done); `gGodFireParam`'s `auraDmg`/
+    `emitDmg` read the new `*ByRank` tables (or restore explicit per-rank damage). No derived scaling. Keep the 3 s cadence.
+  - **One tunable for Josh:** the **rank-10 cost ceiling** (~45 mp/s proposed, down from ~88; lift if maxed BB should
+    stay a Max-MP-gated monster). The damage-vs-cost steepness is now just the authored numbers — tune by feel.
+  - **Verify on the training dummy** (`hitTrainingDummy` path already wired in `gTickBurningBody :~4021`): measure
     realized dps at ranks 1/5/10 per Form and confirm the dps/mp ratio climbs + the evolution steps read. Pairs
     with #8.7/#8.8 (this lowers early cost too — re-judge early difficulty together). Host-authoritative; the HUD
-    mp/s figure (`gGodSkillDrainPerSec`) updates for free. **Trail/Pyroclasm (item 2) inherit this curve shape**
-    when built — author their cost/dps with the same step+superlinear model, not a flat ramp.
+    mp/s figure (`gGodSkillDrainPerSec`) updates for free. **Trail/Pyroclasm (item 2) inherit this two-table model**
+    when built — fixed per-rank cost + damage tables, not a flat ramp and not a formula.
 
 - ◻️ ✨ **#8.8 — Default out-of-combat MANA regen: 10 mp/s after 10 s of no mana use AND no damage** (↳ from
   PM playtest, Josh 2026-06-12) — mirror of the HP-regen #8.2, and the **relief valve for #8.7** (recharge by

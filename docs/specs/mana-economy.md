@@ -93,53 +93,51 @@ progression. Starting numbers (tune by feel):
 - **Burning Body cost curve — RESCALED (Josh 2026-06-12, supersedes the old flat-linear "10 mp/3s + 27/level"
   model).** The shipped curve was **flat-linear in cost and gentler-linear in dps**, so efficiency ran *backwards*
   (rank 1→2 = cost ×3.7 for dps ×1.5; dps-per-mana **fell ~4×** rank 1→10) and **evolution added no step**. The
-  redesign fixes the mana-to-dps economy. Three principles (the *principles* are Josh-locked; the *exact numbers*
-  are a proposed realization — tune freely):
-  1. **Anchor: rank 1 = 2 mp/s** (down from 3.33). 
-  2. **Step-change at each evolution** — cost ramps gently within a tier, then **jumps at rank 5 (Form)** and again
-     at **rank 10 (Ascension)**. Same shape for dps. Evolving must *feel* like a power+cost spike, not one more
-     linear tick.
-  3. **DPS scales superlinearly with cost: `dps ∝ cost^k`, `k ≈ 1.5`** (the **efficiency exponent**, the master
-     tunable). This makes **dps-per-mana RISE with investment** — 20 mp/s deals ~**11×** the dps of 4 mp/s (Josh's
-     "much more than 5×"). Pouring mana into one skill is rewarded → specialization is the payoff (build-craft
-     north star). Because dps ∝ cost^1.5, a cost *step* at evolution yields an even bigger dps *step* **for free** —
-     put the discontinuity in **cost**; the damage spike follows.
+  redesign fixes the mana-to-dps economy. **The model is two INDEPENDENT per-level tables — a fixed mana cost per
+  rank and a fixed damage per rank — both authored directly and tuned by feel.** There is **NO formula coupling
+  damage to cost** (⚠ correction, Josh 2026-06-12: an earlier draft wrote "dps ∝ cost^1.5" as a runtime mechanic —
+  that was wrong; the engineer built it and it was reverted. The cost↔damage *relationship* is a property of the
+  numbers you pick, not code). Three guidelines for picking the numbers:
+  1. **Anchor: rank 1 is cheap (~2 mp/s).**
+  2. **Step-change at each evolution** — both tables ramp gently within a tier, then **jump at rank 5 (Form)** and
+     again at **rank 10 (Ascension)**. Evolving must *feel* like a power+cost spike, not one more linear tick.
+  3. **Author the DAMAGE table to climb faster than the COST table** — so a maxed skill is *disproportionately*
+     mana-efficient and **pouring mana into one skill is rewarded** (specialization = the build-craft payoff; Josh's
+     "much more than 5×"). This is the intent the old formula was reaching for — now it just lives in the chosen
+     numbers. The actual feel of "how much faster" is **tuned on the training dummy**, not fixed by an exponent.
 
-  **Proposed target curve** (engineer back-solves the registry to land the realized dps on these multiples; verify
-  on the training dummy):
+  **Starting tables** (a first cut to tune from — NOT a target to back-solve; edit any number that feels wrong):
 
   | Rank | Cost mp/s | DPS (× rank-1) | note |
   |---|---|---|---|
   | 1 | **2.0** | 1.0× | |
-  | 2 | 3.0 | 1.8× | |
-  | 3 | 4.0 | 2.8× | |
-  | 4 | 5.5 | 4.6× | |
-  | 5 | **9.0** | **9.5×** | ⬆ Form evolution — step |
-  | 6 | 12 | 14.7× | |
-  | 7 | 16 | 22.6× | |
-  | 8 | 21 | 34× | |
-  | 9 | 27 | 50× | |
-  | 10 | **45** | **107×** | ⬆ Ascension — big step |
+  | 2 | 3.0 | ~1.8× | |
+  | 3 | 4.0 | ~2.8× | |
+  | 4 | 5.5 | ~4.6× | |
+  | 5 | **9.0** | **~9.5×** | ⬆ Form evolution — step |
+  | 6 | 12 | ~14.7× | |
+  | 7 | 16 | ~22.6× | |
+  | 8 | 21 | ~34× | |
+  | 9 | 27 | ~50× | |
+  | 10 | **45** | **~107×** | ⬆ Ascension — big step |
 
-  - **Two open tunables (Josh's call):** **(a) efficiency exponent `k`** — 1.5 = "much more than 5× but not
-    runaway"; raise toward 2.0 for a steeper specialist reward (k=2 → 20mp/s = 25× the 4mp/s dps). **(b) rank-10
-    ceiling** — proposed ~45 mp/s (down from ~88 to honour "lower cost"); lift it (steeper tier-2 ramp + bigger
-    ascension step) if maxed Burning Body should stay a true Max-MP-gated monster.
   - **NO CAP on cost** (unchanged) — at high rank the cost still exceeds a base pool; the "build Max-MP/regen to
-    wield it" gate IS the design (see build-diversity below). The rescale changes the *curve shape*, not the gate.
-  - **Engineering levers (the how is the engineer's):** replace the flat `mpChunkInc:27` (`:14150`) with a **tiered
-    per-rank schedule + explicit evolution cost-steps** at ranks 5/10 (so cost is piecewise, not one slope);
-    steepen the `auraDmg`/`emitDmg` `waveStep`/`formStep` and add **evolution dps-steps** so realized dps tracks
-    the target × multiples. The cost is no longer a clean `base + inc·(rank−1)` — it's tiered, so `gGodSkillBaseChunk`
-    (`:3888`) needs a per-tier table (or base-chunk + a rank→cost lookup). Keep the 3 s chunk cadence.
+    wield it" gate IS the design (see build-diversity below).
+  - **Rank-10 ceiling** (~45 mp/s, down from ~88 to honour "lower cost") — lift it if maxed Burning Body should stay
+    a true Max-MP-gated monster. Tune by feel.
+  - **Engineering levers (the how is the engineer's):** **two flat per-rank lookup tables** —
+    `mpChunkByRank:[…]` (cost, charged every 3 s) **+** `auraDmgByRank:[…]` / `emitDmgByRank:[…]` (damage, read by
+    `gGodFireParam`/`gTickBurningBody`). Each rank reads its cost and its damage straight off its table — no derived
+    scaling, no `gGodSkillDpsScale`, no exponent const. The evolution step is just a jump in the tables at rank 5/10.
+    Keep the 3 s chunk cadence.
 - **Drain layered on regen**, not a replacement: net passive = `regen − Σ(active drains)`. When total active drain
   **exceeds regen**, the pool bleeds even while idle — the pressure that forces toggling skills off (Phase 3).
 
 #### The mechanic is fixed; build variety lives in the CARD pool (design principle — Josh 2026-06-12)
 
-**How mana is spent does not change from here** (numbers tweak, mechanic frozen): a per-second drain that
-scales **super-linearly** with skill level (tiered, with evolution steps — see the rescale above) + per-emit costs
-on evolved Forms, no cap. The variety comes from the **supply side — the
+**How mana is spent does not change from here** (numbers tweak, mechanic frozen): a per-second drain set by a
+**fixed per-rank cost table** (with evolution steps — see the rescale above) + per-emit costs on evolved Forms,
+no cap; damage is a **separate fixed per-rank table** authored to climb faster than cost. The variety comes from the **supply side — the
 card pool — which we expand so a wide range of mana builds are all viable** (the roguelite north star: maximize
 build potential = maximize long-run playability). A flat per-second drain is gated by two *independent* levers, and
 cards push on either:
