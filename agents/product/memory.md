@@ -18,6 +18,28 @@ lesson: **the principle → why → how to apply.** Quality over volume.
 
 ---
 
+### 2026-06-12 — A spec hands the engineer tunable DATA + feel targets, never a FORMULA that derives one game quantity from another
+
+- **Principle:** I wrote "DPS scales superlinearly with cost: `dps ∝ cost^1.5` (the efficiency exponent, the
+  master tunable)" into the #8.9 mana spec as a *mechanic*. The engineer faithfully built it (`gGodSkillDpsScale`
+  — damage derived from cost at runtime), and Josh rejected the whole thing: **skills should have a fixed cost AND
+  a fixed damage per level, set independently.** The intent I was reaching for ("reward going deep on one skill")
+  is real and survived — but it's a **property of the numbers you choose** (author the damage table to climb
+  faster than the cost table), *not* a formula in code. I had encoded a **descriptive** relationship as a
+  **prescriptive** coupling, which removes the designer's ability to tune the two sides independently — the exact
+  opposite of the build-space freedom I usually protect.
+- **Why:** a spec is a contract for the engineer to build *and for Josh to tune*. Two quantities Josh wants to
+  feel out separately (cost vs damage, here) must reach him as two independent dials (data tables) with a feel
+  *target* ("damage should outpace cost — tune by eye"), not as one quantity computed from the other. A formula
+  coupling looks elegant and "can't drift," but the no-drift property is exactly the control Josh wanted to keep.
+  This is the supply-side/`open-vs-close` lesson at the spec layer: don't bake a relationship into the substrate;
+  expose it as numbers. (Engineer-memory sibling logs the build-side: faithful impl of an over-specced formula is
+  still the engineer's miss to catch — and this session that engineer was *me in the other hat*.)
+- **How to apply:** when a spec is tempted to write "X scales as f(Y)", stop — ask "does Josh want to set X and Y
+  independently?" (almost always yes). If so, spec **two tables + a feel target for their relationship**, never a
+  coupling formula or an "exponent knob". Reserve formulas for genuinely-locked invariants (rare). Give the
+  engineer the *intent* + the dials, and let the playtest set the numbers.
+
 ### 2026-06-12 — A "docs-only" PM push is NOT deploy-safe by default: `git push` ships the whole `origin/main..HEAD` chain, gated build commits and all
 
 - **Principle:** the PM's pre-authorized docs-only push right is about *what the PM commits*, but `git push origin
