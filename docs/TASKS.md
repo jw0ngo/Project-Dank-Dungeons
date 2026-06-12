@@ -226,8 +226,10 @@ refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 
   Josh's call): `gFireBursts` list + `gSpawnFireBurst`/`gUpdateFireBursts`/`gDrawFireBursts` (mirrors `gFireRings`).
   Sprite blooms **centre→edge** (ease-out, diameter `0.3r→2r`) then fades, **additive** (`'lighter'`), sized to
   `BURN_EXPLODE_R×1.15`. Loaded via a direct `Image` const (`FIREEXPLOSION_SPR`) like the fire-FX family — **not
-  the manifest** (the fire-draw code uses direct consts). Host-spawned (cosmetic, no MP sync — matches the
-  explosion particles); procedural-disc fallback. `node --check` + asset-resolves verified.
+  the manifest** (the fire-draw code uses direct consts). Host-spawned, **synced to co-op clients** via a new
+  bounded `world/fx` set()-stream (`Net.sendFx`/`_onFxUpdate` + `gNetFx` rolling list + `gBurstAndSync`;
+  id-deduped, history-baselined on join); procedural-disc fallback. `node --check` + an extract-eval canary of
+  the client dedup verified.
   <details><summary>original handoff (Artist)</summary>
 
   one new transparent FX cutout committed at `assets/fx/cilia/fireexplosion.png` (256², ~88 KB; radial fire burst,

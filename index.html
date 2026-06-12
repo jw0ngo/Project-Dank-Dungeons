@@ -2058,6 +2058,8 @@ let gWildTrees=[]; // [{wx,wy,variant,scale,small}] — world.tree[small].<varia
 let gFireWaves=[]; // imbued-LMB fire arcs (Cilia's Fire)
 let gFireRings=[]; // imbued-whirlwind expanding fire rings (Cilia's Fire)
 let gFireBursts=[]; // one-shot fire-explosion sprites that bloom centre→edge then fade (Conflagration detonation)
+let gNetFx=[];      // host: rolling list of one-shot world FX (fire bursts) broadcast to clients via world/fx (cosmetic, bounded)
+let _netFxSeq=0;    // host: monotonic id for net FX events (clients dedupe on it)
 let gFireCrosses=[]; // imbued-leap burning crosses (Cilia's Fire)
 let gFireTrails=[]; // imbued-dash flame trail (Cilia's Fire)
 let gTrailHits=new WeakMap(); // shared per-enemy trail hit cooldown (overlap-proof)
@@ -3224,6 +3226,7 @@ function gameLoad(mapData) {
   gFireWaves=[];
   gFireRings=[];
   gFireBursts=[];
+  gNetFx=[];   // host: clear the broadcast FX list (next sendFx writes null, clearing world/fx for the new run)
   gFireCrosses=[];
   gFireTrails=[]; gTrailHits=new WeakMap();
   gFirePillars=[];
@@ -6375,7 +6378,7 @@ const BURN_EXPLODE_R      = 60;    // px AoE radius
 const BURN_EXPLODE_FRAMES = 120;   // re-ignite duration on caught enemies (before the player's durMult)
 function gBurnExplode(src){
   const dmg = Math.max(4, Math.round((src._burnTickDmg || 1) * 4));
-  gSpawnFireBurst(src.wx, src.wy, BURN_EXPLODE_R * 1.15);   // bloom sized just over the AoE so flames cover the kill zone
+  gBurstAndSync(src.wx, src.wy, BURN_EXPLODE_R * 1.15);   // bloom sized just over the AoE; synced so co-op clients see it too
   spawnGP(src.wx, src.wy, '#ff5512', 18, 4.5);
   spawnGP(src.wx, src.wy, '#ffcc33', 10, 3);
   gShake(2, 4);
@@ -6628,6 +6631,15 @@ function gDrawFireRings(){
 const FIREEXPLOSION_SPR = new Image(); FIREEXPLOSION_SPR.src = 'assets/fx/cilia/fireexplosion.png';
 const FIREBURST_LIFE = 22;   // frames (~0.37s) — a quick bloom
 function gSpawnFireBurst(x, y, r){ gFireBursts.push({ x, y, r, t: 0, rot: Math.random() * Math.PI * 2 }); }
+// Spawn a burst locally AND, on the MP host, queue it for the world/fx broadcast so co-op clients replay it.
+// Use this for host-decided world detonations (vs gSpawnFireBurst for purely-local visuals).
+function gBurstAndSync(x, y, r){
+  gSpawnFireBurst(x, y, r);
+  if(MP.active && MP.isHost){
+    gNetFx.push({ id: ++_netFxSeq, t:'burst', x:Math.round(x), y:Math.round(y), r:Math.round(r) });
+    if(gNetFx.length > 16) gNetFx.shift();   // bounded rolling list — set() overwrites, no unbounded growth
+  }
+}
 function gUpdateFireBursts(dt){
   for(let i = gFireBursts.length - 1; i >= 0; i--){ if((gFireBursts[i].t += dt) >= FIREBURST_LIFE) gFireBursts.splice(i, 1); }
 }
@@ -10246,8 +10258,10 @@ const Net = {
     Net._on(playersRef, 'child_removed', Net._onPlayerRemoved);
 
     // Four independent listeners — each system owns its own path and handler
+    Net._fxSeen = null;   // re-baseline the FX replay on (re)subscribe so we don't replay history
     Net._on(db.ref(`rooms/${roomId}/world/enemies`),       'value', Net._onEnemiesUpdate);
     Net._on(db.ref(`rooms/${roomId}/world/arrows`),        'value', Net._onArrowsUpdate);
+    Net._on(db.ref(`rooms/${roomId}/world/fx`),            'value', Net._onFxUpdate);
     Net._on(db.ref(`rooms/${roomId}/world/bombs`),         'value', Net._onBombsUpdate);
     Net._on(db.ref(`rooms/${roomId}/world/destructibles`), 'value', Net._onDestructiblesUpdate);
     Net._on(db.ref(`rooms/${roomId}/world/potions`),       'value', Net._onPotionsUpdate);
@@ -10495,6 +10509,32 @@ if (!room || room.started !== true) return;
       window._FB.db.ref(`rooms/${MP.roomId}/world/arrows`).set(eSnap);
     }
     // Player arrows now sent by sendPlayerArrows() for all peers
+  },
+
+  /** §7.2c  Stream: one-shot world FX (fire bursts) for clients to replay — set-based, bounded, id-deduped.
+   *  Writes only when a new event appeared since the last send (max id changed), so it doesn't spam the DB. */
+  sendFx() {
+    if (!MP.active || !MP.isHost || !window._FB) return;
+    if (MP.sendTick % Math.round(60 / MP_ENEMY_HZ) !== 0) return;
+    const maxId = gNetFx.length ? gNetFx[gNetFx.length - 1].id : 0;
+    if (maxId === Net._fxSent) return;
+    Net._fxSent = maxId;
+    window._FB.db.ref(`rooms/${MP.roomId}/world/fx`).set(gNetFx.length ? gNetFx : null);
+  },
+
+  /** Client: replay one-shot world FX the host broadcast. Baselines on the first snapshot so a joining
+   *  client doesn't replay history; thereafter spawns each event whose id is newer than seen. */
+  _onFxUpdate(snap) {
+    if (!MP.active || MP.isHost) return;
+    const list = snap.val();
+    if (!list || !list.length) return;
+    const maxId = list[list.length - 1].id || 0;
+    if (Net._fxSeen == null) { Net._fxSeen = maxId; return; }   // join baseline — don't replay history
+    for (const e of list) {
+      if ((e.id || 0) <= Net._fxSeen) continue;
+      if (e.t === 'burst') gSpawnFireBurst(e.x, e.y, e.r);
+    }
+    Net._fxSeen = Math.max(Net._fxSeen, maxId);
   },
 
   /** All peers: broadcast own player arrows so everyone sees them */
@@ -10965,6 +11005,7 @@ function mpTick(){
   Net.sendBombs();
   Net.sendPlayerArrows();
   Net.sendArrows();
+  Net.sendFx();
 }
 
 /** Event-driven: call whenever a destructible breaks. Host-only. */
