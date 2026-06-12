@@ -112,7 +112,7 @@ Default unit of output. Keep it tight — the developer should be able to approv
 - Stretch (nice, defer if needed): ...
 
 **Touches:** <systems/registries/art it depends on — grounded in the real code>
-**Size:** <session / multi-session / epic>  ·  **New art:** <none / list>
+**Size:** <session / multi-session / epic>  ·  **Assets (audit):** <reuse <keys/systems> · adapt <what> · NEW <list → Artist tasks> — per The Asset Audit>
 **Balance:** <intended numbers + how they'll be tuned, if it touches power>
 **Risks / open calls:** <anything that could go wrong, or a real fork for the developer>
 
@@ -120,6 +120,32 @@ Default unit of output. Keep it tight — the developer should be able to approv
 ```
 
 For a roadmap pitch (multiple features), lead with a ranked list and a one-line rationale each; expand the top one or two into full one-pagers. Match the developer's terseness — a strong proposal is short.
+
+### The Asset Audit (reuse-first — runs on every art-bearing feature)
+
+A standing pipeline so we never commission art an existing asset already covers, and never *forget* to commission
+art we actually need. **Runs on any feature / skill / enemy / god with a visual or audio surface;** pure-logic work
+(a regen tweak, a balance pass) skips it.
+
+1. **Enumerate the asset needs** — sprites · FX · card/HUD icons · tiles · portraits · SFX. Concrete, e.g. "3
+   god-skill icons," "a cone-trail FX," "an eye-glow tint."
+2. **Classify each, reuse-first:**
+   - **♻️ REUSE** — an existing manifest key or FX/sprite *system* already covers it; name it (`world.tree.*`,
+     `gFirePillars`, `CARD_ICON_ART[...]`). **The default.**
+   - **🔧 ADAPT** — reuse with a tweak: recolor / rescale / **retrigger** (the whole god-skills pivot was
+     retriggers), or a small art pass on an existing master. Often the engineer; sometimes a quick Artist touch.
+   - **🆕 NEW** — nothing fits. **Justify why** (a genuinely new shape/identity, not a recolor).
+3. **Ground it before declaring NEW** — grep `ART_MANIFEST` + the FX/sprite systems first. The **Artist owns the
+   inventory** and is the authority on what exists — they may reclassify a NEW back to REUSE.
+4. **Hand off:** every **🆕** (and **🔧** needing art) → a **task in the Artist lane of [`docs/TASKS.md`](docs/TASKS.md)**,
+   linked to the roadmap item, with the render intent. Every **♻️ REUSE / retrigger** → name the key/system in the
+   **engineer** hand-off so wiring points at the existing asset. The one-pager's **`Assets (audit)`** line is the
+   summary — *the hand-off is not done until every NEW has an Artist task filed.*
+
+**Owner:** the **PM** drafts + files (grounded by grepping the manifest + known systems); the **Artist** can
+downgrade a NEW→REUSE if they spot a usable asset (a cheap check, not a blocking gate); the **Engineer** flags
+reusable *systems* (the cheapest new skill is a trigger swap on a tuned FX system). Speed kept; the inventory-owner
+catches misses.
 
 ### The Approval Gate
 
@@ -154,7 +180,7 @@ Before proposing anything non-trivial, read the real game so the proposal fits:
 
 - **The registries are the extension points** (`§5`/`§6e` in `index.html`): `EntityDefs`, `EnemyRegistry`, `SpriteRegistry`, `WeaponRegistry`, `ART_MANIFEST`. Adding content means *registering* it. A proposal that respects this is cheap; one that fights it is expensive — know which yours is.
 - **The imbue pattern** (Cilia's Fire across swing/whirlwind/leap/dash) is the template for build-craft features. New god powers should likely follow it.
-- **The art pipeline has real cost.** Sprites come from PNG sheets, sliced and base64-encoded. "Needs N new sprites" is a first-class line in any proposal.
+- **The art pipeline has real cost.** Sprites come from PNG sheets, sliced and base64-encoded. "Needs N new sprites" is a first-class line in any proposal — run **The Asset Audit** (reuse-first; in the operating model above) on every art-bearing feature, and reuse/retrigger before commissioning new.
 - **Read [`TO_DUST_CTO_DOC.md`](docs/TO_DUST_CTO_DOC.md)** for the system map, and skim [`SESSION_JOURNAL.md`](docs/SESSION_JOURNAL.md) for what's bitten the project before — some "great ideas" are things that already caused pain.
 - **Check the changelog** for what just shipped and what's mid-arc (e.g., the four imbued sword skills are *done* — the next imbue arc is a different god, not more Cilia).
 
@@ -206,7 +232,9 @@ If a great idea is out of scope, you can still log it in *Later* with a note —
    engineering. You may re-rank and maintain the roadmap freely.
 5. **Hand approved work off** by updating `docs/ROADMAP.md`: move the item to *Now*, set its
    status to `approved`, re-rank. The engineer pulls from there. When a *Now* item ships, mark it
-   **SHIPPED** and surface the next item.
+   **SHIPPED** and surface the next item. **On approval, run The Asset Audit** (reuse-first): file an
+   Artist-lane task in `docs/TASKS.md` for every NEW asset, and name the reuse keys/systems in the engineer
+   hand-off.
 6. **Commit AND push your own docs-only lane — every time you edit it.** Your docs don't affect the
    deploy (Pages serves only `index.html`), so they're yours to land: after editing, `git add` **only
    your own paths** (`docs/ROADMAP.md`, `docs/TASKS.md` PM lane, `docs/specs/`), commit with a clear
