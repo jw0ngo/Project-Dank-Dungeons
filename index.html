@@ -4336,7 +4336,8 @@ function gTickPyroclasm(p, dt, id, tree){
   if(asc === 'riftmaw') dmg = Math.max(1, Math.round(dmg * PYRO_RIFT_DMG));   // long rift → many pillars, lower each
   const radius  = gGodFireParam(p, id, 'pillarRadius');
   const count   = Math.max(1, Math.round(gGodFireParam(p, id, 'pillarCount')));
-  const burnDur = gGodFireParam(p, id, 'burnFrames');
+  let   burnDur = gGodFireParam(p, id, 'burnFrames');
+  if(asc === 'riftmaw') burnDur = PYRO_RIFT_BURN;             // the rift burns for 20s
 
   gPyroFire(p, p.angle, gPyroAimDist(p, id), dmg, count, radius, burnDur, ground, shape, asc);  // fire toward the mouse
   gShake && gShake(4, 6);
@@ -4350,19 +4351,31 @@ function gPyroAimDist(p, id){
 }
 // The deterministic pillar footprints for a fire aimed in direction `ang` out to `aimDist` — the SINGLE source
 // of layout truth, shared by the actual fire (gPyroFire) and the aim indicator (gDrawPyroTelegraph) so they
-// always match. Returns [{x, y, r, finale, delay}]. Riftmaw = a long erratic rift (deterministic jitter).
-function gPyroPlan(p, ang, aimDist, shape, count, radius, asc){
+// always match. Returns [{x, y, r, finale, delay}]. `forTelegraph` only changes Riftmaw: the indicator is a
+// clean STRAIGHT line of circles, while the real rift is a condensed JAGGED line of pillars.
+function gPyroPlan(p, ang, aimDist, shape, count, radius, asc, forTelegraph){
   const out = [], start = FP_START_TILES * T;
   if(asc === 'riftmaw'){
-    // A screen-spanning rift: PYRO_RIFT_LEN chaos pillars marching out in the AIM direction with deterministic
-    // lateral jitter (erratic but identical between telegraph + fire), erupting in sequence so it TRAVELS.
-    const perp = ang + Math.PI / 2;
-    for(let i = 0; i < PYRO_RIFT_LEN; i++){
-      const d = start + i * PYRO_RIFT_STEP;
-      const h = Math.sin(i * 127.1 + 311.7) * 43758.5453; const jit = (h - Math.floor(h)) * 2 - 1;  // [-1,1], deterministic per i
-      out.push({ x: p.wx + Math.cos(ang) * d + Math.cos(perp) * jit * PYRO_RIFT_JITTER,
-                 y: p.wy + Math.sin(ang) * d + Math.sin(perp) * jit * PYRO_RIFT_JITTER,
-                 r: radius, finale: false, delay: i * PYRO_RIFT_DELAY });
+    // Placed at the CURSOR (anywhere on screen), perpendicular to your aim → a wall crossing the map BOTH ways
+    // (never on you by default). Indicator = a clean straight line of circles; actual = a condensed jagged line
+    // of chaosfire pillars erupting outward from the cursor (it tears open). Lateral jitter is deterministic.
+    const cx = gMouseX + camX, cy = gMouseY + camY;
+    const axis = Math.atan2(cy - p.wy, cx - p.wx) + Math.PI / 2;
+    const reach = Math.min(VW, PYRO_RIFT_HALFSPAN);
+    if(forTelegraph){
+      const per = Math.ceil(reach / PYRO_RIFT_TELE_STEP);
+      for(let i = -per; i <= per; i++)
+        out.push({ x: cx + Math.cos(axis) * i * PYRO_RIFT_TELE_STEP, y: cy + Math.sin(axis) * i * PYRO_RIFT_TELE_STEP, r: radius, finale: false, delay: 0 });
+      return out;
+    }
+    const jx = Math.cos(axis + Math.PI / 2), jy = Math.sin(axis + Math.PI / 2);   // jitter ⟂ the rift
+    const per = Math.ceil(reach / PYRO_RIFT_STEP);
+    for(let i = -per; i <= per; i++){
+      const d = i * PYRO_RIFT_STEP;
+      const h = Math.sin(i * 127.1 + 311.7) * 43758.5453, jit = (h - Math.floor(h)) * 2 - 1;  // [-1,1] deterministic per i
+      out.push({ x: cx + Math.cos(axis) * d + jx * jit * PYRO_RIFT_JITTER,
+                 y: cy + Math.sin(axis) * d + jy * jit * PYRO_RIFT_JITTER,
+                 r: radius, finale: false, delay: Math.abs(i) * PYRO_RIFT_DELAY });
     }
     return out;
   }
@@ -4388,13 +4401,13 @@ function gPyroPlan(p, ang, aimDist, shape, count, radius, asc){
 }
 // Push one pillar (reusing the gFirePillars entity) + the ascension substance ground (dragonfire heal-patch
 // / chaosfire self-burn patch) it stands on — mirrors Dragonfeet's pillar+ground pattern.
-function gPyroPushPillar(x, y, dmg, radius, burnDur, delay, scale, ground){
+function gPyroPushPillar(x, y, dmg, radius, burnDur, delay, scale, ground, groundLife){
   gFirePillars.push({ x, y, delay: delay || 0, life: 0, erupted: false,
     dmg, burn: Math.max(FP_BURN_MIN, Math.round(dmg * FP_BURN_RATIO)), burnDur, radius, hits: new Set(), scale: scale || 1 });
   if(ground === 'dragonfire')
-    gSpawnFireTrail(x, y, 1, false, { substance:'dragonfire', heal: Math.max(1, Math.round(dmg * DRAGONFIRE_HEAL_RATIO)), reach: radius, life: 150 });
+    gSpawnFireTrail(x, y, 1, false, { substance:'dragonfire', heal: Math.max(1, Math.round(dmg * DRAGONFIRE_HEAL_RATIO)), reach: radius, life: groundLife || 150, burnFrames: burnDur });
   else if(ground === 'chaosfire')
-    gSpawnFireTrail(x, y, 1, false, { substance:'chaosfire', selfDmg: Math.max(1, Math.round(dmg * CHAOSFIRE_SELF_RATIO)), reach: radius, life: FT_LIFE });
+    gSpawnFireTrail(x, y, 1, false, { substance:'chaosfire', selfDmg: Math.max(1, Math.round(dmg * CHAOSFIRE_SELF_RATIO)), reach: radius, life: groundLife || FT_LIFE, burnFrames: burnDur });
 }
 // Erupt the planned pillars. Eruption's finale hits PYRO_FINALE_DMG× (Wyrmspine re-erupts it). Riftmaw's whole
 // rift is in the plan (chaosfire via ground), so this just spawns it.
@@ -4406,7 +4419,7 @@ function gPyroFire(p, ang, aimDist, dmg, count, radius, burnDur, ground, shape, 
       if(asc === 'wyrmspine')
         for(let k = 1; k < PYRO_REERUPT; k++) gPyroPushPillar(q.x, q.y, fd, q.r, burnDur, q.delay + k * PYRO_REERUPT_GAP, PYRO_FINALE_SCALE, ground);
     } else {
-      gPyroPushPillar(q.x, q.y, dmg, q.r, burnDur, q.delay, 1, ground);
+      gPyroPushPillar(q.x, q.y, dmg, q.r, burnDur, q.delay, 1, ground, asc === 'riftmaw' ? PYRO_RIFT_GROUND_LIFE : undefined);
     }
   }
 }
@@ -4430,7 +4443,7 @@ function gDrawPyroTelegraph(p){
   const baseA = 0.10 + 0.20 * prog;                           // footprint firms up as the eruption nears
   const col = ground === 'dragonfire' ? '#ffcc55' : ground === 'chaosfire' ? '#ff3a2a' : '#ff7a22';
   gctx.save();
-  for(const q of gPyroPlan(p, p.angle, gPyroAimDist(p, id), shape, count, radius, asc)){
+  for(const q of gPyroPlan(p, p.angle, gPyroAimDist(p, id), shape, count, radius, asc, true)){
     const sx = q.x - camX, sy = q.y - camY;
     if(sx < -80 || sx > VW + 80 || sy < -120 || sy > VH + 80) continue;
     gctx.globalAlpha = baseA;                                 // solid footprint disc
@@ -7288,12 +7301,17 @@ const PYRO_WALL_STAGGER = 7;          // Firewall: frames between wall-row erupt
 const PYRO_WALL_SPAN    = 5;          // Firewall: pillars across each perpendicular wall-row
 const PYRO_REERUPT      = 3;          // Wyrmspine: finale re-erupts this many times
 const PYRO_REERUPT_GAP  = 26;         // Wyrmspine: frames between re-erupts
-// Riftmaw — a long erratic rift of chaos pillars crossing the map, aimed (spawn + direction) by the mouse.
-const PYRO_RIFT_LEN     = 30;         // pillars along the rift — a screen-spanning line
-const PYRO_RIFT_STEP    = 52;         // px between rift pillars (×LEN ≈ 1500px ≈ "across the map")
-const PYRO_RIFT_JITTER  = 42;         // lateral erratic offset (px), deterministic per-index so telegraph = fire
-const PYRO_RIFT_DELAY   = 3;          // frames between successive rift eruptions → it TRAVELS across the map
-const PYRO_RIFT_DMG     = 0.4;        // per-pillar damage × (many pillars over a long line → lower each)
+// Riftmaw — a chaos rift placed at the CURSOR, extending BOTH ways across the map. The aim INDICATOR shows a
+// clean STRAIGHT line of circles (PYRO_RIFT_TELE_STEP); the actual rift is a CONDENSED, JAGGED single line of
+// chaosfire pillars (PYRO_RIFT_STEP + jitter) that lingers + burns for 20s.
+const PYRO_RIFT_HALFSPAN = 900;       // px the rift reaches each way from the cursor (clamped to ≤ VW) — "across the map"
+const PYRO_RIFT_STEP     = 32;        // px between ACTUAL rift pillars — tight → reads as a single condensed jagged line
+const PYRO_RIFT_TELE_STEP= 64;        // px between INDICATOR circles — sparser → a clean straight dotted preview
+const PYRO_RIFT_JITTER   = 40;        // lateral erratic offset (px) of the actual pillars, deterministic per-index
+const PYRO_RIFT_DELAY    = 2;         // frames between successive eruptions (outward from the cursor) → it TEARS open
+const PYRO_RIFT_DMG      = 0.4;       // per-pillar eruption damage × (many pillars over a long line → lower each)
+const PYRO_RIFT_BURN     = 1200;      // 20s — the chaos-fire burn the rift inflicts on enemies (and re-ignites with)
+const PYRO_RIFT_GROUND_LIFE = 1200;   // 20s — the chaosfire rift LINGERS as a burning hazard across the map
 // Flame of Chaos (Emberfan 🔥 leaf) — the massive slow ball that lays a chaosfire wake the whole way.
 const FLAMEOFCHAOS_TILES    = 20;   // how far the chaos ball travels (tiles) — a long lane of fire
 const FLAMEOFCHAOS_SPEED    = 4.5;  // px/frame — deliberately slow & lumbering (~3.6s to cross 20 tiles)
