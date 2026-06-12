@@ -212,6 +212,36 @@ drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 wolf 
     3×3-only). Source master `art/fx/cilia/fire-explosion.png`. *(The older 9-variant `art/fx/cilia/fire-explosions.png`
     sheet is separate and unsliced — ping ART if a full explosion variant set is wanted too.)*
 
+- ◻️ 🎨 **Wire `fx.jumpimpact` — leap-landing impact shockwave** (↳ from ART, Josh 2026-06-12) — Josh: the
+  `jump-impact` sprite should play on the **leap (`gFireLeap`) landing**. Verified it was **never wired** (master
+  `art/fx/_shared/jump-impact.png` existed; no cutout in `assets/`, zero `index.html` refs). Now sliced & committed
+  at `assets/fx/_shared/jump-impact.png` (256², ~47 KB; radial ground shockwave, bright white-hot core + spike
+  ring). A **single key** like `fx.thrust`/`fx.slash`. Paste:
+  ```
+  'fx.jumpimpact':'assets/fx/_shared/jump-impact.png',
+  ```
+  - **Compositing: it's a black-bg light burst → additive `globalCompositeOperation='lighter'`** (the
+    `FP_SPR`/`FW_SPR` pattern — black drops out, the shockwave glows; the soft radial glow a hard alpha cut
+    would clip is preserved). Background is floored to true black (corners = 0,0,0 — QA'd, **no square wash**).
+    Load it the same way as `FT_SPR` (`new Image(); .src='assets/fx/_shared/jump-impact.png'`) + the `haveSpr`
+    guarded-fallback pattern.
+  - **Where it fires:** the **"Impact VFX" block at `index.html:~4255`** (inside `gFireLeap`, at `lp.timer >=
+    flightDur` landing) — currently spawns only `spawnGP` particles. Spawn the sprite there at `p.wx,p.wy`,
+    **keep the existing particles** (they read as debris kicked up over the flat shockwave). It already
+    `gShake`s on landing — the sprite is the missing visual core.
+  - **Draw intent:** one-shot, **drawn flat/centered** on the landing point (the art is already a top-down
+    ground ellipse — wider than tall in perspective — so **no rotation, no y-squash** needed; draw it as a
+    centered square box and the perspective is baked in). Short life ~16–22 frames, scale ~0.5×→1.1× with alpha
+    1→0 (quick pop + fade). **Size:** the bright ring spans ~0.9× the sprite width, so a draw box ≈ **`2.5 ×
+    leapRadius`** (`leapRadius`=60 → ~150 px box) lands the ring around/just outside the damage zone — a live
+    knob; tune in-game. **Size-coupling:** the box should scale off `leapRadius` so the visual tracks the hit
+    zone if the radius is ever retuned (not a hard hitbox couple — the damage circle is the source of truth).
+  - **Raster → HiDPI:** standard additive FX blit; 256² source covers a generous on-screen size at 2× DPR.
+    **Verify:** `node --check` + grep the key resolves to the file + `python dev.py` → leap → on landing the
+    shockwave pops additively over the ground (no square halo), scales/fades, and reads as a ground impact.
+  - *Tool:* resize+true-black-floor+optimize of the 1254² master via Pillow (single light-on-black sprite — no
+    cutout needed; additive compositing IS the "background removal"). Master `art/fx/_shared/jump-impact.png`.
+
 - ✅ 🎨 **Wire SMALLER tree sprites + formation-based forest** (Josh, 2026-06-12) — **done 2026-06-12.**
   Re-used the occluding-prop system as-is (`gWildTrees`/`gDrawTree`/`gRCTrees`). Wired the `world.treesmall.0..8`
   set; small trees render smaller via a smaller draw `scale` (both sets are cell-framed to fill the 256²
