@@ -18,6 +18,21 @@ lesson: **the principle → why → how to apply.** Quality over volume.
 
 ---
 
+### 2026-06-12 — A "docs-only" PM push is NOT deploy-safe by default: `git push` ships the whole `origin/main..HEAD` chain, gated build commits and all
+
+- **Principle:** the PM's pre-authorized docs-only push right is about *what the PM commits*, but `git push origin
+  main` advances the remote over the **entire ancestor chain**, not just your diff. On a shared `main`, the engineer
+  commits `index.html` locally and **deliberately leaves it unpushed** awaiting Josh's deploy auth — so if your docs
+  commit lands *on top of* that, your "harmless" push **sweeps the gated build commit to Pages and deploys it.** It
+  happened today: my docs pushes deployed the engineer's `index.html` #8 fixers (`1f41da0`) with no explicit OK.
+- **Why:** Pages redeploys on any push to `main`; a local-but-unpushed `main` commit is **not** a safe deploy-hold
+  against a co-committer who shares the branch. "I only staged docs" guarantees nothing about what *else* rides along.
+- **How to apply (standing gate — run EVERY time before pushing, CLI or pm-bot):** check the **whole outgoing
+  delta**, not your top commit — `git log --oneline origin/main..HEAD -- index.html assets/`. **Empty → safe to
+  push** (truly docs-only). **Non-empty → the push is deploy-affecting regardless of who authored the tip → HOLD for
+  Josh's auth** (or push only your commit via a non-`main` path). Same gate the engineer crystallized + the filed
+  pm-bot guard (PM lane). Corollary: after committing your docs, **don't reflexively `git push`** — gate first.
+
 ### 2026-06-12 — The engineer session builds from your spec in near-real-time; encode directives the moment they land, and expect to re-rank when eng ships ahead of the roadmap
 
 - **Principle:** the PM and engineer sessions run **concurrently and out of sync**, with the spec/tasks as the
