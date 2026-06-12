@@ -67,6 +67,19 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   cap to force castability, but the designer's resolution was the opposite ("not enough Max-MP → you literally
   can't cast it — that gate IS the design"). A cap/clamp that makes the impossible look possible erases the
   decision the designer wanted. Present the conflict + the tradeoff; let them choose.
+- **A relationship between two game quantities the designer tunes independently is DATA (two tables), not a
+  formula — even when the spec hands you the formula.** I faithfully built the #8.9 spec's `dps ∝ cost^1.5` as a
+  runtime `gGodSkillDpsScale` (damage *derived* from cost); Josh rejected it — cost and damage are independent
+  per-rank tables, and the "damage climbs faster than cost" intent lives in the *chosen numbers*, not code. A
+  faithful impl of an over-engineered spec is still **your** miss to catch: implement the design *intent*, not the
+  literal math. (I authored that bad spec in the PM hat — the same person over-specs in one role and must catch it
+  in the other; PM-memory sibling logged the spec-craft side.)
+- **A designer's FEEL-description IS the architecture spec, and "make it one ring" means unify at the ENTITY
+  level.** "Firebloom = a persistent ring that ebbs/flows · Cinderburst = a periodic explosion" mapped sensation →
+  which variant gets the aura-ring-unify vs stays centre-out. Unifying Dragonbreath to *one* ring meant the aura
+  ring **itself** breathes (delete the separate wave entity), which cascaded into a damage-delivery change
+  (swept-wave → breathing-aura). Confirm SCOPE before broad-applying a feel concept (I did all evolutions; Josh
+  narrowed to Dragonbreath) and expose every magnitude as a named const for his eye.
 
 ### 2026-06-12 — A phased/multi-site mechanic belongs at the site that enforces the HARDEST constraint; and a run-start reset block is a second source of truth
 
@@ -86,10 +99,9 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   reverts at the next run start.** Any value that is both registry-defined AND reset-seeded must change in
   **both** places — grep the reset block for the symbol before trusting the definition-site edit. (Same
   family as the duplicate-`function` shadow trap: "looks wired, does nothing.")
-- **How to apply:** for a phased feature, locate the single chokepoint that satisfies *every* constraint
-  before writing; for a number tune, grep for a reset/re-seed of the symbol first. New rank-scaling params come
-  free when the rank-up apply pours **every** key of the step object (`for(const k in step)`). Verified the
-  dispatcher by **extracting the real functions and driving the state machine in Node** (no-browser canary).
+- **How to apply:** for a phased feature, locate the single chokepoint that satisfies *every* constraint before
+  writing; for a number tune, grep for a reset/re-seed of the symbol first. Verified by **extracting the real
+  functions and driving the state machine in Node** (no-browser canary).
 
 ### 2026-06-12 — Occluding environment sprites: a reusable system + three rules (cull by extents · fade tracks the occluded · hitbox matches the art)
 
@@ -111,24 +123,15 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 
 ### 2026-06-12 — A many-round spacing/feel knob converges to one physical rule, not stacked per-category constants
 
-- **Principle:** When a placement/spacing feature is tuned over many one-number rounds, the convergent form is
-  usually **one constraint derived from the real geometry**, not a pile of per-category constants. Tree spacing
-  churned small-min-sep → +large-min-sep → +cross-set, and each *new category* exposed a gap the prior constants
-  couldn't see (small-vs-large could still wall the player even with both per-set seps "right"). The move that
-  ended it: derive the rule from the actual hitboxes — **any two trees keep centre-distance ≥
-  `rxOf(a)+rxOf(b)+TREE_WALK_GAP`** (one player-width clearance), which subsumes *all* pair types at once and
-  self-tunes when scales or trunk-width change. Stacked constants also breed brittle hand-coupling (I kept
-  re-deriving `RX_FRAC`↔`MIN_SEP` in comments).
-- **Why:** a per-category knob encodes the *symptom* (this pair too close), not the *cause* (trunk geometry vs
-  player width). Symptoms are unbounded; the geometry is finite — so the physical rule is both shorter and
-  complete.
-- **How to apply:** the moment a spacing/feel knob needs a *second* per-category exception, stop adding
-  constants — ask "what physical quantity is this approximating?" and compute the constraint from it, enforced
-  O(1) via a spatial hash, seeded for MP-determinism; expose just the one comfort term (`TREE_WALK_GAP`) for
-  live taste. Direct sibling of the *visual-feature-converges-on-the-user's-eye* lesson below: iteration is how
-  you find the right **abstraction**, not an excuse to keep stacking parameters. (Also: lushness-vs-walkability
-  was a real tension resolved by *thinning the collision* `TREE_BASE_RX_FRAC` 0.30→0.22, not by spacing — when
-  two goals fight over one knob, look for the *other* knob that lets both win.)
+- When a placement/spacing knob is tuned over many one-number rounds, the convergent form is usually **one
+  constraint derived from the real geometry**, not a pile of per-category constants — each new category exposes a
+  gap the prior constants can't see. Tree spacing ended when I derived it from the hitboxes: **any two keep
+  centre-distance ≥ `rxOf(a)+rxOf(b)+TREE_WALK_GAP`** (one player-width clearance) — subsumes all pair types,
+  self-tunes with scale/trunk-width. The moment a spacing knob needs a *second* per-category exception, stop
+  adding constants and ask "what physical quantity is this approximating?"; enforce it O(1) via a spatial hash,
+  seeded for MP-determinism, exposing just the one comfort term. (When two goals fight over one knob — lushness
+  vs walkability — look for the *other* knob: thinned the collision `TREE_BASE_RX_FRAC`, not the spacing.) Sibling
+  of the visual-feature-converges-on-the-user's-eye lesson: iteration finds the right **abstraction**.
 
 ### 2026-06-11 — An art handoff's "new prop" framing can really be a "replace the placeholder" job — reconcile the spec against what's already on screen
 
