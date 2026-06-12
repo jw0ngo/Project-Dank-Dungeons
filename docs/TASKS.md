@@ -204,9 +204,22 @@ refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 
   player-occlusion). Keep it cheap: only for trees already in the draw cull, iterate `gEnemies` once.
   Render-only, no sim/MP impact. *(Small new mechanic — Josh-directed; combat-readability, pillar 1.)*
 
-- ◻️ ✨ **Item 10 — Card-pool consolidation (~33 → ~23 cards)** (↳ from PM, Josh-approved 2026-06-12 · spec
-  [`specs/card-pool.md`](specs/card-pool.md)) — collapse the per-skill stat sprawl into broad **character stats**
-  + one **Mastery** card per active skill. Merge mapping (full table + balance + grounding in the spec):
+- ✅ ✨ **Item 10 — Card-pool consolidation (33 → 23 cards)** — **done ENG 2026-06-12.** Rebuilt `PASSIVE_CARDS`
+  (now 13: + **Strength** `meleeDmgPct`, **Ferocity** crit-chance+crit-dmg in one, **Dexterity** `attackSpeed`,
+  **Reach** swing+heavy reach; removed Precision/Savagery) and `SKILL_CARDS` (now 3 **Mastery** cards via a
+  step-set `_applyMastery` pour, mirroring `cil-dof`). New `wildBuffs.meleeDmgPct` (read in `gDoSwingAt`/
+  `gDoHeavyAtk` + char screen) and `wildBuffs.attackSpeed` (folded into `pSkillSpeed` → swingCd + heavyMaxWindup,
+  its only callers; **this IS the Attack-Speed/Dexterity task below**). Grit (4) + Patron/Cilia (3) untouched →
+  **23 static draft cards.** Draft renders via the emoji `icon` + `fmt(value)` (no `CARD_ICON_ART` change needed —
+  it's `typeof`-guarded). `node --check` + grep verified (no dangling old card ids; combat reads the new stats).
+  **⚠ Browser canary still owed** (Sim is browser-only): draft each new card and confirm the bundles apply.
+  *(Design-ahead hooks preserved: Mastery step-sets are data → easy to add evolutions; Strength/Dexterity are
+  `wildBuffs` stats → can graduate to major stats.)* — original detail below.
+  - **Merges:** `crit`+`critdmg` → **Ferocity** (both crit stats, one card); `sw-dmg`+`hv-dmg` → **Strength** (+%
+    melee dmg to swing **&** heavy — new `wildBuffs.meleeDmgPct` read in `gDoSwingAt`+`gDoHeavyAtk`, stacks on
+    Bloodlust's global `damagePct`; frame as a character stat — Josh may grow it into a major stat later);
+    `sw-reach`+`hv-rad` → **Reach** (swing-reach + `heavyLen` in one); `sw-spd`+`hv-chg` → **Dexterity** (= the
+    Attack-Speed card above).
   - **Merges:** `crit`+`critdmg` → **Ferocity** (both crit stats, one card); `sw-dmg`+`hv-dmg` → **Strength** (+%
     melee dmg to swing **&** heavy — new `wildBuffs.meleeDmgPct` read in `gDoSwingAt`+`gDoHeavyAtk`, stacks on
     Bloodlust's global `damagePct`; frame as a character stat — Josh may grow it into a major stat later);
@@ -244,7 +257,12 @@ refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 
   - Host-authoritative (burn resolves host-side) → no MP change. **Verify** on the training dummy / a burning pack:
     crit cards now drive detonation frequency + blast size; zero-crit Cilia still chains modestly.
 
-- ◻️ ✨ **Attack Speed — promote to a first-class CHARACTER stat** (↳ from PM, Josh 2026-06-12 · resolves the
+- 🔄 ✨ **Attack Speed — promote to a first-class CHARACTER stat** — **mostly done ENG 2026-06-12 (with item 10).**
+  `wildBuffs.attackSpeed` added + folded into `pSkillSpeed` (`v = base/(1 + (skillPct + attackSpeed)/100)`) → speeds
+  swingCd + heavyMaxWindup (its only callers); the **Dexterity** passive card (+7%/pick) writes it. Ikras inherits
+  it later. **Remaining (minor):** the char-panel **"ATK SPD" stat row** (and a "STR" row for Strength) — not yet
+  added; the swing/heavy *damage* display already reflects Strength. *(original detail below.)*
+  (↳ from PM, Josh 2026-06-12 · resolves the
   item-9 Ikras gap, spec [`specs/god-stat-identities.md`](specs/god-stat-identities.md)) — add a new
   `wildBuffs.attackSpeed` (%) character stat that **(1) speeds the normal attack** (more swings — reduces
   `swingCd`) and **(2) speeds the heavy charge** (faster windup — reduces `heavyMaxWindup`). The engine already

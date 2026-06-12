@@ -2649,7 +2649,9 @@ function pSkillStat(p, key){
 // diminishing multiplier base/(1+Σ%/100) — not flat frames (see card-pool-expansion spec §5). The
 // percent lives in skillMods[pctKey]; SKILL_STAT_FLOOR[key] caps how fast it can get.
 function pSkillSpeed(p, key, pctKey){
-  const pct = (p && p.skillMods && p.skillMods[pctKey]) || 0;
+  // % from the per-skill mod (legacy) PLUS the Dexterity character stat (wildBuffs.attackSpeed, item 10) —
+  // so Dexterity speeds the normal swing (swingCd) and the heavy charge (heavyMaxWindup), its only two callers.
+  const pct = ((p && p.skillMods && p.skillMods[pctKey]) || 0) + ((p && p.wildBuffs && p.wildBuffs.attackSpeed) || 0);
   const v = pSkillStat(p, key) / (1 + Math.max(0, pct) / 100);
   const floor = SKILL_STAT_FLOOR[key];
   return floor !== undefined ? Math.max(floor, v) : v;
@@ -3453,7 +3455,8 @@ function makePlayerState(wx, wy) {
     // Wilderness run buffs from obelisks — reset each run
     wildBuffs: { hpBonus:0, mpBonus:0, hpRegenAdd:0, mpRegenAdd:0,
                  speedPct:0, damagePct:0, cdPct:0, spawnPct:0,
-                 xpPct:0, pickupRange:0,
+                 xpPct:0, pickupRange:0, critChance:0, critDamage:0,
+                 meleeDmgPct:0, attackSpeed:0,   // item 10 character stats: Strength (melee dmg), Dexterity (atk speed)
                  burnExplodeChance:0, burnDurMult:1, burnTickMult:1 },  // Cilia patron cards (item 0c)
     // Look
     angle: 0,
@@ -3706,7 +3709,7 @@ function gDoSwingAt(aimAngle){
   if(!gPlayer||gPlayer.swinging||gPlayer.swingCooldown>0||gPlayer.wwActive||gPlayer.dead)return;
   if(gPlayer.heavyWindingUp||gPlayer.heavySwinging)return; // committing to a heavy locks out the normal swing until it resolves (weighty combat, roadmap #6)
   const _dbuf = (gPlayer.wildBuffs && (1+(gPlayer.wildBuffs.damagePct||0)/100))||1;
-  const dmg   = Math.round(W().baseDamage * _dbuf * (1 + pSkillStat(gPlayer,'swingDmgPct')/100));
+  const dmg   = Math.round(W().baseDamage * _dbuf * (1 + (pSkillStat(gPlayer,'swingDmgPct') + (gPlayer.wildBuffs&&gPlayer.wildBuffs.meleeDmgPct||0))/100));
   gPlayer._chargeDmg=dmg;
   gPlayer.swinging=true;gPlayer.swingTimer=0;gPlayer.swingDir*=-1;
   gPlayer.swingAimAngle=aimAngle;
@@ -4719,7 +4722,7 @@ function _fireHeavyAtk(p){
   const r = p.heavyChargeRatio;
   const chargedLen = pSkillStat(p,'heavyLen') * (1 + r);
   const _dbuf = (p.wildBuffs && (1+(p.wildBuffs.damagePct||0)/100))||1;   // obelisk + level-up %damage
-  const chargedDmg = Math.round((W().heavyDamage + (W().heavyDamageMax - W().heavyDamage) * r) * _dbuf * (1 + pSkillStat(p,'heavyDmgPct')/100));
+  const chargedDmg = Math.round((W().heavyDamage + (W().heavyDamageMax - W().heavyDamage) * r) * _dbuf * (1 + (pSkillStat(p,'heavyDmgPct') + (p.wildBuffs&&p.wildBuffs.meleeDmgPct||0))/100));
   p._heavyChargedLen = chargedLen;
   p._heavyChargedDmg = chargedDmg;
   p.heavyRect = {
@@ -12986,10 +12989,10 @@ function _charSkillDetail(skill){
   let dmgLine = '';
 
   if(skill.id === 'swing'){
-    const swMult = 1 + pSkillStat(p,'swingDmgPct')/100;          // Swing: Bite card
+    const swMult = 1 + (pSkillStat(p,'swingDmgPct') + (p.wildBuffs&&p.wildBuffs.meleeDmgPct||0))/100;   // Strength (item 10)
     dmgLine = `Damage: ${Math.round(W.baseDamage * _dbuf * swMult)}`;
   } else if(skill.id === 'heavy'){
-    const hvMult = 1 + pSkillStat(p,'heavyDmgPct')/100;          // Heavy: Devastation card
+    const hvMult = 1 + (pSkillStat(p,'heavyDmgPct') + (p.wildBuffs&&p.wildBuffs.meleeDmgPct||0))/100;   // Strength (item 10)
     const base = Math.round(W.heavyDamage    * _dbuf * hvMult);
     const max  = Math.round(W.heavyDamageMax * _dbuf * hvMult);
     dmgLine = `Damage: ${base} – ${max}`;
@@ -14531,6 +14534,15 @@ function _addGritMod(p, key, v){ p.gritMods  = p.gritMods||{};  p.gritMods[key] 
 const PASSIVE_CARDS = [
   { id:'dmg',     cat:'passive', icon:'⚔', name:'Bloodlust',     base:5,  frac:false, fmt:v=>`+${v}% Damage`,
     apply(p,v){ p.wildBuffs.damagePct  = (p.wildBuffs.damagePct||0)  + v; } },
+  // ── item 10 character stats — broad, always-draftable, govern the whole melee kit ──
+  { id:'strength', cat:'passive', icon:'⚔', name:'Strength',     base:8,  frac:false, fmt:v=>`+${v}% Melee Damage`,
+    apply(p,v){ p.wildBuffs.meleeDmgPct = (p.wildBuffs.meleeDmgPct||0) + v; } },  // swing & heavy (merges Bite + Devastation)
+  { id:'ferocity', cat:'passive', icon:'✷', name:'Ferocity',     base:3,  frac:false, fmt:v=>`+${v}% Crit Chance & +${v*5}% Crit Damage`,
+    apply(p,v){ p.wildBuffs.critChance = Math.min(0.75, (p.wildBuffs.critChance||0) + v/100); p.wildBuffs.critDamage = (p.wildBuffs.critDamage||0) + v*5/100; } },  // merges Precision + Savagery
+  { id:'dexterity',cat:'passive', icon:'⚡', name:'Dexterity',    base:7,  frac:false, fmt:v=>`+${v}% Attack Speed`,
+    apply(p,v){ p.wildBuffs.attackSpeed = (p.wildBuffs.attackSpeed||0) + v; } },  // swing rate + heavy charge (merges Tempo + Quickdraw)
+  { id:'reach',    cat:'passive', icon:'↔', name:'Reach',        base:8,  frac:false, fmt:v=>`+${v} Swing & Heavy Reach`,
+    apply(p,v){ _addSkillMod(p,'smearOuter', v); _addSkillMod(p,'heavyLen', v); } },  // merges Swing: Reach + Heavy: Reach
   { id:'speed',   cat:'passive', icon:'⚡', name:'Swiftness',     base:6,  frac:false, fmt:v=>`+${v}% Move Speed`,
     apply(p,v){ p.wildBuffs.speedPct   = (p.wildBuffs.speedPct||0)   + v; } },
   { id:'cd',      cat:'passive', icon:'↺', name:'Alacrity',      base:4,  frac:false, fmt:v=>`−${v}% Cooldowns`,
@@ -14547,49 +14559,26 @@ const PASSIVE_CARDS = [
     apply(p,v){ p.wildBuffs.xpPct      = (p.wildBuffs.xpPct||0)      + v; } },
   { id:'pickup',  cat:'passive', icon:'◎', name:'Magnetism',     base:30, frac:false, fmt:v=>`+${v} Pickup Range`,
     apply(p,v){ p.wildBuffs.pickupRange= (p.wildBuffs.pickupRange||0)+ v; } },
-  // Crit (Card Pool Expansion §2): chance hard-capped 75%; crit multiplier = CRIT_BASE_MULT (1.5) + critDamage.
-  { id:'crit',    cat:'passive', icon:'✷', name:'Precision',     base:4,  frac:false, fmt:v=>`+${v}% Crit Chance`,
-    apply(p,v){ p.wildBuffs.critChance = Math.min(0.75, (p.wildBuffs.critChance||0) + v/100); } },
-  { id:'critdmg', cat:'passive', icon:'✸', name:'Savagery',      base:20, frac:false, fmt:v=>`+${v}% Crit Damage`,
-    apply(p,v){ p.wildBuffs.critDamage = (p.wildBuffs.critDamage||0) + v/100; } },
 ];
 
-// ACTIVE-SKILL pool (cat:'skill') — writes the per-player skillMods (read via pSkillStat), so
-// MP-safe. Only whirlwind & leap (the stats migrated in Stage 1); `req` gates on that skill's
-// unlock. Reductions store a negative mod; pSkillStat floors stop them hitting zero.
+// ACTIVE-SKILL pool (cat:'skill') — item 10: ONE Mastery card per active skill (gated on its unlock).
+// Each pours its whole improvement bundle (a step-set ×rolled value) into the skill's per-player skillMods
+// (read via pSkillStat), so MP-safe. Cooldown steps are NEGATIVE mods; pSkillStat floors stop them hitting
+// zero. (Replaces the old 15 per-skill cards; swing/heavy stats folded up into Strength/Reach/Dexterity.)
+const WW_MASTERY   = { wwDamage:5, wwRadius:4, wwCooldown:-18 };
+const LEAP_MASTERY = { leapDamage:8, leapRadius:8, leapRange:16, leapCooldown:-30 };
+const DASH_MASTERY = { evasionRange:14, evasionCooldown:-12 };
+function _applyMastery(p, step, v){ for(const k in step) _addSkillMod(p, k, step[k] * v); }
 const SKILL_CARDS = [
-  { id:'ww-dmg', cat:'skill', req:()=>gIsSkillUnlocked('ww'),   icon:'⚡', name:'Whirlwind: Edge',  base:5,  frac:false, fmt:v=>`Whirlwind +${v} damage`,
-    apply(p,v){ _addSkillMod(p,'wwDamage', v); } },
-  { id:'ww-rad', cat:'skill', req:()=>gIsSkillUnlocked('ww'),   icon:'⚡', name:'Whirlwind: Reach', base:4,  frac:false, fmt:v=>`Whirlwind +${v}px radius`,
-    apply(p,v){ _addSkillMod(p,'wwRadius', v); } },
-  { id:'ww-cd',  cat:'skill', req:()=>gIsSkillUnlocked('ww'),   icon:'⚡', name:'Whirlwind: Rhythm',base:18, frac:false, fmt:v=>`Whirlwind −${(v/60).toFixed(1)}s cooldown`,
-    apply(p,v){ _addSkillMod(p,'wwCooldown', -v); } },
-  { id:'leap-dmg', cat:'skill', req:()=>gIsSkillUnlocked('leap'), icon:'🌀', name:'Leap: Force',    base:8,  frac:false, fmt:v=>`Leap +${v} damage`,
-    apply(p,v){ _addSkillMod(p,'leapDamage', v); } },
-  { id:'leap-rad', cat:'skill', req:()=>gIsSkillUnlocked('leap'), icon:'🌀', name:'Leap: Impact',   base:8,  frac:false, fmt:v=>`Leap +${v}px impact radius`,
-    apply(p,v){ _addSkillMod(p,'leapRadius', v); } },
-  { id:'leap-rng', cat:'skill', req:()=>gIsSkillUnlocked('leap'), icon:'🌀', name:'Leap: Bound',    base:16, frac:false, fmt:v=>`Leap +${v}px range`,
-    apply(p,v){ _addSkillMod(p,'leapRange', v); } },
-  { id:'leap-cd',  cat:'skill', req:()=>gIsSkillUnlocked('leap'), icon:'🌀', name:'Leap: Tempo',    base:30, frac:false, fmt:v=>`Leap −${(v/60).toFixed(1)}s cooldown`,
-    apply(p,v){ _addSkillMod(p,'leapCooldown', -v); } },
-  // ── Card Pool Expansion: swing/heavy/dash (the level-1 core kit). Swing is always on; heavy
-  //    unlocks @L1, dash @L2. Speed cards write a % mod read via pSkillSpeed; the rest are flat. ──
-  { id:'sw-reach', cat:'skill', icon:'⚔', name:'Swing: Reach',     base:8, frac:false, fmt:v=>`Swing +${v} reach`,
-    apply(p,v){ _addSkillMod(p,'smearOuter', v); } },
-  { id:'sw-spd',   cat:'skill', icon:'⚔', name:'Swing: Tempo',     base:6, frac:false, fmt:v=>`Swing +${v}% attack speed`,
-    apply(p,v){ _addSkillMod(p,'swingSpdPct', v); } },
-  { id:'sw-dmg',   cat:'skill', icon:'⚔', name:'Swing: Bite',      base:8, frac:false, fmt:v=>`Swing +${v}% damage`,
-    apply(p,v){ _addSkillMod(p,'swingDmgPct', v); } },
-  { id:'hv-chg',   cat:'skill', req:()=>gIsSkillUnlocked('heavy'), icon:'🔨', name:'Heavy: Quickdraw',  base:8, frac:false, fmt:v=>`Heavy +${v}% charge speed`,
-    apply(p,v){ _addSkillMod(p,'heavyChgPct', v); } },
-  { id:'hv-rad',   cat:'skill', req:()=>gIsSkillUnlocked('heavy'), icon:'🔨', name:'Heavy: Reach', base:8, frac:false, fmt:v=>`Heavy +${v} reach`,
-    apply(p,v){ _addSkillMod(p,'heavyLen', v); } },
-  { id:'hv-dmg',   cat:'skill', req:()=>gIsSkillUnlocked('heavy'), icon:'🔨', name:'Heavy: Devastation', base:8, frac:false, fmt:v=>`Heavy +${v}% damage`,
-    apply(p,v){ _addSkillMod(p,'heavyDmgPct', v); } },
-  { id:'dash-cd',  cat:'skill', req:()=>gIsSkillUnlocked('dash'), icon:'💨', name:'Dash: Recovery', base:12, frac:false, fmt:v=>`Dash −${(v/60).toFixed(1)}s cooldown`,
-    apply(p,v){ _addSkillMod(p,'evasionCooldown', -v); } },
-  { id:'dash-dist',cat:'skill', req:()=>gIsSkillUnlocked('dash'), icon:'💨', name:'Dash: Momentum', base:14, frac:false, fmt:v=>`Dash +${v}px distance`,
-    apply(p,v){ _addSkillMod(p,'evasionRange', v); } },
+  { id:'ww-mastery',   cat:'skill', req:()=>gIsSkillUnlocked('ww'),   icon:'🌀', name:'Whirlwind Mastery',
+    base:1, frac:false, fmt:v=>`Whirlwind +${WW_MASTERY.wwDamage*v} dmg · +${WW_MASTERY.wwRadius*v}px · −${(-WW_MASTERY.wwCooldown*v/60).toFixed(1)}s cd`,
+    apply(p,v){ _applyMastery(p, WW_MASTERY, v); } },
+  { id:'leap-mastery', cat:'skill', req:()=>gIsSkillUnlocked('leap'), icon:'🔱', name:'Leap Mastery',
+    base:1, frac:false, fmt:v=>`Leap +${LEAP_MASTERY.leapDamage*v} dmg · +${LEAP_MASTERY.leapRadius*v}px · +${LEAP_MASTERY.leapRange*v}px range · −${(-LEAP_MASTERY.leapCooldown*v/60).toFixed(1)}s cd`,
+    apply(p,v){ _applyMastery(p, LEAP_MASTERY, v); } },
+  { id:'dash-mastery', cat:'skill', req:()=>gIsSkillUnlocked('dash'), icon:'💨', name:'Dash Mastery',
+    base:1, frac:false, fmt:v=>`Dash +${DASH_MASTERY.evasionRange*v}px · −${(-DASH_MASTERY.evasionCooldown*v/60).toFixed(1)}s cd`,
+    apply(p,v){ _applyMastery(p, DASH_MASTERY, v); } },
 ];
 
 // GRIT pool (cat:'grit') — writes per-player gritMods; gated on the Grit unlock (level 5).
@@ -15805,6 +15794,7 @@ function gWildReset(){
     gPlayer.wildBuffs = { hpBonus:0, mpBonus:0, hpRegenAdd:0, mpRegenAdd:0,
                           speedPct:0, damagePct:0, cdPct:0, spawnPct:0,
                           xpPct:0, pickupRange:0, critChance:0, critDamage:0,
+                          meleeDmgPct:0, attackSpeed:0,   // item 10: Strength (melee dmg), Dexterity (atk speed)
                           burnExplodeChance:0, burnDurMult:1, burnTickMult:1 };  // Cilia patron cards (item 0c)
     gPlayer.maxHp = 100; gPlayer.hp = 100;
     gPlayer.maxMp = 100; gPlayer.mp = 100;
