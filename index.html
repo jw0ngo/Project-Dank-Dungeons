@@ -2689,6 +2689,38 @@ function spawnGP(x,y,col,n,spd){if(!Number.isFinite(x)||!Number.isFinite(y))retu
 function spawnGPCustom(x,y,col,vx,vy,life){if(!Number.isFinite(x)||!Number.isFinite(y))return;const spread=0.8;gParticles.push({x,y,vx:vx+(Math.random()-.5)*spread,vy:vy+(Math.random()-.5)*spread,life:life||1,decay:.06+Math.random()*.04,r:1+Math.random()*1.5,col});}
 function addGDmg(x,y,v,col,big){if(!Number.isFinite(x)||!Number.isFinite(y))return;if(gDmgNums.length>=20)return; // cap damage numbers to avoid flooding
 gDmgNums.push({x,y,val:v,col:col||'#fff',life:1,vy:-1.4,vx:(Math.random()-.5)*1.5,big:!!big});}
+// Aggregated XP pickup popup (#8.4b) — a SINGLE "+N XP" above the player's head that accumulates over a
+// short window (each orb adds to the running total + refreshes the window), instead of one float per orb
+// (which jumbled into unreadable noise on multi-pickup). White, distinct from gold Favor (#8.4a). Drawn
+// anchored to the live player position (not a fixed world point), updated+rendered in the gDmgNums pass.
+let gXpPopup = null;            // {total, expiry, pop} or null
+const XP_POPUP_WINDOW = 300;    // 5s @60 — window kept alive by each new pickup
+const XP_POPUP_FADE   = 48;     // last ~0.8s eases out
+function gAddXpPopup(xp){
+  if(!gPlayer) return;
+  if(gXpPopup) gXpPopup.total += xp; else gXpPopup = { total: xp, pop: 0 };
+  gXpPopup.expiry = gFrame + XP_POPUP_WINDOW;
+  gXpPopup.pop = 1;             // scale kick on each pickup — eases back down in the draw
+}
+function gDrawXpPopup(){
+  if(!gXpPopup || !gPlayer){ return; }
+  if(gFrame >= gXpPopup.expiry){ gXpPopup = null; return; }
+  const remain = gXpPopup.expiry - gFrame;
+  const a = remain < XP_POPUP_FADE ? remain / XP_POPUP_FADE : 1;
+  gXpPopup.pop = Math.max(0, gXpPopup.pop - 0.05*gLastDt);   // ease the scale kick back to rest
+  const sx = gPlayer.wx - camX, sy = gPlayer.wy - camY - 46;
+  const fs = 13 + Math.round(gXpPopup.pop * 6);
+  const txt = '+' + gXpPopup.total + ' XP';
+  gctx.save();
+  gctx.textAlign = 'center';
+  gctx.globalAlpha = a;
+  gctx.font = `bold ${fs}px monospace`;
+  gctx.lineWidth = 3; gctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  gctx.strokeText(txt, sx, sy);
+  gctx.fillStyle = '#eef2ff';   // soft white — reads clearly, distinct from gold Favor
+  gctx.fillText(txt, sx, sy);
+  gctx.restore();
+}
 function gShake(m,d){gShakeMag=m;gShakeDur=d;}
 // Feedback when a skill can't fire for lack of mana: "Not Enough Mana!" floats over the player + the MP bar
 // outline flashes red. Throttled so holding a key / mashing doesn't spam it.
@@ -3260,7 +3292,7 @@ function gameLoad(mapData) {
   gBombFireZones=[];
   exitReached=false; gPaused=false;
   const _bbl=document.getElementById('boss-bar');if(_bbl)_bbl.style.display='none';
-  gParticles.length=0; gDmgNums.length=0;
+  gParticles.length=0; gDmgNums.length=0; gXpPopup=null;
   gShakeX=0;gShakeY=0;gShakeDur=0;camX=0;camY=0;
 
   const ps = gEntsRaw.find(e=>e.kind==='player') || {tx:3,ty:3};
@@ -5410,7 +5442,8 @@ function _aiGoblin(e, dt){
 // NATIVE TO THE LAND: wolves climb over rocks (gIsWalkWolf — incl. their own den arcs, the
 // old stuck-on-the-den bug) and destructibles, and take no forest tree-slow. Nothing stops them.
 const WOLF_LEASH_R = 22.6*T;   // px from the camp centre before the pack gives up and heals (+33% chase range)
-const WOLF_LEAP_MAX = 16;      // cap on the pounce impulse (px/frame) — lowered so the lunge is slower/more readable (was 22)
+const WOLF_LEAP_MAX = 20;      // cap on the pounce impulse (px/frame) — #8.3: raised 16→20 (~+25% reach) so the pounce CLOSES the committed gap instead of landing short. Readability still comes from the biteWindup tell, not the pounce speed.
+const WOLF_LUNGE_COMMIT_FRAC = 0.70;  // #8.3: only commit the lunge within 70% of lungeRange (mirrors _aiWarrior's true-proximity gate) — the wolf used to commit at the far edge of lungeRange and land short. Reach (above) now over-reaches this tighter gate → reliable connect.
 const WOLF_LUNGE_RECOVER = 42; // frames the wolf is EXPOSED after a lunge — it coasts the pounce, then plants fully (a clear retaliation window for the player; was 32)
 // Pack attack token — only ONE wolf per pack commits a lunge at a time, so a pack pressures in turns
 // instead of all charging at once (the early-game "instant death" cause). Keyed by camp/home; the
@@ -5493,7 +5526,7 @@ function _aiWolf(e, dt){
   const _pk = _wolfPackKey(e);
   const _slotFree = !(gWolfPackTokens[_pk] > gFrame);
   if(!e._bitePending && e.biteWindup<=0 && e.lungeTimer<=0 && e.attackCooldown<=0
-     && dist<=d.lungeRange && _slotFree && !gPlayer.dead){
+     && dist<=d.lungeRange*WOLF_LUNGE_COMMIT_FRAC && _slotFree && !gPlayer.dead){
     e.biteWindup=d.biteWindup; e.biteMax=d.biteWindup; e.biteAngle=e.angle; e._bitePending=true;
     gWolfPackTokens[_pk] = gFrame + d.biteWindup + WOLF_LUNGE_RECOVER + 6;   // hold the slot through windup + the full lunge recovery
   }
@@ -9447,6 +9480,7 @@ function gRender(){
   mpDrawRemotePlayers();
   gctx.textAlign='center';
   for(let i=gDmgNums.length-1;i>=0;i--){const d=gDmgNums[i];d.x+=d.vx*gLastDt;d.y+=d.vy*gLastDt;d.life-=.022*gLastDt;if(d.life<=0){gDmgNums.splice(i,1);continue;}gctx.globalAlpha=d.life;gctx.fillStyle=d.col;const _fs=d.big?17+Math.round((1-d.life)*7):10+Math.round((1-d.life)*5);gctx.font=`bold ${_fs}px monospace`;gctx.fillText(d.val,d.x-camX,d.y-camY);}gctx.globalAlpha=1;
+  gDrawXpPopup();   // #8.4b: aggregated "+N XP" over the player's head
   // ── Whirlwind active indicator — radius ring around player ───
   if(gPlayer&&gPlayer.wwActive){
     const sx2=gPlayer.wx-camX, sy2=gPlayer.wy-camY;
@@ -13955,7 +13989,7 @@ function gDrawFavorOrbs(){
 function gWildGrantXP(xp, wx, wy){
   if(!inWilderness || !gPlayer) return;
   wildXP += xp;
-  addGDmg(wx, wy - 16, '+' + xp + ' XP', '#ffd040');
+  gAddXpPopup(xp);   // #8.4: aggregate into one white "+N XP" over the player (was a per-orb gold float — jumbled w/ Favor)
   while(wildXP >= wildXpToNext(wildLevel)){
     wildXP -= wildXpToNext(wildLevel);
     wildLevel++;
@@ -15138,7 +15172,7 @@ function gWildEnd(){
   gArrows.length  = 0;
   gXPOrbs.length  = 0;
   gFavorOrbs.length = 0;
-  gFogMap = null;
+  gFogMap = null; gFogVis = null;
   _minimapFull = false;
   gVillages = [];
   gWildCamps = [];
@@ -15401,6 +15435,8 @@ function _drawObeliskStone(sx, sy, topCol, shadowCol, now){
 // ═══════════════════════════════════════════════════════════════
 
 let gFogMap       = null;  // Uint8Array(W*H): 0=unseen, 1=revealed
+let gFogVis       = null;  // Float32Array(W*H): per-tile DISPLAYED reveal 0→1, eased toward gFogMap each draw (#8.5 — smooths the frontier shimmer)
+const FOG_REVEAL_EASE = 0.05;  // #8.5: per-frame ease toward target (~0.33s full reveal) — calm growing edge instead of tile-stepping snap
 let _fogOffscreen = null;  // screen-sized canvas the fog overlay is composed on (rebuilt on resize)
 let _fogCtx       = null;
 let _fogLow       = null;  // low-res (1px/tile) fog-alpha canvas, bilinear-upscaled for smooth (sub-tile) edges
@@ -15447,8 +15483,9 @@ function gHiddenByFog(wx, wy){
 
 // ── Initialise fog for current map ───────────────────────────
 function gFogInit(){
-  if(!inWilderness){ gFogMap = null; return; }
+  if(!inWilderness){ gFogMap = null; gFogVis = null; return; }
   gFogMap = new Uint8Array(gMapW * gMapH);
+  gFogVis = new Float32Array(gMapW * gMapH);   // #8.5: displayed reveal, eased toward gFogMap in gDrawFog
   _fogOffscreen = null; _fogCtx = null; _fogLow = null; // reset; rebuilt lazily
   const mm = document.getElementById('minimap-canvas');
   if(mm) mm.style.display = 'block';
@@ -15499,7 +15536,7 @@ function _fogEnsureLow(w, h){
 
 // ── Draw fog overlay on game canvas (screen-space) ───────────
 function gDrawFog(){
-  if(!gFogMap || !inWilderness || !gPlayer) return;
+  if(!gFogMap || !gFogVis || !inWilderness || !gPlayer) return;
   const fx = _fogEnsureOffscreen();
   if(!fx) return;
 
@@ -15516,15 +15553,30 @@ function gDrawFog(){
   const shroudA = ((wildIsNight ? FOG_SHROUD_A_N : FOG_SHROUD_A) * 255) | 0;
   const unseenA = (FOG_UNSEEN_A * 255) | 0;
   const d = _fogLowImg.data;
+  const fadeStep = FOG_REVEAL_EASE * gLastDt;   // #8.5: per-frame ease amount toward the tile's target reveal
   for(let ty=0; ty<th; ty++){
     const my = tr0 + ty;
     const inRowMap = (my >= 0 && my < gMapH);
     const mapRow = my * gMapW;
     for(let tx=0; tx<tw; tx++){
       const mx = tc0 + tx;
-      const visited = inRowMap && mx >= 0 && mx < gMapW && gFogMap[mapRow + mx];
+      const onMap = inRowMap && mx >= 0 && mx < gMapW;
+      // #8.5 — TEMPORAL EASE: a newly-revealed tile's displayed reveal lerps 0→1 over ~0.33s instead of
+      // snapping, so the bilinear-upscaled black↔shroud frontier grows smoothly rather than stepping one
+      // whole tile per reveal (the shimmer/shake the player saw exploring new ground). Off-map → always black.
+      let vis = 0;
+      if(onMap){
+        const idx = mapRow + mx;
+        const tgt = gFogMap[idx] ? 1 : 0;
+        let cur = gFogVis[idx];
+        if(cur < tgt)      cur = Math.min(tgt, cur + fadeStep);
+        else if(cur > tgt) cur = Math.max(tgt, cur - fadeStep);
+        gFogVis[idx] = cur;
+        vis = cur;
+      }
       const p = (ty*tw + tx) * 4;
-      d[p] = 0; d[p+1] = 0; d[p+2] = 0; d[p+3] = visited ? shroudA : unseenA;
+      d[p] = 0; d[p+1] = 0; d[p+2] = 0;
+      d[p+3] = (unseenA + (shroudA - unseenA) * vis) | 0;   // vis 0 → unseen(black), 1 → shroud(dim)
     }
   }
   _fogLowCtx.putImageData(_fogLowImg, 0, 0);

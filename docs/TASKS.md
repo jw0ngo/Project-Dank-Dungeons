@@ -104,14 +104,27 @@ refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 
     re-judge the felt difficulty *with* #8.8 in before deciding how far to cut (don't double-nerf). **Tune by feel:**
     night 1 should be beatable but not free; the late-game wall item 1 created must stay. Host-authoritative; no MP/Sim change.
 
-- ◻️ 🔴 **#8.3 — Wolf leap fires out of range; widen + gate like the warrior charge** — in `_aiWolf`
-  (`index.html:5392`) + the wolf leap range (`leapRange:200`, `:2555` — confirm this is the wolf's def, not
-  the player's `:15088`): (a) **+30% range** 200→**260**. (b) **Only initiate the leap within 70% of max
-  range** (≤182px) — mirror `_aiWarrior`'s true-proximity firing gate (`:5521–5524`, the real-range check
-  that ignores the night-aggro override, vs `chargeRange :2740`). Today the wolf commits from too far and
-  lands short/whiffs. Pure AI/number; host-authoritative, no MP/Sim change.
+- ✅ 🔴 **#8.3 — Wolf leap fires out of range; widen + gate like the warrior charge** — **done ENG 2026-06-12.**
+  The task's `leapRange:200`/`:2555` refs were the *player's* leap; translated the intent to the wolf's real
+  params. The wolf's "leap" is the pounce-bite: it commits when `dist≤lungeRange` (150 dire / 170 alpha) but the
+  pounce impulse was capped by `WOLF_LEAP_MAX=16` (~80px reach) → committing at the far edge landed short. Fix =
+  mirror `_aiWarrior`'s true-proximity gate: **commit only within 70% of `lungeRange`** (`WOLF_LUNGE_COMMIT_FRAC=0.70`)
+  **+ raise pounce reach `WOLF_LEAP_MAX` 16→20** (~+25%) so the leap over-reaches the tighter gate → reliable connect
+  for both wolf types (flankDist sits inside the gate, so the orbiter still closes to commit range). Knobs: the frac
+  (0.70) + the cap (20). Host-side AI, no MP/Sim change. *(The original `200→260` numbers were for the wrong entity;
+  the effect is the same warrior-style relationship — leap reach now exceeds commit distance. Detail preserved below.)*
+  > *(orig)* in `_aiWolf` (`index.html:5392`) + the wolf leap range (`leapRange:200`, `:2555` — confirm this is the
+  > wolf's def, not the player's `:15088`): (a) **+30% range** 200→**260**. (b) **Only initiate the leap within 70%
+  > of max range** (≤182px) — mirror `_aiWarrior`'s true-proximity firing gate (`:5521–5524`). Today the wolf commits
+  > from too far and lands short/whiffs.
 
-- ◻️ 🟢 **#8.4 — XP/Favor pickup text: colour split + aggregated XP counter** — two parts:
+- ✅ 🟢 **#8.4 — XP/Favor pickup text: colour split + aggregated XP counter** — **done ENG 2026-06-12.** Both parts
+  in one: the per-orb gold `+N XP` float is replaced by a single persistent **`gXpPopup{total,expiry,pop}`** anchored
+  over the player's head (`gAddXpPopup`/`gDrawXpPopup`, near `addGDmg`), accumulating over a **5 s window**
+  (`XP_POPUP_WINDOW=300`, refreshed per pickup) with a scale-kick on each add, then easing out (`XP_POPUP_FADE`). It
+  renders **soft white `#eef2ff`** → satisfies the colour split (a); **Favor stays per-pickup gold `#ffd040`**
+  unchanged. Reset with `gDmgNums` on run-reset. Render-only, MP-safe. Flag for Josh: Favor left per-pickup (not
+  aggregated) per the task. *(orig detail below.)*
   - **(a) Colour split** (trivial): XP pickup text → **white** (`addGDmg` at `:13858`, today gold `#ffd040`
     → `#ffffff` / soft `#eef2ff`); Favor pickup text **stays gold** (`:13782`, `#ffd040`). They're
     indistinguishable today because *both* are gold — this is the core "I can't read the popups" fix.
@@ -122,11 +135,12 @@ refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 
     `gPlayer`, vs the transient `addGDmg` list at `:13858`). **Favor stays per-pickup gold** (aggregate is
     XP-only per Josh) — flag if he wants Favor aggregated too. Render/HUD-only.
 
-- ◻️ 🟢 **#8.5 — Smooth the fog-of-war edge shake at the explore frontier** — the low-res fog (`_fogLow`,
-  1 px/tile, bilinear-upscaled `:15306–15309`; composed in `gDrawFog :9446`, revealed `gFogReveal :9971`)
-  makes the shroud edge **jitter/shimmer** as new tiles reveal while exploring. Smooth it — temporal ease
-  on the per-tile fog alpha (lerp toward target instead of snapping), or higher-res reveal sampling —
-  engineer's call. Intent: a calm, smoothly-growing reveal edge, no shake. Render-only.
+- ✅ 🟢 **#8.5 — Smooth the fog-of-war edge shake at the explore frontier** — **done ENG 2026-06-12.** Took the
+  temporal-ease route: added a map-sized **`gFogVis` Float32Array** (allocated/reset in lockstep with `gFogMap`)
+  holding each tile's *displayed* reveal 0→1. In `gDrawFog`'s low-res mask build, each tile's alpha now lerps
+  unseen↔shroud by `gFogVis` (eased toward `gFogMap`'s 0/1 target at `FOG_REVEAL_EASE=0.05`/frame ≈ 0.33 s) instead
+  of snapping → the bilinear-upscaled black↔shroud frontier grows smoothly rather than stepping one whole tile per
+  reveal. Knob: `FOG_REVEAL_EASE`. Render-only, no sim/MP impact. Defensive `!gFogVis` guard added to `gDrawFog`.
 
 - ◻️ 🟢 **#8.6 — Night vision radius should ease in/out, not snap** — `fogVisRadiusVisualPx()` (`:15337`)
   snaps between day (`dayR`) and night (`FOG_VIS_NIGHT*T`) the instant `wildIsNight` flips (`:14761`). Make
