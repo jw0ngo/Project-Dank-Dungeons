@@ -5442,7 +5442,7 @@ function _aiGoblin(e, dt){
 // NATIVE TO THE LAND: wolves climb over rocks (gIsWalkWolf — incl. their own den arcs, the
 // old stuck-on-the-den bug) and destructibles, and take no forest tree-slow. Nothing stops them.
 const WOLF_LEASH_R = 22.6*T;   // px from the camp centre before the pack gives up and heals (+33% chase range)
-const WOLF_LEAP_MAX = 20;      // cap on the pounce impulse (px/frame) — #8.3: raised 16→20 (~+25% reach) so the pounce CLOSES the committed gap instead of landing short. Readability still comes from the biteWindup tell, not the pounce speed.
+const WOLF_LEAP_MAX = 26;      // cap on the pounce impulse (px/frame) — #8.3: 16→20 (close the gap) → 26 (Josh: another +30%, leap THROUGH the player). Sits just above the commit-range impulse so the leap-through lands on a standing/strafing target but a hard backpedal still escapes it. Readability comes from the biteWindup tell, not pounce speed.
 const WOLF_LUNGE_COMMIT_FRAC = 0.70;  // #8.3: only commit the lunge within 70% of lungeRange (mirrors _aiWarrior's true-proximity gate) — the wolf used to commit at the far edge of lungeRange and land short. Reach (above) now over-reaches this tighter gate → reliable connect.
 const WOLF_LUNGE_RECOVER = 42; // frames the wolf is EXPOSED after a lunge — it coasts the pounce, then plants fully (a clear retaliation window for the player; was 32)
 // Pack attack token — only ONE wolf per pack commits a lunge at a time, so a pack pressures in turns
@@ -5500,7 +5500,11 @@ function _aiWolf(e, dt){
     // tail), capped at WOLF_LEAP_MAX so it reads as a leap. This is what makes the wolf actually reach
     // a standing target — orbiting at flankDist, a fixed short dash fell well short of the tight reach.
     const _gap = Math.max(0, dist - (e.r + (tgt.r||11)));
-    const _leap = Math.min(WOLF_LEAP_MAX, _gap*0.20 + d.lungeSpeed*0.35);   // slower pounce — more time to react
+    // 0.26 = gap/5 (the exact friction-tail close) ×1.3 → the pounce travels ~30% PAST body-contact, so the
+    // wolf LEAPS THROUGH the player and ends up on the far side (the committed/exposed punish window), per Josh.
+    // The commit RANGE is unchanged (WOLF_LUNGE_COMMIT_FRAC) — only the leap distance grew. Cap stays just above
+    // the commit-range impulse so a hard backpedal during the windup still makes the leap fall short (dodge counterplay).
+    const _leap = Math.min(WOLF_LEAP_MAX, _gap*0.26 + d.lungeSpeed*0.35);
     e.vx += Math.cos(e.biteAngle)*_leap;
     e.vy += Math.sin(e.biteAngle)*_leap;
     e.attackCooldown=d.meleeCooldown;
@@ -13948,7 +13952,7 @@ function gUpdateFavorOrbs(dt){
   }
 }
 
-const FAVORCOIN_PX = 22;   // on-ground coin width (px); height from art aspect
+const FAVORCOIN_PX = 13;   // on-ground coin width (px); height from art aspect — Josh: −40% (was 22). Pickup hitbox (orb.r) unchanged — visual only.
 function gDrawFavorOrbs(){
   if(!inWilderness || !gFavorOrbs.length) return;
   const t = Date.now();
@@ -13965,7 +13969,7 @@ function gDrawFavorOrbs(){
     gctx.globalCompositeOperation = 'lighter';
     gctx.globalAlpha = pulse * 0.45;
     gctx.fillStyle = '#ffcc33';
-    gctx.beginPath(); gctx.arc(sx, sy+bob, 9, 0, Math.PI*2); gctx.fill();
+    gctx.beginPath(); gctx.arc(sx, sy+bob, 5, 0, Math.PI*2); gctx.fill();   // glow scaled with the smaller coin (was 9)
     gctx.globalCompositeOperation = 'source-over';
     gctx.globalAlpha = 1;
     if(haveSpr){

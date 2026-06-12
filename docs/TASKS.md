@@ -111,7 +111,10 @@ refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 
   mirror `_aiWarrior`'s true-proximity gate: **commit only within 70% of `lungeRange`** (`WOLF_LUNGE_COMMIT_FRAC=0.70`)
   **+ raise pounce reach `WOLF_LEAP_MAX` 16→20** (~+25%) so the leap over-reaches the tighter gate → reliable connect
   for both wolf types (flankDist sits inside the gate, so the orbiter still closes to commit range). Knobs: the frac
-  (0.70) + the cap (20). Host-side AI, no MP/Sim change. *(The original `200→260` numbers were for the wrong entity;
+  (0.70) + the cap (26). Host-side AI, no MP/Sim change. **Refinement (Josh, 2026-06-12):** another +30% lunge reach
+  with the *commit range held the same* → the wolf now **leaps THROUGH** you (gap-close coefficient `0.20→0.26` =
+  travel ×1.3 / ~30% past contact; `WOLF_LEAP_MAX 20→26` so it isn't re-clamped; a hard backpedal during the windup
+  still makes it fall short — dodge counterplay). *(The original `200→260` numbers were for the wrong entity;
   the effect is the same warrior-style relationship — leap reach now exceeds commit distance. Detail preserved below.)*
   > *(orig)* in `_aiWolf` (`index.html:5392`) + the wolf leap range (`leapRange:200`, `:2555` — confirm this is the
   > wolf's def, not the player's `:15088`): (a) **+30% range** 200→**260**. (b) **Only initiate the leap within 70%
