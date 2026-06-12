@@ -14291,6 +14291,36 @@ function generateWildernessMap(seed){
 // ── Entry point — called when player steps through green portal ──
 let inWilderness = false;
 
+// First-drop title card — "Welcome to To Dust" fades in, then "Try to Survive" fades in beneath it, then BOTH
+// fade out together (the container's opacity carries the joint fade-out). Overlays the game view (.game-inner);
+// fires once per page load, on the first wilderness entry.
+let _titleCardShown = false;
+function gShowTitleCard(){
+  if(_titleCardShown) return;
+  _titleCardShown = true;
+  const host = document.querySelector('#game .game-inner');
+  if(!host) return;
+  const ov = document.createElement('div');
+  ov.id = 'title-card';
+  ov.style.cssText = 'position:absolute;inset:0;z-index:30;pointer-events:none;display:flex;flex-direction:column;'
+    + 'align-items:center;justify-content:center;gap:3%;opacity:0;transition:opacity 1.4s ease;'
+    + 'background:radial-gradient(ellipse at center, rgba(0,0,0,.6) 0%, rgba(0,0,0,.35) 65%, rgba(0,0,0,.12) 100%);';
+  const mkImg = (src, maxW, maxH) => {
+    const im = document.createElement('img'); im.src = src; im.alt = '';
+    im.style.cssText = `max-width:${maxW}%;max-height:${maxH}%;opacity:0;transition:opacity 1.3s ease;`
+      + 'filter:drop-shadow(0 3px 12px rgba(0,0,0,.8));';
+    return im;
+  };
+  const welcome = mkImg('assets/ui/title/welcome.png', 66, 34);
+  const survive = mkImg('assets/ui/title/survive.png', 46, 20);
+  ov.appendChild(welcome); ov.appendChild(survive);
+  host.appendChild(ov);
+  requestAnimationFrame(() => { ov.style.opacity = '1'; welcome.style.opacity = '1'; });  // backdrop + welcome in
+  setTimeout(() => { survive.style.opacity = '1'; }, 1500);                                // survive fades in beneath
+  setTimeout(() => { ov.style.opacity = '0'; }, 4800);                                     // both fade out together
+  setTimeout(() => { ov.remove(); }, 6400);
+}
+
 function goWilderness(){
   if(MP.active && !MP.isHost){
     // Non-host players wait for host to lead them in
@@ -14310,6 +14340,7 @@ function goWilderness(){
   gameLoad(mapData);
   gFogInit();           // init fog after map is loaded (gMapW/gMapH are set)
   gWildSyncUnlocks(false);  // level-1 starting kit (swing + heavy); rest unlock on level-up
+  gShowTitleCard();         // first-drop "Welcome / Try to Survive" overlay (once per page load)
 
   // Spawn village enemies now that gEnemies exists
   for(const vill of gVillages){
@@ -16827,8 +16858,13 @@ buildEdPalette();
 refreshHub();
 // Go straight to the town world on page load
 // Firebase must be ready first — _fbInit sets up window._FB
-// goTown() is safe to call immediately; presence defers gracefully if Firebase isn't ready
+// goTown() is safe to call immediately; presence defers gracefully if Firebase isn't ready.
+// goTown sets up the game screen + loop; on the DEPLOYED build (GitHub Pages) we then drop straight into the
+// wilderness (with the title card) before the first frame renders — so no town flash. Local dev (localhost /
+// file://) stays in the town hub for editing/testing.
 goTown();
+const _onPages = !/^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])$/.test(location.hostname) && location.protocol !== 'file:';
+if(_onPages) goWilderness();
 
 
 // ── Shrine patron god menu ────────────────────────────────────────
