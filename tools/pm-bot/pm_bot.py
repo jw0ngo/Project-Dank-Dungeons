@@ -19,6 +19,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -164,6 +165,83 @@ def tool_write_roadmap(args: dict) -> str:
     return f"Wrote {len(content)} chars to {ROADMAP_REL}. Not committed yet — call commit_and_push to publish."
 
 
+# ── Deploy-safe push ──────────────────────────────────────────────────────────
+# A plain `git push origin main` advances the remote ref over the WHOLE ancestor
+# chain — so a docs commit sitting ON TOP of an un-pushed index.html/assets commit
+# would silently carry it to Pages (which redeploys on any push to main). The PM's
+# docs-only push right is pre-authorized; a deploy is NOT. So before pushing we
+# inspect the entire outgoing delta, not just the tip: if a build commit is parked
+# in it, we push ONLY the docs commits (replayed onto the clean remote tip via an
+# isolated worktree) and leave the build commit un-pushed for Josh's explicit auth.
+
+def _git(*args):
+    return subprocess.run(["git", "-C", str(REPO_DIR), *args],
+                          capture_output=True, text=True)
+
+
+def _commit_is_build(sha: str) -> bool:
+    """True if the commit touches the deploy build (index.html or assets/)."""
+    names = _git("diff-tree", "--no-commit-id", "--name-only", "-r", sha).stdout
+    return any(f.strip() == "index.html" or f.strip().startswith("assets/")
+               for f in names.splitlines())
+
+
+def _safe_push_main() -> str:
+    """Push the outgoing delta to origin/main WITHOUT ever advancing past a gated
+    build (index.html/assets) commit. Returns a human-readable status line."""
+    _git("fetch", "origin", "main")  # refresh the origin/main ref before diffing
+    outgoing = _git("rev-list", "--reverse", "origin/main..HEAD").stdout.split()
+    if not outgoing:
+        return "Nothing to push (already in sync with origin/main)."
+    build = [c for c in outgoing if _commit_is_build(c)]
+    if not build:
+        push = _git("push", "origin", "main")
+        if push.returncode != 0:
+            return f"Committed locally, but push failed:\n{push.stderr.strip()[:400]}"
+        return f"Committed and pushed ({len(outgoing)} commit(s), docs-only delta)."
+
+    # A gated build commit is parked in the chain — isolate and push only the docs.
+    docs = [c for c in outgoing if c not in build]
+    if not docs:
+        return (f"HELD (not pushed): the outgoing delta is build-only — {len(build)} "
+                f"commit(s) touch index.html/assets. Awaiting Josh's deploy auth.")
+    wt = os.path.join(tempfile.gettempdir(), f"pmbot-wt-{os.getpid()}-{int(time.time())}")
+    try:
+        add = _git("worktree", "add", "--detach", wt, "origin/main")
+        if add.returncode != 0:
+            return f"Committed locally; safe-push setup failed:\n{add.stderr.strip()[:400]}"
+        for sha in docs:  # replay docs commits (oldest→newest) onto the clean remote tip
+            cp = subprocess.run(["git", "-C", wt, "cherry-pick", "-x", sha],
+                                capture_output=True, text=True)
+            if cp.returncode != 0:
+                subprocess.run(["git", "-C", wt, "cherry-pick", "--abort"],
+                               capture_output=True, text=True)
+                return (f"HELD: couldn't isolate docs from the parked build commit "
+                        f"(cherry-pick conflict on {sha[:9]}). Pushed nothing — manual push needed.")
+        push = subprocess.run(["git", "-C", wt, "push", "origin", "HEAD:main"],
+                              capture_output=True, text=True)
+        if push.returncode != 0:
+            return f"Committed locally; docs push failed:\n{push.stderr.strip()[:400]}"
+    finally:
+        _git("worktree", "remove", "--force", wt)
+        _git("worktree", "prune")
+
+    # origin/main now carries the docs. Reconcile local main: drop the now-duplicate
+    # docs commits, replay the build commit(s) on top (still un-pushed).
+    _git("fetch", "origin", "main")
+    held = f"held {len(build)} build commit(s) for Josh's deploy auth"
+    if _git("status", "--porcelain").stdout.strip():
+        return (f"Pushed {len(docs)} docs commit(s) to origin/main; {held}. "
+                f"⚠ Local main not auto-reconciled (working tree dirty) — "
+                f"run `git rebase origin/main` when clean.")
+    rb = _git("rebase", "origin/main")
+    if rb.returncode != 0:
+        _git("rebase", "--abort")
+        return (f"Pushed {len(docs)} docs commit(s); {held}. "
+                f"⚠ Local rebase conflicted and was aborted — run `git rebase origin/main` manually.")
+    return f"Pushed {len(docs)} docs commit(s) to origin/main (deployed); {held}."
+
+
 def tool_commit_and_push(args: dict) -> str:
     message = (args.get("message") or "").strip()
     if not message:
@@ -178,11 +256,7 @@ def tool_commit_and_push(args: dict) -> str:
         body = f"{message}\n\nCo-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
         subprocess.run(["git", "-C", str(REPO_DIR), "commit", "-m", body],
                        check=True, capture_output=True, text=True)
-        push = subprocess.run(["git", "-C", str(REPO_DIR), "push", "origin", "main"],
-                              capture_output=True, text=True)
-        if push.returncode != 0:
-            return f"Committed locally, but push failed:\n{push.stderr.strip()[:500]}"
-        return f"Committed and pushed: {message}"
+        return _safe_push_main()
     except subprocess.CalledProcessError as e:
         return f"Git error: {(e.stderr or str(e)).strip()[:500]}"
 
@@ -225,7 +299,10 @@ TOOLS = [
         "name": "commit_and_push",
         "description": (
             "Commit docs/ROADMAP.md and push to origin/main so the engineering session sees "
-            "approved items. Call only after write_roadmap and after the developer has approved."
+            "approved items. Call only after write_roadmap and after the developer has approved. "
+            "Deploy-safe: if an un-pushed index.html/assets (build) commit is parked in the "
+            "outgoing delta, it pushes ONLY the docs commits and holds the build commit for "
+            "Josh's deploy auth — never silently deploying. The returned status line says what happened."
         ),
         "parameters": {
             "type": "object",

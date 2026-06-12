@@ -85,6 +85,15 @@ You (Telegram) ⇄ PM bot ──approve──▶ writes docs/ROADMAP.md ──�
 Pushing `ROADMAP.md` does **not** affect the deployed game — GitHub Pages serves
 `index.html`; the roadmap is just a tracked doc.
 
+**Deploy-safe push.** A plain `git push` advances `origin/main` over the *whole*
+ancestor chain, so a docs push sitting on top of an un-pushed `index.html`/`assets/`
+commit would silently deploy it (Pages redeploys on any push to `main`). The bot
+guards against this: before pushing it inspects the entire outgoing delta, and if a
+build commit is parked in it, it pushes **only the docs commits** (replayed onto the
+clean remote tip via an isolated `git worktree`, then reconciles local `main`) and
+**holds** the build commit for your explicit deploy auth — it never silently deploys.
+On any conflict it reports `HELD` and pushes nothing.
+
 ## Security notes
 
 - `.env` and `state/` are gitignored — your keys and chat history never get committed.
