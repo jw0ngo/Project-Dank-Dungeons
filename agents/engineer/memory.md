@@ -18,6 +18,20 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 
 ---
 
+### 2026-06-12 — Sync a host-decided event to co-op clients by its ORIGIN shape: per-player seq · bounded set-stream · push
+
+- **Principle:** To replay a host-authoritative event on clients, pick the sync primitive that matches the
+  event's *origin & cardinality*, not the nearest one. Three shapes in this codebase: (1) **per-player seq
+  counter** (`_frSeq`) for FX that originate AT a player (position = the synced player, implicit); (2)
+  **bounded set-based, id-deduped stream** (`world/fx` via `Net.sendFx`/`_onFxUpdate`/`gNetFx`/`gBurstAndSync`)
+  for **host-decided WORLD events at arbitrary positions** (a Conflagration detonation at an enemy) — `set()`
+  stays bounded (no push-growth), a monotonic id lets clients dedupe AND **baseline-skip history on join**; (3)
+  **push()** for **client→host** one-shot reports (`sendHits`). I reached for the player-seq first — wrong: the
+  burst is at an enemy, not a player, so it needs an explicit `{x,y}` payload + its own id space.
+- **How to apply:** new host→client cosmetic world FX (future god-skill detonations) ride the `world/fx`
+  channel — spawn-local + record-on-host, broadcast-on-change, client baseline-then-dedupe-by-id. Keep it
+  **cosmetic** (no gameplay authority) so a dropped/dup event is harmless; verify the client dedupe by extract-eval.
+
 ### 2026-06-12 — A designer's quantitative benchmark is a TUNING TARGET, not a mechanic spec — don't re-architect to hit a number
 
 - **Principle:** When the designer hands a number ("rank-10 ≈ 80–100 MP/s"), it sizes a *parameter*, not the
@@ -60,34 +74,21 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 
 ### 2026-06-12 — Occluding environment sprites: a reusable system + three rules (cull by extents · fade tracks the occluded · hitbox matches the art)
 
-- **Principle:** A tall world-prop the player can walk behind (tree, and future pillars/statues) is the
-  `gWildTrees` / `gDrawTree` / `gRCTrees` family. Three rules make it read right and all transfer to the next
-  such sprite:
-  1. **Cull by the DRAWN extents, not the anchor.** A foot-anchored sprite draws far ABOVE its foot, so
-     culling on the foot with a small margin clips *visible* sprites at the screen edge → "popping." Use
-     margins derived from the size const (canopy reaches ~0.93·h above the foot). Latent at small scale,
-     blatant at 2×.
-  2. **The occlusion-fade boundary must track the OCCLUDED entity, not a fixed fraction of the occluder.**
-     Standing rule of thumb: **the player's top half always stays visible** behind env sprites. How much of
-     the sprite covers the player depends on where they *stand*, so map the player's **waist** (foot −
-     `PLAYER_VIS_H`/2) into the sprite's image-height fraction and go fully translucent at/above it, ramping
-     to opaque below. A fixed "top X% fades" is wrong — it ignores the player's position.
-  3. **Hitbox matches the art's footprint, and the opaque region coincides with the hitbox.** A wide/short
-     base (roots+rocks) is an **ellipse**, not a circle (a circle over-blocks vertically); a circle centred
-     on the foot dips a full radius *below* the visible base and reads "too low" — anchor the shape so its
-     base meets the ground contact. Drive the collision extent AND the always-opaque draw band from the
-     **same const** so the player can see exactly where collision is.
-- **Mechanics worth keeping:** depth-sort props by foot-y in the `drawables` list (NOT the tile pass, which
-  always sits under entities) so the player tucks behind a canopy / in front of a trunk. Smooth opacity
-  gradient = draw to a **reused offscreen** then `destination-in` a vertical linear gradient (a hard clip =
-  visible seam); faded sprites only. Player-radius-inflated point-vs-ellipse is a fine cheap resolution.
-  Placement seeded in map-gen ⇒ MP-deterministic. Every feel value (`TREE_BASE`, `TREE_DENSITY`,
-  `TREE_BASE_RX/RY_FRAC`, `TREE_FADE_ALPHA/BLEND`, `PLAYER_VIS_H`) is a **named knob** — the feature
-  converged over ~7 one-number user iterations (sibling of the visual-feature-converges-on-the-user's-eye
-  lesson).
-- **Applied + extended (2026-06-12, shipped v0.12.0):** added a `world.treesmall.*` set (foot re-measured →
-  `TREE_FOOT` 0.94; both sets fill the canvas, so "small" reads smaller only via a smaller *draw scale*) and
-  rebuilt placement as weighted **formations** — the hard tuning lived in the spacing rule directly below.
+- **Principle:** A tall world-prop the player walks behind (tree → future pillars/statues) is the
+  `gWildTrees`/`gDrawTree`/`gRCTrees` family. Three transferable rules: (1) **Cull by the DRAWN extents, not
+  the anchor** — a foot-anchored sprite draws far above its foot, so foot-culling clips visible sprites at the
+  edge ("popping"); margin from the size const (canopy ~0.93·h up). Latent at 1×, blatant at 2×. (2) **The
+  occlusion-fade boundary tracks the OCCLUDED entity, not a fixed fraction of the occluder** — keep the
+  player's top half visible: map their **waist** (foot − `PLAYER_VIS_H`/2) into the sprite's height fraction,
+  translucent at/above it. "Top X% fades" ignores where they stand. (3) **Hitbox matches the art's footprint;
+  the opaque region coincides with the hitbox** — a wide/short base is an **ellipse** (a foot-centred circle
+  over-blocks vertically + reads "too low"); drive collision extent AND the always-opaque draw band from the
+  **same const** so collision is visible.
+- **Mechanics:** depth-sort props by foot-y in `drawables` (NOT the tile pass, always under entities). Smooth
+  fade = draw to a **reused offscreen** then `destination-in` a vertical gradient (hard clip = seam). Seeded
+  placement ⇒ MP-deterministic. Every feel value is a **named knob** (converged over ~7 one-number user
+  rounds — sibling of the visual-feature-converges lesson). Extended v0.12.0 with a `world.treesmall.*` set
+  (smaller via *draw scale*, both sets fill the canvas) + weighted **formations**.
 
 ### 2026-06-12 — A many-round spacing/feel knob converges to one physical rule, not stacked per-category constants
 
