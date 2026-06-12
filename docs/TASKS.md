@@ -59,25 +59,25 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 
 ### God Skills — item 2 (↳ roadmap #2 · spec [`specs/god-skills.md`](specs/god-skills.md))
 
-- ✅ ✨ **Trail of Embers — built (full 10-rank tree)** — **done ENG 2026-06-12.** The 2nd Cilia god skill: a
-  movement-as-weapon auto-fire. Added as a generic pool entry `IMBUE_PATHS.cilia.trailOfEmbers` (`fire` block) +
-  `gTickTrailOfEmbers` + a `case 'trailOfEmbers'` in `gUpdateGodSkills` — so acquire/rank-up cards, the Form @5 &
-  Ascension @10 forks (+ headless `gSimEvolution` hook), the toggle, and the action-bar HUD all come **free** from
-  the generic machinery. **Trigger swap:** lays a burning `gFireTrails` patch every `TOE_PATCH_DIST` of distance
-  *moved* (decoupled from dash). **Cost follows emission shape (#8.9 two-table model, Josh-confirmed numbers):**
-  movement Forms charge **per-patch** (`mpPatchByRank`, ~0.7× Burning-Body parity — pay only as you move);
-  Ember Shroud aura charges **per-second** (`mpPerSecByRank`, BB parity); damage is the independent
-  `trailDmgByRank` (rank 1→10 = 45× vs cost 21.7× → dps/mana rises). `gGodSkillDrainPerSec` made Trail-aware (HUD
-  shows honest effective mp/s while moving). **Forms:** Inferno Wake (hotter/wider lanes) · Ember Shroud (continuous
-  burning aura). **Ascensions** reuse the shipped substance grounds: 🐉 Wyrmwake/Phoenix Mantle (dragonfire heal) ·
-  🔥 Chaos Steps — **a trail of exploding footsteps** (Josh 2026-06-12): replaces the continuous trail; every
-  `TOE_STEP_DIST` (100px) of stride drops a fused chaos bomb at the spot just **left behind** (the trailing anchor —
-  never under current feet), detonating ~1s later via the new global `gTrailBombs`/`gUpdateTrailBombs`; stand still →
-  no footsteps. / Immolation (chaosfire self-burn aura). Plumbed a ranked `burnDur` through
-  `gSpawnFireTrail` (legacy callers fall back to `FT_BURN_FRAMES`). `node --check` + economy extract-eval verified.
-  **⚠ Tuning watch (flag for Josh):** Immolation self-burn ≈ 80 self-dps at rank 10 (chaosfire 0.07× × 450 dmg ×
-  2.5/s) — very punishing solo; intended to be funded by a dragon ground (the hybrid synergy). Tune by feel /
-  on the dummy. **Next God Skill: Pyroclasm** (interval + auto-target).
+- ✅ ✨ **Trail of Embers — built, then REWORKED to the new evolution tree** — **done ENG 2026-06-12.** The 2nd
+  Cilia god skill: a movement-as-weapon auto-fire. Generic pool entry `IMBUE_PATHS.cilia.trailOfEmbers` (`fire`
+  block) + `gTickTrailOfEmbers` + a `case 'trailOfEmbers'` in `gUpdateGodSkills` → acquire/rank-up cards, Form @5
+  & Ascension @10 forks (+ headless `gSimEvolution` hook), toggle, and action-bar HUD all come **free**. Emits per
+  `TOE_PATCH_DIST` of distance *moved* (decoupled from dash). **Re-implemented to the PM rework (`25b02ef`):**
+  - **Forms:** **Inferno Wake** = a **wide cone** fanning behind you (`gToeLayCone`: `TOE_CONE_N` patches in a V,
+    apex at feet; `dmgMult 0.55`, `costMult 1.5` — broad/low-per-patch) · **Firesteps** = the **single line** but
+    `dmgMult 1.6` (concentrated). *(Ember Shroud aura **cut** — removed all aura code + `mpPerSecByRank`.)*
+  - **Ascensions** reuse the shipped substance grounds: 🐉 **Wyrmwake** (dragonfire cone, heal) · 🔥 **Chaoswake**
+    (chaosfire cone, offset `TOE_CONE_BACK` behind so **never on the player's tile**) · 🐉 **Dragonfeet** (line
+    patches erupt into dragonflame **pillars @`TOE_DRAGONFEET_FUSE`** via `gFirePillars` + a dragonfire heal-patch
+    — new `kind:'dragon'` in `gTrailBombs`) · 🔥 **Chaos Steps** (relocated to Firesteps, unchanged — exploding
+    footsteps dropped at the trailing anchor).
+  - **Cost:** now **all per-emit** (no per-second anything) — `mpPatchByRank` per emit-tick × the form's `costMult`;
+    cone 9→47 mp/s, line 6→31, footsteps ~43. Damage = independent `trailDmgByRank` (1→10 = 45× vs cost 21.7×).
+    `gGodSkillDrainPerSec` shows honest effective mp/s while moving. Plumbed a ranked `burnDur` through
+    `gSpawnFireTrail` (legacy callers fall back). `node --check` + economy extract-eval verified.
+  - **⚠ Tuning watch (Josh):** Chaoswake self-burn (walk back into your wake) + Chaos-Steps blast (810 dmg rk10) +
+    cone perf (~6 patches/tick) — tune by feel on the dummy. **Next God Skill: Pyroclasm** (interval + auto-target).
 
 ### Playtest feel/readability batch (↳ from PM playtest, Josh 2026-06-12 · roadmap #8)
 *Nine developer-directed game-feel / readability / balance / bug fixes from the first mana-economy playtest.
