@@ -24,6 +24,9 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
   recover, then dive back in.
 
 ### Changed
+- **Obelisks now always offer the three mana/economy boons — Max Mana, Mana Regen, Pickup Range — and the % scales
+  with your level.** Instead of three random buffs from a big pool, every obelisk lets you pick which of the three
+  economy axes to invest in, and the bonus grows the higher your level (so obelisks found deeper into a run pay out bigger).
 - **Burning Body mana economy rescaled — cost and damage are now independent per-rank tables.** Each rank reads a
   fixed mana cost (`mpChunkByRank`) and a fixed damage (`auraDmgByRank`/`emitDmgByRank`) straight off a table — no
   formula coupling the two. The early ranks are **cheaper** (rank 1 = 2 mp/s), both tables **step up** at the Form

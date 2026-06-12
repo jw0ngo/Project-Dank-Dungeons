@@ -15835,50 +15835,30 @@ function gWildReset(){
 const OBELISK_RADIUS  = 3 * 32;   // 3 tiles in px
 const OBELISK_CHANNEL = 600;       // frames to channel (10s at 60fps)
 
-// ── Buff pool (10 types) ─────────────────────────────────────
+// ── Buff pool ────────────────────────────────────────────────
+// Vertical-slice tuning: an obelisk ALWAYS offers the same three mana/economy axes (Max Mana · Mana Regen ·
+// Pickup Range) — the choice is which to invest in. The % each grants SCALES WITH PLAYER LEVEL, so obelisks
+// found deeper into a run pay out bigger. The % is of a fixed base per stat (granted as a flat wildBuffs add).
+const OBELISK_PCT_BASE      = 10;   // % at level 1
+const OBELISK_PCT_PER_LEVEL = 2;    // +% per player level
+const OBELISK_MAXMANA_BASE  = 100;  // 100% ⇒ +this Max MP (= the base pool) — so +pct% of base mana
+const OBELISK_REGEN_BASE    = 5;    // 100% ⇒ +this mp/s regen
+const OBELISK_PICKUP_BASE   = 150;  // 100% ⇒ +this px pickup range
+function _obeliskPct(){ return OBELISK_PCT_BASE + OBELISK_PCT_PER_LEVEL * Math.max(0, (wildLevel || 1) - 1); }
 const OBELISK_BUFFS = [
-  { id:'hp',       icon:'❤',  name:'Vitality',       color:'#cc4444',
-    desc:'+30 Max HP',
-    apply(p){ p.wildBuffs.hpBonus=(p.wildBuffs.hpBonus||0)+30; _wildApplyStats(); } },
-  { id:'mp',       icon:'✦',  name:'Arcane Vessel',  color:'#4488cc',
-    desc:'+25 Max MP',
-    apply(p){ p.wildBuffs.mpBonus=(p.wildBuffs.mpBonus||0)+25; _wildApplyStats(); } },
-  { id:'hpregen',  icon:'⟳',  name:'Regeneration',   color:'#dd6666',
-    desc:'+0.5 HP/s Regen',
-    apply(p){ p.wildBuffs.hpRegenAdd=(p.wildBuffs.hpRegenAdd||0)+0.5; } },
-  { id:'mpregen',  icon:'⟳',  name:'Clarity',        color:'#6699dd',
-    desc:'+0.4 MP/s Regen',
-    apply(p){ p.wildBuffs.mpRegenAdd=(p.wildBuffs.mpRegenAdd||0)+0.4; } },
-  { id:'speed',    icon:'⚡',  name:'Swiftness',      color:'#44ddaa',
-    desc:'+10% Movement Speed',
-    apply(p){ p.wildBuffs.speedPct=(p.wildBuffs.speedPct||0)+10; } },
-  { id:'damage',   icon:'⚔',  name:'Bloodlust',      color:'#ff6644',
-    desc:'+15% All Damage',
-    apply(p){ p.wildBuffs.damagePct=(p.wildBuffs.damagePct||0)+15; } },
-  { id:'cd',       icon:'↺',  name:'Alacrity',       color:'#aaddff',
-    desc:'−15% All Cooldowns',
-    apply(p){ p.wildBuffs.cdPct=(p.wildBuffs.cdPct||0)+15; } },
-  { id:'spawn',    icon:'☠',  name:'Cursed Ground',  color:'#ff4488',
-    desc:'+25% Enemy Spawns',
-    apply(p){ p.wildBuffs.spawnPct=(p.wildBuffs.spawnPct||0)+25; } },
-  { id:'xp',       icon:'★',  name:'Wisdom',         color:'#ffd040',
-    desc:'+30% EXP Gain',
-    apply(p){ p.wildBuffs.xpPct=(p.wildBuffs.xpPct||0)+30; } },
-  { id:'pickup',   icon:'◎',  name:'Magnetism',      color:'#88ffcc',
-    desc:'+40px EXP Pickup Range',
-    apply(p){ p.wildBuffs.pickupRange=(p.wildBuffs.pickupRange||0)+40; } },
+  { id:'mp',      icon:'✦', name:'Arcane Vessel', color:'#4488cc',
+    desc:()=>`+${_obeliskPct()}% Max Mana`,
+    apply(p){ p.wildBuffs.mpBonus    = (p.wildBuffs.mpBonus||0)    + Math.round(OBELISK_MAXMANA_BASE * _obeliskPct()/100); _wildApplyStats(); } },
+  { id:'mpregen', icon:'⟳', name:'Clarity',       color:'#6699dd',
+    desc:()=>`+${_obeliskPct()}% Mana Regen`,
+    apply(p){ p.wildBuffs.mpRegenAdd = (p.wildBuffs.mpRegenAdd||0) + +(OBELISK_REGEN_BASE  * _obeliskPct()/100).toFixed(2); } },
+  { id:'pickup',  icon:'◎', name:'Magnetism',     color:'#88ffcc',
+    desc:()=>`+${_obeliskPct()}% Pickup Range`,
+    apply(p){ p.wildBuffs.pickupRange= (p.wildBuffs.pickupRange||0)+ Math.round(OBELISK_PICKUP_BASE * _obeliskPct()/100); } },
 ];
 
-// Pick 3 random non-duplicate buffs
-function _obeliskPickBuffs(){
-  const pool = [...OBELISK_BUFFS];
-  const picks = [];
-  while(picks.length < 3 && pool.length > 0){
-    const i = Math.floor(Math.random()*pool.length);
-    picks.push(pool.splice(i,1)[0]);
-  }
-  return picks;
-}
+// Always offer all three (the choice is which economy axis to invest in this obelisk).
+function _obeliskPickBuffs(){ return OBELISK_BUFFS; }
 
 // ── Obelisk buff selection overlay ───────────────────────────
 function gShowObeliskBuffs(ob){
@@ -15900,7 +15880,7 @@ function gShowObeliskBuffs(ob){
     card.innerHTML = `
       <div class="sc-icon" style="font-size:24px;">${buff.icon}</div>
       <div class="sc-name" style="color:${buff.color}">${buff.name}</div>
-      <div class="sc-bonuses" style="text-align:center;">${buff.desc}</div>
+      <div class="sc-bonuses" style="text-align:center;">${typeof buff.desc==='function'?buff.desc():buff.desc}</div>
     `;
     card.onclick = () => {
       buff.apply(p);
