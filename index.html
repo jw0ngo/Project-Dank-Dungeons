@@ -4332,19 +4332,40 @@ function gTickPyroclasm(p, dt, id, tree){
   const ground  = (leaf && leaf.ground) || null;
   const shape   = (fdef && fdef.fire && fdef.fire.shape) || 'lane';   // pre-Form = a plain lane
   const dmgMult = (fdef && fdef.fire && fdef.fire.dmgMult) || 1;       // Firewall lays many pillars → lower each
-  const dmg     = Math.max(1, Math.round(gGodFireParam(p, id, 'pillarDmg') * dbuf * dmgMult));
+  let   dmg     = Math.max(1, Math.round(gGodFireParam(p, id, 'pillarDmg') * dbuf * dmgMult));
+  if(asc === 'riftmaw') dmg = Math.max(1, Math.round(dmg * PYRO_RIFT_DMG));   // long rift → many pillars, lower each
   const radius  = gGodFireParam(p, id, 'pillarRadius');
   const count   = Math.max(1, Math.round(gGodFireParam(p, id, 'pillarCount')));
   const burnDur = gGodFireParam(p, id, 'burnFrames');
 
-  gPyroFire(p, p.angle, dmg, count, radius, burnDur, ground, shape, asc);   // fire toward the mouse aim
+  gPyroFire(p, p.angle, gPyroAimDist(p, id), dmg, count, radius, burnDur, ground, shape, asc);  // fire toward the mouse
   gShake && gShake(4, 6);
 }
-// The deterministic pillar footprints for a lane/walls aimed at `ang` — the SINGLE source of layout truth,
-// shared by the actual fire (gPyroFire) and the aim indicator (gDrawPyroTelegraph) so they always match.
-// Returns [{x, y, r, finale, delay}] (the erratic Riftmaw scatter is random → not part of the plan).
-function gPyroPlan(p, ang, shape, count, radius, asc){
-  const out = [], start = FP_START_TILES * T, step = FP_STEP_TILES * T;
+// How far down the aim the lane reaches: the mouse's distance from the player, clamped to [near, VW*0.5*rangeFrac]
+// — so the Eruption finale lands AT the cursor, and at rank 10 (rangeFrac 1.0) can reach the screen's edge.
+function gPyroAimDist(p, id){
+  const dist = Math.hypot((gMouseX + camX) - p.wx, (gMouseY + camY) - p.wy);
+  const maxR = VW * 0.5 * gGodFireParam(p, id, 'rangeFrac');
+  return Math.max(FP_START_TILES * T + FP_STEP_TILES * T, Math.min(dist, maxR));
+}
+// The deterministic pillar footprints for a fire aimed in direction `ang` out to `aimDist` — the SINGLE source
+// of layout truth, shared by the actual fire (gPyroFire) and the aim indicator (gDrawPyroTelegraph) so they
+// always match. Returns [{x, y, r, finale, delay}]. Riftmaw = a long erratic rift (deterministic jitter).
+function gPyroPlan(p, ang, aimDist, shape, count, radius, asc){
+  const out = [], start = FP_START_TILES * T;
+  if(asc === 'riftmaw'){
+    // A screen-spanning rift: PYRO_RIFT_LEN chaos pillars marching out in the AIM direction with deterministic
+    // lateral jitter (erratic but identical between telegraph + fire), erupting in sequence so it TRAVELS.
+    const perp = ang + Math.PI / 2;
+    for(let i = 0; i < PYRO_RIFT_LEN; i++){
+      const d = start + i * PYRO_RIFT_STEP;
+      const h = Math.sin(i * 127.1 + 311.7) * 43758.5453; const jit = (h - Math.floor(h)) * 2 - 1;  // [-1,1], deterministic per i
+      out.push({ x: p.wx + Math.cos(ang) * d + Math.cos(perp) * jit * PYRO_RIFT_JITTER,
+                 y: p.wy + Math.sin(ang) * d + Math.sin(perp) * jit * PYRO_RIFT_JITTER,
+                 r: radius, finale: false, delay: i * PYRO_RIFT_DELAY });
+    }
+    return out;
+  }
   if(shape === 'firewall'){
     const perp = ang + Math.PI / 2, walls = PYRO_WALL_COUNT + (asc === 'hellfront' ? 2 : 0), wstart = start + radius * 1.5;
     for(let w = 0; w < walls; w++){
@@ -4356,8 +4377,10 @@ function gPyroPlan(p, ang, shape, count, radius, asc){
       }
     }
   } else {
+    // Lane (base + Eruption): `count` pillars spread from the player out to aimDist; the last is the finale.
+    const gap = count > 1 ? (aimDist - start) / (count - 1) : 0;
     for(let i = 0; i < count; i++){
-      const d = start + i * step, finale = (shape === 'eruption' && i === count - 1);
+      const d = count > 1 ? start + i * gap : aimDist, finale = (shape === 'eruption' && i === count - 1);
       out.push({ x: p.wx + Math.cos(ang) * d, y: p.wy + Math.sin(ang) * d, r: finale ? radius * PYRO_FINALE_SCALE : radius, finale, delay: i * FP_STEP_DELAY });
     }
   }
@@ -4373,10 +4396,10 @@ function gPyroPushPillar(x, y, dmg, radius, burnDur, delay, scale, ground){
   else if(ground === 'chaosfire')
     gSpawnFireTrail(x, y, 1, false, { substance:'chaosfire', selfDmg: Math.max(1, Math.round(dmg * CHAOSFIRE_SELF_RATIO)), reach: radius, life: FT_LIFE });
 }
-// Erupt the planned pillars. Eruption's finale hits PYRO_FINALE_DMG× (Wyrmspine re-erupts it); Riftmaw adds
-// an erratic chaos sprawl past the aim (random → outside the deterministic plan/indicator).
-function gPyroFire(p, ang, dmg, count, radius, burnDur, ground, shape, asc){
-  for(const q of gPyroPlan(p, ang, shape, count, radius, asc)){
+// Erupt the planned pillars. Eruption's finale hits PYRO_FINALE_DMG× (Wyrmspine re-erupts it). Riftmaw's whole
+// rift is in the plan (chaosfire via ground), so this just spawns it.
+function gPyroFire(p, ang, aimDist, dmg, count, radius, burnDur, ground, shape, asc){
+  for(const q of gPyroPlan(p, ang, aimDist, shape, count, radius, asc)){
     if(q.finale){
       const fd = Math.round(dmg * PYRO_FINALE_DMG);
       gPyroPushPillar(q.x, q.y, fd, q.r, burnDur, q.delay, PYRO_FINALE_SCALE, ground);
@@ -4384,14 +4407,6 @@ function gPyroFire(p, ang, dmg, count, radius, burnDur, ground, shape, asc){
         for(let k = 1; k < PYRO_REERUPT; k++) gPyroPushPillar(q.x, q.y, fd, q.r, burnDur, q.delay + k * PYRO_REERUPT_GAP, PYRO_FINALE_SCALE, ground);
     } else {
       gPyroPushPillar(q.x, q.y, dmg, q.r, burnDur, q.delay, 1, ground);
-    }
-  }
-  if(asc === 'riftmaw'){
-    const end = (FP_START_TILES + count * FP_STEP_TILES) * T, step = FP_STEP_TILES * T;
-    for(let k = 0; k < PYRO_RIFT_SCATTER; k++){
-      const d = end + Math.random() * 4 * step, spread = (Math.random() - 0.5) * 1.2;
-      gPyroPushPillar(p.wx + Math.cos(ang + spread) * d, p.wy + Math.sin(ang + spread) * d,
-        Math.round(dmg * 0.8), radius, burnDur, Math.floor(Math.random() * 40), 1, 'chaosfire');
     }
   }
 }
@@ -4415,7 +4430,7 @@ function gDrawPyroTelegraph(p){
   const baseA = 0.10 + 0.20 * prog;                           // footprint firms up as the eruption nears
   const col = ground === 'dragonfire' ? '#ffcc55' : ground === 'chaosfire' ? '#ff3a2a' : '#ff7a22';
   gctx.save();
-  for(const q of gPyroPlan(p, p.angle, shape, count, radius, asc)){
+  for(const q of gPyroPlan(p, p.angle, gPyroAimDist(p, id), shape, count, radius, asc)){
     const sx = q.x - camX, sy = q.y - camY;
     if(sx < -80 || sx > VW + 80 || sy < -120 || sy > VH + 80) continue;
     gctx.globalAlpha = baseA;                                 // solid footprint disc
@@ -7273,7 +7288,12 @@ const PYRO_WALL_STAGGER = 7;          // Firewall: frames between wall-row erupt
 const PYRO_WALL_SPAN    = 5;          // Firewall: pillars across each perpendicular wall-row
 const PYRO_REERUPT      = 3;          // Wyrmspine: finale re-erupts this many times
 const PYRO_REERUPT_GAP  = 26;         // Wyrmspine: frames between re-erupts
-const PYRO_RIFT_SCATTER = 5;          // Riftmaw: erratic chaos pillars scattered past the aim per fire
+// Riftmaw — a long erratic rift of chaos pillars crossing the map, aimed (spawn + direction) by the mouse.
+const PYRO_RIFT_LEN     = 30;         // pillars along the rift — a screen-spanning line
+const PYRO_RIFT_STEP    = 52;         // px between rift pillars (×LEN ≈ 1500px ≈ "across the map")
+const PYRO_RIFT_JITTER  = 42;         // lateral erratic offset (px), deterministic per-index so telegraph = fire
+const PYRO_RIFT_DELAY   = 3;          // frames between successive rift eruptions → it TRAVELS across the map
+const PYRO_RIFT_DMG     = 0.4;        // per-pillar damage × (many pillars over a long line → lower each)
 // Flame of Chaos (Emberfan 🔥 leaf) — the massive slow ball that lays a chaosfire wake the whole way.
 const FLAMEOFCHAOS_TILES    = 20;   // how far the chaos ball travels (tiles) — a long lane of fire
 const FLAMEOFCHAOS_SPEED    = 4.5;  // px/frame — deliberately slow & lumbering (~3.6s to cross 20 tiles)
@@ -14757,10 +14777,13 @@ const IMBUE_PATHS = {
         kind:'pyroclasm',
         base: { interval:PYRO_INTERVAL, pillarRadius:FP_RADIUS, burnFrames:FP_BURN_FRAMES, pillarCount:3,
                 // #8.9 — TWO independent per-rank tables. (1) COST per LANE fired (per-emit, charged each interval);
-                //     ÷interval(3s) ⇒ mp/s [2,3,4,5.5,9,12,16,21,27,45] — Burning-Body parity (an always-on interval skill).
+                //     ÷interval(7s) ⇒ mp/s — Burning-Body parity per-lane (the slower cadence makes the live mp/s lower).
                 mpLaneByRank:[6, 9, 12, 16.5, 27, 36, 48, 63, 81, 135],
                 // (2) DAMAGE per pillar — climbs FASTER than cost (rank 1→10 = 45× vs cost 22.5×). Form dmgMult scales it.
-                pillarDmgByRank:[20, 30, 44, 66, 110, 155, 220, 310, 440, 900] },
+                pillarDmgByRank:[20, 30, 44, 66, 110, 155, 220, 310, 440, 900],
+                // (3) AIM RANGE as a fraction of the half-screen (VW/2): the Eruption finale lands at the mouse,
+                //     clamped to VW*0.5*rangeFrac. Rank 10 = 1.0 → the finale reaches the screen's left/right edge.
+                rangeFracByRank:[0.30, 0.38, 0.46, 0.55, 0.68, 0.76, 0.84, 0.92, 0.96, 1.00] },
         floors: { interval:60 },   // cadence floor (perf/spam)
       },
       // ranks 1–4: more pillars, bigger radius, longer burn (damage is pillarDmgByRank, not additive here).
