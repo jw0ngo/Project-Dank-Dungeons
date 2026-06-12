@@ -70,8 +70,10 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
   `trailDmgByRank` (rank 1→10 = 45× vs cost 21.7× → dps/mana rises). `gGodSkillDrainPerSec` made Trail-aware (HUD
   shows honest effective mp/s while moving). **Forms:** Inferno Wake (hotter/wider lanes) · Ember Shroud (continuous
   burning aura). **Ascensions** reuse the shipped substance grounds: 🐉 Wyrmwake/Phoenix Mantle (dragonfire heal) ·
-  🔥 Chaos Steps (per-patch trail **+** a fused chaos bomb every 2s → detonates ~1s later via new global
-  `gTrailBombs`/`gUpdateTrailBombs`) / Immolation (chaosfire self-burn aura). Plumbed a ranked `burnDur` through
+  🔥 Chaos Steps — **a trail of exploding footsteps** (Josh 2026-06-12): replaces the continuous trail; every
+  `TOE_STEP_DIST` (100px) of stride drops a fused chaos bomb at the spot just **left behind** (the trailing anchor —
+  never under current feet), detonating ~1s later via the new global `gTrailBombs`/`gUpdateTrailBombs`; stand still →
+  no footsteps. / Immolation (chaosfire self-burn aura). Plumbed a ranked `burnDur` through
   `gSpawnFireTrail` (legacy callers fall back to `FT_BURN_FRAMES`). `node --check` + economy extract-eval verified.
   **⚠ Tuning watch (flag for Josh):** Immolation self-burn ≈ 80 self-dps at rank 10 (chaosfire 0.07× × 450 dmg ×
   2.5/s) — very punishing solo; intended to be funded by a dragon ground (the hybrid synergy). Tune by feel /

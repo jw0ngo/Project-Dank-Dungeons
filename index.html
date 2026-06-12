@@ -3979,9 +3979,10 @@ function gGodSkillDrainPerSec(p, id){
   if(tree && tree.fire && tree.fire.kind === 'trailOfEmbers'){
     const form = gImbueForm(p, id), fdef = form && tree.forms[form];
     if(fdef && fdef.fire && fdef.fire.emit === 'aura') return gGodFireParam(p, id, 'mpPerSec');
-    let rate = gGodFireParam(p, id, 'mpPatch') * ((p.speed || 2.4) * 60 / TOE_PATCH_DIST);
-    if(gImbueAscension(p, id) === 'chaosSteps') rate += gGodSkillEmitCost(p, id) * 60 / TOE_BOMB_INTERVAL;
-    return rate;
+    const pps = (p.speed || 2.4) * 60;
+    // Chaos Steps replaces the continuous trail with exploding footsteps → drain is per-footstep only.
+    if(gImbueAscension(p, id) === 'chaosSteps') return gGodSkillEmitCost(p, id) * (pps / TOE_STEP_DIST);
+    return gGodFireParam(p, id, 'mpPatch') * (pps / TOE_PATCH_DIST);
   }
   const baseRate = gGodSkillBaseChunk(p, id) * 60 / BB_AURA_INTERVAL;
   const ei = gGodSkillEmitInterval(p, id);
@@ -4172,12 +4173,14 @@ function gTickBurningBody(p, dt, id, tree){
 }
 
 // Trail of Embers — the movement-as-weapon god skill. (1) The movement path (base / Inferno Wake +
-// its 🐉 Wyrmwake / 🔥 Chaos Steps ascensions) lays a burning patch every TOE_PATCH_DIST of distance
-// MOVED, charging a per-patch chunk (mpPatchByRank) as it goes — you pay only while moving. (2) The
-// Ember Shroud Form (+ 🐉 Phoenix Mantle / 🔥 Immolation) drops the ground trail for a continuous
-// burning AURA that drains per-second (mpPerSecByRank). Ascensions reskin to the shipped substance
-// grounds: dragonfire heals the owner, chaosfire self-burns. Chaos Steps additionally drops a fused
-// chaos bomb every TOE_BOMB_INTERVAL that detonates after TOE_BOMB_FUSE (gUpdateTrailBombs). Damage is
+// its 🐉 Wyrmwake ascension) lays a continuous burning patch every TOE_PATCH_DIST of distance MOVED,
+// charging a per-patch chunk (mpPatchByRank) as it goes — you pay only while moving. (2) The Ember
+// Shroud Form (+ 🐉 Phoenix Mantle / 🔥 Immolation) drops the ground trail for a continuous burning
+// AURA that drains per-second (mpPerSecByRank). Ascensions reskin to the shipped substance grounds:
+// dragonfire heals the owner, chaosfire self-burns. 🔥 Chaos Steps is the exception — it replaces the
+// continuous trail with a TRAIL OF EXPLODING FOOTSTEPS: each TOE_STEP_DIST of stride drops a fused chaos
+// bomb at the spot just LEFT BEHIND (never under current feet), detonating after TOE_BOMB_FUSE
+// (gUpdateTrailBombs). Damage is
 // the per-rank trailDmgByRank table; cost + damage are independent tables (the #8.9 model).
 function gTickTrailOfEmbers(p, dt, id, tree){
   const dbuf   = (p.wildBuffs && (1 + (p.wildBuffs.damagePct || 0) / 100)) || 1;
@@ -4225,34 +4228,40 @@ function gTickTrailOfEmbers(p, dt, id, tree){
     return;
   }
 
-  // ── Movement path: lay a patch every TOE_PATCH_DIST of DISTANCE MOVED, paying per-patch as you go ──
-  if(p._toeLastX == null){ p._toeLastX = p.wx; p._toeLastY = p.wy; p._toeDist = 0; }
-  else {
-    p._toeDist = (p._toeDist || 0) + Math.hypot(p.wx - p._toeLastX, p.wy - p._toeLastY);
-    p._toeLastX = p.wx; p._toeLastY = p.wy;
-    let guard = 0;                                            // safety: never lay more than a few patches/frame
-    while(p._toeDist >= TOE_PATCH_DIST && guard++ < 6){
-      p._toeDist -= TOE_PATCH_DIST;
-      const cost = gGodFireParam(p, id, 'mpPatch');
-      if(p.mp < cost){ p.godSkillDormant[id] = true; p._toeDist = 0; break; }  // broke → dormant, drop the backlog
-      gSpendMana(p, cost);
-      const opts = { reach, life, burnFrames: burnDur };
-      if(ground === 'dragonfire'){ opts.substance = 'dragonfire'; opts.heal    = Math.max(1, Math.round(dmg * DRAGONFIRE_HEAL_RATIO)); }
-      else if(ground === 'chaosfire'){ opts.substance = 'chaosfire'; opts.selfDmg = Math.max(1, Math.round(dmg * CHAOSFIRE_SELF_RATIO)); }
-      gSpawnFireTrail(p.wx, p.wy, dmg, false, opts);
+  // ── Movement path: base / Inferno Wake / Wyrmwake lay a CONTINUOUS burning trail per distance moved,
+  //    paying per-patch as you go. Chaos Steps is the exception — it replaces the continuous trail with
+  //    spaced exploding footsteps (handled below), so it lays no patch here. ──
+  if(asc !== 'chaosSteps'){
+    if(p._toeLastX == null){ p._toeLastX = p.wx; p._toeLastY = p.wy; p._toeDist = 0; }
+    else {
+      p._toeDist = (p._toeDist || 0) + Math.hypot(p.wx - p._toeLastX, p.wy - p._toeLastY);
+      p._toeLastX = p.wx; p._toeLastY = p.wy;
+      let guard = 0;                                          // safety: never lay more than a few patches/frame
+      while(p._toeDist >= TOE_PATCH_DIST && guard++ < 6){
+        p._toeDist -= TOE_PATCH_DIST;
+        const cost = gGodFireParam(p, id, 'mpPatch');
+        if(p.mp < cost){ p.godSkillDormant[id] = true; p._toeDist = 0; break; }  // broke → dormant, drop the backlog
+        gSpendMana(p, cost);
+        const opts = { reach, life, burnFrames: burnDur };
+        if(ground === 'dragonfire'){ opts.substance = 'dragonfire'; opts.heal = Math.max(1, Math.round(dmg * DRAGONFIRE_HEAL_RATIO)); }
+        gSpawnFireTrail(p.wx, p.wy, dmg, false, opts);
+      }
     }
   }
 
-  // ── Chaos Steps (🔥 Inferno Wake ascension): a fused chaos bomb every TOE_BOMB_INTERVAL ──
+  // ── Chaos Steps (🔥 Inferno Wake ascension) — a trail of exploding footsteps. As the player STRIDES
+  //    away, a fused chaos bomb is dropped at the spot they just LEFT (the trailing anchor — never under
+  //    their current feet), every TOE_STEP_DIST of movement. Keep moving → the blasts bloom behind you;
+  //    stand still → no footsteps drop. Charges the per-emit cost per footstep. ──
   if(asc === 'chaosSteps'){
-    p._toeBombT = (p._toeBombT || 0) - dt;
-    if(p._toeBombT <= 0){
-      const emitCost = gGodSkillEmitCost(p, id);            // leaf.mpEmit
+    if(p._toeStepX == null){ p._toeStepX = p.wx; p._toeStepY = p.wy; }
+    else if(Math.hypot(p.wx - p._toeStepX, p.wy - p._toeStepY) >= TOE_STEP_DIST){
+      const emitCost = gGodSkillEmitCost(p, id);             // leaf.mpEmit, charged per footstep
       if(p.mp >= emitCost){
         gSpendMana(p, emitCost);
-        p._toeBombT = TOE_BOMB_INTERVAL;
-        gTrailBombs.push({ x: p.wx, y: p.wy, fuse: TOE_BOMB_FUSE, dmg: Math.round(dmg * TOE_BOMB_DMG_MULT) });
-      } else { p._toeBombT = 12; }                          // can't afford the bomb this beat → retry shortly
+        gTrailBombs.push({ x: p._toeStepX, y: p._toeStepY, fuse: TOE_BOMB_FUSE, dmg: Math.round(dmg * TOE_BOMB_DMG_MULT) });
+        p._toeStepX = p.wx; p._toeStepY = p.wy;              // advance the anchor; the next footstep drops here once you stride on
+      } else { p.godSkillDormant[id] = true; }               // can't afford → no footstep (anchor holds, retries on regen)
     }
   }
 }
@@ -7106,7 +7115,7 @@ const CHAOSFIRE_SELF_RATIO  = 0.07; // chaosfire  per-tick SELF-DAMAGE      = th
 // the Ember Shroud aura charges per-second (mpPerSecByRank, BB parity — it drains even standing still).
 const TOE_PATCH_DIST    = FT_SPACING; // px of movement per laid patch (reuse the dash-trail spacing = 18)
 const TOE_AURA_RADIUS   = 70;         // Ember Shroud base aura radius (px) — a moving burning bubble; grows with reach
-const TOE_BOMB_INTERVAL = 120;        // Chaos Steps: a fused chaos bomb every ~2s (frames)
+const TOE_STEP_DIST     = 100;        // Chaos Steps: px of movement between exploding footsteps (the stride)
 const TOE_BOMB_FUSE     = 60;         // Chaos Steps: drop→detonation delay (~1s telegraph)
 const TOE_BOMB_R        = 84;         // Chaos Steps detonation radius (px)
 const TOE_BOMB_DMG_MULT = 1.8;        // bomb blast damage = trailDmg × this
@@ -14529,7 +14538,7 @@ const IMBUE_PATHS = {
       art:'Trail of Embers', icon:'🔥', maxRank:10, formRank:5, chaosRank:10,
       acquireDesc:'You leave a trail of burning embers as you move — anything that follows you through it catches fire and burns.',
       fire: {
-        kind:'trailOfEmbers', timerKey:'_toeBombT',
+        kind:'trailOfEmbers',   // distance-keyed (no single timer); cost follows emission shape
         base: { reach:FT_REACH, life:FT_LIFE, burnFrames:FT_BURN_FRAMES,
                 // #8.9 — THREE independent per-rank tables (read by rank; no formula couples them):
                 // (1) COST per PATCH (MP) for the movement Forms — ~0.7× Burning-Body parity (you pay only as you
