@@ -59,7 +59,7 @@ three cheap irritant-fixers (wolf leap whiffing, XP/Favor popups jumbling, fog-e
 | **5** | **Boreas** — a second god (ice/control) | ⏸️ Held | Multi-session | Parked — the playtest showed we don't need it yet |
 | **6** | **Heavy charge locks out the normal swing** — committing to a heavy means committing | ✅ Shipped (2026-06-11) | Quick | Weighty-combat directive: a committed action must cost you other options |
 | **7** | **Mana economy & skill management** — costs/cooldowns rework so you run dry early; God Skills drain mana/sec; toggle auto-casts to keys 1–9 + WoW-style action bar | ✅ Shipped (2026-06-12, all 3 phases + action bar) | Multi-session, phased | Makes mana a real resource + a live build-management decision (weighty combat + build depth) |
-| **8** | **Playtest feel/readability batch** — wolf-leap range fix · XP/Favor colour split + aggregated XP counter · fog-edge smoothing · gradual night-vision fade · out-of-combat HP regen · LOS reveal of enemies behind trees | ◻️ Approved (2026-06-12) — 6 tasks in Engineer lane | Quick (batch ≈ 1 session) | Game feel + readability (pillar 1) — fixes the irritants the first mana playtest surfaced |
+| **8** | **Playtest feel/readability/balance batch** — wolf-leap fix · XP/Favor colour split + aggregated XP counter · fog-edge smoothing · gradual night-vision · out-of-combat HP **&** mana regen · LOS tree-reveal · **early-game difficulty scale-back** | ◻️ Approved (2026-06-12) — 8 tasks in Engineer lane | Quick (batch ≈ 1 session) | Game feel + readability + early-game balance (pillar 1) — fixes the irritants the first mana playtest surfaced |
 
 ---
 
@@ -400,11 +400,17 @@ clearly and feeling fair:
    so threats can't lurk invisibly behind trunks.
 5. **Fog-edge smoothing** — the shroud edge shimmers/shakes as you explore new ground; smooth it to a calm reveal.
 6. **Gradual night-vision** — the night vision-shrink eases in/out as night nears/lifts instead of snapping.
+7. **Early-game difficulty scale-back** — with the new tight mana you can't spam leap to clear a horde, so **night 1
+   is too hard.** Push the difficulty curve later (lower the early bases, keep item 1's late-game ramp).
+8. **Out-of-combat mana regen** — **10 mp/s after 10 s of no mana use and no damage** (mirrors the HP regen; also the
+   relief valve that makes the scaled-back early game survivable — disengage to recharge, then re-engage).
 
 **Why:** Pillar 1 is the top priority, and these are the irritants the live mana playtest surfaced — readability
-(can't tell XP from Favor; popups jumble), fairness (wolves whiff; enemies hide behind trees), and polish (fog
-shimmer; vision snap). All cheap, all developer-directed (numbers given). **Sequencing:** interleaves with item 2 —
-grab the three cheapest (wolf leap · colour split · fog shake) first; they improve every subsequent playtest.
+(can't tell XP from Favor; popups jumble), fairness (wolves whiff; enemies hide behind trees), polish (fog shimmer;
+vision snap), and an **early-game balance regression** (item 7's tighter mana × item 1's steeper curve made night 1
+too punishing). All cheap, all developer-directed (numbers given). **Sequencing:** interleaves with item 2 — grab the
+three cheapest (wolf leap · colour split · fog shake) first; do the **mana regen (8) before the difficulty cut (7)**
+so we don't double-nerf the early game.
 
 ---
 

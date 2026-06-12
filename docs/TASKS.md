@@ -40,10 +40,40 @@ the PM, Engineer/CTO, and Artist lives here with a live status. When there's no 
 ## 🟧 Engineer / CTO lane
 
 ### Playtest feel/readability batch (↳ from PM playtest, Josh 2026-06-12 · roadmap #8)
-*Six developer-directed game-feel / readability / bug fixes from the first mana-economy playtest. All
-pre-greenlit (bug-driven + polish on shipped systems). Mostly quick; grounding/anchors inline (line refs
-drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 wolf leap, #8.4a colour split,
-#8.5 fog shake) — tiny, and they clean up every playtest.*
+*Eight developer-directed game-feel / readability / balance / bug fixes from the first mana-economy playtest.
+All pre-greenlit (bug-driven + balance/polish on shipped systems). Mostly quick; grounding/anchors inline (line
+refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 wolf leap, #8.4a colour split,
+#8.5 fog shake) — tiny, and they clean up every playtest. #8.7/#8.8 are the mana-balance pair (do #8.8 first).*
+
+- ◻️ ✨ **#8.8 — Default out-of-combat MANA regen: 10 mp/s after 10 s of no mana use AND no damage** (↳ from
+  PM playtest, Josh 2026-06-12) — mirror of the HP-regen #8.2, and the **relief valve for #8.7** (recharge by
+  disengaging → leap into the next horde). Today base mana regen is tight (`mpRegen 0.01667/f ≈ 1/s`, `:2545`,
+  applied `:4502–4509`). Add: stamp **`p._lastMpUseFrame = gFrame`** at every mana-spend site (dash `:4115`,
+  leap `:4208`, heavy `:4002/4337` + emit `:4044`, whirlwind per-frame `:4506`, **and the god-skill per-second
+  drain** in `gUpdateGodSkills`) — cleanest via a tiny `gSpendMana(p,amt)` helper all sites route through, or
+  stamp inline. Then in the regen block, when **`gFrame - (p._lastMpUseFrame||0) ≥ 600` AND
+  `gFrame - (p._lastDmgFrame||0) ≥ 600`** (10 s; `_lastDmgFrame` already added by #8.2), regen at **10 mp/s**
+  (overrides the base ~1/s; card `mpRegenAdd` still stacks). Clamp to `maxMp`. Per-player local, MP-safe. Knobs:
+  rate (10), delay (10 s). **⚠ Design default to confirm w/ Josh:** an **active god-skill aura drains mana every
+  frame → continuously stamps `_lastMpUseFrame` → ooc regen won't fire while a skill is lit** (you must toggle it
+  off to fast-recharge). Consistent with the toggle-management design — but flag it so it's intended, not a
+  surprise. *(Whirlwind spinning likewise counts as "using mana" — correct.)*
+
+- ◻️ 🟢 **#8.7 — Early-game difficulty too hard with the new mana economy; scale back the first night(s)** (↳ from
+  PM playtest, Josh 2026-06-12 · revisits roadmap #1 + #7) — with the tighter mana (can't spam leap to clear a
+  horde), **night 1 is now too punishing.** Item 1 steepened the curve to fix the flat *late* game; it also lifted
+  the *early* game. **Fix = push the difficulty later, not flatten it** (keep item 1's "tune the slope" intent — just
+  start lower). Levers (all in the wilderness scaling, `:13727–13744` + nightfall `:14811–14816`):
+  - **Night-1 stat step** — `wildThreatMult() = 1 + wildThreatLevel·0.35` (`:13728`) makes night 1 already **1.35×**
+    HP/dmg (threat = night #, `:14811`). Soften the early step (gentler coefficient, or a threat curve that starts
+    ~0 on night 1 and ramps), so night 1 reads as a *readable trickle* again.
+  - **First-night horde** — `_wildSpawnHorde(_wildHordeSize(wildNight))` (`:14816`) + the per-night siege stream
+    (`siegeSpawnAccum`): cut the night-1 horde size / spawn rate so the opening siege is clearable on the tight mana
+    budget.
+  - **Count/speed mults** — `1 + threat·0.15` (`:13737`) / `·0.08` (`:13731`): lower the early end if needed.
+  - **Sequence AFTER #8.8 lands** — the out-of-combat mana regen is itself a survivability boost on night 1, so
+    re-judge the felt difficulty *with* #8.8 in before deciding how far to cut (don't double-nerf). **Tune by feel:**
+    night 1 should be beatable but not free; the late-game wall item 1 created must stay. Host-authoritative; no MP/Sim change.
 
 - ◻️ 🔴 **#8.3 — Wolf leap fires out of range; widen + gate like the warrior charge** — in `_aiWolf`
   (`index.html:5392`) + the wolf leap range (`leapRange:200`, `:2555` — confirm this is the wolf's def, not
