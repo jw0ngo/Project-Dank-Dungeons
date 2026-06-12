@@ -25,6 +25,16 @@
   `--global` case. (c) Handoff: a transparent FX cutout draws fine alpha-composited, but additive `'lighter'`
   reads hotter for fire-over-scene (transparent contributes nothing, flame pixels add) — name it, engineer's call.
   Where it *fires* (which skill) is a design call — deliver the clean asset + key, don't presume the wiring.
+  **(d) Pure light-on-black bursts (shockwaves, glows, a white-hot impact) → DON'T cut at all.** When the master
+  is bright light on a black field and the soft radial glow IS the art, the right deliverable is **not** a
+  transparent cutout — additive `'lighter'` *is* the background removal (black contributes nothing). Just
+  resize→**floor faint ambient to true black** (`max(R,G,B)≤~8 → 0`, re-floor after LANCZOS ringing)→optimize,
+  and hand off black-bg + `'lighter'` (the `FP_SPR`/`FW_SPR` pattern). A hard alpha cut would clip the glow
+  falloff; flooring kills the square wash (QA: corners must read `(0,0,0)` — a faint non-zero ambient adds a
+  visible square under `'lighter'`). The discriminator vs. `--bg white` cutout (fireexplosion): **is it pure
+  light you want to keep glowing, or a coloured object with edges?** Light→keep-black-additive; object→cut.
+  (Proven on the leap-landing `jump-impact` shockwave — 1254² master, never wired; the win was choosing the
+  *medium*, not running a slicer.)
 
 ### 2026-06-12 — Organizing assets for an AI-native game: foldering is mostly human-readability; machine-value comes from where CODE reasons, or from DERIVING the dimension cheaply
 
