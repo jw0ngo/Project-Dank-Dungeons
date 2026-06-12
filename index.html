@@ -987,7 +987,7 @@ function _fbInit() {
       <div class="gd-sub" id="g-death-sub">Your party has been defeated...</div>
       <div class="gd-btns">
         <button class="gd-btn respawn" id="g-respawn-btn" onclick="mpRespawn()">RESPAWN</button>
-        <button class="gd-btn" onclick="mpLeaveAfterDeath()">LEAVE</button>
+        <button class="gd-btn" id="g-leave-btn" onclick="mpLeaveAfterDeath()">LEAVE</button>
       </div>
     </div>
     <div id="g-complete">
@@ -3392,13 +3392,28 @@ function mpShowDeath(isLocalDeath) {
     const btn   = document.getElementById('g-respawn-btn');
     if(title) title.textContent = 'YOU HAVE FALLEN';
     if(sub)   sub.textContent  = `Survived ${Math.floor(survivedSecs/60)}m ${Math.floor(survivedSecs%60)}s · Level ${levelAtDeath} · ${killsAtDeath} kills`;
-    if(btn){
-      btn.textContent = 'RETURN TO SANCTUM';
-      btn.onclick = () => {
-        document.getElementById('g-death').classList.remove('show');
-        if(gLoopId){ cancelAnimationFrame(gLoopId); gLoopId=null; }
-        goTown();
-      };
+    const leaveBtn = document.getElementById('g-leave-btn');
+    if(_wildBoot){
+      // Deployed (web) build (or ?wild=1 sim): no Sanctum to return to — just retry the run. Hide LEAVE, repurpose the button.
+      if(leaveBtn) leaveBtn.style.display = 'none';
+      if(btn){
+        btn.textContent = 'Retry?';
+        btn.onclick = () => {
+          document.getElementById('g-death').classList.remove('show');
+          if(gLoopId){ cancelAnimationFrame(gLoopId); gLoopId=null; }
+          goTown(); goWilderness();   // re-establish screen/loop/player, then a fresh run
+        };
+      }
+    } else {
+      if(leaveBtn) leaveBtn.style.display = '';
+      if(btn){
+        btn.textContent = 'RETURN TO SANCTUM';
+        btn.onclick = () => {
+          document.getElementById('g-death').classList.remove('show');
+          if(gLoopId){ cancelAnimationFrame(gLoopId); gLoopId=null; }
+          goTown();
+        };
+      }
     }
     document.getElementById('g-death').classList.add('show');
     return;

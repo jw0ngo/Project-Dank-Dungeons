@@ -7,6 +7,11 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+### Changed
+- **Death screen on the web build is just "Retry?".** With no Sanctum to return to on the deployed build, the
+  death screen drops the "Return to Sanctum" / "Leave" buttons for a single **Retry?** that starts a fresh run.
+  (Local dev keeps the normal buttons; `?wild=1` simulates the web build.)
+
 ## [0.1.0] - 2026-06-12
 
 ### Added
