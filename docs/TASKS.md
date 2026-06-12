@@ -538,6 +538,36 @@ refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 
 
 - ◻️ 🎨 **Wire shared god-skill icons into draft card + action bar** (↳ from PM, 2026-06-12 · pairs with the Artist handoff + the action-bar task above) — once the Artist delivers the 3 Cilia skill icons, wire each as a `CARD_ICON_ART`-keyed asset used in **both** `_paintDraft` (the level-up card) **and** the `#g-godskills` slot — one asset, two sites (no duplicate icon set). Confirm the draft cards + god skills carry a stable `iconKey` to key off (not `card.name`). Folds together with the existing "Level-up screen art-direction pass" image-icon override. **Action-bar consumer READY (2026-06-12):** the slot already reads `CARD_ICON_ART[iconKey]` (iconKey = god-skill id) with an emoji fallback — so the bar half is just **defining `CARD_ICON_ART` + adding the 3 icon assets**; then mirror the same `CARD_ICON_ART[card.iconKey]` lookup in `_paintDraft`.
 
+- ◻️ 🎨 **Wire the dragonfire/chaosfire FX sprite set (6 new) — substance reskins for pillars · bursts · ground** (↳ from ART, 2026-06-12) — six new transparent FX cutouts committed under `assets/fx/cilia/` (~565 KB total), the per-substance art for the three Cilia fire God Skills (Burning Body · Trail of Embers · Pillars of Fire). All load via **direct `Image` consts** like the rest of the fire family (`FP_SPR`/`FIREEXPLOSION_SPR`/`*_CIRCLE_SPR`) — **NOT** through `ART_MANIFEST`. Each is a *substance variant* that slots into an existing draw entity; the wiring is **tag-the-spawn-with-its-substance + select-the-sprite-&-composite-by-substance**, not new FX systems. (All 6 QA'd halo-clean over a dark bg — the worst case for the white-bg gen art these came from.)
+  <details><summary>detail (render spec)</summary>
+
+  **The 6 assets** (`assets/fx/cilia/`, square 256² unless noted; the `fx.*` keys are nominal — these aren't manifest-loaded, define a const):
+
+  | Asset | px | Effect family it reskins | Fires in |
+  |---|---|---|---|
+  | `dragonfire-pillar.png` | 117×256 | pillar — `FP_SPR` / `gFirePillars` / `gDrawFirePillars` (`:7536`) | Pillars-of-Fire 🐉 **Wyrmspine / Dragonmarch**; Trail 🐉 **Dragonfeet** (`:4290`) |
+  | `chaosfire-pillar.png` | 127×256 | pillar — same | Pillars-of-Fire 🔥 **Riftmaw / Hellfront**; chaos pillars via `gPyroPushPillar` (`:4408`) |
+  | `dragonfire-explosion.png` | 256² | burst — `FIREEXPLOSION_SPR` / `gSpawnFireBurst` / `gDrawFireBursts` (`:7098`) | dragon detonations (Wyrmspine re-erupt, any 🐉 pop) |
+  | `chaosfire-explosion.png` | 256² | burst — same | Chaos Steps bomb detonation (`:4302`), Cataclysm/Chaos Crown blasts |
+  | `dragonfire-ground.png` | 256² | substance ground decal (the burning floor you stand in) | dragonfire heal-carpet laid by `gSpawnFireTrail` (Dragonfeet/Wyrmwake/Dragonmarch grounds) |
+  | `chaosfire-ground.png` | 256² | substance ground decal | chaosfire self-burn field (Chaoswake/Chaos Steps/Riftmaw 20s ground) |
+
+  - **⚠ COMPOSITING — the thing that will look wrong if missed:** **chaosfire's black smoke IS the art.** The existing pillar/burst paths blit **additively (`'lighter'`)**, and additive *erases black* (black adds nothing) → a chaosfire pillar drawn additively shows only the red core and the dark menace vanishes. So **chaosfire sprites must draw with NORMAL alpha**; **dragonfire stays additive** (bright, no black — `'lighter'` reads hotter, the glow falloff is intended). Branch the composite op by substance in `gDrawFirePillars`/`gDrawFireBursts` (+ the ground draw). This is why these are two visually-opposite families, not one.
+  - **Pillars** — `gFirePillars` entries are **not substance-tagged yet**; add a `substance` field at the push sites (Dragonfeet `:4290` already knows it's 🐉; `gPyroPushPillar` `:4408` knows its ground substance; base heavy `:7532` = null/plain). In `gDrawFirePillars` select `FP_SPR` (plain) / `DRAGONFIRE_PILLAR_SPR` / `CHAOSFIRE_PILLAR_SPR` by `fp.substance`, **bottom-anchored exactly as today** (drop-in — same `drawImage(spr, sx-w/2, sy-h, w, h)`). **AR note:** base `FP_SPRITE_AR=0.438` (`:7518`) is for `pillar.png` (84×192); the substance pillars are a touch wider (dragon 0.457, chaos 0.496). Drawing them at 0.438 squishes ~4–12% — cheap fix: derive AR per-sprite from `spr.naturalWidth/naturalHeight` instead of the constant, or a small per-substance AR. `FP_SPRITE_H` unchanged.
+  - **Bursts** — `gSpawnFireBurst`/`gBurstAndSync` take no substance; add an optional `substance` arg → store on the burst → select `FIREEXPLOSION_SPR` (plain) / `DRAGONFIRE_EXPLO_SPR` / `CHAOSFIRE_EXPLO_SPR` in `gDrawFireBursts`. Same bloom/fade. Chaos detonations pass `'chaosfire'` (→ normal alpha), dragon pass `'dragonfire'`, the Conflagration burn-pop stays plain.
+  - **Ground decals** — these are **filled scorched-earth disks** (charred ground + flames/embers), distinct from the thin `*-circle.png` ring band already wired to Burning Body fields. **Your call where they draw:** (a) skin the per-patch substance grounds in `gSpawnFireTrail`/`gDrawFireTrails` (`:6541`, currently a procedural gradient) — **flag: hundreds of patches → don't blit a 256² disk per patch**, downscale hard or use only for apex/large patches; or (b) reserve them for the *large single zones* (Riftmaw's 20s lingering ground, Chaos Crown settle, Dragonheart at-feet pool) where one disk reads as "scorched floor." Dragon-ground → additive glow (heal carpet); chaos-ground → normal alpha (dark scorch). **Recommend (b) to start** (cleaner + cheaper); (a) is a polish pass.
+  - **Load consts** (paste-ready, sibling to `:6840` `*_CIRCLE_SPR`):
+    ```js
+    const DRAGONFIRE_PILLAR_SPR = new Image(); DRAGONFIRE_PILLAR_SPR.src = 'assets/fx/cilia/dragonfire-pillar.png';
+    const CHAOSFIRE_PILLAR_SPR  = new Image(); CHAOSFIRE_PILLAR_SPR.src  = 'assets/fx/cilia/chaosfire-pillar.png';
+    const DRAGONFIRE_EXPLO_SPR  = new Image(); DRAGONFIRE_EXPLO_SPR.src  = 'assets/fx/cilia/dragonfire-explosion.png';
+    const CHAOSFIRE_EXPLO_SPR   = new Image(); CHAOSFIRE_EXPLO_SPR.src   = 'assets/fx/cilia/chaosfire-explosion.png';
+    const DRAGONFIRE_GROUND_SPR = new Image(); DRAGONFIRE_GROUND_SPR.src = 'assets/fx/cilia/dragonfire-ground.png';
+    const CHAOSFIRE_GROUND_SPR  = new Image(); CHAOSFIRE_GROUND_SPR.src  = 'assets/fx/cilia/chaosfire-ground.png';
+    ```
+  - **No size↔hitbox coupling** — pure render skins; pillar/burst damage radii unchanged. Keep the procedural fallback (`haveSpr` pattern) so an undecoded sprite still draws.
+  - **Verify:** `node --check` + grep each new const + `python dev.py` → pledge Cilia → reach a 🔥 ascension (chaos pillars draw **dark/smoky**, not a faded red glow → proves normal-alpha) and a 🐉 ascension (dragon pillars glow prismatic additively). Source masters: `art/fx/cilia/{dragonfire,chaosfire}-{pillar-raw,explosion-raw}.png` + the pre-existing `*-ground.png`. Deploy-affecting → push with Josh's auth.</details>
+
 - 🔄 ✨ **Item 2 — God Skills** (roadmap #2 `approved` · spec [`specs/god-skills.md`](specs/god-skills.md)) —
   phased trigger-swap, 3/5 done:
   - [x] **Architecture generalization** (2026-06-11) — imbue-path mastery machinery generalized from
@@ -681,6 +711,18 @@ refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 
 
 ## ✅ Done (recent track record — prune to git history as it grows)
 
+- **2026-06-12 — Dragonfire/chaosfire FX sprite set sliced (6 sprites)** (Artist, ↳ from Josh) — cut six per-substance
+  fire FX from new masters for the 3 Cilia God Skills: **pillars** (`dragonfire-/chaosfire-pillar`, tight-AR, reskin
+  `FP_SPR`/`gFirePillars`), **bursts** (`-explosion`, reskin `FIREEXPLOSION_SPR`), **ground decals** (`-ground`,
+  scorched-floor disk). The "transparent" gen art was actually an **opaque painted near-white checkerboard** → real
+  bg-removal, edge-seeded `--bg white` keying (white-hot dragonfire cores survive as interior). **Josh flagged a white
+  halo on the 3 black-smoke sprites** (both grounds + chaos pillar): the AA edge was figure-blended-with-white = pale
+  *neutral* ramp surviving the brightness key. Fixed with a new **`slice-single-fx.py --dewhite`** pass (neutral-gated
+  white-spill alpha suppression — fades the grey ramp to transparent, leaves saturated flame wisps) + erode 2; all 6
+  QA-clean over a **dark** bg (the worst case — magenta misled me). Added `--frame tight` (keep native AR for tall
+  pillars/jets) + `--dewhite` to the tool. Engineer handoff filed (Engineer lane) — **key flag: chaosfire = NORMAL
+  alpha** (black smoke is the art; additive erases it), dragonfire = additive. Masters in `art/fx/cilia/`. ~565 KB.
+  Committed locally (assets/tool/docs — deploy-affecting assets await Josh push auth).
 - **2026-06-12 — Asset-folder stewardship: scheme set, fold tooling ready** (Artist, ↳ from Josh — new standing
   responsibility) — Josh assigned the Artist ongoing **upkeep of `assets/`** as the game scales across areas
   (`world/` was filling from one area's set-dressing). Decided axis (Josh-approved): **`world/` folds by AREA**
