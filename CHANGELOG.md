@@ -7,6 +7,8 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-06-12
+
 ### Added
 - **Title/welcome card + straight-to-the-wild web build.** Dropping into the wilderness now plays a title overlay —
   **"Welcome to To Dust"** fades in, then **"Try to Survive"** fades in beneath it, then both fade out together. On
