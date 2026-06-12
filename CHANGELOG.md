@@ -19,6 +19,9 @@ Tag each release in git: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
   screen's edge) or *Firewall* (advancing walls of fire). **Ascension @10:** 🐉 *Wyrmspine* (the finale re-erupts +
   heals) / *Dragonmarch* (dragonfire walls + a healing carpet) · 🔥 *Riftmaw* (place a jagged chaos rift at your
   cursor that tears **across the map** and burns for 20s) / *Hellfront* (extra advancing chaos walls).
+- **Skill bar: a Grit icon + hover tooltips.** Grit (the level-5 defensive passive) now shows as a small shield
+  icon to the left of the skill bar — locked until level 5, lit while its shield is up. Hovering any skill (or
+  Grit) pops a brief description of what it does.
 - **Out-of-combat recovery.** After 10s without taking *or dealing* damage, you regain **3 HP/s** (with a gentle
   green heal shimmer); mana also fast-recharges at **10 MP/s** after 10s with no mana use either — disengage to
   recover, then dive back in.
