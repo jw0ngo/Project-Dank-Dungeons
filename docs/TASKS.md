@@ -173,6 +173,26 @@ refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 
   player-occlusion). Keep it cheap: only for trees already in the draw cull, iterate `gEnemies` once.
   Render-only, no sim/MP impact. *(Small new mechanic — Josh-directed; combat-readability, pillar 1.)*
 
+- ◻️ ✨ **Item 10 — Card-pool consolidation (~33 → ~23 cards)** (↳ from PM, Josh-approved 2026-06-12 · spec
+  [`specs/card-pool.md`](specs/card-pool.md)) — collapse the per-skill stat sprawl into broad **character stats**
+  + one **Mastery** card per active skill. Merge mapping (full table + balance + grounding in the spec):
+  - **Merges:** `crit`+`critdmg` → **Ferocity** (both crit stats, one card); `sw-dmg`+`hv-dmg` → **Strength** (+%
+    melee dmg to swing **&** heavy — new `wildBuffs.meleeDmgPct` read in `gDoSwingAt`+`gDoHeavyAtk`, stacks on
+    Bloodlust's global `damagePct`; frame as a character stat — Josh may grow it into a major stat later);
+    `sw-reach`+`hv-rad` → **Reach** (swing-reach + `heavyLen` in one); `sw-spd`+`hv-chg` → **Dexterity** (= the
+    Attack-Speed card above).
+  - **Mastery (multi-mod rank-aware apply — mirror `cil-dof` `:14233`):** **Whirlwind Mastery** (`ww-dmg`+`ww-rad`
+    +`ww-cd`) · **Leap Mastery** (`leap-*` ×4) · **Dash Mastery** (`dash-dist`+`dash-cd`). One card advances the
+    skill's whole mod-bundle per pick.
+  - **Removes** the 15-card `cat:'skill'` block (→ 3 Mastery + the swing/heavy stats folding up into Strength/
+    Reach/Dexterity). **Confirm nothing else reads the vanished ids.** Grit (4) + Patron/Cilia (3) untouched.
+  - **Design-ahead hooks (don't build now):** Mastery cards may get **evolutions** later; **Strength/Dexterity**
+    may graduate into **major character stats** — build the consolidation so those are additive.
+  - **Sim/MP:** rides the existing `cardPicks`/`gDrawCards` plumbing (only ids change). Update `_paintDraft` icon
+    `iconKey` mapping + `CARD_ICON_ART` for the new ids (levelup-screen.md). **Verify:** `node --check`; draft each
+    new card → Strength buffs swing+heavy, Reach extends both, Ferocity grants both crit stats, each Mastery
+    advances its bundle; no dangling reads. **Pairs with the Attack-Speed/Dexterity task above** (build together).
+
 - ◻️ ✨ **Item 9 (Cilia slice) — God Stat Identities: wire Cilia's burn-explosion to crit** (↳ from PM,
   Josh 2026-06-12 · spec [`specs/god-stat-identities.md`](specs/god-stat-identities.md)) — rewire the
   Conflagration burn-explosion (item 0c) to run on **crit stats** instead of the bespoke `burnExplodeChance`:
@@ -204,20 +224,20 @@ refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 
   with the existing skill-stats and the `SKILL_STAT_FLOOR` clamps (`swingCd:18`, `heavyMaxWindup:36`) keep it from
   zeroing out. Affects **swing + heavy only** — *not* cooldowns (CDR/`cdPct` owns those); heavy = charge speed,
   not its post-fire `heavyCooldown`.
-  - **New passive card** (mirror Precision/Swiftness shape): e.g. **"Frenzy"** (⚡/⚔) **"+X% Attack Speed"**,
-    ~**+7%/pick** (tune), **uncapped** (pool-wide caps removed). Add to `PASSIVE_CARDS` + the town/dev card list
-    (`:15221`-area) + factory init (`:3422`) + run-start reset (`:15175`) + the Statforge dev block.
+  - **New passive card — "Dexterity"** ⚡ **"+X% Attack Speed"** (named per the card-pool consolidation, was
+    "Frenzy"), ~**+7%/pick** (tune), **uncapped**. Add to `PASSIVE_CARDS` + the town/dev card list (`:15221`-area)
+    + factory init (`:3422`) + run-start reset (`:15175`) + the Statforge dev block. **This card IS the Dexterity
+    slot of the consolidation** ([`specs/card-pool.md`](specs/card-pool.md)) — it **replaces** the removed Swing:
+    Tempo (`sw-spd`) + Heavy: Quickdraw (`hv-chg`) skill cards. **Build it as part of the consolidation rebuild below.**
   - **Char-screen display:** add an "ATK SPD" stat to the character panel alongside CRIT/MOVE/CD (~`:12535–12554`).
   - **Forks to flag (Josh's feel call):** **(a)** the swing *cooldown* (`swingCd`) is the primary "more swings"
     lever, but at high attack speed the swing *animation* (`swingDur 10f`) becomes the floor of the cycle — to keep
     scaling past ~2.5×, optionally also scale `swingDur` lightly (engineer judges feel; don't over-shorten the
     anim). **(b)** card value/curve — +7%/pick is a starting guess; tune so a committed attack-speed build feels
-    fast but the floors keep it sane. **(c)** name — "Frenzy" proposed (Precision/Savagery/Swiftness/Alacrity taken).
+    fast but the floors keep it sane. *(name resolved: **Dexterity**.)*
   - **Ikras tie-in:** this IS the stat Ikras's identity pulls (item 9) — works on the base sword kit now; Ikras
-    inherits it. **Note vs Swing: Tempo** (`swingSpdPct`, swing-only skill card): they coexist & stack — Attack
-    Speed is the broad character stat (swing + heavy), Tempo the swing-only specialist. Host/local; the swing/heavy
-    timing is already local → no MP change. **Verify:** `node --check`; stack Frenzy → confirm faster swings + faster
-    heavy charge, both clamped at the floors; char screen shows ATK SPD.
+    inherits it. Host/local; the swing/heavy timing is already local → no MP change. **Verify:** `node --check`;
+    stack Dexterity → confirm faster swings + faster heavy charge, both clamped at the floors; char screen shows ATK SPD.
 
 - ◻️ 🔧 **Apply the `assets/world` fold (atomic move + manifest rewrite)** (↳ from ART, 2026-06-12 ·
   Josh-approved) — `assets/world/` is flat and filling up (one area's set-dressing so far). Scheme

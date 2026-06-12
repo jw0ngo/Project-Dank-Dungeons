@@ -59,6 +59,7 @@ three cheap irritant-fixers (wolf leap whiffing, XP/Favor popups jumbling, fog-e
 | **5** | **Boreas** — a second god (ice/control) | ⏸️ Held | Multi-session | Parked — the playtest showed we don't need it yet |
 | **6** | **Heavy charge locks out the normal swing** — committing to a heavy means committing | ✅ Shipped (2026-06-11) | Quick | Weighty-combat directive: a committed action must cost you other options |
 | **7** | **Mana economy & skill management** — costs/cooldowns rework so you run dry early; God Skills drain mana/sec; toggle auto-casts to keys 1–9 + WoW-style action bar | ✅ Shipped (2026-06-12, all 3 phases + action bar) | Multi-session, phased | Makes mana a real resource + a live build-management decision (weighty combat + build depth) |
+| **10** | **Card-pool consolidation** — collapse ~33 draft cards → ~23: per-skill sprawl folds into broad character stats (Strength = melee dmg, Ferocity = crit+critdmg, Dexterity = atk speed, Reach = swing+heavy reach) + one **Mastery** card per active skill (Whirlwind/Leap/Dash) | ◻️ Approved (2026-06-12) — Engineer lane | Session | Build-craft + game feel — every draft pick becomes a real, legible build choice |
 | **9** | **God Stat Identities** — each god's mechanics read the character stats that express its identity (Cilia ← crit; Ikras ← atk/move speed; Boreas ← mana-regen/pickup/CDR; Bhumi ← HP/regen), so generic stat cards become build-defining per patron | ◻️ Cilia slice approved; rest design-ahead | System (Cilia slice quick) | Build-craft depth + god identity — generic stats gain god-specific meaning, near-zero new content |
 | **8** | **Playtest feel/readability/balance batch** — wolf-leap fix · XP/Favor colour split + aggregated XP counter · fog-edge smoothing · gradual night-vision · out-of-combat HP **&** mana regen · LOS tree-reveal · early-game difficulty scale-back · **Burning Body mana→dps rescale** | ◻️ Approved (2026-06-12) — 9 tasks in Engineer lane | Quick (batch ≈ 1 session) | Game feel + readability + early-game balance (pillar 1) — fixes the irritants the first mana playtest surfaced |
 
@@ -415,6 +416,24 @@ vision snap), and an **early-game balance regression** (item 7's tighter mana ×
 too punishing). All cheap, all developer-directed (numbers given). **Sequencing:** interleaves with item 2 — grab the
 three cheapest (wolf leap · colour split · fog shake) first; do the **mana regen (8) before the difficulty cut (7)**
 so we don't double-nerf the early game.
+
+---
+
+### 10. Card-pool consolidation — fewer, more focused draft cards
+
+`✅ approved` (Josh 2026-06-12) · **Size:** session · **Pillars:** build-craft depth + game feel · **Art:** none
+(reuses card icons) · **Source of truth:** [`specs/card-pool.md`](specs/card-pool.md)
+
+**What:** The draft is bloated — ~33 cards, mostly per-skill noise (the same verb split across five skills). Cut to
+~23: collapse the per-skill stat cards into **broad character stats** and give each active skill **one Mastery
+card** that bundles its improvements. Merges: **Strength** (= melee attack damage, swing+heavy — *may become a
+major character stat later*), **Ferocity** (crit chance + crit damage), **Dexterity** (attack speed), **Reach**
+(swing + heavy reach); **Whirlwind / Leap / Dash Mastery** (each bundles that skill's dmg/radius/range/cd). Grit +
+Cilia patron sets untouched.
+
+**Why:** a 3-card draft should feel build-defining. The per-skill sprawl diluted it; consolidation makes **every
+pick move the needle** and reads cleanly. **Design-ahead:** Mastery cards may get evolutions, and Strength/Dexterity
+may graduate into major STR/DEX-style character stats. Folds the in-flight Attack-Speed card in as **Dexterity**.
 
 ---
 
