@@ -3983,6 +3983,10 @@ function gGodSkillDrainPerSec(p, id){
     const costMult = (fdef && fdef.fire && fdef.fire.costMult) || 1;
     return gGodFireParam(p, id, 'mpPatch') * costMult * (pps / TOE_PATCH_DIST);
   }
+  // Pyroclasm: per-emit (one charge per interval-fired lane) → effective mp/s = cost-per-lane ÷ interval-seconds.
+  if(tree && tree.fire && tree.fire.kind === 'pyroclasm'){
+    return gGodFireParam(p, id, 'mpLane') * 60 / Math.max(1, gGodFireParam(p, id, 'interval'));
+  }
   const baseRate = gGodSkillBaseChunk(p, id) * 60 / BB_AURA_INTERVAL;
   const ei = gGodSkillEmitInterval(p, id);
   return baseRate + (ei > 0 ? gGodSkillEmitCost(p, id) * 60 / ei : 0);
@@ -4049,8 +4053,7 @@ function gUpdateGodSkills(p, dt){
     switch(tree.fire.kind){
       case 'burningBody':   gTickBurningBody(p, dt, id, tree); break;
       case 'trailOfEmbers': gTickTrailOfEmbers(p, dt, id, tree); break;
-      // 'interval+autotarget' (Pyroclasm) lands in the next slice — it charges its own gated chunks the
-      // same way, so this dispatcher needs no per-skill change.
+      case 'pyroclasm':     gTickPyroclasm(p, dt, id, tree); break;
     }
   }
 }
@@ -4301,6 +4304,109 @@ function gUpdateTrailBombs(dt){
       gShake && gShake(4, 6);
     }
     gTrailBombs.splice(i, 1);
+  }
+}
+
+// Pyroclasm — the ranged heavy-hitter god skill. Every PYRO_INTERVAL it AUTO-AIMS at the nearest enemy and
+// fires a lane of fire pillars (reuses gFirePillars). ALL per-emit: ONE mana charge per lane fired (no
+// per-second; nothing ticks between volleys). Form @5: Eruption (the last pillar is a colossal finale) vs
+// Firewall (advancing perpendicular walls). Rank-10 Ascension keeps the Form's shape, swapping substance:
+// 🐉 Wyrmspine (finale re-erupts + dragonfire heal) · 🔥 Riftmaw (erratic chaos sprawl past your aim) ·
+// 🐉 Dragonmarch (dragonfire walls + heal carpet) · 🔥 Hellfront (extra advancing chaos walls). Cost =
+// mpLaneByRank per lane; damage = the independent pillarDmgByRank table climbing faster than cost (#8.9).
+function gTickPyroclasm(p, dt, id, tree){
+  const interval = gGodFireParam(p, id, 'interval');
+  p._pyroT = (p._pyroT || 0) - dt;
+  if(p._pyroT > 0) return;
+  const tgt = gPyroTarget(p);
+  if(!tgt){ p._pyroT = 15; return; }                         // nothing in range → wait briefly, no cost
+  const cost = gGodFireParam(p, id, 'mpLane');
+  if(p.mp < cost){ p.godSkillDormant[id] = true; p._pyroT = 15; return; }   // can't pay → dormant, retry soon
+  gSpendMana(p, cost);
+  p._pyroT = interval;
+
+  const dbuf    = (p.wildBuffs && (1 + (p.wildBuffs.damagePct || 0) / 100)) || 1;
+  const form    = gImbueForm(p, id), fdef = form && tree.forms[form];
+  const asc     = gImbueAscension(p, id);
+  const leaf    = (fdef && asc && fdef.ascensions[asc]) || null;
+  const ground  = (leaf && leaf.ground) || null;
+  const shape   = (fdef && fdef.fire && fdef.fire.shape) || 'lane';   // pre-Form = a plain lane
+  const dmgMult = (fdef && fdef.fire && fdef.fire.dmgMult) || 1;       // Firewall lays many pillars → lower each
+  const dmg     = Math.max(1, Math.round(gGodFireParam(p, id, 'pillarDmg') * dbuf * dmgMult));
+  const radius  = gGodFireParam(p, id, 'pillarRadius');
+  const count   = Math.max(1, Math.round(gGodFireParam(p, id, 'pillarCount')));
+  const burnDur = gGodFireParam(p, id, 'burnFrames');
+  const ang     = Math.atan2(tgt.y - p.wy, tgt.x - p.wx);
+
+  if(shape === 'firewall') gPyroFireWalls(p, ang, dmg, count, radius, burnDur, ground, asc);
+  else                     gPyroFireLane(p, ang, dmg, count, radius, burnDur, ground, shape, asc);
+  gShake && gShake(4, 6);
+}
+// Auto-target: nearest live enemy within PYRO_RANGE (training dummy in town as a fallback). null = hold fire.
+function gPyroTarget(p){
+  let best = null, bd = PYRO_RANGE * PYRO_RANGE;
+  for(const en of gEnemies){
+    if(en.dead || !Number.isFinite(en.wx)) continue;
+    const dx = en.wx - p.wx, dy = en.wy - p.wy, d = dx*dx + dy*dy;
+    if(d < bd){ bd = d; best = en; }
+  }
+  if(best) return { x: best.wx, y: best.wy };
+  if(inTown && gTrainingDummy){
+    const dx = gTrainingDummy.wx - p.wx, dy = gTrainingDummy.wy - p.wy;
+    if(dx*dx + dy*dy < PYRO_RANGE * PYRO_RANGE) return { x: gTrainingDummy.wx, y: gTrainingDummy.wy };
+  }
+  return null;
+}
+// Push one Pyroclasm pillar (reusing the gFirePillars entity) + the ascension substance ground (dragonfire
+// heal-patch / chaosfire self-burn patch) it stands on — mirrors Dragonfeet's pillar+ground pattern.
+function gPyroPushPillar(x, y, dmg, radius, burnDur, delay, scale, ground){
+  gFirePillars.push({ x, y, delay: delay || 0, life: 0, erupted: false,
+    dmg, burn: Math.max(FP_BURN_MIN, Math.round(dmg * FP_BURN_RATIO)), burnDur, radius, hits: new Set(), scale: scale || 1 });
+  if(ground === 'dragonfire')
+    gSpawnFireTrail(x, y, 1, false, { substance:'dragonfire', heal: Math.max(1, Math.round(dmg * DRAGONFIRE_HEAL_RATIO)), reach: radius, life: 150 });
+  else if(ground === 'chaosfire')
+    gSpawnFireTrail(x, y, 1, false, { substance:'chaosfire', selfDmg: Math.max(1, Math.round(dmg * CHAOSFIRE_SELF_RATIO)), reach: radius, life: FT_LIFE });
+}
+// A LANE of pillars from the player toward the aim (base + Eruption). Eruption's last pillar is a colossal
+// finale (PYRO_FINALE_SCALE/DMG); Wyrmspine re-erupts that finale; Riftmaw scatters erratic chaos past the aim.
+function gPyroFireLane(p, ang, dmg, count, radius, burnDur, ground, shape, asc){
+  const start = FP_START_TILES * T, step = FP_STEP_TILES * T;
+  for(let i = 0; i < count; i++){
+    const d = start + i * step;
+    const x = p.wx + Math.cos(ang) * d, y = p.wy + Math.sin(ang) * d;
+    const finale = (shape === 'eruption' && i === count - 1);
+    if(finale){
+      const fr = radius * PYRO_FINALE_SCALE, fd = Math.round(dmg * PYRO_FINALE_DMG);
+      gPyroPushPillar(x, y, fd, fr, burnDur, i * FP_STEP_DELAY, PYRO_FINALE_SCALE, ground);
+      if(asc === 'wyrmspine')                               // the finale re-erupts in place (free follow-through)
+        for(let k = 1; k < PYRO_REERUPT; k++) gPyroPushPillar(x, y, fd, fr, burnDur, i * FP_STEP_DELAY + k * PYRO_REERUPT_GAP, PYRO_FINALE_SCALE, ground);
+    } else {
+      gPyroPushPillar(x, y, dmg, radius, burnDur, i * FP_STEP_DELAY, 1, ground);
+    }
+  }
+  if(asc === 'riftmaw'){                                     // chaos sprawls erratically past where you aimed
+    const end = start + count * step;
+    for(let k = 0; k < PYRO_RIFT_SCATTER; k++){
+      const d = end + Math.random() * 4 * step, spread = (Math.random() - 0.5) * 1.2;
+      gPyroPushPillar(p.wx + Math.cos(ang + spread) * d, p.wy + Math.sin(ang + spread) * d,
+        Math.round(dmg * 0.8), radius, burnDur, Math.floor(Math.random() * 40), 1, 'chaosfire');
+    }
+  }
+}
+// Advancing WALLS (Firewall): PYRO_WALL_COUNT perpendicular rows that erupt in succession, each further
+// forward (the sweep toward the target). Hellfront fields extra walls; substance per ascension.
+function gPyroFireWalls(p, ang, dmg, count, radius, burnDur, ground, asc){
+  const perp  = ang + Math.PI / 2;
+  const walls = PYRO_WALL_COUNT + (asc === 'hellfront' ? 2 : 0);
+  const start = FP_START_TILES * T + radius * 1.5;
+  for(let w = 0; w < walls; w++){
+    const fwd = start + w * PYRO_WALL_GAP;
+    const cx = p.wx + Math.cos(ang) * fwd, cy = p.wy + Math.sin(ang) * fwd;
+    for(let j = 0; j < PYRO_WALL_SPAN; j++){
+      const t   = PYRO_WALL_SPAN === 1 ? 0 : (j / (PYRO_WALL_SPAN - 1)) * 2 - 1;   // -1..1 across the wall
+      const off = t * (PYRO_WALL_SPAN - 1) * 0.5 * radius * 1.6;
+      gPyroPushPillar(cx + Math.cos(perp) * off, cy + Math.sin(perp) * off, dmg, radius, burnDur, w * PYRO_WALL_STAGGER + j, 1, ground);
+    }
   }
 }
 
@@ -7128,6 +7234,23 @@ const TOE_DRAGONFEET_FUSE = 120;      // Dragonfeet: frames a laid patch waits b
 const TOE_BOMB_FUSE     = 60;         // Chaos Steps: drop→detonation delay (~1s telegraph)
 const TOE_BOMB_R        = 84;         // Chaos Steps detonation radius (px)
 const TOE_BOMB_DMG_MULT = 1.8;        // bomb blast damage = trailDmg × this
+// ── Pyroclasm (god skill) tuning ─────────────────────────────────────────────────────────────────
+// Ranged heavy-hitter: every PYRO_INTERVAL it AUTO-AIMS at the nearest enemy and fires a lane of fire
+// pillars (reusing gFirePillars). All per-emit (one mana charge per lane fired — no per-second). Form @5:
+// Eruption (the last pillar is a colossal finale) vs Firewall (advancing perpendicular walls). Ascensions:
+// Wyrmspine (🐉 finale re-erupts + heal) · Riftmaw (🔥 erratic chaos sprawl past your aim) · Dragonmarch
+// (🐉 dragonfire walls + heal carpet) · Hellfront (🔥 extra advancing chaos walls). (god-skills.md "Pyroclasm")
+const PYRO_INTERVAL     = 180;        // base lane cadence (frames, ~3s) — the slow heavy-hitter rhythm
+const PYRO_RANGE        = 620;        // auto-target acquisition range (px) — fire only with an enemy in reach
+const PYRO_FINALE_SCALE = 2.2;        // Eruption finale pillar: radius + flame visual ×
+const PYRO_FINALE_DMG   = 3.0;        // Eruption finale pillar: damage ×
+const PYRO_WALL_COUNT   = 5;          // Firewall: advancing wall-rows per fire (Hellfront adds +2)
+const PYRO_WALL_GAP     = 46;         // Firewall: px each successive wall advances forward
+const PYRO_WALL_STAGGER = 7;          // Firewall: frames between wall-row eruptions (the sweep)
+const PYRO_WALL_SPAN    = 5;          // Firewall: pillars across each perpendicular wall-row
+const PYRO_REERUPT      = 3;          // Wyrmspine: finale re-erupts this many times
+const PYRO_REERUPT_GAP  = 26;         // Wyrmspine: frames between re-erupts
+const PYRO_RIFT_SCATTER = 5;          // Riftmaw: erratic chaos pillars scattered past the aim per fire
 // Flame of Chaos (Emberfan 🔥 leaf) — the massive slow ball that lays a chaosfire wake the whole way.
 const FLAMEOFCHAOS_TILES    = 20;   // how far the chaos ball travels (tiles) — a long lane of fire
 const FLAMEOFCHAOS_SPEED    = 4.5;  // px/frame — deliberately slow & lumbering (~3.6s to cross 20 tiles)
@@ -7369,9 +7492,14 @@ function gUpdateFirePillars(dt){
         if(Math.hypot(en.wx - fp.x, en.wy - fp.y) > fp.radius + en.r) continue;
         fp.hits.add(en);
         // gDealEnemyDamage handles MP routing + burn sync (host authoritative).
-        gDealEnemyDamage(en, fp.dmg, { hitFlash: 14, burn: fp.burn, burnDur: FP_BURN_FRAMES });
+        gDealEnemyDamage(en, fp.dmg, { hitFlash: 14, burn: fp.burn, burnDur: fp.burnDur || FP_BURN_FRAMES });
         addGDmg(en.wx, en.wy - 16, fp.dmg, '#ff9a3a');
         gPlayHit && gPlayHit();
+      }
+      if(inTown && gTrainingDummy && !fp.hits.has(gTrainingDummy) &&
+         Math.hypot(gTrainingDummy.wx - fp.x, gTrainingDummy.wy - fp.y) <= fp.radius + gTrainingDummy.r){
+        fp.hits.add(gTrainingDummy);
+        hitTrainingDummy(fp.dmg, '#ff9a3a', fp.x, fp.y);   // lets Pyroclasm be DPS-tested on the dummy
       }
     }
     if(fp.life >= FP_WARN + FP_ACTIVE) gFirePillars.splice(i, 1);
@@ -7406,7 +7534,7 @@ function gDrawFirePillars(){
       gctx.beginPath(); gctx.ellipse(sx, sy, fp.radius, fp.radius*0.4, 0, 0, Math.PI*2); gctx.fill();
       gctx.restore();
       if(FP_SPR.complete && FP_SPR.naturalWidth){
-        const h = FP_SPRITE_H * rise;
+        const h = FP_SPRITE_H * rise * (fp.scale || 1);   // Pyroclasm Eruption finale scales the flame up
         const w = h * FP_SPRITE_AR * flick;
         gctx.save();
         gctx.globalCompositeOperation = 'lighter';
@@ -14587,6 +14715,55 @@ const IMBUE_PATHS = {
               desc:'Each step of your trail erupts into a pillar of dragonflame a moment later — stand in the pillars and the dragon’s fire mends you.' },
             chaosSteps: { name:'Chaos Steps', icon:'🔥', age:'new', tag:'NEW · CHAOS · POWER+COST', ground:'chaosfire', mpEmit:30,
               desc:'Your footsteps become fused chaos ground that erupts a heartbeat after you leave it. Keep moving and the blasts bloom behind you; linger and you are caught in your own detonation.' },
+          },
+        },
+      },
+    },
+    // ── God Skill: Pyroclasm (item 2) ── ranged heavy-hitter. gTickPyroclasm ticks it from gUpdateGodSkills:
+    // every `interval` it AUTO-AIMS at the nearest enemy and fires a lane of fire pillars (reuses gFirePillars).
+    // ALL per-emit — one mana charge per lane fired (no per-second). Form @5: Eruption (the last pillar is a
+    // colossal finale — concentrated nuke) vs Firewall (many advancing perpendicular walls — broad, lower
+    // dmg/pillar via dmgMult). Rank-10 Ascension keeps the Form's shape, swapping substance: 🐉 Wyrmspine/
+    // Dragonmarch (dragonfire heal) · 🔥 Riftmaw/Hellfront (chaosfire). #8.9: per-lane cost + independent
+    // per-pillar damage table climbing faster than cost.
+    pyroclasm: {
+      art:'Pyroclasm', icon:'🔥', maxRank:10, formRank:5, chaosRank:10,
+      acquireDesc:'Pillars of fire erupt from the ground at range, auto-aimed at the nearest enemy — a slow, heavy ranged barrage.',
+      fire: {
+        kind:'pyroclasm',
+        base: { interval:PYRO_INTERVAL, pillarRadius:FP_RADIUS, burnFrames:FP_BURN_FRAMES, pillarCount:3,
+                // #8.9 — TWO independent per-rank tables. (1) COST per LANE fired (per-emit, charged each interval);
+                //     ÷interval(3s) ⇒ mp/s [2,3,4,5.5,9,12,16,21,27,45] — Burning-Body parity (an always-on interval skill).
+                mpLaneByRank:[6, 9, 12, 16.5, 27, 36, 48, 63, 81, 135],
+                // (2) DAMAGE per pillar — climbs FASTER than cost (rank 1→10 = 45× vs cost 22.5×). Form dmgMult scales it.
+                pillarDmgByRank:[20, 30, 44, 66, 110, 155, 220, 310, 440, 900] },
+        floors: { interval:60 },   // cadence floor (perf/spam)
+      },
+      // ranks 1–4: more pillars, bigger radius, longer burn (damage is pillarDmgByRank, not additive here).
+      waveStep: { pillarCount:0.75, pillarRadius:2, burnFrames:10 },
+      forms: {
+        eruption: {
+          name:'Eruption', tag:'SKILLSHOT · NUKE', icon:'🔥',
+          desc:'The lane’s final pillar becomes a colossal eruption — a single devastating blast landing on the target.',
+          formStep: { pillarRadius:2, burnFrames:10, pillarCount:0.5 },
+          fire: { shape:'eruption', dmgMult:1.0 },           // concentrated — few pillars + a huge finale
+          ascensions: {
+            wyrmspine: { name:'Wyrmspine', icon:'🐉', age:'old', tag:'OLD · DRAGON · SUSTAIN', ground:'dragonfire',
+              desc:'The finale erupts again and again from the same spot — a spine of dragonflame you can stand in to heal.' },
+            riftmaw:   { name:'Riftmaw',   icon:'🔥', age:'new', tag:'NEW · CHAOS · POWER+COST', ground:'chaosfire',
+              desc:'The eruption tears open a chaosfire fissure that splits and erupts erratically past where you aimed — stay clear of the cracks or burn.' },
+          },
+        },
+        firewall: {
+          name:'Firewall', tag:'ADVANCING · WALL', icon:'🔥',
+          desc:'Successive walls of pillars erupt one after another, sweeping forward toward the target — a marching wall of fire.',
+          formStep: { pillarCount:0.5, pillarRadius:2, burnFrames:10 },
+          fire: { shape:'firewall', dmgMult:0.35 },          // broad — many pillars, lower dmg each
+          ascensions: {
+            dragonmarch: { name:'Dragonmarch', icon:'🐉', age:'old', tag:'OLD · DRAGON · SUSTAIN', ground:'dragonfire',
+              desc:'The marching walls turn to dragonfire, leaving a healing carpet in their wake — advance behind them and be mended.' },
+            hellfront:   { name:'Hellfront',   icon:'🔥', age:'new', tag:'NEW · CHAOS · POWER+COST', ground:'chaosfire',
+              desc:'The walls multiply and march outward as relentless chaosfire — caught ahead of or between them, you burn too.' },
           },
         },
       },
