@@ -15836,14 +15836,14 @@ const OBELISK_RADIUS  = 3 * 32;   // 3 tiles in px
 const OBELISK_CHANNEL = 600;       // frames to channel (10s at 60fps)
 
 // ── Buff pool ────────────────────────────────────────────────
-// Vertical-slice tuning: an obelisk ALWAYS offers the same three mana/economy axes (Max Mana · Mana Regen ·
-// Pickup Range) — the choice is which to invest in. The % each grants SCALES WITH PLAYER LEVEL, so obelisks
-// found deeper into a run pay out bigger. The % is of a fixed base per stat (granted as a flat wildBuffs add).
+// Vertical-slice tuning: an obelisk ALWAYS offers the same three axes (Max Mana · Mana Regen · Max Health) —
+// the choice is which to invest in. The % each grants SCALES WITH PLAYER LEVEL, so obelisks found deeper into a
+// run pay out bigger. The % is of a fixed base per stat (granted as a flat wildBuffs add).
 const OBELISK_PCT_BASE      = 10;   // % at level 1
 const OBELISK_PCT_PER_LEVEL = 2;    // +% per player level
 const OBELISK_MAXMANA_BASE  = 100;  // 100% ⇒ +this Max MP (= the base pool) — so +pct% of base mana
 const OBELISK_REGEN_BASE    = 5;    // 100% ⇒ +this mp/s regen
-const OBELISK_PICKUP_BASE   = 150;  // 100% ⇒ +this px pickup range
+const OBELISK_MAXHP_BASE    = 100;  // 100% ⇒ +this Max HP (= the base pool) — so +pct% of base health
 function _obeliskPct(){ return OBELISK_PCT_BASE + OBELISK_PCT_PER_LEVEL * Math.max(0, (wildLevel || 1) - 1); }
 const OBELISK_BUFFS = [
   { id:'mp',      icon:'✦', name:'Arcane Vessel', color:'#4488cc',
@@ -15852,9 +15852,9 @@ const OBELISK_BUFFS = [
   { id:'mpregen', icon:'⟳', name:'Clarity',       color:'#6699dd',
     desc:()=>`+${_obeliskPct()}% Mana Regen`,
     apply(p){ p.wildBuffs.mpRegenAdd = (p.wildBuffs.mpRegenAdd||0) + +(OBELISK_REGEN_BASE  * _obeliskPct()/100).toFixed(2); } },
-  { id:'pickup',  icon:'◎', name:'Magnetism',     color:'#88ffcc',
-    desc:()=>`+${_obeliskPct()}% Pickup Range`,
-    apply(p){ p.wildBuffs.pickupRange= (p.wildBuffs.pickupRange||0)+ Math.round(OBELISK_PICKUP_BASE * _obeliskPct()/100); } },
+  { id:'hp',      icon:'❤', name:'Vitality',      color:'#cc4444',
+    desc:()=>`+${_obeliskPct()}% Max Health`,
+    apply(p){ p.wildBuffs.hpBonus    = (p.wildBuffs.hpBonus||0)    + Math.round(OBELISK_MAXHP_BASE * _obeliskPct()/100); _wildApplyStats(); } },
 ];
 
 // Always offer all three (the choice is which economy axis to invest in this obelisk).
