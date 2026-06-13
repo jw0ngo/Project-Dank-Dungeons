@@ -85,11 +85,17 @@ Strategy/priority: [`../ROADMAP.md`](../ROADMAP.md). Sibling docs: [`pm.md`](pm.
   one entity system" — revised after reading: the families' update/shape logic is genuinely heterogeneous;
   the remaining bulk is draw-side, split out as stage 3 below.)*
 
-- ◻️ 🔧 **Refactor #2 stage 3 — fire-FX draw-side dedup + knob→def consolidation (§6i)** (logged 2026-06-13) —
-  the remaining ~600 lines are the nine `gDraw*` fns (likely shared additive-blend sprite-blit boilerplate)
-  plus ~143 loose `FW_*`/`FR_*`/`FC_*`/`FT_*`/`FP_*`… knobs that could fold into per-family def objects.
-  **Needs a session with Josh eyeballing the dev window** — draw regressions are invisible to the headless
-  canary (`--check firefx` covers sim behavior only). Don't do blind.
+- ✅ 🔧 **Refactor #2 stage 3 — fire-FX draw-side dedup** — **done ENG 2026-06-13** (`71fadd7`).
+  `_fxBlitCentered` (the §6i house blit: additive centred sprite, pulse-alpha × fade, optional rotate,
+  `normalBlend` flag for trails' opaque ground art) now serves rings/crosses/bursts/aura/trails;
+  `_fxFadeInOut` replaces the duplicated 3-segment fade envelope in crosses/jets/trails/fields. Waves/jets/
+  pillars keep their custom geometry (identity, not duplication); all procedural fallbacks intact.
+  **Knob→def consolidation REJECTED:** folding ~143 flat `FW_*`… consts into a defs object = ~400 hand-edits,
+  zero behavioral gain, and it would blind `gen-code-map`'s knob census (built on flat UPPER consts) — the
+  prefix convention already IS the def structure. Verified: verify-repo 0 errors · `--check firefx` pass ·
+  `--batch 3` clean · live-loop draw check (all families on screen, real rendered frames, 0 errors).
+  **⚠ Pending Josh's visual eyeball** (dev window; Burning Body aura is the one path the live check couldn't
+  reach — needs the skill owned — it shares `_fxBlitCentered` with rings).
 
 - ◻️ 🎨 **Skin the Obelisk POI with its sprite** (↳ from ART, 2026-06-12) — the §12b Obelisk system (`gObelisks`, `_drawObeliskStone` `:16096`) draws a tiny ~42px procedural stone marker; replace it with the new art (same pattern as chest/barrel — skin the existing entity, keep the procedural fallback). Cutout committed: **`assets/world/obelisk.png`** (247×512, ~210 KB — transparent, feet-anchored, base at the cutout bottom; dark rune-stone with purple glowing runes + base crystals). Manifest (auto-loads via `gInitArt`):
   ```

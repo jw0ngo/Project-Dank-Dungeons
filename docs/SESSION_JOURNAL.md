@@ -48,6 +48,13 @@ Each entry captures: what was built, what broke badly, and what the root cause t
   families, asserts damage landed + every fx array drained (~1s). Stage 3 (draw-side dedup + knob→defs)
   logged ◻️ — needs human eyes on the dev window, headless can't see draw regressions.
 
+- **Refactor #2 stage 3 (`71fadd7`): draw-side dedup.** `_fxBlitCentered` + `_fxFadeInOut` collapse the
+  additive-blit and fade-envelope boilerplate across rings/crosses/bursts/aura/trails and crosses/jets/
+  trails/fields; waves/jets/pillars keep their custom geometry. **Knob→def fold rejected** — it would blind
+  gen-code-map's flat-UPPER-const knob census for zero behavioral gain. Draw paths exercised LIVE via a
+  canary `--expr` (spawn all families, let real frames render — `runFast` skips gRender, so the firefx
+  check alone never executes draw code). Pending: Josh's visual pass.
+
 ### Lessons
 - **The generated map found the drift the banners hid.** The §6d mislabel was invisible while navigating by
   banner; one glance at CODE_MAP's per-section function counts exposed it. Generated mirrors don't just stay
