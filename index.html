@@ -6496,6 +6496,23 @@ function _fxHitFeedback(en, dmg, p, numCol){
   addGDmg(en.wx, en.wy - 16, dmg, numCol || '#ff9a3a');
   gPlayHit && gPlayHit();
 }
+// The §6i house blit: a centred square sprite, composite 'lighter' (the sprite's black bg drops
+// out and the flame glows over the scene), smoothing on, caller-computed alpha (pulse × fade),
+// optional rotation about the centre. normalBlend=true skips 'lighter' (opaque ground art).
+function _fxBlitCentered(spr, ox, oy, D, alpha, rot, normalBlend){
+  gctx.save();
+  if(!normalBlend) gctx.globalCompositeOperation = 'lighter';
+  gctx.globalAlpha = alpha;
+  gctx.imageSmoothingEnabled = true;
+  if(rot){ gctx.translate(ox, oy); gctx.rotate(rot); gctx.drawImage(spr, -D/2, -D/2, D, D); }
+  else gctx.drawImage(spr, ox - D/2, oy - D/2, D, D);
+  gctx.restore();
+}
+// The §6i fade envelope over life-ratio lr (0→1): ramp in over [0,inEnd], hold at 1, ramp out
+// over [outStart,1]. (Out-slope divides by 1-outStart — within float ulp of the old literals.)
+function _fxFadeInOut(lr, inEnd, outStart){
+  return lr < inEnd ? lr / inEnd : lr > outStart ? Math.max(0, (1 - lr) / (1 - outStart)) : 1;
+}
 // Owner standing in a substance ground (trails/fields): dragonfire heals, chaosfire self-burns.
 // One application per FT_TICK across ALL overlapping grounds (the shared _groundTickFrame) — the
 // tick is consumed even when the substance has no heal/selfDmg, exactly the pre-refactor behavior.
@@ -6706,8 +6723,7 @@ function gDrawFireFields(){
   for(const f of gFireFields){
     const ox = f.x - camX, oy = f.y - camY, R = f.r;
     if(R < 1) continue;
-    const lr = f.life / f.maxLife;
-    const fade = lr > 0.7 ? Math.max(0, (1-lr)/0.3) : 1;
+    const fade = _fxFadeInOut(f.life / f.maxLife, 0, 0.7);
     gctx.save();
     gctx.globalCompositeOperation = 'lighter';
     // Burning-ground wash filling the disc.
@@ -6827,8 +6843,7 @@ function gDrawFireJets(){
   const haveSpr = FP_SPR.complete && FP_SPR.naturalWidth;
   for(const j of gFireJets){
     const bx = j.x - camX, by = j.y - camY;
-    const lr = j.life / DRAGONFIRE_JET_LIFE;
-    const fade = lr < 0.25 ? lr/0.25 : (lr > 0.55 ? Math.max(0, (1-lr)/0.45) : 1);  // quick burst, hold, fade
+    const fade = _fxFadeInOut(j.life / DRAGONFIRE_JET_LIFE, 0.25, 0.55);  // quick burst, hold, fade
     gctx.save();
     gctx.translate(bx, by);
     gctx.rotate(j.angle + Math.PI/2);   // pillar's tip (-y in source) → the beam's +x (aim) direction
@@ -7190,14 +7205,9 @@ function gDrawBurningBodyAura(){
   const ox = p.wx - camX, oy = p.wy - camY;
   if(spr.complete && spr.naturalWidth){
     const D = 2 * radius / FR_RING_FRAC;                       // sprite's bright ring sits at the aura edge
-    gctx.save();
-    gctx.globalCompositeOperation = 'lighter';                // additive — the sprite's black drops out
-    gctx.globalAlpha = 0.40 + 0.10 * Math.sin(gFrame * 0.10); // gentle breathing pulse
-    gctx.imageSmoothingEnabled = true;
-    gctx.translate(ox, oy);
-    gctx.rotate(gFrame * 0.012);                              // slow churn so it reads as living fire
-    gctx.drawImage(spr, -D/2, -D/2, D, D);
-    gctx.restore();
+    _fxBlitCentered(spr, ox, oy, D,
+      0.40 + 0.10 * Math.sin(gFrame * 0.10),                   // gentle breathing pulse
+      gFrame * 0.012);                                         // slow churn so it reads as living fire
   } else {
     gctx.save(); gctx.globalAlpha = 0.3; gctx.strokeStyle = '#ff7a22'; gctx.lineWidth = 4;
     gctx.beginPath(); gctx.arc(ox, oy, radius, 0, Math.PI*2); gctx.stroke(); gctx.restore();
@@ -7213,12 +7223,7 @@ function gDrawFireRings(){
     const fade = Math.max(0, 1 - (w.traveled / w.range) * 0.55);
     if(haveSpr){
       const D = 2 * w.traveled / FR_RING_FRAC; // size so the bright flame ring sits at `traveled`
-      gctx.save();
-      gctx.globalCompositeOperation = 'lighter';
-      gctx.globalAlpha = (0.8 + 0.2 * Math.sin(gFrame * 0.5)) * fade;
-      gctx.imageSmoothingEnabled = true;
-      gctx.drawImage(sprite, ox - D/2, oy - D/2, D, D);
-      gctx.restore();
+      _fxBlitCentered(sprite, ox, oy, D, (0.8 + 0.2 * Math.sin(gFrame * 0.5)) * fade, 0);
     } else {
       gctx.save(); gctx.globalAlpha = 0.5 * fade; gctx.strokeStyle = '#ff7a22'; gctx.lineWidth = 6;
       gctx.beginPath(); gctx.arc(ox, oy, w.traveled, 0, Math.PI*2); gctx.stroke(); gctx.restore();
@@ -7252,13 +7257,15 @@ function gDrawFireBursts(){
     const p = Math.min(1, b.t / FIREBURST_LIFE);                  // 0→1 progress
     const D = 2 * b.r * (0.15 + 0.85 * (1 - (1 - p) * (1 - p)));  // ease-out bloom: a small core grows to the full diameter (2r)
     const ox = b.x - camX, oy = b.y - camY;
-    gctx.save();
-    gctx.globalCompositeOperation = 'lighter';                    // additive — transparent/dark drops out, flame glows over the scene
-    gctx.globalAlpha = Math.min(1, 1.6 * (1 - p));                // hold bright through the bloom, then fade out
-    gctx.imageSmoothingEnabled = true;
-    if(haveSpr){ gctx.translate(ox, oy); gctx.rotate(b.rot); gctx.drawImage(FIREEXPLOSION_SPR, -D/2, -D/2, D, D); }
-    else { gctx.fillStyle = '#ff7a22'; gctx.beginPath(); gctx.arc(ox, oy, D/2, 0, Math.PI*2); gctx.fill(); }   // procedural fallback
-    gctx.restore();
+    const alpha = Math.min(1, 1.6 * (1 - p));                     // hold bright through the bloom, then fade out
+    if(haveSpr) _fxBlitCentered(FIREEXPLOSION_SPR, ox, oy, D, alpha, b.rot);
+    else {   // procedural fallback — same additive state the sprite path uses
+      gctx.save();
+      gctx.globalCompositeOperation = 'lighter';
+      gctx.globalAlpha = alpha;
+      gctx.fillStyle = '#ff7a22'; gctx.beginPath(); gctx.arc(ox, oy, D/2, 0, Math.PI*2); gctx.fill();
+      gctx.restore();
+    }
   }
   gctx.globalAlpha = 1;
 }
@@ -7336,16 +7343,10 @@ function gDrawFireCrosses(){
   const haveSpr = FC_SPR.complete && FC_SPR.naturalWidth;
   for(const fc of gFireCrosses){
     const ox = fc.x - camX, oy = fc.y - camY;
-    const lr = fc.life / FC_LIFE;
-    const fade = lr < 0.12 ? lr/0.12 : (lr > 0.7 ? Math.max(0, (1-lr)/0.3) : 1);
+    const fade = _fxFadeInOut(fc.life / FC_LIFE, 0.12, 0.7);
     if(haveSpr){
       const D = 2 * fc.reach;
-      gctx.save();
-      gctx.globalCompositeOperation = 'lighter';
-      gctx.globalAlpha = (0.85 + 0.15 * Math.sin(gFrame * 0.5)) * fade;
-      gctx.imageSmoothingEnabled = true;
-      gctx.drawImage(FC_SPR, ox - D/2, oy - D/2, D, D);
-      gctx.restore();
+      _fxBlitCentered(FC_SPR, ox, oy, D, (0.85 + 0.15 * Math.sin(gFrame * 0.5)) * fade, 0);
     } else {
       const r = fc.reach;
       gctx.save();
@@ -7508,21 +7509,15 @@ function gDrawFireTrails(){
   if(!gFireTrails.length) return;
   for(const ft of gFireTrails){
     const ox = ft.x - camX, oy = ft.y - camY;
-    const lr = ft.life / (ft.maxLife || FT_LIFE);
-    const fade = lr < 0.15 ? lr/0.15 : (lr > 0.6 ? Math.max(0, (1-lr)/0.4) : 1);
+    const fade = _fxFadeInOut(ft.life / (ft.maxLife || FT_LIFE), 0.15, 0.6);
     // Substance-specific ground sprite (real chaos/dragonfire art); plain trails + not-yet-loaded → generic FT_SPR.
     const subSpr = ft.substance === 'dragonfire' ? DRAGONFIRE_GROUND_SPR : ft.substance === 'chaosfire' ? CHAOSFIRE_GROUND_SPR : null;
     const spr = (subSpr && subSpr.complete && subSpr.naturalWidth) ? subSpr : FT_SPR;
     const haveSpr = spr.complete && spr.naturalWidth;
     if(haveSpr){
       const D = ft.reach * FT_DRAW * ft.scl;
-      gctx.save();
-      gctx.translate(ox, oy);
-      gctx.rotate(ft.rot);
-      gctx.globalAlpha = (0.8 + 0.2 * Math.sin(gFrame * 0.4 + ft.x)) * fade;
-      gctx.imageSmoothingEnabled = true;
-      gctx.drawImage(spr, -D/2, -D/2, D, D);
-      gctx.restore();
+      _fxBlitCentered(spr, ox, oy, D, (0.8 + 0.2 * Math.sin(gFrame * 0.4 + ft.x)) * fade,
+        ft.rot, true);   // normal blend — opaque ground art, not an additive glow
       // Tint fallback — only when we DIDN'T get the real substance sprite (keeps the two readable until art loads).
       if(ft.substance && spr === FT_SPR){
         gctx.save();
