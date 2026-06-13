@@ -8868,7 +8868,7 @@ function gInitArt(){
       }
       rec.ready = true;
     };
-    im.onerror = ()=>{ /* leave unready → procedural fallback */ };
+    im.onerror = ()=>{ console.warn('[art] missing/undecodable: '+src+' (key '+key+') — procedural fallback'); };
     im.src = src;
   }
 }
