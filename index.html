@@ -6483,7 +6483,36 @@ function gDealEnemyDamage(e, dmg, opts){
 //      nine spawn/update/draw families, each with its own knob
 //      block: waves · embers · fields · jets · rings · bursts ·
 //      crosses · trails · pillars (+ burning-body aura)
+//      Engine hookup: the FIREFX_* dispatch tables at the END of
+//      this section — register there, never in loop/render/reset.
 // ═══════════════════════════════════════════════════════════════
+
+// ── Shared family helpers — the common hit pipeline ──────────────
+// Can this enemy be hit at all? (alive + sane coordinates)
+function _fxTargetable(en){ return !en.dead && Number.isFinite(en.wx) && Number.isFinite(en.wy); }
+// One hit's feedback: optional particle puff p=[col,n,spd], floating damage number, hit sound.
+function _fxHitFeedback(en, dmg, p, numCol){
+  if(p) spawnGP(en.wx, en.wy, p[0], p[1], p[2]);
+  addGDmg(en.wx, en.wy - 16, dmg, numCol || '#ff9a3a');
+  gPlayHit && gPlayHit();
+}
+// Owner standing in a substance ground (trails/fields): dragonfire heals, chaosfire self-burns.
+// One application per FT_TICK across ALL overlapping grounds (the shared _groundTickFrame) — the
+// tick is consumed even when the substance has no heal/selfDmg, exactly the pre-refactor behavior.
+function _fxOwnerGroundTick(x, y, reach, substance, heal, selfDmg, minDist){
+  if(!gPlayer || gPlayer.dead) return;
+  const pd = Math.hypot(gPlayer.wx - x, gPlayer.wy - y);
+  if(pd > reach + gPlayer.r || pd < (minDist || 0)) return;
+  if((gPlayer._groundTickFrame || 0) > gFrame) return;
+  gPlayer._groundTickFrame = gFrame + FT_TICK;
+  if(substance === 'dragonfire' && heal > 0){
+    gPlayer.hp = Math.min(gPlayer.maxHp, gPlayer.hp + heal);
+    addGDmg(gPlayer.wx, gPlayer.wy - 22, '+' + heal, '#7CFC9E');
+    spawnGP(gPlayer.wx, gPlayer.wy, '#ffe08a', 4, 2);
+  } else if(substance === 'chaosfire' && selfDmg > 0){
+    gDamagePlayer(selfDmg, { particle:{ col:'#ff5a18', n:4, spd:2.5 }, number:{ col:'#ff8a3a', y:-22 } });
+  }
+}
 
 // Base wave at rank 0 — deliberately SMALL; the arc widens (waveStep.half) and the reach grows
 // (waveStep.rangeTiles) as Dance of Fire is leveled, so the wave visibly blossoms over a run.
@@ -6589,17 +6618,14 @@ function gUpdateEmberShots(dt){
     }
     if(!s._visual){
       for(const en of gEnemies){
-        if(en.dead || s._hit.has(en)) continue;
-        if(!Number.isFinite(en.wx) || !Number.isFinite(en.wy)) continue;
+        if(!_fxTargetable(en) || s._hit.has(en)) continue;
         if(Math.hypot(en.wx - s.x, en.wy - s.y) > s.r + en.r) continue;
         s._hit.add(en);
         gDealEnemyDamage(en, s.dmg, {
           burn: s.burn, burnDur: s.burnFrames,
           kbAngle: s.angle, kbMag: 7,
         });
-        spawnGP(en.wx, en.wy, '#ff6622', 8, 3.2);
-        addGDmg(en.wx, en.wy - 16, s.dmg, '#ff9a3a');
-        gPlayHit && gPlayHit();
+        _fxHitFeedback(en, s.dmg, ['#ff6622', 8, 3.2]);
         if(s.pierceLeft-- <= 0){ gEmberShots.splice(i,1); break; }   // spent → stop here
       }
     }
@@ -6662,29 +6688,15 @@ function gUpdateFireFields(dt){
     f.r = Math.min(f.maxR, f.maxR * (f.life / f.grow));   // expand with the wave, then hold at maxR
     // Enemy DoT anywhere inside the burning disc (per-enemy throttle, like gTrailHits).
     for(const en of gEnemies){
-      if(en.dead) continue;
-      if(!Number.isFinite(en.wx) || !Number.isFinite(en.wy)) continue;
+      if(!_fxTargetable(en)) continue;
       if(Math.hypot(en.wx - f.x, en.wy - f.y) > f.r + en.r) continue;
       if((f._hits.get(en) || 0) > gFrame) continue;
       f._hits.set(en, gFrame + FT_TICK);
       gDealEnemyDamage(en, f.dmg, { burn: f.burn, burnDur: FT_BURN_FRAMES });
-      addGDmg(en.wx, en.wy - 16, f.dmg, '#ff9a3a');
-      gPlayHit && gPlayHit();
+      _fxHitFeedback(en, f.dmg, null);
     }
     // Owner heal (dragonfire) / self-burn (chaosfire) when standing in the fire — outside the bare eye.
-    if(gPlayer && !gPlayer.dead){
-      const pd = Math.hypot(gPlayer.wx - f.x, gPlayer.wy - f.y);
-      if(pd <= f.r + gPlayer.r && pd >= FIREFIELD_EYE && (gPlayer._groundTickFrame || 0) <= gFrame){
-        gPlayer._groundTickFrame = gFrame + FT_TICK;
-        if(f.substance === 'dragonfire' && f.heal > 0){
-          gPlayer.hp = Math.min(gPlayer.maxHp, gPlayer.hp + f.heal);
-          addGDmg(gPlayer.wx, gPlayer.wy - 22, '+' + f.heal, '#7CFC9E');
-          spawnGP(gPlayer.wx, gPlayer.wy, '#ffe08a', 4, 2);
-        } else if(f.substance === 'chaosfire' && f.selfDmg > 0){
-          gDamagePlayer(f.selfDmg, { particle:{ col:'#ff5a18', n:4, spd:2.5 }, number:{ col:'#ff8a3a', y:-22 } });
-        }
-      }
-    }
+    _fxOwnerGroundTick(f.x, f.y, f.r, f.substance, f.heal, f.selfDmg, FIREFIELD_EYE);
     if(f.life >= f.maxLife) gFireFields.splice(i, 1);
   }
 }
@@ -6796,8 +6808,7 @@ function gUpdateFireJets(dt){
     // Beam hit — project each enemy onto the jet axis; hit once (the _hit set), even if it walks in.
     const cos = Math.cos(j.angle), sin = Math.sin(j.angle), halfW = DRAGONFIRE_JET_WIDTH/2;
     for(const en of gEnemies){
-      if(en.dead || j._hit.has(en)) continue;
-      if(!Number.isFinite(en.wx) || !Number.isFinite(en.wy)) continue;
+      if(!_fxTargetable(en) || j._hit.has(en)) continue;
       const dx = en.wx - j.x, dy = en.wy - j.y;
       const lx =  dx*cos + dy*sin;        // along the beam
       const ly = -dx*sin + dy*cos;        // across the beam
@@ -6805,9 +6816,7 @@ function gUpdateFireJets(dt){
       if(Math.abs(ly) > halfW + en.r) continue;
       j._hit.add(en);
       gDealEnemyDamage(en, j.dmg, { burn: j.burn, burnDur: j.burnFrames, kbAngle: j.angle, kbMag: 8 });
-      spawnGP(en.wx, en.wy, '#ffd24a', 8, 3.5);
-      addGDmg(en.wx, en.wy - 16, j.dmg, '#ffd24a');
-      gPlayHit && gPlayHit();
+      _fxHitFeedback(en, j.dmg, ['#ffd24a', 8, 3.5], '#ffd24a');
     }
     j.life += dt;
     if(j.life >= DRAGONFIRE_JET_LIFE) gFireJets.splice(i, 1);
@@ -6860,8 +6869,7 @@ function gUpdateFireWaves(dt){
       // Same arc the visual draws (gDrawFireWaves), so what you see is what you hit. Each enemy is hit
       // once (the wave pierces) — the _hit set means the front "reaching" it is enough.
       for(const en of gEnemies){
-        if(en.dead || w._hit.has(en)) continue;
-        if(!Number.isFinite(en.wx) || !Number.isFinite(en.wy)) continue;
+        if(!_fxTargetable(en) || w._hit.has(en)) continue;
         const dx = en.wx - w.x, dy = en.wy - w.y;
         const dist = Math.hypot(dx, dy);
         if(dist > w.traveled + en.r) continue;         // front hasn't reached it yet
@@ -6880,9 +6888,7 @@ function gUpdateFireWaves(dt){
           burn: w.burnTotal, burnDur: w._burnFrames || FW_BURN_FRAMES,
           kbAngle: Math.atan2(dy, dx), kbMag: 8 * (1 - t*(1 - FW_FAR_KB)),
         });
-        spawnGP(en.wx, en.wy, '#ff6622', 9, 3.5);
-        addGDmg(en.wx, en.wy-16, hitD, '#ff9a3a');
-        gPlayHit && gPlayHit();
+        _fxHitFeedback(en, hitD, ['#ff6622', 9, 3.5]);
       }
     }
     if(w.traveled >= w.range) gFireWaves.splice(i, 1);
@@ -7061,8 +7067,7 @@ function gUpdateFireRings(dt){
     // _visual rings are remote players' casts — render only, never damage (the
     // owner already dealt/reported it). Iterating nothing keeps them expanding.
     for(const en of (w._visual ? [] : gEnemies)){
-      if(en.dead || w._hit.has(en)) continue;
-      if(!Number.isFinite(en.wx) || !Number.isFinite(en.wy)) continue;
+      if(!_fxTargetable(en) || w._hit.has(en)) continue;
       const dist = Math.hypot(en.wx - w.x, en.wy - w.y);
       if(dist + en.r < lo || dist - en.r > hi) continue;    // band hasn't crossed this enemy
       w._hit.add(en);
@@ -7071,9 +7076,7 @@ function gUpdateFireRings(dt){
         // outward push normally; inward (toward the centre) for the collapsing vortex — it drags the pack in.
         kbAngle: Math.atan2(en.wy - w.y, en.wx - w.x) + (w.invert ? Math.PI : 0), kbMag: w.invert ? 9 : 6,
       });
-      spawnGP(en.wx, en.wy, '#ff6622', 8, 3.2);
-      addGDmg(en.wx, en.wy - 16, w.dmg, '#ff9a3a');
-      gPlayHit && gPlayHit();
+      _fxHitFeedback(en, w.dmg, ['#ff6622', 8, 3.2]);
     }
     if(!w._visual && inTown && gTrainingDummy && !w._hit.has(gTrainingDummy)){
       const dm = gTrainingDummy;
@@ -7307,16 +7310,13 @@ function gUpdateFireCrosses(dt){
     fc.life += dt;
     if(!fc._visual){
       for(const en of gEnemies){
-        if(en.dead) continue;
-        if(!Number.isFinite(en.wx) || !Number.isFinite(en.wy)) continue;
+        if(!_fxTargetable(en)) continue;
         if(!_fcOnArm(en.wx - fc.x, en.wy - fc.y, fc.reach, fc.arm, en.r)) continue;
         const t = fc.hits.get(en) || 0;
         if(t > 0){ fc.hits.set(en, t - dt); continue; }
         fc.hits.set(en, FC_TICK);
         gDealEnemyDamage(en, fc.dmg, { hitFlash: 10, burn: fc.burn, burnDur: FC_BURN_FRAMES });
-        spawnGP(en.wx, en.wy, '#ff6622', 5, 2.5);
-        addGDmg(en.wx, en.wy - 16, fc.dmg, '#ff9a3a');
-        gPlayHit && gPlayHit();
+        _fxHitFeedback(en, fc.dmg, ['#ff6622', 5, 2.5]);
       }
       if(inTown && gTrainingDummy){
         const dm = gTrainingDummy;
@@ -7480,16 +7480,14 @@ function gUpdateFireTrails(dt){
     ft.life += dt;
     if(!ft._visual){
       for(const en of gEnemies){
-        if(en.dead) continue;
-        if(!Number.isFinite(en.wx) || !Number.isFinite(en.wy)) continue;
+        if(!_fxTargetable(en)) continue;
         if(Math.hypot(en.wx - ft.x, en.wy - ft.y) > ft.reach + en.r) continue;
         // Shared cooldown: one tick per enemy per FT_TICK frames regardless of how many
         // overlapping patches cover it (the dense trail would otherwise multi-hit ~3x).
         if((gTrailHits.get(en) || 0) > gFrame) continue;
         gTrailHits.set(en, gFrame + FT_TICK);
         gDealEnemyDamage(en, ft.dmg, { hitFlash: 8, burn: ft.burn, burnDur: ft.burnDur || FT_BURN_FRAMES });
-        addGDmg(en.wx, en.wy - 16, ft.dmg, '#ff9a3a');
-        gPlayHit && gPlayHit();
+        _fxHitFeedback(en, ft.dmg, null);
       }
       if(inTown && gTrainingDummy){
         const dm = gTrainingDummy;
@@ -7500,18 +7498,7 @@ function gUpdateFireTrails(dt){
       }
       // Two-age grounds (Slice C): the owner standing in their own dragonfire heals; in chaosfire,
       // burns. One application per FT_TICK regardless of how many patches overlap (shared player tick).
-      if(ft.substance && gPlayer && !gPlayer.dead &&
-         Math.hypot(gPlayer.wx - ft.x, gPlayer.wy - ft.y) <= ft.reach + gPlayer.r &&
-         (gPlayer._groundTickFrame || 0) <= gFrame){
-        gPlayer._groundTickFrame = gFrame + FT_TICK;
-        if(ft.substance === 'dragonfire' && ft.heal > 0){
-          gPlayer.hp = Math.min(gPlayer.maxHp, gPlayer.hp + ft.heal);
-          addGDmg(gPlayer.wx, gPlayer.wy - 22, '+' + ft.heal, '#7CFC9E');
-          spawnGP(gPlayer.wx, gPlayer.wy, '#ffe08a', 4, 2);
-        } else if(ft.substance === 'chaosfire' && ft.selfDmg > 0){
-          gDamagePlayer(ft.selfDmg, { particle:{ col:'#ff5a18', n:4, spd:2.5 }, number:{ col:'#ff8a3a', y:-22 } });
-        }
-      }
+      if(ft.substance) _fxOwnerGroundTick(ft.x, ft.y, ft.reach, ft.substance, ft.heal, ft.selfDmg, 0);
     }
     if(ft.life >= (ft.maxLife || FT_LIFE)) gFireTrails.splice(i, 1);
   }
@@ -7672,14 +7659,12 @@ function gUpdateFirePillars(dt){
       spawnGP(fp.x, fp.y, '#ffcc44', 10, 4);
       gPlayFireTick && gPlayFireTick();
       for(const en of gEnemies){
-        if(en.dead || fp.hits.has(en)) continue;
-        if(!Number.isFinite(en.wx) || !Number.isFinite(en.wy)) continue;
+        if(!_fxTargetable(en) || fp.hits.has(en)) continue;
         if(Math.hypot(en.wx - fp.x, en.wy - fp.y) > fp.radius + en.r) continue;
         fp.hits.add(en);
         // gDealEnemyDamage handles MP routing + burn sync (host authoritative).
         gDealEnemyDamage(en, fp.dmg, { hitFlash: 14, burn: fp.burn, burnDur: fp.burnDur || FP_BURN_FRAMES });
-        addGDmg(en.wx, en.wy - 16, fp.dmg, '#ff9a3a');
-        gPlayHit && gPlayHit();
+        _fxHitFeedback(en, fp.dmg, null);
       }
       if(inTown && gTrainingDummy && !fp.hits.has(gTrainingDummy) &&
          Math.hypot(gTrainingDummy.wx - fp.x, gTrainingDummy.wy - fp.y) <= fp.radius + gTrainingDummy.r){
