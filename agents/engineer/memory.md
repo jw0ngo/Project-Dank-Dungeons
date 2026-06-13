@@ -18,6 +18,24 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 
 ---
 
+### 2026-06-13 — A stated prescription — even your own survey proposal — is a hypothesis; re-derive on contact, and "decline on read" is a first-class result
+- *(raises + subsumes the archived `…-deferred-fix-is-a-hypothesis.md` (06-09) and `…-visual-bug-blame-is-a-hypothesis.md` (06-10) into one family: deferred Fix:, user blame, AND your own plan are all hypotheses to test against current code.)*
+- **Principle:** Any prescription carries a premise that may have rotted: a deferred `Fix:` note, a user's blame
+  attribution, or *your own refactor-survey item*. Verify against **current** code before executing. This session,
+  of five surveyed refactors, **#3a (a `gSimUpdate` per-frame registry) was proposed then DECLINED on close
+  reading** — the explicit gated call-list is self-documenting, its gates heterogeneous (present/alive/host/client/
+  town), and `gSimUpdate` is already the single step fn, so a `{gate,fn}` registry reads *worse* on the game's
+  hottest path for marginal gain. And #2's scope ("one entity system, collapse 1k+ lines") dissolved on contact:
+  the nine fire families share **plumbing, not shapes**.
+- **How to apply:** (1) treat a survey as ranked *hypotheses*, not a commitment — re-read each target before doing
+  it; a reasoned **decline** is the "honest tradeoffs" charter in action, not a failure. (2) "Unify N similar
+  systems" almost always = **unify the plumbing** (guards / feedback / dispatch / engine-hookup), **keep the
+  identities** (each system's distinct shape/logic) — fire-FX stages 1-3 and the EnemyRegistry positive-dispatch
+  both took this shape. (3) Before a behavior-preserving restructure of a hot loop, **prove the coupling you're
+  changing is dead or invariant** (positive AI dispatch was safe only because `isPatrol` is never set and every
+  `defId` is a registry key), then write the **targeted canary BEFORE** claiming equivalence (`--check firefx`,
+  `--check enemyai`) — `--batch` alone never exercises the skill-hit or per-type-AI paths.
+
 ### 2026-06-13 — Every hand-maintained mirror of repo structure was drifted the moment a checker existed; encode invariants as tools, not discipline
 - **Principle:** In a docs-as-memory studio, any prose mirror of a machine-checkable fact rots silently —
   and a new checker's FIRST RUN is the cheapest audit you'll ever get. The day the infra batch landed:
@@ -218,7 +236,8 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   effect fire**, not reading the script (a `[string]$P=$null` PowerShell param silently becomes `''`). Full entry:
   `agents/engineer/archive/2026-06-11-syntax-pass-not-behavior-pass.md`.
 
-### 2026-06-10 — Three archived lessons (one-line index; full entries in `agents/engineer/archive/2026-06-10-*.md`)
+### 2026-06-10 — Two archived lessons (one-line index; full entries in `agents/engineer/archive/2026-06-10-*.md`)
+- *(the third, "visual-bug-blame is a hypothesis to test", is now folded into the 2026-06-13 hypothesis-family entry above; archive file `…-visual-bug-blame-is-a-hypothesis.md` retained.)*
 - **De-risk a large spec'd feature: sub-slices on rails + dev harness + named knobs** — land it as independently-
   verified sub-slices, a `_DEV`-gated harness driving the *real* systems (one click to any deep state), placeholder
   FX on const knobs (feel-iteration = edit-a-number); system + highest-feedback instance first, fan the rest out as
@@ -228,16 +247,11 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   head/shoulder-width ratio mean (pose-invariant, `tools/check-pose-scale.py`), not bbox; gauge keying by alpha-fringe
   brightness vs a clean sibling; `gDrawSprite` couples mult to cell size (re-cut → rescale `new/old`); when metric and
   eye disagree, let the user's reports bracket and the metric interpolate. `…-measure-sprite-scale-and-quality.md`.
-- **A user blaming a visual bug on your edits is a hypothesis to test** — (1) `git diff <base>..HEAD -- <artifact>`
-  filtered to the render path (often zero), (2) measure the suspect asset vs a sibling; separate render-path
-  regression (your lane) from asset defect (owning role) and route with data. `…-visual-bug-blame-is-a-hypothesis.md`.
 
 ---
 
-### 2026-06-09 — Four archived lessons (one-line index; full entries in `agents/engineer/archive/2026-06-09-*.md`)
-- **A deferred "Fix:" is a hypothesis, not an instruction** — its premise rots between writing and acting;
-  re-confirm against *current* code (grep symbols, trace reachability + consumers) before executing, especially
-  destructive prescriptions; if false, reframe and report. `…-deferred-fix-is-a-hypothesis.md`.
+### 2026-06-09 — Three archived lessons (one-line index; full entries in `agents/engineer/archive/2026-06-09-*.md`)
+- *(the fourth, "a deferred Fix: is a hypothesis", is now folded into the 2026-06-13 hypothesis-family entry above; archive file `…-deferred-fix-is-a-hypothesis.md` retained.)*
 - **A mode-global flipped for a special mode must be torn down symmetrically** — save-at-entry / restore-in-
   `finally`, or the mutation leaks into the default mode far from the toggle (`Sim.startRun` left `_SIM.muted`
   set → game mute). Treat the AI-native harness as production code. `…-symmetric-teardown-of-mode-globals.md`.
