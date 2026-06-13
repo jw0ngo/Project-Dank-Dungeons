@@ -1,0 +1,2 @@
+# sh-executed files must stay LF — CRLF breaks `sh` on the hook runner.
+tools/githooks/* text eol=lf
