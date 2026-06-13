@@ -41,6 +41,29 @@ function Get-NewestEntry([string]$path) {
   return $null
 }
 
+# Summarize one per-agent task doc (docs/tasks/<role>.md): status counts + top open titles.
+# Emoji matched by codepoint (PS 5.1 mangles non-ASCII literals in script source).
+function Get-LaneSummary([string]$path) {
+  if (-not (Test-Path $path)) { return $null }
+  $todo = [regex]::Escape([char]0x25FB)                       # white square (todo)
+  $prog = [regex]::Escape([char]::ConvertFromUtf32(0x1F504))  # arrows (in-progress)
+  $blk  = [regex]::Escape([char]0x26D4)                       # no-entry (blocked)
+  $lines = Get-Content $path -Encoding UTF8
+  $sum = @{ todo = 0; prog = 0; blocked = 0; top = @() }
+  foreach ($l in $lines) {
+    $isTodo = $l -match ('^- ' + $todo)
+    if ($isTodo) { $sum.todo++ }
+    elseif ($l -match ('^- ' + $prog)) { $sum.prog++ }
+    elseif ($l -match ('^- ' + $blk)) { $sum.blocked++ }
+    if ($isTodo -and $sum.top.Count -lt 3 -and $l -match '\*\*(.+?)\*\*') {
+      $t = $matches[1]
+      if ($t.Length -gt 64) { $t = $t.Substring(0, 61) + '...' }
+      $sum.top += $t
+    }
+  }
+  return $sum
+}
+
 # Parse an agent card's YAML frontmatter (the keys we care about) into a hashtable.
 function Get-Card([string]$path) {
   if (-not (Test-Path $path)) { return $null }
@@ -119,6 +142,32 @@ try {
     foreach ($o in $over) { [void]$sb.AppendLine(('- ' + $o)) }
     [void]$sb.AppendLine('Compact each: merge overlapping entries, supersede outdated ones, raise altitude; move')
     [void]$sb.AppendLine('superseded raw entries to agents/<role>/archive/ (the journal archives by session block).')
+    [void]$sb.AppendLine('')
+  }
+
+  # Per-agent task docs: open counts per lane + the engineer's (default role) top open items.
+  $laneOrder = @(@('engineer', 'Engineer'), @('pm', 'PM'), @('artist', 'Artist'))
+  $tb = [System.Text.StringBuilder]::new()
+  $pendingCanaries = 0
+  foreach ($pair in $laneOrder) {
+    $lanePath = Join-Path $root ('docs/tasks/{0}.md' -f $pair[0])
+    $s = Get-LaneSummary $lanePath
+    if ($null -eq $s) { continue }
+    $counts = ('{0} todo / {1} in-progress / {2} blocked' -f $s.todo, $s.prog, $s.blocked)
+    [void]$tb.AppendLine(('- {0}: {1}' -f $pair[1], $counts))
+    if ($pair[0] -eq 'engineer' -and $s.top.Count -gt 0) {
+      foreach ($t in $s.top) { [void]$tb.AppendLine(('    top: ' + $t)) }
+    }
+    foreach ($l in (Get-Content $lanePath -Encoding UTF8)) {
+      if ($l -match '(?i)canary' -and $l -match '(?i)pending') { $pendingCanaries++ }
+    }
+  }
+  if ($tb.Length -gt 0) {
+    [void]$sb.AppendLine('TASK DOCS (docs/tasks/<role>.md - your lane is your backlog):')
+    [void]$sb.Append($tb.ToString())
+    if ($pendingCanaries -gt 0) {
+      [void]$sb.AppendLine(('- ! {0} task line(s) mention a PENDING canary - close them with: node tools/canary/run.mjs' -f $pendingCanaries))
+    }
     [void]$sb.AppendLine('')
   }
 

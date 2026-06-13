@@ -37,7 +37,9 @@ Strategy/priority: [`../ROADMAP.md`](../ROADMAP.md). Sibling docs: [`pm.md`](pm.
   runs batch/expr, captures console errors, exits non-zero on failure. Closes the recurring "⚠ in-browser
   canary pending" class. Presets in `checks.mjs`; documented in `agents/engineer/engineer.md`.
 
-- ◻️ 🔧 **Infra-5 — Session-brief surfaces the task docs** — extend `tools/session-brief.ps1` to parse
+- ✅ 🔧 **Infra-5 — Session-brief surfaces the task docs** — **done ENG 2026-06-13.** Per-lane counts verified
+  against manual greps (21/3/4); engineer top-3 ◻️ titles shown; pending-canary scan nudges
+  `node tools/canary/run.mjs`. Emoji matched by codepoint (PS 5.1 source-encoding gotcha). *(orig)* — extend `tools/session-brief.ps1` to parse
   `docs/tasks/{pm,engineer,artist}.md`: per-lane open counts (◻️/🔄/⛔), top ◻️ titles (engineer default),
   and a pending-canary count.
 
