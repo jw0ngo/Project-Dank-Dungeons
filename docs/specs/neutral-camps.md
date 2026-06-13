@@ -2,7 +2,7 @@
 
 **Status:** `spine built` 2026-06-09 (eng) — *was* `approved` (Josh) · **the final major mechanical feature of the vertical slice**, shipped right after Favor.
 **Spine landed (eng 2026-06-09):** 40 crescent dens placed at world-gen (carved into the `rocks` layer); `direwolf` + `alphawolf` EntityDefs + `_aiWolf` (neutral / circle-flank / telegraphed lunge-bite / hard-leash + full-heal); `isNeutral` + camp-linked `_wolfWakeCamp`; `gUpdateWolfCamps` 3-min respawn + chest-on-clear (2–4 Favor) inside `gSimUpdate`; minimap dots; editor palette. **Open calls resolved to the spec's recommendations** (gated-on-clear chest · Alpha-as-elite · flat 3–5 pack · random crescent mouth · 180s `WOLF_CAMP_RESPAWN`). **Remaining = playtest/tune + polish** (lunge-bite juice, pack-wake telegraph, threat-scaled packs) and the in-browser `await Sim.batch(3)` canary.
-**Owner handoff:** PM → engineering (systems) + Artist (wolf sprites). Engineer owns the *how* per [`agents/engineer/engineer.md`](agents/engineer/engineer.md).
+**Owner handoff:** PM → engineering (systems) + Artist (wolf sprites). Engineer owns the *how* per [`agents/engineer/engineer.md`](../../agents/engineer/engineer.md).
 **Pillar:** game feel (a new, readable combat encounter + a farm-route rhythm) · mastery (risk/route decisions) · build-craft depth (a reliable, repeatable economy source feeding [`favor.md`](favor.md) + the card draft).
 **Reads with:** [`favor.md`](favor.md) (the chest is the marquee Favor source) · the day-farm/VS-night spawn loop (camps are the *day* content the lull was waiting for).
 

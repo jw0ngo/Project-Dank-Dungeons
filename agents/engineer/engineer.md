@@ -112,8 +112,11 @@ Always state what you refactored and why, and confirm behavior is unchanged.
 There is no test suite and no lint config. The verification loop is:
 
 1. Make the change in `index.html`.
-2. Extract the `<script>` JS and run `node --check` on it to confirm no syntax error.
-3. Run a **targeted** check (grep or a small node snippet) proving the change is present and correct — `node --check` alone is not sufficient.
+2. Run **`python tools/verify-repo.py`** — the canonical repo lint: every inline `<script>` through
+   `node --check`, every referenced `assets/` path resolved **case-sensitively against the git index**
+   (disk is case-insensitive and lies; missing art falls back silently — now also `console.warn`ed in dev),
+   plus a relative md-link check. Exit 0 before any handoff or session end.
+3. Run a **targeted** check (grep or a small node snippet) proving the change is present and correct — syntax-clean alone is not sufficient.
 4. For behavior, run `python dev.py` — serves `index.html` at `http://localhost:5500` and auto-reloads the browser on every save (the game boots straight into the town hub via `goTown()`). Testing is local; `git push` is only for publishing to GitHub Pages.
 
 > **Node:** a portable Node LTS (v24) lives **outside the repo** at `tools/node-v24.16.0-win-x64/` (sibling of the repo root) and is on the user PATH, so `node --check` works directly in a fresh shell (extract the inline `<script>` first — see step 2). It's deliberately outside the repo so its 35 MB never gets committed. Node is used only as a syntax checker — the game still runs in-browser via `python dev.py`, there is no build step, and the nested `dungeon-forge-project/` Vite port is still stale/unused.

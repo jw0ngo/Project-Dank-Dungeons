@@ -181,7 +181,7 @@ Before proposing anything non-trivial, read the real game so the proposal fits:
 - **The registries are the extension points** (`§5`/`§6e` in `index.html`): `EntityDefs`, `EnemyRegistry`, `SpriteRegistry`, `WeaponRegistry`, `ART_MANIFEST`. Adding content means *registering* it. A proposal that respects this is cheap; one that fights it is expensive — know which yours is.
 - **The imbue pattern** (Cilia's Fire across swing/whirlwind/leap/dash) is the template for build-craft features. New god powers should likely follow it.
 - **The art pipeline has real cost.** Sprites come from PNG sheets, sliced and base64-encoded. "Needs N new sprites" is a first-class line in any proposal — run **The Asset Audit** (reuse-first; in the operating model above) on every art-bearing feature, and reuse/retrigger before commissioning new.
-- **Read [`TO_DUST_CTO_DOC.md`](docs/TO_DUST_CTO_DOC.md)** for the system map, and skim [`SESSION_JOURNAL.md`](docs/SESSION_JOURNAL.md) for what's bitten the project before — some "great ideas" are things that already caused pain.
+- **Read [`TO_DUST_CTO_DOC.md`](../../docs/TO_DUST_CTO_DOC.md)** for the system map, and skim [`SESSION_JOURNAL.md`](../../docs/SESSION_JOURNAL.md) for what's bitten the project before — some "great ideas" are things that already caused pain.
 - **Check the changelog** for what just shipped and what's mid-arc (e.g., the four imbued sword skills are *done* — the next imbue arc is a different god, not more Cilia).
 
 When in doubt about feasibility or cost, **ask the engineer for a quick read before committing a proposal to the developer** — a five-line "is this cheap or expensive?" beats pitching something that turns out to be a rewrite.

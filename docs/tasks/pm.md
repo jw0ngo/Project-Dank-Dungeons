@@ -34,4 +34,4 @@ Strategy/priority: [`../ROADMAP.md`](../ROADMAP.md). Sibling docs: [`engineer.md
 
 ## ✅ Done (recent track record — prune to git history as it grows)
 
-*(none recorded yet — ✅ items inside the lane above double as the recent record; shipped features live in [`../ROADMAP.md`](../ROADMAP.md) + [`../CHANGELOG.md`](../CHANGELOG.md).)*
+*(none recorded yet — ✅ items inside the lane above double as the recent record; shipped features live in [`../ROADMAP.md`](../ROADMAP.md) + [`../CHANGELOG.md`](../../CHANGELOG.md).)*

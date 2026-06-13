@@ -1,7 +1,7 @@
 # Spec — Card Pool Expansion (Swing/Heavy/Dash scaling · Crit · sustain rebalance)
 
 **Status:** `approved` 2026-06-08 · fills the card-draft's parked "deeper card content" stretch ([`../ROADMAP.md`](../ROADMAP.md) → *Now*). Builds directly on the shipped card-draft Core ([`card-draft.md`](card-draft.md)).
-**Owner handoff:** PM → engineering. Engineer owns the *how* per [`agents/engineer/engineer.md`](agents/engineer/engineer.md).
+**Owner handoff:** PM → engineering. Engineer owns the *how* per [`agents/engineer/engineer.md`](../../agents/engineer/engineer.md).
 **Pillar:** build-craft depth (more build axes) · game feel (crit juice) · mastery (the *whole* kit scales, not just whirlwind/leap).
 
 **One-liner:** give **swing, heavy, and dash** their own upgrade cards, add **crit chance / crit damage** as real character stats (with cards), and rebalance sustain (nerf flat HP regen).

@@ -1,7 +1,7 @@
 # Spec — Favor (the world currency)
 
 **Status:** `approved` direction 2026-06-08 (Josh) · **supersedes the Favor mechanics in [`favor-imbue.md`](favor-imbue.md)** (see *Reconciliation* §7).
-**Owner handoff:** PM → engineering. Engineer owns the *how* per [`agents/engineer/engineer.md`](agents/engineer/engineer.md).
+**Owner handoff:** PM → engineering. Engineer owns the *how* per [`agents/engineer/engineer.md`](../../agents/engineer/engineer.md).
 **Pillar:** build-craft depth (a player-controlled power lever) · game feel (a rare drop + a juicy spend) · mastery (spend decisions, not just draws).
 **Reads with:** [`card-draft.md`](card-draft.md) (cards = magnitude, rarity tiers) · [`card-pool-expansion.md`](card-pool-expansion.md) (the active card-economy build this layers onto).
 

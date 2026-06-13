@@ -18,7 +18,10 @@ Strategy/priority: [`../ROADMAP.md`](../ROADMAP.md). Sibling docs: [`pm.md`](pm.
   one-shot `.git/DEPLOY_AUTH` file); `tools/install-githooks.ps1` sets `core.hooksPath`; session-brief nudges
   if unset. Mirrors pm-bot's `_safe_push_main` whole-delta detection.
 
-- ◻️ 🔧 **Infra-3 — Canonical repo lint `tools/verify-repo.py`** — (1) every `ART_MANIFEST` path + direct
+- ✅ 🔧 **Infra-3 — Canonical repo lint `tools/verify-repo.py`** — **done ENG 2026-06-13.** First run already
+  paid: found **10 broken md links** (9 pre-existing + 1 from the tracker split), all fixed; assets + JS clean;
+  the 48-file orphan report matches the known unwired-art inventory. `gInitArt` now `console.warn`s missing art
+  (deploy-affecting, committed at tip, push-gated). Documented as step 2 of the verification loop. *(orig)* — (1) every `ART_MANIFEST` path + direct
   `.src` const resolves case-sensitively vs `git ls-tree -r HEAD` (+ orphan-asset report, warning-level);
   (2) extracted `<script>` → `node --check`; (3) relative md-link lint across docs/ agents/ studio/ root.
   Plus a one-line `console.warn` in `gInitArt`'s `onerror` so missing art is loud in dev (deploy-affecting,
