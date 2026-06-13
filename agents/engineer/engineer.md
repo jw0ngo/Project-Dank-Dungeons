@@ -117,7 +117,12 @@ There is no test suite and no lint config. The verification loop is:
    (disk is case-insensitive and lies; missing art falls back silently — now also `console.warn`ed in dev),
    plus a relative md-link check. Exit 0 before any handoff or session end.
 3. Run a **targeted** check (grep or a small node snippet) proving the change is present and correct — syntax-clean alone is not sufficient.
-4. For behavior, run `python dev.py` — serves `index.html` at `http://localhost:5500` and auto-reloads the browser on every save (the game boots straight into the town hub via `goTown()`). Testing is local; `git push` is only for publishing to GitHub Pages.
+4. For behavior **without a human browser**, run the headless canary — `node tools/canary/run.mjs`
+   (`--batch 3` for bot runs, `--check boot|batch|draft` for presets, `--expr "Sim.…"` for anything else;
+   see `tools/canary/README.md`). It drives the real game in headless Chromium, fails on any console/page
+   error, and replaces the old "⚠ in-browser canary pending — needs a live browser" dead-end. Run it after
+   any notable `index.html` change.
+5. For look/feel, run `python dev.py` — serves `index.html` at `http://localhost:5500` and auto-reloads the browser on every save (the game boots straight into the town hub via `goTown()`). Testing is local; `git push` is only for publishing to GitHub Pages.
 
 > **Node:** a portable Node LTS (v24) lives **outside the repo** at `tools/node-v24.16.0-win-x64/` (sibling of the repo root) and is on the user PATH, so `node --check` works directly in a fresh shell (extract the inline `<script>` first — see step 2). It's deliberately outside the repo so its 35 MB never gets committed. Node is used only as a syntax checker — the game still runs in-browser via `python dev.py`, there is no build step, and the nested `dungeon-forge-project/` Vite port is still stale/unused.
 

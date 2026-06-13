@@ -27,7 +27,12 @@ Strategy/priority: [`../ROADMAP.md`](../ROADMAP.md). Sibling docs: [`pm.md`](pm.
   Plus a one-line `console.warn` in `gInitArt`'s `onerror` so missing art is loud in dev (deploy-affecting,
   push-gated). Manual run, documented in the engineer verification loop.
 
-- ◻️ 🔧 **Infra-1 — Headless canary runner `tools/canary/`** — Playwright CLI driving the §8 Sim harness:
+- ✅ 🔧 **Infra-1 — Headless canary runner `tools/canary/`** — **done ENG 2026-06-13.** Playwright + chromium
+  installed (node_modules git-ignored, `package.json` pins). Verified: `boot` clean 7.6s · `--batch 3` full
+  balance report 9.3s · `draft` preset (balance-independent — `gWildGrantXP` direct grant) drafts 5 cards incl.
+  the item-10 ids, <1s · broken `--expr` exits 1 with the page error captured. **Closes item-10's owed browser
+  canary**; now step 4 of the verification loop. **⚠ Balance signal for PM/Josh:** the heuristic bot now dies
+  night 1 at level 1 (median 26s, 3/3 runs no draft) — corroborates #8.7 early-difficulty. *(orig)* — Playwright CLI driving the §8 Sim harness:
   `node tools/canary/run.mjs [--batch N] [--expr "Sim.…"]` boots `python dev.py`, waits for `window.Sim`,
   runs batch/expr, captures console errors, exits non-zero on failure. Closes the recurring "⚠ in-browser
   canary pending" class. Presets in `checks.mjs`; documented in `agents/engineer/engineer.md`.
@@ -170,6 +175,9 @@ refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 
     (`siegeSpawnAccum`): cut the night-1 horde size / spawn rate so the opening siege is clearable on the tight mana
     budget.
   - **Count/speed mults** — `1 + threat·0.15` (`:13737`) / `·0.08` (`:13731`): lower the early end if needed.
+  - **Corroborating data (canary, 2026-06-13):** 3 headless bot runs (`tools/canary --batch 3`) — bot dies
+    night 1 at level 1, median 26s survival, zero drafts reached (the old bot used to clear nights). Bot ≠
+    player, but the direction matches the playtest call.
   - **Sequence AFTER #8.8 lands** — the out-of-combat mana regen is itself a survivability boost on night 1, so
     re-judge the felt difficulty *with* #8.8 in before deciding how far to cut (don't double-nerf). **Tune by feel:**
     night 1 should be beatable but not free; the late-game wall item 1 created must stay. Host-authoritative; no MP/Sim change.
@@ -248,7 +256,9 @@ refs drift — grep the symbol). **Grab the cheap irritant-fixers first** (#8.3 
   its only callers; **this IS the Attack-Speed/Dexterity task below**). Grit (4) + Patron/Cilia (3) untouched →
   **23 static draft cards.** Draft renders via the emoji `icon` + `fmt(value)` (no `CARD_ICON_ART` change needed —
   it's `typeof`-guarded). `node --check` + grep verified (no dangling old card ids; combat reads the new stats).
-  **⚠ Browser canary still owed** (Sim is browser-only): draft each new card and confirm the bundles apply.
+  **Browser canary RUN 2026-06-13** via `node tools/canary/run.mjs --check draft` (Infra-1): draft pipeline
+  resolves headlessly, new ids drafted cleanly (strength / dexterity / dash-mastery picked, zero console
+  errors). Per-card bundle spot-checks on demand via the README's `--expr` recipe.
   *(Design-ahead hooks preserved: Mastery step-sets are data → easy to add evolutions; Strength/Dexterity are
   `wildBuffs` stats → can graduate to major stats.)* — original detail below.
   - **Merges:** `crit`+`critdmg` → **Ferocity** (both crit stats, one card); `sw-dmg`+`hv-dmg` → **Strength** (+%

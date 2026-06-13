@@ -1,0 +1,9 @@
+{
+  "name": "to-dust-canary",
+  "private": true,
+  "type": "module",
+  "description": "Headless in-browser canary for the §8 Sim harness (Infra-1). See README.md.",
+  "dependencies": {
+    "playwright": "^1.49.0"
+  }
+}
