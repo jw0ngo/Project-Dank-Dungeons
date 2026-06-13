@@ -18,23 +18,20 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 
 ---
 
-### 2026-06-13 — A stated prescription — even your own survey proposal — is a hypothesis; re-derive on contact, and "decline on read" is a first-class result
-- *(raises + subsumes the archived `…-deferred-fix-is-a-hypothesis.md` (06-09) and `…-visual-bug-blame-is-a-hypothesis.md` (06-10) into one family: deferred Fix:, user blame, AND your own plan are all hypotheses to test against current code.)*
-- **Principle:** Any prescription carries a premise that may have rotted: a deferred `Fix:` note, a user's blame
-  attribution, or *your own refactor-survey item*. Verify against **current** code before executing. This session,
-  of five surveyed refactors, **#3a (a `gSimUpdate` per-frame registry) was proposed then DECLINED on close
-  reading** — the explicit gated call-list is self-documenting, its gates heterogeneous (present/alive/host/client/
-  town), and `gSimUpdate` is already the single step fn, so a `{gate,fn}` registry reads *worse* on the game's
-  hottest path for marginal gain. And #2's scope ("one entity system, collapse 1k+ lines") dissolved on contact:
-  the nine fire families share **plumbing, not shapes**.
-- **How to apply:** (1) treat a survey as ranked *hypotheses*, not a commitment — re-read each target before doing
-  it; a reasoned **decline** is the "honest tradeoffs" charter in action, not a failure. (2) "Unify N similar
-  systems" almost always = **unify the plumbing** (guards / feedback / dispatch / engine-hookup), **keep the
-  identities** (each system's distinct shape/logic) — fire-FX stages 1-3 and the EnemyRegistry positive-dispatch
-  both took this shape. (3) Before a behavior-preserving restructure of a hot loop, **prove the coupling you're
-  changing is dead or invariant** (positive AI dispatch was safe only because `isPatrol` is never set and every
-  `defId` is a registry key), then write the **targeted canary BEFORE** claiming equivalence (`--check firefx`,
-  `--check enemyai`) — `--batch` alone never exercises the skill-hit or per-type-AI paths.
+### 2026-06-13 — A stated prescription — even your own survey proposal — is a hypothesis; "decline on read" is a first-class result
+- *(subsumes the archived 06-09 `…-deferred-fix-is-a-hypothesis.md` + 06-10 `…-visual-bug-blame-is-a-hypothesis.md`: deferred Fix:, user blame, AND your own plan all rot — verify vs current code before executing.)*
+- **Principle:** Re-derive a prescription's premise on contact. Of five surveyed refactors, **#3a (a `gSimUpdate`
+  per-frame registry) was proposed then DECLINED on reading** — the explicit gated call-list is self-documenting,
+  its gates heterogeneous (present/alive/host/client/town), and `gSimUpdate` is already the single step fn, so a
+  `{gate,fn}` registry reads *worse* on the game's hottest path for marginal gain. #2's scope ("one entity system,
+  −1k lines") dissolved too: the nine fire families share **plumbing, not shapes**.
+- **How to apply:** (1) a survey is ranked *hypotheses*, not a commitment — a reasoned **decline** is the honest-
+  tradeoffs charter, not a failure. (2) "Unify N similar systems" ≈ **unify the plumbing** (guards/feedback/
+  dispatch/hookup), **keep the identities** (distinct shape/logic) — fire-FX stages 1-3 + EnemyRegistry positive-
+  dispatch both took this shape. (3) Before restructuring a hot loop, **prove the coupling you change is dead or
+  invariant** (positive AI dispatch was safe only because `isPatrol` is never set and every `defId` is a registry
+  key), then write the **targeted canary BEFORE** claiming equivalence (`--check firefx`/`enemyai`) — `--batch`
+  alone never exercises the skill-hit or per-type-AI paths.
 
 ### 2026-06-13 — Every hand-maintained mirror of repo structure was drifted the moment a checker existed; encode invariants as tools, not discipline
 - **Principle:** In a docs-as-memory studio, any prose mirror of a machine-checkable fact rots silently —
