@@ -1,6 +1,6 @@
 # To Dust — Code Map (GENERATED — DO NOT EDIT)
 
-*Regenerated from `index.html`'s `// §` banners by `tools/gen-code-map.py` (2026-06-13, 17939 lines). Re-run the tool after adding/moving a section or a notable system; **edit the banners, not this file.** Sections appear in FILE ORDER (the § numbers are stable names, not positions — e.g. §10 INIT lives near the end).*
+*Regenerated from `index.html`'s `// §` banners by `tools/gen-code-map.py` (2026-06-13, 17948 lines). Re-run the tool after adding/moving a section or a notable system; **edit the banners, not this file.** Sections appear in FILE ORDER (the § numbers are stable names, not positions — e.g. §10 INIT lives near the end).*
 
 ## (pre-§1)  HTML / CSS / boot script before the first banner
 *lines 1–1195* · 1 function(s) · 0 knob(s)
@@ -138,53 +138,53 @@
 **Knobs (UPPER consts):** `WILD_W` · `WILD_H` · `SHRINE_R` · `SHRINE_MARGIN` · `NUM_CAMPS` · `CAMP_ROCK_CLUMPS` · `NUM_OUTCROPS` · `TREE_FORMATION_RATE` · `TREE_WALK_GAP` · `TREE_CELL`
 
 ## §12  WILDERNESS — XP, LEVELLING & THREAT SCALING
-*lines 14462–16017* · 64 function(s) · 28 knob(s)
+*lines 14462–16026* · 63 function(s) · 29 knob(s)
 
-**Functions:** `wildXpToNext` · `wildThreatMult` · `wildSpeedMult` · `wildDmgMult` · `gWildThreatTier` · `gWildSpawnXPOrb` · `gUpdateXPOrbs` · `gDrawXPOrbs` · `gGrantFavor` · `gWildSpawnFavorOrb` · `gUpdateFavorOrbs` · `gDrawFavorOrbs` · `gWildGrantXP` · `wildDexCdMult` · `_wildApplyStats` · `rollCardRarity` · `_addSkillMod` · `_addGritMod` · `_applyMastery` · `gImbueCardWindow` · `gIsSkillUnlocked` · `gGritUnlocked` · `_cardValue` · `gCardAvailable` · `gGodSkillCards` · `gDrawCards` · `gDraftQueue` · `gDraftGenerate` · `_draftUpgradeCard` · `_draftBuyRank` · `gDraftReroll` · `_draftUpdateConfirm` · `_draftUpdateReroll` · `_draftUpdateFavor` · `gDraftSelect` · `gDraftPaint` · `gDraftSetupTheme` · `gDraftOpen` · `gDraftClose` · `gDraftUpdateFab` · `gDraftCamShift` · `gDraftConfirm` · `gDraftReset` · `gWildSyncUnlocks` · `gWildLevelUp` · `gWildTick` · `gWildUpdateHUD` · `gWildDayNightTick` · `_wildOnNightBegin` · `_wildHordeSize` · `_wildNightStreamRate` · `_wildSwarmType` · `_wildSpawnHorde` · `_wildSpawnKings` · `gAmbientDeaggroR` · `gWildAmbientTarget` · `_wildSpawnAmbientPack` · `gWildPatrolTick` · `wildCurrentCap` · `_wildPickSpawnPos` · `_wildSpawnEnemy` · `gWildSpawnTick` · `gWildEnd` · `gWildReset`
+**Functions:** `wildXpToNext` · `wildThreatMult` · `wildSpeedMult` · `wildDmgMult` · `gWildThreatTier` · `gWildSpawnXPOrb` · `gUpdateXPOrbs` · `gDrawXPOrbs` · `gGrantFavor` · `gWildSpawnFavorOrb` · `gUpdateFavorOrbs` · `gDrawFavorOrbs` · `gWildGrantXP` · `wildDexCdMult` · `_wildApplyStats` · `rollCardRarity` · `_addSkillMod` · `_addGritMod` · `_applyMastery` · `gImbueCardWindow` · `gIsSkillUnlocked` · `gGritUnlocked` · `_cardValue` · `gCardAvailable` · `gGodSkillCards` · `gDrawCards` · `gDraftQueue` · `gDraftGenerate` · `_draftUpgradeCard` · `_draftBuyRank` · `gDraftReroll` · `_draftUpdateConfirm` · `_draftUpdateReroll` · `_draftUpdateFavor` · `gDraftSelect` · `gDraftPaint` · `gDraftSetupTheme` · `gDraftOpen` · `gDraftClose` · `gDraftUpdateFab` · `gDraftCamShift` · `gDraftConfirm` · `gDraftReset` · `gWildSyncUnlocks` · `gWildLevelUp` · `gWildTick` · `gWildUpdateHUD` · `gWildDayNightTick` · `_wildOnNightBegin` · `_wildHordeSize` · `_wildNightRate` · `_wildSwarmType` · `_wildSpawnHorde` · `_wildSpawnKings` · `gAmbientDeaggroR` · `gWildAmbientTarget` · `_wildSpawnAmbientPack` · `gWildPatrolTick` · `_wildPickSpawnPos` · `_wildSpawnEnemy` · `gWildSpawnTick` · `gWildEnd` · `gWildReset`
 
-**Knobs (UPPER consts):** `WILD_MAX_THREAT` · `WILD_DAY_DURATION` · `WILD_NIGHT_DURATION` · `WILD_XP_TABLE` · `WILD_TIER1_THREAT` · `WILD_TIER2_THREAT` · `FAVORCOIN_PX` · `CARD_RARITIES` · `PASSIVE_CARDS` · `WW_MASTERY` · `LEAP_MASTERY` · `DASH_MASTERY` · `SKILL_CARDS` · `GRIT_MASTERY` · `GRIT_CARDS` · `PATRON_CARD_CHANCE` · `GODSKILL_CARD_CHANCE` · `PATRON_CARDS` · `IMBUE_PATHS` · `IMBUE_CARDS` · `CILIA_FIG_IMG` · `KNIGHT_FIG_IMG` · `GOD_DATA` · `DRAFT_RETRACT_MS` · `SKILL_UNLOCK_LEVEL` · `GRIT_UNLOCK_LEVEL` · `AMBIENT_PULL_R` · `AMBIENT_RESPAWN_INTERVAL`
+**Knobs (UPPER consts):** `WILD_MAX_THREAT` · `WILD_DAY_DURATION` · `WILD_NIGHT_DURATION` · `WILD_NIGHT_HORDE_DELAY` · `WILD_XP_TABLE` · `WILD_TIER1_THREAT` · `WILD_TIER2_THREAT` · `FAVORCOIN_PX` · `CARD_RARITIES` · `PASSIVE_CARDS` · `WW_MASTERY` · `LEAP_MASTERY` · `DASH_MASTERY` · `SKILL_CARDS` · `GRIT_MASTERY` · `GRIT_CARDS` · `PATRON_CARD_CHANCE` · `GODSKILL_CARD_CHANCE` · `PATRON_CARDS` · `IMBUE_PATHS` · `IMBUE_CARDS` · `CILIA_FIG_IMG` · `KNIGHT_FIG_IMG` · `GOD_DATA` · `DRAFT_RETRACT_MS` · `SKILL_UNLOCK_LEVEL` · `GRIT_UNLOCK_LEVEL` · `AMBIENT_PULL_R` · `AMBIENT_RESPAWN_INTERVAL`
 
 ## §12b  OBELISK SYSTEM
-*lines 16018–16189* · 6 function(s) · 12 knob(s)
+*lines 16027–16198* · 6 function(s) · 12 knob(s)
 
 **Functions:** `_obeliskPct` · `_obeliskPickBuffs` · `gShowObeliskBuffs` · `gUpdateObelisks` · `gDrawObelisks` · `_drawObeliskStone`
 
 **Knobs (UPPER consts):** `OBELISK_RADIUS` · `OBELISK_CHANNEL` · `OBELISK_DRAW_H` · `OBELISK_FOOT` · `OBELISK_FADE_ALPHA` · `OBELISK_COLLIDE_R` · `OBELISK_PCT_BASE` · `OBELISK_PCT_PER_LEVEL` · `OBELISK_MAXMANA_BASE` · `OBELISK_REGEN_BASE` · `OBELISK_MAXHP_BASE` · `OBELISK_BUFFS`
 
 ## §13  FOG OF WAR
-*lines 16190–16539* · 9 function(s) · 10 knob(s)
+*lines 16199–16548* · 9 function(s) · 10 knob(s)
 
 **Functions:** `fogVisRadius` · `fogVisRadiusVisualPx` · `gHiddenByFog` · `gFogInit` · `gFogReveal` · `_fogEnsureOffscreen` · `_fogEnsureLow` · `gDrawFog` · `gDrawMinimap`
 
 **Knobs (UPPER consts):** `FOG_REVEAL_EASE` · `FOG_VIS_DAY` · `FOG_VIS_NIGHT` · `ENEMY_DEAGGRO_TILES` · `FOG_VIS_FRAC` · `FOG_SIGHT_SOFT` · `FOG_SIGHT_EDGE` · `FOG_SHROUD_A` · `FOG_SHROUD_A_N` · `FOG_UNSEEN_A`
 
 ## §14  GOBLIN VILLAGE SYSTEM
-*lines 16540–16596* · 2 function(s) · 0 knob(s)
+*lines 16549–16605* · 2 function(s) · 0 knob(s)
 
 **Functions:** `_villageAlert` · `gUpdateVillages`
 
 ## §14b  NEUTRAL WOLF CAMPS  (specs/neutral-camps.md)
-*lines 16597–16827* · 8 function(s) · 5 knob(s)
+*lines 16606–16836* · 8 function(s) · 5 knob(s)
 
 **Functions:** `_wolfSpawnPack` · `gUpdateWolfCamps` · `_villageCheckDamageAlert` · `gDrawVillages` · `_chestDrawAlpha` · `_drawChestSprite` · `gDrawWolfCamps` · `_drawVillageDotsMinimap`
 
 **Knobs (UPPER consts):** `WOLF_CAMP_RESPAWN` · `WOLF_CAMP_SPAWN_R` · `CHEST_HOLD_SECS` · `CHEST_FADE_SECS` · `CHEST_PX`
 
 ## §15  SHRINE SYSTEM
-*lines 16828–16925* · 3 function(s) · 1 knob(s)
+*lines 16837–16934* · 3 function(s) · 1 knob(s)
 
 **Functions:** `gDrawShrine` · `gUpdateShrine` · `gShrineInteract`
 
 **Knobs (UPPER consts):** `SHRINE_PX`
 
 ## §10  INIT
-*lines 16926–17477* · 33 function(s) · 2 knob(s)
+*lines 16935–17486* · 33 function(s) · 2 knob(s)
 
 **Functions:** `gInitShrineLocks` · `gImbuableSkills` · `gImbuedCount` · `gImbueAllowance` · `gShrineHasUnclaimed` · `gOpenImbueMenu` · `gRenderImbueCards` · `gCloseImbueMenu` · `gPendingEvolution` · `_evolutionOptions` · `_chooseEvolution` · `_renderEvolutionCards` · `gOpenEvolutionMenu` · `gCloseEvolutionMenu` · `gForgeGodSkills` · `_forgeEnsurePatron` · `gForgeAcquire` · `gForgeRankSkill` · `gForgeMaxSkill` · `gRenderSkillforge` · `gOpenSkillforge` · `gCloseSkillforge` · `gRenderStatForge` · `gOpenStatForge` · `gCloseStatForge` · `gImbueSelectSkill` · `_imbueAnimateBg` · `draw` · `gOpenShrineMenu` · `gCloseShrineMenu` · `gShrineSelectGod` · `_shrineAnimateBg` · `draw`
 
 **Knobs (UPPER consts):** `SKILLFORGE_GOD` · `STAT_FORGE_STATS`
 
 ## §8  SIM / PLAYTEST HARNESS  (window.Sim)
-*lines 17478–17939* · 6 function(s) · 0 knob(s)
+*lines 17487–17948* · 6 function(s) · 0 knob(s)
 
 **Functions:** `installClock` · `restoreClock` · `freshMetrics` · `installHooks` · `stopRafLoop` · `finishRun`

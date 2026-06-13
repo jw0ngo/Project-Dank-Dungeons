@@ -14477,12 +14477,14 @@ const WILD_MAX_THREAT      = 12;   // cap on stat scaling (nights can exceed thi
 // Day/night cycle — night is a discrete SIEGE (the difficulty clock); day is the lull.
 const WILD_DAY_DURATION   = 180;  // 3 min day  (the lull)
 const WILD_NIGHT_DURATION = 120;  // 2 min night (the siege window — a FIXED timer, never clear-to-dawn)
+const WILD_NIGHT_HORDE_DELAY = 10; // seconds after nightfall the opening swarm crashes in (stream flows from t=0).
 let wildIsNight   = false;
 let wildDayTimer  = 0;  // seconds into current day/night phase
 // Night siege state — set at each nightfall by _wildOnNightBegin().
 let siegeActive     = false;  // true only while a night (opening horde + constant stream) is in progress
+let siegeHordePending = false; // true while the opening swarm is armed but not yet dropped (fires at t+WILD_NIGHT_HORDE_DELAY)
 let siegeSpawnAccum = 0;      // fractional accumulator for the night stream (carries sub-1 spawns between frames)
-let siegeSpawnRate  = 0;      // night stream rate, goblins/second (_wildNightStreamRate)
+let siegeSpawnRate  = 0;      // night stream rate, enemies/second (_wildNightRate) — spawns ALL night, no total cap
 
 // ── XP table ─────────────────────────────────────────────────
 // XP granted per enemy type kill
@@ -15680,6 +15682,7 @@ function gWildDayNightTick(secs){
       // Dawn — the night's fixed timer expired. The stream stops; whatever's still on the
       // field stays (the day pull-radius/leash takes over and they get culled as you roam).
       siegeActive = false;
+      siegeHordePending = false;
       siegeSpawnAccum = 0;
       addGDmg(gPlayer.wx, gPlayer.wy - 48, '☀ DAWN BREAKS — you survived the night', '#ffe090');
       spawnGP(gPlayer.wx, gPlayer.wy, '#ffe090', 20, 4);
@@ -15692,18 +15695,18 @@ function _wildOnNightBegin(){
   // Step the difficulty clock once: this is night N.
   wildNight++;
   wildThreatLevel = Math.min(WILD_MAX_THREAT, wildNight);  // stat scaling steps with the night
-  // Prime the constant night stream, then drop the opening horde.
+  // Prime the constant night stream (starts flowing immediately); the opening horde is ARMED now but
+  // crashes in WILD_NIGHT_HORDE_DELAY seconds later (see gWildSpawnTick) — anticipation before the clump.
   siegeSpawnAccum = 0;
-  siegeSpawnRate  = _wildNightStreamRate(wildNight);   // goblins/sec streamed in until dawn
+  siegeSpawnRate  = _wildNightRate(wildNight);         // enemies/sec, streamed in all night (no total cap)
   siegeActive     = true;
-  _wildSpawnHorde(_wildHordeSize(wildNight));           // one big compact group from a single direction
+  siegeHordePending = true;                            // delayed swarm — dropped by gWildSpawnTick at t+10s
   // Alert
   addGDmg(gPlayer.wx, gPlayer.wy - 48, '☽ NIGHT ' + wildNight + ' — HORDE', '#aab4ff');
   spawnGP(gPlayer.wx, gPlayer.wy, '#4444aa', 24, 5);
-  gShake(6, 12);
   // Activate the day's roaming camps (ambient goblins) so they join the night swarm. Village/
   // shrine guardians stay held until the player engages them, and neutral wolf packs stay asleep
-  // (a separate encounter, not the siege) — so neither floods the field or the siege live-cap.
+  // (a separate encounter, not the siege) — so neither floods the field uninvited.
   for(const e of gEnemies){
     if(!e.dead && e.isAmbient) e.activated = true;
   }
@@ -15715,7 +15718,11 @@ function _wildOnNightBegin(){
 // STREAM refills the field until dawn (Vampire-Survivors-style). These two knobs are the night
 // difficulty curve — scale freely.
 function _wildHordeSize(n){ return Math.min(72, 20 + (n - 1) * 13); }   // opening horde: night1=20, +13/night, capped for perf (item 1: steeper)
-function _wildNightStreamRate(n){ return 1.5 + n * 0.6; }               // enemies/sec streaming in after the horde (item 1: 0.4→0.6/night)
+// Night stream ARRIVAL RATE, enemies/second — the swarm's only dial. There is NO per-night total and NO
+// concurrent cap: enemies arrive at this rate for the whole night, so an un-thinned horde just keeps
+// growing until dawn (size ≈ rate × night − kills). The opening horde is ON TOP. night1 ≈ 3.25/s
+// (~390 by dawn), +0.25/s per night, plateauing with threat at night12 ≈ 6/s (~720 by dawn).
+function _wildNightRate(n){ return 3 + Math.min(n, WILD_MAX_THREAT) * 0.25; }
 
 // Threat-weighted enemy type for the night swarm (horde + stream). Goblins are always the
 // backbone; tougher types unlock and grow their share as the threat level (= night number)
@@ -15862,12 +15869,11 @@ function gWildPatrolTick(secs){
   packSize = Math.min(packSize, deficit);
   _wildSpawnAmbientPack(packSize);
 }
-// Max simultaneously-live siege enemies — the budget spawner throttles against this so
-// the roster trickles in instead of all appearing at once. Scales with the night.
-function wildCurrentCap(){
-  const base = 20 + wildThreatLevel * 5;   // item 1: 4→5/threat — density is the VS pressure dial
-  return wildIsNight ? Math.floor(base * 1.6) : base;   // t12 night ≈ 128 live — perf ceiling, mix-shift carries the rest
-}
+// NOTE: there is deliberately NO concurrent/on-screen enemy cap AND no per-night total for the night
+// siege — enemies arrive at _wildNightRate(n)/sec for the whole night (see gWildSpawnTick), so the horde
+// just keeps growing until dawn unless the player thins it. Perf headroom confirmed 2026-06-13 (canary
+// --check perfspawn): ~600 mixed enemies ≈ 9ms/frame, ~900 nears the 30fps line on headless software
+// raster (smoother on GPU); only a fully-passive late night reaches those densities.
 
 // Pick a random walkable spawn point just off the visible screen edge
 // Returns {wx, wy} in world-space, or null if no valid tile found
@@ -15917,19 +15923,21 @@ function _wildSpawnEnemy(type, wx, wy){
 function gWildSpawnTick(dt){
   if(!inWilderness || !gPlayer || gPlayer.dead) return;
   if(!siegeActive) return;
-  // dt is in frames (~1 per frame at 60fps); siegeSpawnRate is per-second.
+  // Drop the delayed opening swarm once the night is WILD_NIGHT_HORDE_DELAY seconds old — a single
+  // compact clump from one direction, on top of the stream (it's the same swarm, just front-loaded).
+  if(siegeHordePending && wildDayTimer >= WILD_NIGHT_HORDE_DELAY){
+    siegeHordePending = false;
+    _wildSpawnHorde(_wildHordeSize(wildNight));
+    gShake(6, 12);
+  }
+  // dt is in frames (~1 per frame at 60fps); siegeSpawnRate is enemies per-second.
   siegeSpawnAccum += siegeSpawnRate * (dt / 60);
   if(siegeSpawnAccum < 1) return;
 
-  const cap  = wildCurrentCap();
-  // Count only siege-relevant enemies against the cap. EXCLUDE held village/shrine guardians
-  // (isHeld — not yet engaged) and neutral wolf-camp packs (campId set). Otherwise the map's
-  // standing population — especially the 40 wolf camps (≈160 persistent wolves) — pins
-  // live ≥ cap and starves the night stream entirely (horde drops, then nothing follows).
-  let   live = 0;
-  for(const e of gEnemies){ if(!e.dead && !e.isHeld && e.campId===undefined) live++; }
-  const room = Math.max(0, cap - live);
-  const want = Math.min(Math.floor(siegeSpawnAccum), room);
+  // NO per-night total and NO concurrent/on-screen cap — enemies arrive at siegeSpawnRate for the WHOLE
+  // night, so an un-thinned horde just keeps growing until dawn. Every spawn re-rolls _wildSwarmType,
+  // so fresh goblins keep coming alongside elites; live count is simply whatever the player hasn't killed.
+  const want = Math.floor(siegeSpawnAccum);
 
   let spawned = 0;
   for(; spawned < want; spawned++){
@@ -15938,8 +15946,8 @@ function gWildSpawnTick(dt){
     _wildSpawnEnemy(_wildSwarmType(), pos.wx, pos.wy);   // spawns activated → chases
   }
   siegeSpawnAccum -= spawned;
-  // Cap pent-up demand so a cleared field doesn't dump a wall at once.
-  if(siegeSpawnAccum > cap) siegeSpawnAccum = cap;
+  // Clamp pent-up demand (only builds if spawn points kept failing) so it can't dump a wall at once.
+  if(siegeSpawnAccum > 30) siegeSpawnAccum = 30;
 }
 // ── End a wilderness run — called on death or leaving ────────────
 // Clears inWilderness so spawning stops, then resets all run state.
@@ -15976,6 +15984,7 @@ function gWildReset(){
   wildIsNight     = false;
   wildDayTimer    = 0;
   siegeActive     = false;
+  siegeHordePending = false;
   siegeSpawnAccum = 0;
   siegeSpawnRate  = 0;
   if(gWildTick._lastMs) gWildTick._lastMs = 0;

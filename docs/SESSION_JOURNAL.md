@@ -21,6 +21,57 @@ Each entry captures: what was built, what broke badly, and what the root cause t
 
 ---
 
+## 2026-06-13 — Night siege: uncapped growing all-angles horde, fixed per-second arrival rate  [eng] · s21
+
+### Built / Done
+- **Reshaped the wilderness night siege** to a constant all-angles onslaught (Josh's feel spec): stream
+  starts immediately at nightfall; the single-direction opening horde is **delayed to t+10s**
+  (`siegeHordePending`, dropped from `gWildSpawnTick`); stream **stops in the final 10s**
+  (`WILD_NIGHT_SPAWN_TAIL`) as a mop-up window. (Earlier pass this session.)
+- **Diagnosed Josh's "goblins stop, warriors keep coming" bug** → **no goblin-specific cap exists.** It's
+  emergent: the tight global live cap (`wildCurrentCap`, old 40→128) + attrition (goblin 30 HP vs warrior
+  80 HP). When the field hits the cap, `room = cap−live` → 0 and the **whole stream stalls** — player then
+  clears fragile goblins while tanky warriors linger → field drifts elite. That same tight cap also made
+  the desired *growing* horde impossible. Fix for both = raise the cap.
+- **Measured the real perf ceiling** before raising (new keeper canary check `perfspawn`): drives
+  `gSimUpdate(1)+gRender()` as manual frames (sidesteps headless rAF throttling), escalating a realistic
+  night-12 mix. Result: **enemy-count cost is trivial** — gSimUpdate (AI + separation grid) ~1ms@40 →
+  **~4ms p95 @260**; gRender **median ~6–8ms, flat in N**. The scary render **p95 (~42–55ms) is a fixed
+  headless software-raster/GC artifact** (already ~43ms at N=40, doesn't track count; won't occur on a
+  GPU browser). **The asserted "128" ceiling was way conservative — engine handles 260+ fine.**
+- **Iterated to the FINAL model: a fixed per-second arrival RATE for the whole night — NO concurrent cap
+  AND no per-night total** (Josh's repeated steering: cap→184 → per-night budget 300 → "forget the total,
+  just set enemies/sec over a fixed night"). So `wildCurrentCap()` **and** the budget machinery
+  (`_wildNightBudget`/`siegeBudget`/`siegeSpawned`/the tail cutoff) are all **deleted**. `_wildNightRate(n)
+  = 3 + min(n,12)·0.25` → **night1 ≈ 3.25/s, +0.25/s per night, plateau night12 ≈ 6/s**; enemies arrive at
+  that rate from nightfall to dawn, so an un-thinned horde **just keeps growing** (size ≈ rate×night −
+  kills; night1 no-kill ≈ 410, night12 ≈ 790). Opening horde delayed to t+10s (`WILD_NIGHT_HORDE_DELAY`,
+  renamed from the old TAIL) is on top. Type mix `_wildSwarmType` unchanged.
+  **Why the change:** the per-night *total* (300) made a no-kill player's horde stop ~4:50 (night1 = run
+  minutes 3–5; the 300÷110s rate ran out right at the night's end) — Josh read that as a bug. A pure rate
+  has no total to "run out", so the swarm grows continuously all night. The day lull between nights (3-min
+  day, no siege) still exists by design.
+- **Perf** (rate model's worst case ≈ night12 no-kill ~790 concurrent): headless `gSimUpdate`+`gRender` —
+  ~600 ≈ 9ms/frame (comfortable 60fps), ~900 ≈ render-median 33ms (30fps line, headless software raster,
+  smoother on GPU; update path <13ms p95). Degrades gracefully; only a fully-passive late night (already a
+  death sentence) reaches those densities.
+- **Regression check `nightgrow`** (rewritten for the rate model) reproduces the night-1 no-kill case:
+  walks the full 120s night with zero kills, asserts the horde is **still climbing in the back half**
+  (no mid-night stop/cap) and reaches ≈410 by dawn with goblins present. Passes (`rate 3.25, live 218→380
+  →413`). `perfspawn` kept as the manual perf probe. Boot canary clean (0 errors).
+
+### Debugging lesson
+- **"X stops happening" is often a global throttle + differential attrition, not an X-specific limit.**
+  Goblins didn't have a cap; they just lose the survival race once a *shared* cap pins the field — the
+  tanky type wins the standing population. Before adding a per-type rule, check whether a global gate +
+  uneven lifetimes already explains it.
+- **Measure before trusting an asserted ceiling — and read the median, not p95, under headless render.**
+  Headless Chromium has no GPU; its render p95 is raster/GC noise uncorrelated with load. The per-frame
+  *compute* (gSimUpdate) and the render *median* are the trustworthy signals; both said we had ~2× the
+  headroom the old comment claimed.
+
+---
+
 ## 2026-06-13 — index.html refactor survey + banner re-home + fire-FX stages 1–2  [eng] · s20
 
 ### Built / Done

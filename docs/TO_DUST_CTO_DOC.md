@@ -141,13 +141,22 @@ Row chars: `R`=rock, `T`=tree, `H`=hut, `S`=spike, `W`=wall (shrine border), `F`
 The day/night cycle (3-min day / 2-min night, `WILD_DAY_DURATION`/`WILD_NIGHT_DURATION`) **is** the
 difficulty curve — there is no 90s threat timer anymore. `wildThreatLevel` = `wildNight` (capped), so
 enemy stat scaling steps once per nightfall.
-- **Night = a fixed roster:** `_wildSiegeRoster(n)` (goblins `10+5n`, archers/bombers/warriors/shaman
-  unlock by night, kings `min(5,⌊n/2⌋)`); `_wildBuildSiegeQueue` flattens+shuffles (×`NIGHT_GRUNT_SCALE`,
-  kings last). `gWildSpawnTick` is a **budget spawner**: deploys the queue at `roster/night_duration`
-  per second, throttled by `wildCurrentCap()`. Unspawned remainder is dropped at dawn.
-- **Day = lull:** no horde spawning; only `gWildPatrolTick` bands (now aggro-on-spawn), ~16s cadence.
+- **Night = fixed per-second arrival RATE, NO concurrent cap AND no per-night total** (s21, 2026-06-13).
+  `_wildOnNightBegin` primes the siege; `gWildSpawnTick` streams enemies at `siegeSpawnRate =
+  _wildNightRate(n)` per second (`_wildNightRate(n) = 3 + min(n,12)·0.25` → night1 ≈3.25/s, +0.25/s,
+  plateau night12 ≈6/s) for the **whole night** — there is no total to spend and no density throttle, so
+  an un-thinned horde **just keeps growing until dawn** (size ≈ rate×night − kills; night1 no-kill ≈410,
+  night12 ≈790). Each spawn re-rolls `_wildSwarmType(n)` (weighted mix: goblins always, elites unlock +
+  ramp with threat; goblins thin at night ≥8). **No `wildCurrentCap`, no `_wildNightBudget`** (both
+  deleted).
+- **Opening swarm:** a single-direction compact horde `_wildSpawnHorde(_wildHordeSize(n))` (night1 20,
+  +13/night, cap 72), **delayed to t+`WILD_NIGHT_HORDE_DELAY` (10s)** into the night and dropped from
+  `gWildSpawnTick` (`siegeHordePending`); it's **on top** of the stream (front-loaded, same swarm). The
+  stream runs all the way to dawn (no mop-up tail).
+- **Day = lull:** no siege spawning (`siegeActive` false); only `gWildPatrolTick` bands + the ambient camp
+  maintainer.
 - **Despawn:** 85-tile radius, excludes `isPatrol` and `isHeld` enemies.
-- Spawn ring: player-centred, `visRadius+3` to `+20` tiles, `activated=true`.
+- Spawn ring: player-centred, `visRadius+3` to `+20` tiles, all angles, `activated=true`.
 
 ---
 

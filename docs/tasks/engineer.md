@@ -6,6 +6,23 @@ Strategy/priority: [`../ROADMAP.md`](../ROADMAP.md). Sibling docs: [`pm.md`](pm.
 
 ---
 
+### Night siege — uncapped growing horde, fixed arrival rate (↳ Josh-directed 2026-06-13 · s21)
+*Shipped this session: delayed t+10 horde, immediate all-angles stream, and — final model — **NO concurrent
+cap AND no per-night total**, just a per-second arrival rate `_wildNightRate(n)=3+min(n,12)·0.25` (night1
+≈3.25/s → night12 ≈6/s) for the whole night; horde grows until dawn (night1 no-kill ≈410). `wildCurrentCap`
++ budget machinery deleted. Verified headless (`--check nightgrow` = live 218→380→413 climbing; `perfspawn`).
+Remaining is real-GPU feel + tuning.*
+
+- ◻️ 🎮 **Real-browser feel + FX-load pass** — playtest a full night in an actual GPU browser: confirm the
+  all-angles growth *feels* right and framerate holds *with combat FX active* (arrows/bombs/fire fields —
+  the `perfspawn` probe was combat-free). Headless showed ~600 concurrent comfortable, ~900 (night-12
+  passive worst case) at the 30fps line on software raster; verify the GPU path is better. If FX-heavy late
+  nights stutter, lower `_wildNightRate` — NOT by re-adding a concurrent cap (Josh's explicit design).
+- ◻️ 🎮 **Tune the rate curve to feel** — `_wildNightRate` (3 + 0.25·threat) sets arrival speed = how fast
+  the horde grows. From the playtest, confirm early/late nights pace well; adjust base/slope as needed.
+
+---
+
 ### AI-native infrastructure batch (↳ Josh-approved 2026-06-13 · plan: agents verify their own work)
 *Five tooling/docs items, each its own commit; only the `gInitArt` warn + a §-banner renumber touch
 `index.html` (committed locally, push gated). Build order: gate → lint → canary → brief → code map.*
