@@ -6,7 +6,7 @@ session; add to it at session end (studio doctrine — see `studio/STUDIO.md`). 
 dated, titled lesson: **the principle → why → how to apply.** Quality over volume.
 
 > **Division of homes:** tactical debugging lessons stay in `docs/SESSION_JOURNAL.md`; deferred findings /
-> to-dos in your Engineer lane of `docs/TASKS.md`; architecture in `docs/TO_DUST_CTO_DOC.md`. *This* file is the step up
+> to-dos in your task doc `docs/tasks/engineer.md`; architecture in `docs/TO_DUST_CTO_DOC.md`. *This* file is the step up
 > from all of them — the transferable principles about *how to engineer well in this codebase*.
 
 > Entry template:
@@ -79,35 +79,15 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   channel — spawn-local + record-on-host, broadcast-on-change, client baseline-then-dedupe-by-id. Keep it
   **cosmetic** (no gameplay authority) so a dropped/dup event is harmless; verify the client dedupe by extract-eval.
 
-### 2026-06-12 — A designer's quantitative benchmark is a TUNING TARGET, not a mechanic spec — don't re-architect to hit a number
-
-- **Principle:** When the designer hands a number ("rank-10 ≈ 80–100 MP/s"), it sizes a *parameter*, not the
-  *mechanic*. I burned ~5 rounds converting a discrete per-rank chunk cost → a smooth drain → frequency-scaling
-  → a cost cap, all to make one average "come out right" — and the designer walked **every** one back ("keep
-  the dynamic system", "keep the interval", "no cap"). The right move: build the simplest mechanic that honors
-  the *stated knobs* (chunk every 3 s, grows per level, per-emit on evolves), expose the numbers as live consts,
-  and let the benchmark drive **one** increment. Iterate numbers, not architecture. The tell you've gone wrong:
-  you're changing the mechanic's *shape* (discrete↔continuous, adding a cap/clamp/new scaling axis) to hit a
-  target — that's re-architecting, not tuning. Re-read the directive for the *mechanic* words and treat the
-  number as the dial.
-- **When two stated constraints look impossible, SURFACE the conflict — don't silently clamp it away.** "~90/s
-  average" + "castable on a base pool" can't both hold at a fixed interval + 100 pool; I nearly shipped a cost
-  cap to force castability, but the designer's resolution was the opposite ("not enough Max-MP → you literally
-  can't cast it — that gate IS the design"). A cap/clamp that makes the impossible look possible erases the
-  decision the designer wanted. Present the conflict + the tradeoff; let them choose.
-- **A relationship between two game quantities the designer tunes independently is DATA (two tables), not a
-  formula — even when the spec hands you the formula.** I faithfully built the #8.9 spec's `dps ∝ cost^1.5` as a
-  runtime `gGodSkillDpsScale` (damage *derived* from cost); Josh rejected it — cost and damage are independent
-  per-rank tables, and the "damage climbs faster than cost" intent lives in the *chosen numbers*, not code. A
-  faithful impl of an over-engineered spec is still **your** miss to catch: implement the design *intent*, not the
-  literal math. (I authored that bad spec in the PM hat — the same person over-specs in one role and must catch it
-  in the other; PM-memory sibling logged the spec-craft side.)
-- **A designer's FEEL-description IS the architecture spec, and "make it one ring" means unify at the ENTITY
-  level.** "Firebloom = a persistent ring that ebbs/flows · Cinderburst = a periodic explosion" mapped sensation →
-  which variant gets the aura-ring-unify vs stays centre-out. Unifying Dragonbreath to *one* ring meant the aura
-  ring **itself** breathes (delete the separate wave entity), which cascaded into a damage-delivery change
-  (swept-wave → breathing-aura). Confirm SCOPE before broad-applying a feel concept (I did all evolutions; Josh
-  narrowed to Dragonbreath) and expose every magnitude as a named const for his eye.
+### 2026-06-12 — A designer's quantitative benchmark is a TUNING TARGET, not a mechanic spec — archived
+- Build the simplest mechanic that honors the stated *mechanic words*; expose numbers as live consts and let the
+  benchmark drive **one** increment. The tell you've gone wrong: changing the mechanic's *shape* (discrete↔
+  continuous, caps, new scaling axes) to hit a number — that's re-architecting, not tuning. When two stated
+  constraints can't both hold, **SURFACE the conflict** instead of clamping it away (the impossible-looking gate
+  may BE the design). A relationship the designer tunes independently is **DATA (two tables), not a formula** —
+  even when the spec hands you the formula; implement intent, not literal math. A feel-description IS the
+  architecture spec ("make it one ring" = unify at the ENTITY level); confirm SCOPE before broad-applying a feel
+  concept. Full entry: `agents/engineer/archive/2026-06-12-designer-benchmark-is-tuning-target.md`.
 
 ### 2026-06-12 — A phased/multi-site mechanic belongs at the site that enforces the HARDEST constraint; and a run-start reset block is a second source of truth
 
@@ -149,46 +129,32 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   rounds — sibling of the visual-feature-converges lesson). Extended v0.12.0 with a `world.treesmall.*` set
   (smaller via *draw scale*, both sets fill the canvas) + weighted **formations**.
 
-### 2026-06-12 — A many-round spacing/feel knob converges to one physical rule, not stacked per-category constants
+### 2026-06-12 — A feel/visual feature's spec converges through user iteration; the knob converges to ONE physical rule
+- *(merges the 2026-06-11 fog-convergence + 2026-06-12 tree-spacing siblings; raw entries:
+  `agents/engineer/archive/2026-06-12-feel-convergence-raw.md`)*
+- For a *feel/visual* feature (fog, juice, spacing, a HUD bar) the real spec emerges over several fast user
+  rounds — don't over-plan the first cut, but DO pull the consequential **visual forks** out of the user *before
+  a big rewrite* (shape · persistence · what-hides), not after. A **"works in regime A, not B"** report is a
+  **parameter-regime bug, not a render bug** — localize by the parameter that differs. **Decouple a shared knob
+  before retuning it for one use** (one number feeding two systems is a trap). "Tune it live" = every magnitude a
+  named const (the user iterates on numbers, not geometry). Canvas: composite on a reused offscreen then blit;
+  bilinear-upscale a low-res 1px/tile mask for smooth sub-tile fields (render-only ⇒ MP/Sim-safe).
+- **When the tuning rounds keep coming, the convergent form is one constraint derived from real geometry, not
+  stacked per-category constants.** Tree spacing ended at `dist ≥ rxOf(a)+rxOf(b)+TREE_WALK_GAP` — subsumes every
+  pair type, self-tunes with scale. The moment a knob needs a *second* per-category exception, ask "what physical
+  quantity is this approximating?" and enforce that O(1) (spatial hash), seeded for MP-determinism. When two
+  goals fight over one knob (lushness vs walkability), look for the *other* knob. Iteration finds the right
+  **abstraction**, not just the right number.
 
-- When a placement/spacing knob is tuned over many one-number rounds, the convergent form is usually **one
-  constraint derived from the real geometry**, not a pile of per-category constants — each new category exposes a
-  gap the prior constants can't see. Tree spacing ended when I derived it from the hitboxes: **any two keep
-  centre-distance ≥ `rxOf(a)+rxOf(b)+TREE_WALK_GAP`** (one player-width clearance) — subsumes all pair types,
-  self-tunes with scale/trunk-width. The moment a spacing knob needs a *second* per-category exception, stop
-  adding constants and ask "what physical quantity is this approximating?"; enforce it O(1) via a spatial hash,
-  seeded for MP-determinism, exposing just the one comfort term. (When two goals fight over one knob — lushness
-  vs walkability — look for the *other* knob: thinned the collision `TREE_BASE_RX_FRAC`, not the spacing.) Sibling
-  of the visual-feature-converges-on-the-user's-eye lesson: iteration finds the right **abstraction**.
-
-### 2026-06-11 — An art handoff's "new prop" framing can really be a "replace the placeholder" job — reconcile the spec against what's already on screen
-
-- **Principle:** An Artist render-spec tells you how the *art* works, not what *product role* it plays in the
-  live game. The tree handoff said "NEW world-prop, scatter, NOT a tile" — so I built an open-field scatter
-  layer beside the existing procedural `TILE_TREE` forest. The CD actually wanted those painted sprites to
-  *replace* the placeholder forest. Both readings satisfy the literal spec; only looking at what's already
-  rendered distinguishes them. Before wiring a "new" asset, ask: **is there an existing procedural/placeholder
-  thing this art is meant to supersede?** If yes, the job is a swap (retarget placement onto the old thing's
-  positions + delete the old draw), not an addition.
-- **The tell + the disambiguation were both cheap.** The user's word **"still"** ("still getting placeholder
-  trees") points at something that *predates* your change — i.e. not the thing you just added. And the
-  "which placeholder?" question settled in two greps: there was **no** pre-existing tree entity/sprite, and
-  `gInitArt` + valid case-correct PNGs meant the new art *does* load — so the only thing left that could read
-  as "placeholder" was the procedural `TILE_TREE` tile draw. Enumerate the candidate sources and eliminate
-  by evidence instead of guessing or rebuilding twice.
-- **Reusable mechanics (good first-cut, survived the pivot):** a scatter/overflow world-prop is the `gRocks`
-  family — off-grid `{wx,wy,variant,scale}` generated in the **seeded** map gen (so MP-deterministic), returned
-  as `kind:` entities, unpacked at load, and pushed into the **y-sorted `drawables`** so it occludes/tucks
-  with characters (NOT drawn in the tile pass, which always sits under entities). Feet-anchor by the
-  **measured alpha-bbox foot** (PIL `getbbox` over the PNGs → the base sits ~0.93 down; one shared `*_FOOT`
-  const), never the canvas bottom. Only the *placement source* changed in the pivot (open grass → forest
-  tiles) — the render/draw/load machinery was right the first time.
-- **How to apply:** for any art-wiring handoff, hold the spec next to a live look (or a precise mental model)
-  of what currently occupies that visual slot; when the art is a quality upgrade of an existing element, plan
-  for swap-and-delete (retarget + remove the superseded draw + its now-dead consts) and expose density/size as
-  named knobs for the CD to tune live — a visual feature's final spec converges on his eyeball, not your first
-  guess. Sibling of the 2026-06-11 fog lesson (pull the visual forks before a big rewrite) and the
-  display-text-vs-frozen-token rename split.
+### 2026-06-11 — An art handoff's "new prop" framing can really be a "replace the placeholder" job — archived
+- A render-spec says how the *art* works, not what *product role* it plays. Before wiring a "new" asset, ask:
+  **is an existing procedural/placeholder element what this art supersedes?** If yes, the job is swap-and-delete
+  (retarget placement onto the old thing's positions, remove the old draw + dead consts), not an addition. The
+  user's word **"still"** ("still getting placeholder trees") points at something *predating* your change;
+  settle "which placeholder?" by enumerating candidate sources and eliminating with greps. Scatter/overflow
+  world-props = the `gRocks` family (seeded map-gen → `kind:` entities → y-sorted `drawables`; feet-anchor by
+  the measured alpha-bbox foot, never the canvas bottom). Full entry:
+  `agents/engineer/archive/2026-06-11-art-handoff-replace-placeholder.md`.
 
 ### 2026-06-11 — To make a modal MP-seamless, separate "UI is open" from "the world is frozen" — archived
 - `gPaused` had accreted four meanings (UI-open, sim-freeze, input-lock, immunity); a non-blocking modal needs
@@ -208,23 +174,14 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
   draw-CONSTRUCTED key resolves to a manifest entry *and* a real file. Full entry:
   `agents/engineer/archive/2026-06-11-pages-stale-cache-and-rename-by-layer.md`.
 
-### 2026-06-11 — A feel/visual feature's spec converges through user iteration; localize by the differing parameter, decouple shared knobs first
-- For a *feel/visual* feature (fog, juice, a HUD bar) the real spec emerges over several fast user rounds —
-  don't over-plan the first cut, but DO pull the consequential **visual forks** out of the user *before a big
-  rewrite* (shape · persistence · what-hides), not after (I rewrote fog ~4× by implementing each clue instead of
-  asking up front). A **"works in regime A, not B"** report ("works at night, not day") is a **parameter-regime
-  bug, not a render bug** — localize by the parameter that differs (vision radius vs screen), cheaper than
-  reading code. **Decouple a shared knob before retuning it for one use:** `fogVisRadius()` drove the visual
-  circle AND enemy aggro — split gameplay onto its own const *first* (one number feeding two systems is a trap).
-  Canvas tricks: composite on a **reused offscreen** then blit (so `destination-out` hits only the effect), and
-  **bilinear-upscale a low-res 1px/tile mask** for smooth sub-tile fields; both render-only ⇒ MP/Sim-safe.
-  "Tune it live" = every magnitude a named const (the user iterates on numbers, not geometry).
-
 ### 2026-06-11 — Documentation is a system: tier by load-cost, key shared artifacts to self-order, write every altitude — archived
 - Docs are engineered artifacts with failure modes: (1) **tier always-on context by load-frequency, not topic** —
   keep auto-loaded files thin routers, push depth behind role/task gates (root `CLAUDE.md` split dropped universal
   load 194→60); (2) **key a multi-writer log on a self-ordering primary** (date, newest-first), not a hand-counter
-  that collides; (3) **prefer a tagging/keying fix over fragmenting** a shared cross-role artifact per-role; (4)
+  that collides; (3) **prefer a tagging/keying fix over fragmenting** a shared cross-role artifact per-role —
+  *refined 2026-06-13:* fragmenting wins once the file is large AND every session reads only its own partition
+  (the ~820-line tracker split into `docs/tasks/<role>.md`); fragment on the **load boundary**, keep the
+  cross-role rules in ONE thin hub (`docs/TASKS.md`) so conventions aren't triplicated; (4)
   **each altitude is a separate write** — a crystallized principle doesn't capture the tactic, log both. Corollary:
   **restructure before you rewire** (lock target shape, then rewire refs in one pass). Full entry:
   `agents/engineer/archive/2026-06-11-doc-system-tiers-keys-altitudes.md`.
