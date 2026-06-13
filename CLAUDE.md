@@ -88,5 +88,6 @@ relevant section when a task touches it:
 - `ROADMAP.md` — product strategy: *what/why* + priority (read the *Now* block). `TASKS.md` — the task-tracker
   hub (shared conventions; the per-agent to-dos live in `tasks/<role>.md` — read yours). `CHANGELOG.md` — what just shipped.
 - `SESSION_JOURNAL.md` — recent sessions + the Debugging Heuristics table (older sessions in `docs/archive/`).
-- `WORKING_AGREEMENT.md` · `specs/` (per-feature specs) · `learnings/` (crystallized lessons).
+- `WORKING_AGREEMENT.md` · `specs/` (per-feature specs). (Crystallized lessons live in each role's
+  `agents/<role>/memory.md`, not under `docs/` — see Recursive learning above.)
 - `Art_Designer_Agent.md` — the Artist's per-asset reference; open only when generating a specific asset.
