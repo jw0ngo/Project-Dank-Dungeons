@@ -55,6 +55,14 @@ Each entry captures: what was built, what broke badly, and what the root cause t
   canary `--expr` (spawn all families, let real frames render — `runFast` skips gRender, so the firefx
   check alone never executes draw code). Pending: Josh's visual pass.
 
+- **Design-state log sync (Josh):** the imbued-actives removal (a while back) is now reflected in the logs —
+  **god skills are ALL auto-cast mana skills; the warrior kit is never imbued; the imbued-kit code is shelved**
+  (kept, canary-covered, unreachable). §2 array decls + the §6i banner now carry an explicit LIVE/SHELVED
+  inventory (live: rings/bursts/trails/pillars + aura via Burning Body / Trail of Embers / Pyroclasm; shelved:
+  waves/embers/fields/jets/crosses — spawners parked with the imbued swing/leap/dash/heavy branches). The CTO
+  doc was already correct (its "Parked" §); the code comments + engineer memory lagged. PM flagged to sweep
+  roadmap/spec language.
+
 ### Lessons
 - **The generated map found the drift the banners hid.** The §6d mislabel was invisible while navigating by
   banner; one glance at CODE_MAP's per-section function counts exposed it. Generated mirrors don't just stay

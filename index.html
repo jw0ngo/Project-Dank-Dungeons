@@ -2055,19 +2055,22 @@ let gRocks=[];
 // Scatter tree props (off-grid decorative cutouts that overflow a cell, drawn over the ground and
 // depth-sorted with characters). Décor only — no collision. Placed deterministically per map seed.
 let gWildTrees=[]; // [{wx,wy,variant,scale,small}] — world.tree[small].<variant> art, drawn by gDrawTree
-let gFireWaves=[]; // imbued-LMB fire arcs (Cilia's Fire)
-let gFireRings=[]; // imbued-whirlwind expanding fire rings (Cilia's Fire)
-let gFireBursts=[]; // one-shot fire-explosion sprites that bloom centre→edge then fade (Conflagration detonation)
+// Fire-FX family arrays (§6i). God skills are ALL auto-cast mana skills now (gUpdateGodSkills) —
+// the warrior kit is never imbued. Families whose only spawner was the old imbued kit are SHELVED:
+// code kept + canary-covered (--check firefx), but unreachable in play (nothing writes p.imbues).
+let gFireWaves=[]; // SHELVED — fire arcs; only spawner is the parked imbued-swing Dance of Fire tree
+let gFireRings=[]; // LIVE — expanding fire rings/novas (Burning Body: Firebloom/Cinderburst/Dragonbreath)
+let gFireBursts=[]; // LIVE — one-shot fire-explosion blooms (Burning Body detonations, ToE chaos bombs)
 let gNetFx=[];      // host: rolling list of one-shot world FX (fire bursts) broadcast to clients via world/fx (cosmetic, bounded)
 let _netFxSeq=0;    // host: monotonic id for net FX events (clients dedupe on it)
-let gFireCrosses=[]; // imbued-leap burning crosses (Cilia's Fire)
-let gFireTrails=[]; // imbued-dash flame trail (Cilia's Fire) + Trail of Embers god-skill patches
-let gTrailBombs=[]; // Trail of Embers · Chaos Steps — fused chaosfire bombs (drop → detonate ~1s later)
+let gFireCrosses=[]; // SHELVED — burning crosses; only spawner is the parked imbued-leap branch
+let gFireTrails=[]; // LIVE — ground patches (Trail of Embers); the imbued-dash spawner is parked
+let gTrailBombs=[]; // LIVE — Trail of Embers · Chaos Steps fused bombs (drop → detonate ~1s later)
 let gTrailHits=new WeakMap(); // shared per-enemy trail hit cooldown (overlap-proof)
-let gFirePillars=[]; // imbued-RMB fire pillars (Cilia's Fire heavy)
-let gEmberShots=[]; // Dance of Fire · Emberlance Form — volley of travelling fireballs (item 2)
-let gFireJets=[]; // Dance of Fire · Dragonfire ascension — horizontal fire-jet beams (item 2 Slice C)
-let gFireFields=[]; // Dance of Fire · Cinder Ring ascension — solid burning-ground discs (item 2 Slice C)
+let gFirePillars=[]; // LIVE — fire pillars (Pyroclasm); the imbued-heavy spawner is parked
+let gEmberShots=[]; // SHELVED — Emberlance fireball volley (parked Dance of Fire form)
+let gFireJets=[]; // SHELVED — horizontal fire-jet beams (parked Dance of Fire ascension)
+let gFireFields=[]; // SHELVED — burning-ground discs (parked Dance of Fire ascension)
 // Skills imbued at the Sanctum shrine persist into dungeons (but NOT the wilderness,
 // which grants its own imbues). Survives the per-run player rebuild.
 // Multi-imbue model: a map of skillId -> patron god (more than one skill can be imbued at once).
@@ -6481,8 +6484,10 @@ function gDealEnemyDamage(e, dmg, opts){
 // ═══════════════════════════════════════════════════════════════
 // §6i  FIRE FX — Cilia's god-skill arsenal
 //      nine spawn/update/draw families, each with its own knob
-//      block: waves · embers · fields · jets · rings · bursts ·
-//      crosses · trails · pillars (+ burning-body aura)
+//      block. LIVE (auto-cast god skills): rings · bursts · trails ·
+//      pillars (+ burning-body aura). SHELVED (spawners parked with
+//      the old imbued warrior kit): waves · embers · fields · jets ·
+//      crosses — kept + firefx-canaried, unreachable in play.
 //      Engine hookup: the FIREFX_* dispatch tables at the END of
 //      this section — register there, never in loop/render/reset.
 // ═══════════════════════════════════════════════════════════════

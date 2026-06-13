@@ -30,6 +30,14 @@ Strategy/priority: [`../ROADMAP.md`](../ROADMAP.md). Sibling docs: [`engineer.md
 
 - ◻️ ✨ **Mana-build card expansion — size as a proposal** (↳ Josh 2026-06-12 · spec [`specs/mana-economy.md`](../specs/mana-economy.md) "mana-build card expansion" follow-on) — the *supply* side of item 7: a card pool rich enough to make SUSTAIN (regen), BURST (max-pool / UNIQUE multipliers like *3× pool*), and hybrid mana builds all viable. Item 7 only rebalances the existing `mpRegenAdd`/`mpBonus` cards ~10×; this expands the archetypes + introduces a **UNIQUE build-defining card class**. Write a roadmap proposal once item 7's mechanic is live (sequence after, don't block Phase 1). Embodies the build-potential north star (PM memory 2026-06-12).
 
+- ◻️ 📝 **Sweep roadmap/spec language for the imbued-actives removal** (↳ from ENG, 2026-06-13) — Josh
+  confirmed the design state: **all god skills are auto-cast mana-consuming skills; the warrior skill kit is
+  no longer imbued** (the old imbued-actives code is shelved in `index.html`, unreachable). Engineering logs
+  (CTO doc "Parked" §, §6i LIVE/SHELVED comments, engineer task inventory) are synced; please sweep
+  `ROADMAP.md` + `specs/` (e.g. `god-skills.md`, `favor-imbue.md` pricing language) for any remaining
+  "imbue the warrior's skills" framing so product docs match. The revive-or-delete call on the shelved kit
+  is yours/Josh's — ENG holds the deletion checklist in `tasks/engineer.md`.
+
 ---
 
 ## ✅ Done (recent track record — prune to git history as it grows)

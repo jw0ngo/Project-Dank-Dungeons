@@ -116,6 +116,16 @@ Strategy/priority: [`../ROADMAP.md`](../ROADMAP.md). Sibling docs: [`pm.md`](pm.
   - **Behaviour is your/Josh's call** (not an art decision): whether the splash auto-dismisses, waits for a click/key, or gates the existing hub flow; where it mounts (a new `#g-landing` overlay over everything at boot). Transparent PNGs → composite over any bg you choose.
   - **Load-weight note:** ~1.5 MB for the pair (detailed gold gradients + smoke don't PNG-compress well). Fine for a one-time splash; **if you want it lighter, ping ART** — I can flatten each onto the landing's solid bg colour as JPG (~10× smaller) since transparency isn't strictly needed once the bg is fixed. Source masters: `art/reference images/title screen {welcome,survive}.png`. New `assets/ui/` kind documented in `assets/README.md` (folds by UI surface → `title/`). Deploy-affecting → push with Josh's auth.
 
+- ◻️ 🟡 **Shelved imbued-kit code — revive-or-delete decision (waits on Josh/PM)** (logged 2026-06-13) —
+  Josh confirmed the design: **god skills are all auto-cast mana skills; the warrior kit is never imbued;
+  shelf the imbued-actives code for now.** Inventory (all unreachable — nothing writes `p.imbues`): the
+  `gIsImbued` combat branches (swing fire-waves/forms, ww rings, leap crosses, dash trails, heavy
+  `isCiliaFire`), the parked Dance-of-Fire `swing` tree + `gFireWaveParams`, the Sanctum `#g-imbue-overlay`
+  flow (`gOpenImbueMenu` has no caller), the dead `IMBUE_CARDS` const, and the SHELVED §6i families
+  (waves/embers/fields/jets/crosses — see the §2 array-decl LIVE/SHELVED comments). All still §6i-canaried
+  (`--check firefx`) so they don't rot. When the product decision lands: revive into god skills, or delete
+  the lot (the deletion is a clean sweep — the inventory above is the checklist).
+
 ### God Skills — item 2 (↳ roadmap #2 · spec [`specs/god-skills.md`](../specs/god-skills.md))
 
 - ✅ ✨ **Trail of Embers — built, then REWORKED to the new evolution tree** — **done ENG 2026-06-12.** The 2nd
