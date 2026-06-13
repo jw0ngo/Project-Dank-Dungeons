@@ -21,7 +21,7 @@ Each entry captures: what was built, what broke badly, and what the root cause t
 
 ---
 
-## 2026-06-13 — index.html refactor survey + §-banner re-home + client-arrow extraction  [eng] · s20
+## 2026-06-13 — index.html refactor survey + banner re-home + fire-FX stages 1–2  [eng] · s20
 
 ### Built / Done
 - **Refactor survey of `index.html`** (~17.9k lines, 575 functions, ~471 top-level globals) → 5 prioritized
@@ -39,10 +39,24 @@ Each entry captures: what was built, what broke badly, and what the root cause t
   `docs/CODE_MAP.md` is stale vs the banners (`gen-code-map.py --check`); engineer.md now lists CODE_MAP as a
   read-every-session ref + regen duty.
 
+- **Refactor #2 stages 1–2 (fire-FX unification, Josh-approved).** Stage 1 (`d60a8f1`): the nine §6i families
+  now hook the engine via `FIREFX_UPDATE`/`FIREFX_DRAW_UNDER`/`FIREFX_DRAW_OVER`/`gResetFireFx()` dispatch
+  tables — gSimUpdate/gRender/gameLoad each call one dispatcher; a new family is a registration, not a 4-site
+  edit. Stage 2 (`c65fd44`): `_fxTargetable`/`_fxHitFeedback`/`_fxOwnerGroundTick` collapse the duplicated
+  guard/feedback/owner-ground blocks across all nine update fns (exact values threaded; shape tests stay
+  per-family). New permanent canary preset **`--check firefx`**: plants an unkillable goblin, fires all nine
+  families, asserts damage landed + every fx array drained (~1s). Stage 3 (draw-side dedup + knob→defs)
+  logged ◻️ — needs human eyes on the dev window, headless can't see draw regressions.
+
 ### Lessons
 - **The generated map found the drift the banners hid.** The §6d mislabel was invisible while navigating by
   banner; one glance at CODE_MAP's per-section function counts exposed it. Generated mirrors don't just stay
   honest — they make dishonesty *visible*.
+- **"Unify N similar systems" scope-checks itself once you read the update fns.** The pre-read estimate
+  ("one entity system, collapse 1k+ lines") dissolved on contact: the nine families share *plumbing* (guards,
+  hit feedback, owner ground ticks, engine hookup) but their shape tests are genuinely distinct identities.
+  Unify the plumbing, registry the hookup, leave the identities alone — and write the targeted canary
+  (`firefx`) BEFORE claiming behavior is preserved; `--batch` alone never exercises skill-hit paths.
 - Pre-existing, harmless: two nested `function draw(){}` locals (`_imbueAnimateBg`/`_shrineAnimateBg`) show up
   in CODE_MAP §10 — scoped, not the duplicate-declaration footgun.
 

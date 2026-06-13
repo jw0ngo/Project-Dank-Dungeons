@@ -73,10 +73,23 @@ Strategy/priority: [`../ROADMAP.md`](../ROADMAP.md). Sibling docs: [`pm.md`](pm.
   "new per-frame systems must go inside gSimUpdate" invariant structural. Same move: positive AI dispatch in
   `EnemyRegistry` to delete the goblin exclusion-list double-AI bug class. Do before #2.
 
-- ◻️ 🔧 **Refactor #2 — unify the nine fire-FX families (§6i)** (logged 2026-06-13) — waves/embers/fields/
-  jets/rings/bursts/crosses/trails/pillars are nine hand-rolled spawn/update/draw/remote families with separate
-  arrays + knob blocks (~143 knobs). One data-driven ground-FX entity system would collapse 1k+ lines and turn
-  each new god skill into a registration. Multi-session; canary `--batch` before/after each stage.
+- ✅ 🔧 **Refactor #2 stages 1+2 — fire-FX dispatch tables + shared hit pipeline** — **done ENG 2026-06-13**
+  (Josh-approved). **Stage 1** (`d60a8f1`): `FIREFX_UPDATE` / `FIREFX_DRAW_UNDER` / `FIREFX_DRAW_OVER` /
+  `gResetFireFx()` dispatch tables at the end of §6i — gSimUpdate/gRender/gameLoad now call one dispatcher
+  each; **adding a fire-FX family is a registration, not a 4-site edit** (order is load-bearing, documented
+  at the tables). **Stage 2** (`c65fd44`): `_fxTargetable` / `_fxHitFeedback` / `_fxOwnerGroundTick` collapse
+  the guard/feedback/owner-ground duplication across all 9 families (exact per-family values threaded; shape
+  tests stay per-family — they're the identities). **New permanent canary preset `--check firefx`** plants an
+  unkillable goblin, fires all nine families, asserts damage + array drain. Verified per stage: verify-repo 0
+  errors · firefx pass (566 dmg, arrays drained) · `--batch 3` clean. *(orig scope said "collapse 1k+ lines via
+  one entity system" — revised after reading: the families' update/shape logic is genuinely heterogeneous;
+  the remaining bulk is draw-side, split out as stage 3 below.)*
+
+- ◻️ 🔧 **Refactor #2 stage 3 — fire-FX draw-side dedup + knob→def consolidation (§6i)** (logged 2026-06-13) —
+  the remaining ~600 lines are the nine `gDraw*` fns (likely shared additive-blend sprite-blit boilerplate)
+  plus ~143 loose `FW_*`/`FR_*`/`FC_*`/`FT_*`/`FP_*`… knobs that could fold into per-family def objects.
+  **Needs a session with Josh eyeballing the dev window** — draw regressions are invisible to the headless
+  canary (`--check firefx` covers sim behavior only). Don't do blind.
 
 - ◻️ 🎨 **Skin the Obelisk POI with its sprite** (↳ from ART, 2026-06-12) — the §12b Obelisk system (`gObelisks`, `_drawObeliskStone` `:16096`) draws a tiny ~42px procedural stone marker; replace it with the new art (same pattern as chest/barrel — skin the existing entity, keep the procedural fallback). Cutout committed: **`assets/world/obelisk.png`** (247×512, ~210 KB — transparent, feet-anchored, base at the cutout bottom; dark rune-stone with purple glowing runes + base crystals). Manifest (auto-loads via `gInitArt`):
   ```
