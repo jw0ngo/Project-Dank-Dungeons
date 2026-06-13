@@ -52,7 +52,7 @@ stays parked — its unhold trigger ("once God Skills proves out in playtest") n
 **🆕 First mana-economy playtest landed 6 game-feel / readability / bug calls (Josh, 2026-06-12) → item 8, a
 quick polish batch (all `approved`, developer-directed).** Pillar-1 work, so it interleaves with item 2: the
 three cheap irritant-fixers (wolf leap whiffing, XP/Favor popups jumbling, fog-edge shimmer) are worth grabbing
-*first* — tiny, and they clean up every subsequent playtest. Detail + anchors in the Engineer lane of [`TASKS.md`](TASKS.md).
+*first* — tiny, and they clean up every subsequent playtest. Detail + anchors in [`tasks/engineer.md`](tasks/engineer.md).
 
 ## ⚡ At a glance
 
@@ -358,7 +358,7 @@ other options, so missing/committing has a real cost. Free-swinging mid-charge m
 
 - Gate the swing trigger on the heavy-charge flag: while `p.heavyWindingUp === true` (`index.html:3327`),
   suppress the LMB→`gDoSwingAt` dispatch (`~index.html:3517`). Engineer owns drop-vs-queue; product intent =
-  no swing damage/animation while a heavy is winding up. Filed in the Engineer lane of `TASKS.md`.
+  no swing damage/animation while a heavy is winding up. Filed in the engineer's task doc (`tasks/engineer.md`).
 </details>
 
 ---
@@ -396,7 +396,7 @@ starve **lowest-key-first** (your core skills keep running, marginal ones cut ou
 ### 8. Playtest feel/readability batch (first mana-economy playtest)
 
 `✅ approved` (Josh-directed, 2026-06-12) · **Size:** quick (batch ≈ 1 session) · **Pillar:** game feel (the
-moment-to-moment + readability) · **Art:** none · **Detail + line-anchors:** Engineer lane of [`TASKS.md`](TASKS.md) (#8.1–#8.6)
+moment-to-moment + readability) · **Art:** none · **Detail + line-anchors:** [`tasks/engineer.md`](tasks/engineer.md) (#8.1–#8.6)
 
 **What:** Six fixes from the first playtest of the live mana economy — all small, all about the game *reading*
 clearly and feeling fair:
@@ -618,8 +618,9 @@ to changelog, delete here). The other lifecycle states are PM-only too: `propose
 Josh) · `held` / `cut`.
 
 **Execution to-dos and hand-offs live in the task tracker, not here.** The concrete work — feature sub-tasks
-(`in-progress`/`done`), cross-role hand-offs, deferred cruft/bugs — is tracked in **[`TASKS.md`](TASKS.md)**, the
-shared tracker all three roles write to (owner-lanes: PM / Engineer / Artist). This keeps the roadmap a clean
+(`in-progress`/`done`), cross-role hand-offs, deferred cruft/bugs — is tracked in the per-agent task docs
+(**[`tasks/pm.md`](tasks/pm.md)** / **[`tasks/engineer.md`](tasks/engineer.md)** / **[`tasks/artist.md`](tasks/artist.md)**;
+conventions in the hub [`TASKS.md`](TASKS.md)) all three roles write to. This keeps the roadmap a clean
 statement of *intent* that other roles read but don't edit. **One fact, one home:** a task references its
 roadmap item by # / name and never re-states its *why*; the roadmap never tracks execution churn. (The git-lane
 discipline, session-open ritual, and drift rules live in the tracker.)
@@ -631,5 +632,5 @@ detail inline in the 🔧 Build notes.
 
 _PM upkeep: keep this current. Every item carries pillar + plain-English what/why + size. On approval, move to
 **Now** and flip to `approved`; on ship, delete and let the changelog carry the record. Execution to-dos →
-[`TASKS.md`](TASKS.md)._
+the task docs ([`TASKS.md`](TASKS.md) hub)._
 </details>

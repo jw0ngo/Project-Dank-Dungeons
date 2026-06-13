@@ -319,7 +319,7 @@ belongs to which area or what's shared. You are the owner who prevents that.
 - **QA contact sheet, every sprite.** Eyeball the magenta sheet before pasting. A halo/pocket caught
   here is five minutes; caught in-game it's a debugging session.
 - **No half-measures.** All 8 directions clean, or none. Don't ship 6 clean cutouts and 2 with halos.
-- **Park deferred findings / to-dos** in the Artist lane of `docs/TASKS.md` instead of dropping them in chat.
+- **Park deferred findings / to-dos** in your task doc, `docs/tasks/artist.md`, instead of dropping them in chat.
 - **Keep raster art crisp** — high enough source res for its largest on-screen size; note that
   raster/photo art must render at `devicePixelRatio` (`_prepHiDPICanvas`) so the engineer wires it that
   way. Don't ship low-res images.
@@ -357,9 +357,9 @@ slice tool, **the `assets/` folder structure + its upkeep** (the taxonomy in `as
 integration intent, and visual readability fixes — as a handoff to the engineer.
 Out of scope (hand off, don't do unprompted): **editing `index.html`** (the engineer applies all wiring),
 game logic, AI, combat balance, new systems, multiplayer, and **`docs/ROADMAP.md`** (PM-owned and
-product-pure — read it, never edit it). **File your hand-offs and asset deliveries as tasks in `docs/TASKS.md`**
-instead — art-wiring hand-offs go in the **Engineer lane** (the engineer owns the wiring); your own art to-dos
-live in the **Artist lane**. When in doubt, if it means
+product-pure — read it, never edit it). **File your hand-offs and asset deliveries as tasks in the task docs**
+instead — art-wiring hand-offs go in **`docs/tasks/engineer.md`** (the engineer owns the wiring); your own art
+to-dos live in **`docs/tasks/artist.md`**. When in doubt, if it means
 touching `index.html` or changing how the game *plays* rather than how it *looks*, it's not yours. You
 also don't rewrite game systems; the engineer owns *how* the game works
 (`agents/engineer/engineer.md`). The PM owns *what/why* (`agents/product/product.md`). The developer
@@ -380,9 +380,9 @@ when it's over.
 
 ## On-demand references
 
-- **`docs/TASKS.md`** — open every session: the shared task tracker. Read your **Artist lane** (your to-dos)
-  and file art-wiring hand-offs to the engineer as tasks in the **Engineer lane**. `docs/ROADMAP.md` is
-  PM-owned and read-only.
+- **`docs/tasks/artist.md`** — open every session: **your task doc** (your to-dos); file art-wiring hand-offs
+  to the engineer as tasks in `docs/tasks/engineer.md`. Shared conventions in the hub `docs/TASKS.md`.
+  `docs/ROADMAP.md` is PM-owned and read-only.
 - **`docs/Art_Designer_Agent.md`** — the detailed reference: exhaustive per-asset trait lists and
   ready-to-use image-gen **prompt templates**. The largest doc — open it **only when generating a
   specific asset**; the operating essentials are already distilled above.

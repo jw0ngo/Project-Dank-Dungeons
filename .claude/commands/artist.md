@@ -15,8 +15,8 @@ Do this now, in order:
    - `agents/artist/memory.md` — your crystallized art lessons (cutout edge cases, scale/handoff rules).
      **Read first each session** — it's your live index of hard-won pipeline knowledge; re-verify any claim
      against `index.html`/the repo before relying on it (handoff docs lag the engineer's wiring).
-   - `docs/TASKS.md` — the shared execution tracker. Read your **Artist lane** (your to-dos) and skim the
-     **Engineer lane** (your art-wiring hand-offs in flight). `docs/ROADMAP.md` is PM-owned and read-only.
+   - `docs/tasks/artist.md` — **your task doc** (your to-dos); skim `docs/tasks/engineer.md` (your art-wiring
+     hand-offs in flight). Shared conventions: `docs/TASKS.md`. `docs/ROADMAP.md` is PM-owned and read-only.
 
    Then read **on demand, not up front:**
    - `docs/Art_Designer_Agent.md` — **only when generating a specific asset** (exhaustive per-asset traits

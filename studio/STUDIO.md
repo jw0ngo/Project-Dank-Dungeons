@@ -65,7 +65,7 @@ The discipline, for every role:
 
 1. **During the session**, capture specifics where they already belong:
    - debugging lessons → `docs/SESSION_JOURNAL.md` (engineer/artist)
-   - deferred findings / to-dos → your owner-lane in `docs/TASKS.md` (the shared task tracker)
+   - deferred findings / to-dos → your task doc, `docs/tasks/<role>.md` (shared conventions: `docs/TASKS.md`)
    - architecture changes → the relevant `docs/` reference
 2. **At the end of the session**, *crystallize* — step up an altitude and write the **highest-level,
    most transferable** learnings into your role's **memory** (`agents/<role>/memory.md`). Not "fixed

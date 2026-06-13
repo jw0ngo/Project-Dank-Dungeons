@@ -34,17 +34,18 @@ before non-trivial work.
 Two shared docs carry cross-role state (both reset-proof — the repo is the shared brain):
 - **`docs/ROADMAP.md` — PM-owned, product-pure (strategy).** *What/why*, priority, sizing, and the product
   gate (`approved` / `shipped`). Other roles **read** it; only the PM **writes** it.
-- **`docs/TASKS.md` — the shared task tracker (execution).** Every concrete to-do for every agent, in
-  **owner-lanes** (PM / Engineer / Artist), with a live status. Any agent may add a task to any lane (flag work
-  for another); **only the owning lane changes its task's status.** This is also the deferred-work backlog —
-  pull from your lane when there's no higher-priority *Now*. One fact, one home: a task links its roadmap item
+- **The task tracker (execution) — one doc per agent:** `docs/tasks/pm.md` · `docs/tasks/engineer.md` ·
+  `docs/tasks/artist.md`, with the shared conventions in the hub **`docs/TASKS.md`**. Every concrete to-do
+  lives in its owner's doc with a live status. Any agent may add a task to any agent's doc (flag work for
+  another); **only the owning agent changes a task's status.** This is also the deferred-work backlog —
+  pull from your doc when there's no higher-priority *Now*. One fact, one home: a task links its roadmap item
   by #/name and never re-states its *why*.
 
 Hand-offs between roles:
 - The **PM** hands approved work off through `docs/ROADMAP.md` (*Now*, status `approved`); the concrete
-  execution to-dos then live in the Engineer lane of `docs/TASKS.md`, which the engineer flips as it goes.
+  execution to-dos then live in `docs/tasks/engineer.md`, which the engineer flips as it goes.
 - The **Artist** hands off through asset files in `assets/` + a render spec (a paste-ready `ART_MANIFEST`
-  snippet + any draw/scale intent), filing the hand-off as a task in the **Engineer lane** of `docs/TASKS.md`.
+  snippet + any draw/scale intent), filing the hand-off as a task in **`docs/tasks/engineer.md`**.
   **The engineer is the sole editor of `index.html`** and applies all art wiring from that spec — the Artist
   never edits `index.html`. So when you get an Artist handoff, the wiring is *yours* to do; treat the art
   itself as a black box that "just renders."
@@ -61,8 +62,8 @@ committing another lane's files. Pushing is split by deploy impact:
 - **Deploy-affecting pushes require Josh's explicit authorization, every time** — anything touching
   `index.html` or `assets/` (the **Engineer** and **Artist** lanes, and releases via `release.ps1`).
   Commit locally; leave the push/deploy decision to him.
-- **Docs-only pushes are pre-authorized for the PM lane.** `docs/ROADMAP.md`, the PM lane of
-  `docs/TASKS.md`, and `docs/specs/` don't affect the deploy (Pages serves only `index.html`), so the
+- **Docs-only pushes are pre-authorized for the PM lane.** `docs/ROADMAP.md`, `docs/tasks/pm.md`,
+  and `docs/specs/` don't affect the deploy (Pages serves only `index.html`), so the
   PM may commit **and push** them on its own — same as the **pm-bot** already does on Josh's Telegram
   approval. Docs-only means docs-only: a push that also carries a build change is deploy-affecting and gated.
 
@@ -70,7 +71,7 @@ committing another lane's files. Pushing is split by deploy impact:
 
 From Dust compounds through documentation — a lesson not written down is re-paid-for next session.
 **During** a session, capture specifics where they belong (debugging → `docs/SESSION_JOURNAL.md`;
-deferred findings / to-dos → your lane in `docs/TASKS.md`; architecture → the relevant `docs/` reference). **At the
+deferred findings / to-dos → your task doc, `docs/tasks/<role>.md`; architecture → the relevant `docs/` reference). **At the
 end** of a substantive session, *crystallize*: step up an altitude and add the highest-level,
 transferable lessons to your role's memory (engineer: `agents/engineer/memory.md`; PM:
 `agents/product/memory.md`; artist: `agents/artist/memory.md`; CD: `studio/creative-director/LEARNINGS.md`).
@@ -84,8 +85,8 @@ The `docs/` tree is the authoritative project reference. Don't read these whole 
 relevant section when a task touches it:
 - The three role operating models are **folded into each agent's file** under `agents/<role>/` (no longer in `docs/`).
 - `TO_DUST_CTO_DOC.md` — system-by-system architecture (grep its `§` banner for the system you're touching).
-- `ROADMAP.md` — product strategy: *what/why* + priority (read the *Now* block). `TASKS.md` — the shared
-  execution tracker: concrete to-dos per agent (read your lane). `CHANGELOG.md` — what just shipped.
+- `ROADMAP.md` — product strategy: *what/why* + priority (read the *Now* block). `TASKS.md` — the task-tracker
+  hub (shared conventions; the per-agent to-dos live in `tasks/<role>.md` — read yours). `CHANGELOG.md` — what just shipped.
 - `SESSION_JOURNAL.md` — recent sessions + the Debugging Heuristics table (older sessions in `docs/archive/`).
 - `WORKING_AGREEMENT.md` · `specs/` (per-feature specs) · `learnings/` (crystallized lessons).
 - `Art_Designer_Agent.md` — the Artist's per-asset reference; open only when generating a specific asset.

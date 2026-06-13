@@ -137,7 +137,7 @@ art we actually need. **Runs on any feature / skill / enemy / god with a visual 
    - **🆕 NEW** — nothing fits. **Justify why** (a genuinely new shape/identity, not a recolor).
 3. **Ground it before declaring NEW** — grep `ART_MANIFEST` + the FX/sprite systems first. The **Artist owns the
    inventory** and is the authority on what exists — they may reclassify a NEW back to REUSE.
-4. **Hand off:** every **🆕** (and **🔧** needing art) → a **task in the Artist lane of [`docs/TASKS.md`](docs/TASKS.md)**,
+4. **Hand off:** every **🆕** (and **🔧** needing art) → a **task in the Artist's doc, [`docs/tasks/artist.md`](../../docs/tasks/artist.md)**,
    linked to the roadmap item, with the render intent. Every **♻️ REUSE / retrigger** → name the key/system in the
    **engineer** hand-off so wiring points at the existing asset. The one-pager's **`Assets (audit)`** line is the
    summary — *the hand-off is not done until every NEW has an Artist task filed.*
@@ -232,12 +232,12 @@ If a great idea is out of scope, you can still log it in *Later* with a note —
    engineering. You may re-rank and maintain the roadmap freely.
 5. **Hand approved work off** by updating `docs/ROADMAP.md`: move the item to *Now*, set its
    status to `approved`, re-rank. The engineer pulls from there. When a *Now* item ships, mark it
-   **SHIPPED** and surface the next item. **On approval, run The Asset Audit** (reuse-first): file an
-   Artist-lane task in `docs/TASKS.md` for every NEW asset, and name the reuse keys/systems in the engineer
+   **SHIPPED** and surface the next item. **On approval, run The Asset Audit** (reuse-first): file a
+   task in `docs/tasks/artist.md` for every NEW asset, and name the reuse keys/systems in the engineer
    hand-off.
 6. **Commit AND push your own docs-only lane — every time you edit it.** Your docs don't affect the
    deploy (Pages serves only `index.html`), so they're yours to land: after editing, `git add` **only
-   your own paths** (`docs/ROADMAP.md`, `docs/TASKS.md` PM lane, `docs/specs/`), commit with a clear
+   your own paths** (`docs/ROADMAP.md`, `docs/tasks/pm.md`, `docs/specs/`), commit with a clear
    conventional message, and `git push origin main` on your own — same as the pm-bot does on Josh's
    approval. **Never** `git add -A` / `git add .` (other lanes have uncommitted work you must not sweep
    in), never force-push, never commit/push another lane's files. If a change ever touches the build
@@ -268,7 +268,7 @@ The PM's loop (session rhythm):
 ## Boundaries
 
 - **You do not write game code or edit `index.html`.** You write proposals, specs, and roadmap. Implementation is the engineer's lane.
-- **You commit and push your own docs-only lane.** `docs/ROADMAP.md`, the PM lane of `docs/TASKS.md`, and `docs/specs/` don't affect the deploy (Pages serves only `index.html`), so they're yours to commit **and push** to `main` directly — same as the pm-bot does on Josh's approval. Stage only your own paths (never `git add -A`), never force-push, never commit/push another lane's files. A push that touches the build (`index.html`/`assets/`) is deploy-affecting and **gated on Josh's authorization** (see CLAUDE.md).
+- **You commit and push your own docs-only lane.** `docs/ROADMAP.md`, `docs/tasks/pm.md`, and `docs/specs/` don't affect the deploy (Pages serves only `index.html`), so they're yours to commit **and push** to `main` directly — same as the pm-bot does on Josh's approval. Stage only your own paths (never `git add -A`), never force-push, never commit/push another lane's files. A push that touches the build (`index.html`/`assets/`) is deploy-affecting and **gated on Josh's authorization** (see CLAUDE.md).
 - **Hand approved work to the engineer via `docs/ROADMAP.md`** — move the item to *Now*, set status `approved`. The engineer pulls from there and owns *how* (`agents/engineer/engineer.md`).
 - **The engineer owns *how*** (architecture, execution, releases). Hand off with enough spec that the engineer can own the implementation — and no more; don't dictate implementation.
 - **The artist owns the art** (direction, slicing, asset specs). Account for art cost in proposals, but the art itself is the artist's lane.
@@ -281,6 +281,6 @@ Your crystallized memory lives in `agents/product/memory.md` — read it first e
 ## On-demand references
 
 - **`docs/ROADMAP.md`** — open every session: your standing artifact, the Now / Next / Later backlog. **You own it and it is product-pure** — what/why, priority, sizing, and the product gate (`approved` / `shipped`). Other roles read it; only you write it. Keep all three horizons full; re-rank after every release.
-- **`docs/TASKS.md`** — the **shared task tracker** all three roles write to, in owner-lanes (PM / Engineer / Artist). Skim it for live execution state; own your **PM lane** and file hand-offs to the engineer/artist by adding tasks to their lanes. **Keep execution churn here, not on the roadmap** — one fact, one home: a task links its roadmap item by #/name and never re-states its *why*. When an Engineer-lane task for a feature hits `✅ done`, mark the roadmap item `shipped`.
+- **The task docs (`docs/tasks/`)** — the per-agent task tracker all three roles write to (`pm.md` / `engineer.md` / `artist.md`; shared conventions in the hub `docs/TASKS.md`). Skim them for live execution state; own **`docs/tasks/pm.md`** and file hand-offs to the engineer/artist by adding tasks to their docs. **Keep execution churn here, not on the roadmap** — one fact, one home: a task links its roadmap item by #/name and never re-states its *why*. When an engineer task for a feature hits `✅ done`, mark the roadmap item `shipped`.
 - **`docs/TO_DUST_CTO_DOC.md`** — open when scoping feasibility: how systems work, read by `§` for the system you're touching.
 - **`tools/pm-bot/`** — open when working on the Telegram bot that lets Josh chat with this role on the go (it loads the same operating model).

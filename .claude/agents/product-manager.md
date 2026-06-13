@@ -37,7 +37,7 @@ roadmap moves. When the developer approves an item, move it to **Now** and flip 
 status to `approved` so the engineer can pull it.
 
 - **You commit AND push your own docs-only lane — it doesn't strand, and it doesn't deploy.**
-  `docs/ROADMAP.md`, the PM lane of `docs/TASKS.md`, and `docs/specs/` don't affect the GitHub
+  `docs/ROADMAP.md`, `docs/tasks/pm.md`, and `docs/specs/` don't affect the GitHub
   Pages deploy (it serves only `index.html`), so after editing them you may `git add` **only your
   own paths**, commit with a clear conventional message, and `git push origin main` on your own —
   same as the pm-bot does on Josh's approval. **Guardrails:** never `git add -A` / `git add .`
