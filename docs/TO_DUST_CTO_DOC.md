@@ -37,22 +37,26 @@ TILE_SPIKE=10, TILE_HUT=11
 `gTreeSlow`: returns 0.75 inside tree tiles.
 
 ### Section Index (§)
-- §1 Sprites & SpriteRegistry
-- §2 Entity factories
+
+*(Matches the live `// §` banners in `index.html` — re-synced 2026-06-13; the old index here had
+drifted to a pre-rewrite numbering. The per-section symbol map — every function + UPPER-const knob —
+is the **generated [`CODE_MAP.md`](CODE_MAP.md)**, rebuilt with `python tools/gen-code-map.py`.)*
+
+- §1 Config & Storage
+- §2 Demo map & constants (tile ids)
 - §3 Hub & Navigation
 - §4 Map Editor
-- §5 Collision & Pathfinding
-- §6 Sword & Whirlwind system
-- §6b Bow system
-- §7 Player update (gUpdatePlayer)
-- §8 Enemy AI (EnemyRegistry dispatch)
-- §9 Enemy damage / gCheckEnemyDamage
-- §10 Init & gameLoad
-- §11 Render pipeline
-- §12 Wilderness XP, levelling, Nightfall Sieges, card draft
-- §12b Obelisk system
+- §5 Registries (weapons, entities, sprites)
+- §6 Dungeon Engine — §6a Player · §6b Sword & Whirlwind · §6c Hazards & Pickups ·
+  §6d Training Dummy · §6e Enemy System · §6f Render · §6g Game Loop
+- §7 Multiplayer · §7b Character Creator (MP-cosmetic sprite editor)
+- §8 Sim / Playtest harness (`window.Sim`; lives near the END of the file)
+- §9 Map Seed system
+- §10 Init (also near the end of the file)
+- §11 Wilderness Mode
+- §12 Wilderness XP, levelling & threat scaling · §12b Obelisk system
 - §13 Fog of War
-- §14 Goblin Village system
+- §14 Goblin Village system · §14b Neutral Wolf Camps
 - §15 Shrine system
 
 ---

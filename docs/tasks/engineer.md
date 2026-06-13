@@ -43,7 +43,10 @@ Strategy/priority: [`../ROADMAP.md`](../ROADMAP.md). Sibling docs: [`pm.md`](pm.
   `docs/tasks/{pm,engineer,artist}.md`: per-lane open counts (◻️/🔄/⛔), top ◻️ titles (engineer default),
   and a pending-canary count.
 
-- ◻️ 🔧 **Infra-4 — Generated code map** — `tools/gen-code-map.py` parses `index.html` § banners + function/
+- ✅ 🔧 **Infra-4 — Generated code map** — **done ENG 2026-06-13.** `docs/CODE_MAP.md`: 26 sections, 569
+  functions, 312 UPPER-const knobs; idempotent + `--check` staleness mode. Duplicate `§8` fixed (char creator
+  → `§7b`, comment-only). Bonus find: the CTO doc's § index had **fully drifted** to a pre-rewrite numbering
+  (claimed §8 = Enemy AI; real §8 = Sim) — replaced with the live banner list + a CODE_MAP pointer. *(orig)* — `tools/gen-code-map.py` parses `index.html` § banners + function/
   UPPER_CASE-const declarations → `docs/CODE_MAP.md` (generated, do-not-edit); fix the duplicate `§8` banner
   (char creator vs sim harness — comment-only) and re-sync the `TO_DUST_CTO_DOC.md` § index.
 
