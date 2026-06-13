@@ -5784,22 +5784,24 @@ function gUpdateShield(dt){
 // ═══════════════════════════════════════════════════════════════
 
 // ── Enemy behaviour registry ─────────────────────────────────────
+// Keyed by an entity's `defId` (set by its make*Ent factory). gUpdateEnemies
+// dispatches POSITIVELY — each enemy runs the ONE ai its defId maps to (unknown
+// defId falls back to goblin). No exclusion list, so adding a type can't make it
+// double-run goblin AI the way the old "goblin = NOT any flag" matching could.
 // To add a new enemy:
 //   1. Write _aiNewEnemy(e, dt) below
-//   2. Add an entry to EnemyRegistry with its defId
-//   3. Add the type to gUpdateEnemies' goblin exclusion list —
-//      otherwise it runs ITS AI **and** goblin AI (double movement)
-//   4. Register stats in EntityDefs (hp is MANDATORY) + ENTITY_PAL
+//   2. Add an entry here keyed by the type's defId
+//   3. Register stats in EntityDefs (hp is MANDATORY) + ENTITY_PAL
 //   Use gHitPlayer for all damage to the player.
 const EnemyRegistry = {
-  goblin:  { ai: _aiGoblin,  flagProp: null        },
-  archer:  { ai: _aiArcher,  flagProp: 'isArcher'  },
-  warrior: { ai: _aiWarrior, flagProp: 'isWarrior' },
-  king:    { ai: _aiKing,    flagProp: 'isKing'    },
-  bomber:  { ai: _aiBomber,  flagProp: 'isBomber'  },
-  shaman:  { ai: _aiShaman,  flagProp: 'isShaman'  },
-  direwolf: { ai: _aiWolf,   flagProp: 'isDirewolf'  },
-  alphawolf:{ ai: _aiWolf,   flagProp: 'isAlphawolf' },
+  goblin:   { ai: _aiGoblin  },
+  archer:   { ai: _aiArcher  },
+  warrior:  { ai: _aiWarrior },
+  king:     { ai: _aiKing    },
+  bomber:   { ai: _aiBomber  },
+  shaman:   { ai: _aiShaman  },
+  direwolf: { ai: _aiWolf    },
+  alphawolf:{ ai: _aiWolf    },
 };
 
 // ── Goblin Grunt AI ──────────────────────────────────────────────
@@ -8177,25 +8179,22 @@ function gUpdateEnemies(dt=1){
     }
   }
 
-  // Run each registered enemy AI
-  // Patrol enemies use fixed velocity until activated; all others always chase
-  const _pcx = gPlayer ? gPlayer.wx : 0, _pcy = gPlayer ? gPlayer.wy : 0;
-  for(const [defId, reg] of Object.entries(EnemyRegistry)){
-    for(const e of gEnemies){
-      if(e.dead) continue;
-      // Patrol enemies: apply patrol velocity; activate when player is close
-      if(e.isPatrol && !e.activated){
-        if(eAnyPlayerNear(e.wx, e.wy, e.activationRange||320)){
-          e.activated = true; e.isPatrol = false;
-        } else {
-          e.wx += e.patrolVx * dt;
-          e.wy += e.patrolVy * dt;
-          continue;
-        }
+  // Run each enemy's AI exactly once — positive dispatch by defId (each enemy
+  // maps to its ONE EnemyRegistry entry; unknown/missing defId falls back to
+  // goblin, the old negative-match default). No exclusion-list bookkeeping.
+  for(const e of gEnemies){
+    if(e.dead) continue;
+    // Patrol enemies use fixed velocity until a player comes near, then they chase.
+    if(e.isPatrol && !e.activated){
+      if(eAnyPlayerNear(e.wx, e.wy, e.activationRange||320)){
+        e.activated = true; e.isPatrol = false;
+      } else {
+        e.wx += e.patrolVx * dt;
+        e.wy += e.patrolVy * dt;
+        continue;
       }
-      if(reg.flagProp ? !e[reg.flagProp] : (e.isArcher||e.isWarrior||e.isBomber||e.isKing||e.isShaman||e.isDirewolf||e.isAlphawolf)) continue;
-      reg.ai(e, dt);
     }
+    (EnemyRegistry[e.defId] || EnemyRegistry.goblin).ai(e, dt);
   }
 
   // Enemy-enemy separation using spatial grid (O(n) instead of O(n²))

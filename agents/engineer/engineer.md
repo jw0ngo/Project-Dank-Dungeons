@@ -201,7 +201,7 @@ Three mutually-exclusive states driven by two flags: `inTown` (The Sanctum hub),
 Adding content means registering it, not editing the loop:
 - **`SpriteRegistry`** — `register(id, canvas, scale)`; draw code calls `.get(id)`. Sprites are pixel arrays compiled via `bsc()`.
 - **`EntityDefs`** — per-enemy stats. **Every entry MUST have an `hp` field** — `makeGoblinEnt` copies `d.hp`, and `undefined <= 0` is `false` in JS, so a missing `hp` produces an unkillable enemy with an empty health bar.
-- **`EnemyRegistry`** — maps enemy type → `{ ai, flagProp }`. Goblin uses `flagProp: null` plus an explicit **exclusion list**. Any new enemy NOT added to that exclusion list runs *both* its own AI and goblin AI (double-movement bug). The in-file comment at `§5`/`§6e` lists the full "add a new enemy" recipe (def → registry → exclusion list → sprite → editor palette).
+- **`EnemyRegistry`** — maps `defId` → `{ ai }`; `gUpdateEnemies` dispatches **positively** (`(EnemyRegistry[e.defId] || EnemyRegistry.goblin).ai(e, dt)`), so each enemy runs exactly one AI and a new type cannot double-run goblin AI. *(The old `flagProp`/exclusion-list footgun was removed 2026-06-13 — if you read an older doc mentioning it, it's stale.)* The in-file recipe at `§6e` is: write `_aiNewEnemy` → add a registry entry keyed by `defId` → register `EntityDefs` (hp MANDATORY) + `ENTITY_PAL`. The `is<Type>` flags still exist for render/behavior, just not dispatch.
 
 `_wildScaleEnt` early-returns when `!inWilderness`, so its stat scaling applies only to wilderness enemies; dungeon enemies use raw `EntityDefs` values.
 

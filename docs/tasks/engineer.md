@@ -68,10 +68,17 @@ Strategy/priority: [`../ROADMAP.md`](../ROADMAP.md). Sibling docs: [`pm.md`](pm.
   session" + regen duty. Verified: verify-repo 0 errors · no duplicate `function` names · canary `--batch 3`
   clean (3 runs, 0 console/page errors). Behavior unchanged.
 
-- ◻️ 🔧 **Refactor #3 — per-frame system registry** (logged 2026-06-13) — `gSimUpdate` is 40+ hand-listed
-  `gUpdateX(dt)` calls guarded by ad-hoc gates; a registered ordered list (`{fn, gate}`) would make the
-  "new per-frame systems must go inside gSimUpdate" invariant structural. Same move: positive AI dispatch in
-  `EnemyRegistry` to delete the goblin exclusion-list double-AI bug class. Do before #2.
+- ✅ 🔧 **Refactor #3b — EnemyRegistry positive dispatch** — **done ENG 2026-06-13.** `gUpdateEnemies` now
+  dispatches AI via `(EnemyRegistry[e.defId] || EnemyRegistry.goblin).ai(e, dt)` over a single enemy pass —
+  deletes the goblin negative-exclusion-list double-AI footgun (a new type can no longer also run goblin AI).
+  Dropped dead `flagProp` + `_pcx/_pcy`; verified every factory sets a registry-key `defId` (8/8) and the
+  `isPatrol` branch is dead, so behavior is unchanged. New canary **`--check enemyai`** (each type's AI runs).
+  CTO doc §"Enemy System" + engineer memory de-staled.
+- ❌ 🔧 **Refactor #3a — gSimUpdate per-frame registry — DECLINED** (2026-06-13). On reading the hot path:
+  the explicit gated `gUpdateX(dt)` list is self-documenting, its gates are heterogeneous (present/alive/host/
+  client/town), and gSimUpdate is already THE single step fn — a `{gate,fn}` registry reads worse for marginal
+  gain on the riskiest path in the game. Survey-proposed, close-read-rejected; reopen only if the gate set
+  collapses to 1–2 kinds.
 
 - ✅ 🔧 **Refactor #2 stages 1+2 — fire-FX dispatch tables + shared hit pipeline** — **done ENG 2026-06-13**
   (Josh-approved). **Stage 1** (`d60a8f1`): `FIREFX_UPDATE` / `FIREFX_DRAW_UNDER` / `FIREFX_DRAW_OVER` /

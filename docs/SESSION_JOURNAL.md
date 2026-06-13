@@ -55,6 +55,22 @@ Each entry captures: what was built, what broke badly, and what the root cause t
   canary `--expr` (spawn all families, let real frames render — `runFast` skips gRender, so the firefx
   check alone never executes draw code). Pending: Josh's visual pass.
 
+- **Refactor #3b — EnemyRegistry positive dispatch (kills the double-AI footgun).** `gUpdateEnemies` dispatched
+  AI by iterating all 8 registry entries × all enemies and skipping non-matches; goblin used a **negative
+  exclusion list** (`!(isArcher||isWarrior||…)`), so any new type missing from that `||` chain would run BOTH
+  its own AI and goblin AI. Replaced with positive dispatch: `(EnemyRegistry[e.defId] || EnemyRegistry.goblin)
+  .ai(e, dt)` over a single enemy pass — each enemy runs exactly one AI, fallback preserves the old default,
+  no exclusion-list bookkeeping. Dropped the now-dead `flagProp` field + unused `_pcx/_pcy`. Verified safe:
+  every factory sets `defId` to a registry key (8/8), and the `isPatrol` branch is dead code (`isPatrol`/
+  `patrolVx` never assigned), so the loop restructure changes no live behavior. New permanent canary
+  **`--check enemyai`** plants one of each type and asserts each one's AI runs (it moves). CTO doc + engineer
+  memory de-staled (both described the removed `{ai, flagProp}` footgun).
+- **Refactor #3a (gSimUpdate per-frame registry) — DECLINED after reading the hot path.** The explicit
+  `if(gPlayer…)gUpdateX(dt)` list is self-documenting and its gates are heterogeneous (present / alive /
+  host+alive / client+alive / town+dummy); a `{gate, fn}` registry would need predicate-functions or
+  special-casing that reads *worse*, and the "structural invariant" payoff is marginal (gSimUpdate is already
+  THE single step fn — the loop()-vs-step problem #3a was meant to harden is already solved). High-risk hot
+  path, low reward → not worth it. The survey proposed it; close reading changed the call.
 - **Design-state log sync (Josh):** the imbued-actives removal (a while back) is now reflected in the logs —
   **god skills are ALL auto-cast mana skills; the warrior kit is never imbued; the imbued-kit code is shelved**
   (kept, canary-covered, unreachable). §2 array decls + the §6i banner now carry an explicit LIVE/SHELVED

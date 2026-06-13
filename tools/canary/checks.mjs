@@ -86,4 +86,34 @@ export const CHECKS = {
       return { dmg, left };
     }),
   },
+
+  // Every enemy type's AI dispatches under gUpdateEnemies' positive defId dispatch:
+  // plant one of each type point-blank, step ~2 game-seconds, assert each one's AI
+  // actually ran (it moved). A dispatch regression (type routed to no AI, or the old
+  // double-AI footgun returning) shows as a stuck enemy or a console error.
+  enemyai: {
+    desc: 'all 8 enemy types dispatch their AI (each moves) under positive defId dispatch',
+    run: (page) => page.evaluate(async () => {
+      Sim.startRun();
+      await Sim.runFast({ maxSteps: 30 });
+      const p = gPlayer, tx = Math.floor(p.wx / T), ty = Math.floor(p.wy / T);
+      const make = {
+        goblin: (x, y) => makeGoblinEnt(x, y), archer: (x, y) => makeArcherEnt(x, y),
+        king: (x, y) => makeKingEnt(x, y), bomber: (x, y) => makeBomberEnt(x, y),
+        warrior: (x, y) => makeWarriorEnt(x, y), shaman: (x, y) => makeShamanEnt(x, y),
+        direwolf: (x, y) => makeWolfEnt(x, y, 'direwolf'), alphawolf: (x, y) => makeWolfEnt(x, y, 'alphawolf'),
+      };
+      const ents = Object.keys(make).map((t, i) => {
+        const e = make[t](tx + 3 + i, ty);
+        e.wx = p.wx + 120 + i * 10; e.wy = p.wy;
+        gEnemies.push(e);
+        return { t, e, x0: e.wx, y0: e.wy };
+      });
+      await Sim.runFast({ maxSteps: 120 });
+      const stuck = ents.filter(o => !o.e.dead && Math.hypot(o.e.wx - o.x0, o.e.wy - o.y0) < 0.5).map(o => o.t);
+      const moved = ents.map(o => ({ type: o.t, defId: o.e.defId, moved: +Math.hypot(o.e.wx - o.x0, o.e.wy - o.y0).toFixed(1) }));
+      if (stuck.length) return { __failed: true, why: `enemy AI did not run for: ${stuck.join(',')}`, moved };
+      return { moved };
+    }),
+  },
 };

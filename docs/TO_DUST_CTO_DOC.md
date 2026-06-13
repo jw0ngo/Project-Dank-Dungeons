@@ -63,23 +63,29 @@ is the **generated [`CODE_MAP.md`](CODE_MAP.md)**, rebuilt with `python tools/ge
 
 ## Enemy System
 
-### EnemyRegistry — CRITICAL
+### EnemyRegistry — positive dispatch by `defId`
 ```js
 const EnemyRegistry = {
-  goblin:  { ai: _aiGoblin,  flagProp: null        },
-  archer:  { ai: _aiArcher,  flagProp: 'isArcher'  },
-  warrior: { ai: _aiWarrior, flagProp: 'isWarrior' },
-  bomber:  { ai: _aiBomber,  flagProp: 'isBomber'  },
-  shaman:  { ai: _aiShaman,  flagProp: 'isShaman'  },
-  king:    { ai: _aiKing,    flagProp: 'isKing'     },
+  goblin:   { ai: _aiGoblin  },
+  archer:   { ai: _aiArcher  },
+  warrior:  { ai: _aiWarrior },
+  king:     { ai: _aiKing    },
+  bomber:   { ai: _aiBomber  },
+  shaman:   { ai: _aiShaman  },
+  direwolf: { ai: _aiWolf    },
+  alphawolf:{ ai: _aiWolf    },
 };
 ```
 
-**The goblin exclusion list** — any enemy type missing from this list runs BOTH goblin AI and its own AI:
+Keyed by an entity's `defId` (set by its `make*Ent` factory). `gUpdateEnemies` dispatches **positively** — each
+enemy runs the ONE AI its `defId` maps to; an unknown/missing `defId` falls back to goblin:
 ```js
-if(reg.flagProp ? !e[reg.flagProp] : (e.isArcher||e.isWarrior||e.isBomber||e.isKing||e.isShaman)) continue;
+(EnemyRegistry[e.defId] || EnemyRegistry.goblin).ai(e, dt);
 ```
-**When adding a new enemy: add it here.**
+**When adding a new enemy: add an entry keyed by its `defId` + register stats in `EntityDefs` (hp MANDATORY).**
+No exclusion list — a new type cannot double-run goblin AI (the old `{ai, flagProp}` negative-match footgun is
+gone, eliminated 2026-06-13). The `is<Type>` boolean flags (`isKing`/`isArcher`/…) still exist but are now only
+read by render/behavior code, not dispatch.
 
 ### EntityDefs — all must have `hp` field
 | Enemy | HP | Speed | Threat |
