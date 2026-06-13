@@ -3369,16 +3369,8 @@ function gameLoad(mapData) {
   gTiles = tilesFromRows(mapData.rows, gMapW, gMapH);
   gEntsRaw = JSON.parse(JSON.stringify(mapData.entities || []));
   gDestructibles=[]; gEnemies=[]; gTorches=[]; gArrows=[]; gPlayerArrows=[]; gTraps=[]; gPotions=[]; gBombs=[]; gXPOrbs=[]; gFavorOrbs=[]; gObelisks=[]; gWildCamps=[]; gRocks=[]; gWildTrees=[];
-  gFireWaves=[];
-  gFireRings=[];
-  gFireBursts=[];
+  gResetFireFx();   // all §6i fire-FX arrays (waves/rings/bursts/crosses/trails/pillars/embers/jets/fields)
   gNetFx=[];   // host: clear the broadcast FX list (next sendFx writes null, clearing world/fx for the new run)
-  gFireCrosses=[];
-  gFireTrails=[]; gTrailHits=new WeakMap(); gTrailBombs=[];
-  gFirePillars=[];
-  gEmberShots=[];
-  gFireJets=[];
-  gFireFields=[];
   gWolfPackTokens={};
   gBombFireZones=[];
   exitReached=false; gPaused=false;
@@ -7759,6 +7751,31 @@ function gDrawFirePillars(){
   gctx.globalAlpha = 1;
 }
 
+// ── Fire-FX dispatch tables — the ONE place a family hooks the engine ──────
+// A fire-FX family = an array (declared with the g* state, reset in
+// gResetFireFx) + an update fn + a draw fn registered below. gSimUpdate /
+// gRender / gameLoad call only these dispatchers — registering here is the
+// WHOLE engine wiring; never add per-family calls back to those sites.
+// ORDER IS LOAD-BEARING: FIREFX_UPDATE preserves the old gSimUpdate call
+// order; the two draw lists preserve gRender's layers (UNDER = floor decals
+// beneath the z-sorted characters · OVER = effects above entities) and their
+// in-layer order. gUpdateTrailBombs / gDrawPyroTelegraph live in §6b but
+// belong to the trails/pillars families, so they dispatch from here too.
+const FIREFX_UPDATE = [gUpdateFireWaves, gUpdateFireRings, gUpdateFireBursts,
+  gUpdateFireCrosses, gUpdateFireTrails, gUpdateTrailBombs, gUpdateEmberShots,
+  gUpdateFireJets, gUpdateFireFields, gUpdateFirePillars];
+const FIREFX_DRAW_UNDER = [gDrawFireTrails, gDrawFireCrosses, gDrawBurningBodyAura];
+const FIREFX_DRAW_OVER  = [gDrawFireFields, gDrawFireRings, gDrawFireBursts,
+  gDrawFireWaves, gDrawEmberShots, gDrawFireJets, gDrawPyroTelegraph, gDrawFirePillars];
+function gUpdateFireFx(dt){ for(const f of FIREFX_UPDATE) f(dt); }
+function gDrawFireFxUnder(){ for(const f of FIREFX_DRAW_UNDER) f(); }
+function gDrawFireFxOver(){ for(const f of FIREFX_DRAW_OVER) f(); }
+function gResetFireFx(){
+  gFireWaves=[]; gFireRings=[]; gFireBursts=[]; gFireCrosses=[];
+  gFireTrails=[]; gTrailHits=new WeakMap(); gTrailBombs=[];
+  gFirePillars=[]; gEmberShots=[]; gFireJets=[]; gFireFields=[];
+}
+
 // ═══════════════════════════════════════════════════════════════
 // §6e-ii  ENEMY SYSTEM (cont.)
 //      shaman buffs & draw · king/bomber AI · gUpdateEnemies ·
@@ -10062,9 +10079,7 @@ function gRender(){
     gctx.globalAlpha=1;
   }
   gDrawBombFireZones(); // fire zones under bombs and entities
-  gDrawFireTrails(); // imbued-dash flame trail (floor decal, under characters)
-  gDrawFireCrosses(); // imbued-leap burning crosses — floor decal, under characters
-  gDrawBurningBodyAura(); // Burning Body base ignite-aura — fr.png ring under the player (god skill, item 2)
+  gDrawFireFxUnder(); // §6i fire-FX floor decals (trails · crosses · Burning Body aura) — under characters
   gDrawBombs(); // impact circles drawn first (under everything)
   const drawables=[{y:gPlayer.dead?-999:gPlayer.wy,draw:gDrawPlayer,arg:gPlayer}];
   for(const e of gEnemies){ if(!e.dead && !gHiddenByFog(e.wx,e.wy)) drawables.push({y:e.wy,draw:e.isArcher?gDrawArcher:e.isWarrior?gDrawWarrior:e.isBomber?gDrawBomber:e.isKing?gDrawKing:e.isShaman?gDrawShaman:gDrawEnemy,arg:e}); }
@@ -10081,14 +10096,7 @@ function gRender(){
   gDrawArrows();
   drawables.sort((a,b)=>a.y-b.y);
   for(const d of drawables){ d.draw(d.arg); if(d.arg&&d.arg.threatTier&&!d.arg.dead) gDrawThreatGlow(d.arg); }
-  gDrawFireFields(); // Cinder Ring ascension — solid burning-ground discs (under the rings/entities)
-  gDrawFireRings(); // expanding fire rings (imbued whirlwind + Cinder Ring Form)
-  gDrawFireBursts(); // fire-explosion sprite blooms (Conflagration detonation)
-  gDrawFireWaves(); // fire arcs + burning-enemy flames, over entities
-  gDrawEmberShots(); // Emberlance Form — travelling fireballs (item 2)
-  gDrawFireJets(); // Dragonfire ascension — horizontal fire-jet beams (item 2 Slice C)
-  gDrawPyroTelegraph(); // Pillars of Fire — pulsing aim indicator before the lane erupts
-  gDrawFirePillars(); // Cilia heavy fire pillars
+  gDrawFireFxOver(); // §6i fire-FX over entities (fields · rings · bursts · waves · embers · jets · pyro telegraph · pillars)
   if(inTown) townDrawHubPlayers();
   if(inTown) townDrawPortal();
   if(inTown){ portalCheckProximity(); portalDrawPrompt(); townDrawWildernessPortal(); }
@@ -10770,8 +10778,7 @@ function gSimUpdate(dt){
     if(gPlayer)gUpdateShamanBuffs(dt);
     if(gPlayer)gUpdateBurn(dt);
     if(gPlayer)gUpdateShield(dt);
-    if(gPlayer&&!gPlayer.dead){gUpdateFireWaves(dt);gUpdateFireRings(dt);gUpdateFireBursts(dt);gUpdateFireCrosses(dt);gUpdateFireTrails(dt);gUpdateTrailBombs(dt);gUpdateEmberShots(dt);gUpdateFireJets(dt);gUpdateFireFields(dt);}
-    if(gPlayer&&!gPlayer.dead)gUpdateFirePillars(dt);
+    if(gPlayer&&!gPlayer.dead)gUpdateFireFx(dt); // all §6i fire-FX families, in FIREFX_UPDATE order
     if(gPlayer&&!gPlayer.dead)gUpdateEnemyBurn(dt);
     if(gPlayer)gFogReveal(); // wilderness fog of war — throttled inside
     if(gPlayer&&!gPlayer.dead)mpCheckEnemyAttacks();
