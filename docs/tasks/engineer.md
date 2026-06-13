@@ -10,7 +10,10 @@ Strategy/priority: [`../ROADMAP.md`](../ROADMAP.md). Sibling docs: [`pm.md`](pm.
 *Five tooling/docs items, each its own commit; only the `gInitArt` warn + a §-banner renumber touch
 `index.html` (committed locally, push gated). Build order: gate → lint → canary → brief → code map.*
 
-- ◻️ 🔧 **Infra-2 — Git pre-push deploy gate** — committed `tools/githooks/pre-push` refuses any push whose
+- ✅ 🔧 **Infra-2 — Git pre-push deploy gate** — **done ENG 2026-06-13.** Tested 4 ways (docs-only allow ·
+  build-range refuse with the offending commits listed · `DEPLOY_OK=1` allow · `.git/DEPLOY_AUTH` consume);
+  active in this clone (`core.hooksPath=tools/githooks`); CLAUDE.md git section documents the auth handshake.
+  *(orig)* — committed `tools/githooks/pre-push` refuses any push whose
   `origin/main..HEAD` delta touches `index.html`/`assets/` unless explicitly authorized (`DEPLOY_OK=1` env or
   one-shot `.git/DEPLOY_AUTH` file); `tools/install-githooks.ps1` sets `core.hooksPath`; session-brief nudges
   if unset. Mirrors pm-bot's `_safe_push_main` whole-delta detection.

@@ -122,6 +122,15 @@ try {
     [void]$sb.AppendLine('')
   }
 
+  # Deploy-gate hook active in this clone? (tools/install-githooks.ps1 sets core.hooksPath)
+  $hooksPath = ''
+  try { $hooksPath = (git -C $root config core.hooksPath) } catch {}
+  if ($hooksPath -ne 'tools/githooks') {
+    [void]$sb.AppendLine('SETUP: the git deploy gate is NOT active in this clone - run tools/install-githooks.ps1')
+    [void]$sb.AppendLine('(sets core.hooksPath=tools/githooks; holds deploy-affecting pushes for Josh''s auth).')
+    [void]$sb.AppendLine('')
+  }
+
   [void]$sb.AppendLine('INSTRUCTION: before anything else, open this session with a super-brief (<=5 line)')
   [void]$sb.AppendLine('executive summary of the latest updates and learnings above, then await direction.')
 

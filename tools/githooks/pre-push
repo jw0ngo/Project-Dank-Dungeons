@@ -1,0 +1,58 @@
+#!/bin/sh
+# From Dust deploy gate - pre-push hook (active once core.hooksPath=tools/githooks;
+# run tools/install-githooks.ps1 once per clone).
+#
+# Pushing main redeploys the game via GitHub Pages, and git pushes the WHOLE ancestor
+# chain - so this inspects every OUTGOING commit (not just the tip) and refuses the
+# push when any of them touches index.html or assets/, unless explicitly authorized.
+# Mirrors tools/pm-bot/pm_bot.py _safe_push_main's whole-delta detection.
+#
+# Authorize ONE push (Josh's call):
+#   DEPLOY_OK=1 git push ...            # env var, this command only
+#   touch .git/DEPLOY_AUTH; git push    # file token, consumed by this hook
+
+remote="$1"
+zero=0000000000000000000000000000000000000000
+gitdir=$(git rev-parse --git-dir)
+
+blocked=""
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ "$local_sha" = "$zero" ] && continue            # ref deletion - nothing deploys
+  if [ "$remote_sha" = "$zero" ]; then
+    range="$local_sha"                              # new remote ref: all commits outgoing
+  else
+    range="$remote_sha..$local_sha"
+  fi
+  hits=$(git log --oneline "$range" -- index.html assets/ 2>/dev/null)
+  if [ -n "$hits" ]; then
+    blocked="$blocked  $remote_ref:
+$(printf '%s\n' "$hits" | sed 's/^/    /')
+"
+  fi
+done
+
+[ -z "$blocked" ] && exit 0
+
+if [ "$DEPLOY_OK" = "1" ]; then
+  echo "[deploy gate] DEPLOY_OK=1 - deploy-affecting push authorized." >&2
+  exit 0
+fi
+if [ -f "$gitdir/DEPLOY_AUTH" ]; then
+  rm -f "$gitdir/DEPLOY_AUTH"
+  echo "[deploy gate] .git/DEPLOY_AUTH consumed - deploy-affecting push authorized." >&2
+  exit 0
+fi
+
+cat >&2 <<EOF
+[deploy gate] PUSH REFUSED - the outgoing range contains deploy-affecting commits
+(index.html / assets/ redeploy the live game via GitHub Pages on push):
+
+$blocked
+Pushing would deploy ALL of these, regardless of who authored the top commit.
+With Josh's explicit authorization, re-run as:
+
+  DEPLOY_OK=1 git push ...          # or:  touch .git/DEPLOY_AUTH   (one push)
+
+Studio rule: CLAUDE.md -> "Git: commit freely; pushing deploys, so it's gated".
+EOF
+exit 1

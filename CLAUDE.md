@@ -61,7 +61,10 @@ committing another lane's files. Pushing is split by deploy impact:
 
 - **Deploy-affecting pushes require Josh's explicit authorization, every time** — anything touching
   `index.html` or `assets/` (the **Engineer** and **Artist** lanes, and releases via `release.ps1`).
-  Commit locally; leave the push/deploy decision to him.
+  Commit locally; leave the push/deploy decision to him. **Enforced in git** by the committed pre-push
+  hook (`tools/githooks/pre-push`; activate per clone via `tools/install-githooks.ps1`) — it inspects the
+  whole outgoing delta and holds the push; Josh authorizes with `DEPLOY_OK=1 git push` or a one-shot
+  `touch .git/DEPLOY_AUTH`.
 - **Docs-only pushes are pre-authorized for the PM lane.** `docs/ROADMAP.md`, `docs/tasks/pm.md`,
   and `docs/specs/` don't affect the deploy (Pages serves only `index.html`), so the
   PM may commit **and push** them on its own — same as the **pm-bot** already does on Josh's Telegram
