@@ -18,6 +18,18 @@ dated, titled lesson: **the principle → why → how to apply.** Quality over v
 
 ---
 
+### 2026-06-13 — Every hand-maintained mirror of repo structure was drifted the moment a checker existed; encode invariants as tools, not discipline
+- **Principle:** In a docs-as-memory studio, any prose mirror of a machine-checkable fact rots silently —
+  and a new checker's FIRST RUN is the cheapest audit you'll ever get. The day the infra batch landed:
+  `verify-repo.py` found 10 broken md links (one from that morning's reorg), the CTO doc's § index described
+  a **pre-rewrite numbering** (claimed §8 = Enemy AI; real §8 = Sim), a task claimed an uncommitted master
+  "committed", and the canary's first `--batch 3` surfaced a balance regression (the bot now dies night 1).
+- **How to apply:** when a rule lives in CLAUDE.md as *discipline* (push gating, link correctness, "canary
+  owed"), ask what ~50-line tool/hook makes it an *invariant* (pre-push gate, lint, headless runner) — then
+  run it immediately and treat the findings as a free audit. Any structural index should be **generated**
+  (`gen-code-map.py`), never hand-maintained. Sibling: the 06-11 doc-system lesson (fragment on the load
+  boundary); this is its enforcement half.
+
 ### 2026-06-12 — A proven function can still break at a NEW lifecycle phase; mirror the working call-site's timing
 - **Principle:** `goWilderness()` worked everywhere it was called (town→portal, etc.) but **black-screened** when I
   called it at **module-eval boot** to drop the deployed build straight into a run. The function carried implicit
