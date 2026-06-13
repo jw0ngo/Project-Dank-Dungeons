@@ -6,6 +6,38 @@ Strategy/priority: [`../ROADMAP.md`](../ROADMAP.md). Sibling docs: [`pm.md`](pm.
 
 ---
 
+### AI-native infrastructure batch (↳ Josh-approved 2026-06-13 · plan: agents verify their own work)
+*Five tooling/docs items, each its own commit; only the `gInitArt` warn + a §-banner renumber touch
+`index.html` (committed locally, push gated). Build order: gate → lint → canary → brief → code map.*
+
+- ◻️ 🔧 **Infra-2 — Git pre-push deploy gate** — committed `tools/githooks/pre-push` refuses any push whose
+  `origin/main..HEAD` delta touches `index.html`/`assets/` unless explicitly authorized (`DEPLOY_OK=1` env or
+  one-shot `.git/DEPLOY_AUTH` file); `tools/install-githooks.ps1` sets `core.hooksPath`; session-brief nudges
+  if unset. Mirrors pm-bot's `_safe_push_main` whole-delta detection.
+
+- ◻️ 🔧 **Infra-3 — Canonical repo lint `tools/verify-repo.py`** — (1) every `ART_MANIFEST` path + direct
+  `.src` const resolves case-sensitively vs `git ls-tree -r HEAD` (+ orphan-asset report, warning-level);
+  (2) extracted `<script>` → `node --check`; (3) relative md-link lint across docs/ agents/ studio/ root.
+  Plus a one-line `console.warn` in `gInitArt`'s `onerror` so missing art is loud in dev (deploy-affecting,
+  push-gated). Manual run, documented in the engineer verification loop.
+
+- ◻️ 🔧 **Infra-1 — Headless canary runner `tools/canary/`** — Playwright CLI driving the §8 Sim harness:
+  `node tools/canary/run.mjs [--batch N] [--expr "Sim.…"]` boots `python dev.py`, waits for `window.Sim`,
+  runs batch/expr, captures console errors, exits non-zero on failure. Closes the recurring "⚠ in-browser
+  canary pending" class. Presets in `checks.mjs`; documented in `agents/engineer/engineer.md`.
+
+- ◻️ 🔧 **Infra-5 — Session-brief surfaces the task docs** — extend `tools/session-brief.ps1` to parse
+  `docs/tasks/{pm,engineer,artist}.md`: per-lane open counts (◻️/🔄/⛔), top ◻️ titles (engineer default),
+  and a pending-canary count.
+
+- ◻️ 🔧 **Infra-4 — Generated code map** — `tools/gen-code-map.py` parses `index.html` § banners + function/
+  UPPER_CASE-const declarations → `docs/CODE_MAP.md` (generated, do-not-edit); fix the duplicate `§8` banner
+  (char creator vs sim harness — comment-only) and re-sync the `TO_DUST_CTO_DOC.md` § index.
+
+- ◻️ 🟡 **Per-role branch/worktree lane isolation — NOT NOW (logged 2026-06-13)** — would delete the
+  "never `git add -A`" discipline class, but adds merge overhead for a solo-CD studio; the real incident risk
+  is covered by Infra-2 + pm-bot's `_safe_push_main`. Revisit only if a cross-lane sweep bites again.
+
 - ◻️ 🎨 **Skin the Obelisk POI with its sprite** (↳ from ART, 2026-06-12) — the §12b Obelisk system (`gObelisks`, `_drawObeliskStone` `:16096`) draws a tiny ~42px procedural stone marker; replace it with the new art (same pattern as chest/barrel — skin the existing entity, keep the procedural fallback). Cutout committed: **`assets/world/obelisk.png`** (247×512, ~210 KB — transparent, feet-anchored, base at the cutout bottom; dark rune-stone with purple glowing runes + base crystals). Manifest (auto-loads via `gInitArt`):
   ```
   'world.obelisk':'assets/world/obelisk.png',
