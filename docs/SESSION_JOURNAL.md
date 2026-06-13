@@ -21,6 +21,31 @@ Each entry captures: what was built, what broke badly, and what the root cause t
 
 ---
 
+## 2026-06-13 — index.html refactor survey + §-banner re-home + client-arrow extraction  [eng] · s20
+
+### Built / Done
+- **Refactor survey of `index.html`** (~17.9k lines, 575 functions, ~471 top-level globals) → 5 prioritized
+  angles, logged as tasks. Josh approved #1 (banner re-home) + #4 (gSimUpdate extraction) for this session;
+  #3 (per-frame system registry) and #2 (fire-FX unification) logged as ◻️ in `tasks/engineer.md`.
+- **§-banner re-home (zero code moves):** "§6d TRAINING DUMMY" had silently grown to 3,012 lines / 92
+  functions / 143 knobs. Now: §6d "& SANCTUM PROPS" (just the dummy + forges) · new **§6h** PLAYER DAMAGE &
+  GRIT · **§6e** at the real AI start · new **§6i** FIRE FX · **§6e-ii** ENEMY SYSTEM (cont.) · §6c/§6f moved
+  to their true starts. §6e's add-a-new-enemy recipe now names the goblin **exclusion-list** step and
+  mandatory `EntityDefs.hp` (both were documented only in engineer.md gotchas before).
+- **Extracted `gClientEnemyArrowTick`/`gClientPlayerArrowTick` (§6.3c)** from the ~70 lines inlined in
+  `gSimUpdate` — placed beside their authoritative host-side siblings; bodies verbatim (`gLastDt`→`dt`,
+  identical at that point). Behavior unchanged; canary `--batch 3` clean.
+- **CODE_MAP discipline encoded as a tool** (Josh's ask): `verify-repo.py` check #4 fails when
+  `docs/CODE_MAP.md` is stale vs the banners (`gen-code-map.py --check`); engineer.md now lists CODE_MAP as a
+  read-every-session ref + regen duty.
+
+### Lessons
+- **The generated map found the drift the banners hid.** The §6d mislabel was invisible while navigating by
+  banner; one glance at CODE_MAP's per-section function counts exposed it. Generated mirrors don't just stay
+  honest — they make dishonesty *visible*.
+- Pre-existing, harmless: two nested `function draw(){}` locals (`_imbueAnimateBg`/`_shrineAnimateBg`) show up
+  in CODE_MAP §10 — scoped, not the duplicate-declaration footgun.
+
 ## 2026-06-12 — Mana economy (item 7) — all three phases  [eng] · s19
 
 ### Built / Done

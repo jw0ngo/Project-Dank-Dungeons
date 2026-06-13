@@ -11,6 +11,9 @@ One idempotent command that turns three recurring hard-won lesson classes into c
   2. JS       every inline <script> body in index.html passes `node --check`.
   3. MD LINKS every relative markdown link target under root/docs/agents/studio resolves to a
               real file or directory.
+  4. CODE MAP docs/CODE_MAP.md matches index.html's current § banners
+              (`gen-code-map.py --check`) — the map is generated, never hand-edited; a stale
+              map silently misroutes every agent that greps it.
 
 Exit 0 = clean (warnings allowed) · exit 1 = any error. Run it before any handoff / session end:
 
@@ -99,6 +102,14 @@ for md in md_files:
             errors.append(f"md: {md.relative_to(ROOT)} -> broken link '{target}'")
 if not QUIET:
     print(f"   {checked} relative links checked across {len(md_files)} markdown files")
+
+# ---------------------------------------------------------------- 4. code map
+section('code map: docs/CODE_MAP.md vs index.html banners')
+r = run([sys.executable, 'tools/gen-code-map.py', '--check'])
+if r.returncode != 0:
+    errors.append("code map: docs/CODE_MAP.md is STALE — run `python tools/gen-code-map.py` and commit it")
+if not QUIET:
+    print(f"   {r.stdout.strip()}")
 
 # ---------------------------------------------------------------- report
 print()

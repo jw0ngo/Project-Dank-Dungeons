@@ -6,6 +6,7 @@ switch: /cto
 memory: agents/engineer/memory.md
 memory_compact_at: 250
 shared_refs:
+  - docs/CODE_MAP.md             # generated § section map of index.html — READ EVERY SESSION; regen: python tools/gen-code-map.py
   - docs/TO_DUST_CTO_DOC.md      # system-by-system architecture — grep its § banner, never read whole
   - docs/ROADMAP.md              # the build queue — read the *Now* block (status: approved)
   - docs/SESSION_JOURNAL.md      # recent sessions + Debugging Heuristics table — skim before debugging
@@ -115,7 +116,9 @@ There is no test suite and no lint config. The verification loop is:
 2. Run **`python tools/verify-repo.py`** — the canonical repo lint: every inline `<script>` through
    `node --check`, every referenced `assets/` path resolved **case-sensitively against the git index**
    (disk is case-insensitive and lies; missing art falls back silently — now also `console.warn`ed in dev),
-   plus a relative md-link check. Exit 0 before any handoff or session end.
+   a relative md-link check, and a **`docs/CODE_MAP.md` freshness check** (fails if the map is stale vs
+   the `§` banners — fix with `python tools/gen-code-map.py` and commit the map). Exit 0 before any
+   handoff or session end.
 3. Run a **targeted** check (grep or a small node snippet) proving the change is present and correct — syntax-clean alone is not sufficient.
 4. For behavior **without a human browser**, run the headless canary — `node tools/canary/run.mjs`
    (`--batch 3` for bot runs, `--check boot|batch|draft` for presets, `--expr "Sim.…"` for anything else;
@@ -177,11 +180,16 @@ The project root is a git repository (GitHub remote `jw0ngo/Project-Dank-Dungeon
 
 ### Code layout (`index.html`)
 
-One `<script>` divided by `§` section banners. Grep for the banner to jump:
+One `<script>` divided by `§` section banners. **The authoritative, always-current map is the
+generated `docs/CODE_MAP.md`** (every section with its line range, functions, and knobs) — **read it
+at the start of every session** so navigation context is loaded, and regenerate it
+(`python tools/gen-code-map.py`) whenever you add/move a banner or a notable system —
+`verify-repo.py` fails while it's stale. Banner overview (§ numbers are stable names, not file
+positions — see the map for real order/ranges):
 
 - `§1 CONFIG & STORAGE` · `§2 DEMO MAP & CONSTANTS` · `§3 HUB & NAVIGATION` · `§4 MAP EDITOR`
 - `§5 REGISTRIES` — SpriteRegistry, WeaponRegistry, EntityDefs, pathfinding
-- `§6 DUNGEON ENGINE` — `§6a` player · `§6b` sword/whirlwind/dash/leap/heavy · `§6c` hazards/pickups · `§6d` training dummy · `§6e` enemy system · `§6f` render · `§6g` game loop
+- `§6 DUNGEON ENGINE` — `§6a` player · `§6b` sword/whirlwind/dash/leap/heavy · `§6c` hazards/pickups · `§6d` training dummy & Sanctum props · `§6h` player damage & Grit · `§6e`/`§6e-ii` enemy system · `§6i` fire FX (Cilia god-skill arsenal) · `§6f` render · `§6g` game loop
 - `§7 MULTIPLAYER` — Firebase adapter, delta-compressed entity/arrow streams
 
 ### Game modes
@@ -268,6 +276,7 @@ Your crystallized memory lives in `agents/engineer/memory.md` — read it first 
 
 Read the **relevant section** of these when a task touches them — don't read them whole up front:
 
+- `docs/CODE_MAP.md` — **open every session** (generated section map of `index.html`: line ranges, functions, knobs per `§`). Regenerate after banner/system changes: `python tools/gen-code-map.py`.
 - `docs/TO_DUST_CTO_DOC.md` — open when touching a specific system; grep its `§` banner for the system, never read it whole.
 - `docs/ROADMAP.md` — open when picking up product work; read the *Now* block (PM's handoff, status `approved`). **Read-only — PM-owned.**
 - `docs/tasks/engineer.md` — open every session: **your task doc** (your live status, deferred findings, art-wiring hand-offs); the deferred-work backlog to pull from when *Now* is clear. Shared conventions in the hub `docs/TASKS.md`.

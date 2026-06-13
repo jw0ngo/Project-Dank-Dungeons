@@ -54,6 +54,30 @@ Strategy/priority: [`../ROADMAP.md`](../ROADMAP.md). Sibling docs: [`pm.md`](pm.
   "never `git add -A`" discipline class, but adds merge overhead for a solo-CD studio; the real incident risk
   is covered by Infra-2 + pm-bot's `_safe_push_main`. Revisit only if a cross-lane sweep bites again.
 
+### index.html organization (↳ Josh-approved 2026-06-13 · refactor survey)
+
+- ✅ 🔧 **Refactor #1+#4 — §-banner re-home + gSimUpdate client-arrow extraction** — **done ENG 2026-06-13.**
+  (1) The "§6d TRAINING DUMMY" banner covered **3,012 lines / 92 functions / 143 knobs** (damage pipeline, Grit,
+  all enemy AI, the whole fire-FX arsenal) — re-bannered honestly with **zero code moves**: §6d → "& SANCTUM
+  PROPS"; new **§6h** PLAYER DAMAGE & GRIT; **§6e** relocated to the real AI start (recipe now names the goblin
+  **exclusion-list** step + mandatory `EntityDefs.hp`); new **§6i** FIRE FX; **§6e-ii** ENEMY SYSTEM (cont.);
+  §6c/§6f banners moved to their true starts. (2) Extracted the ~70 inlined MP-client arrow lines from
+  `gSimUpdate` → `gClientEnemyArrowTick`/`gClientPlayerArrowTick` (§6.3c, beside their host-side siblings;
+  verbatim bodies, `gLastDt`→`dt` which is identical there). (3) **CODE_MAP upkeep tool-enforced:**
+  `verify-repo.py` check #4 now fails on a stale `docs/CODE_MAP.md`; engineer.md logs "read CODE_MAP every
+  session" + regen duty. Verified: verify-repo 0 errors · no duplicate `function` names · canary `--batch 3`
+  clean (3 runs, 0 console/page errors). Behavior unchanged.
+
+- ◻️ 🔧 **Refactor #3 — per-frame system registry** (logged 2026-06-13) — `gSimUpdate` is 40+ hand-listed
+  `gUpdateX(dt)` calls guarded by ad-hoc gates; a registered ordered list (`{fn, gate}`) would make the
+  "new per-frame systems must go inside gSimUpdate" invariant structural. Same move: positive AI dispatch in
+  `EnemyRegistry` to delete the goblin exclusion-list double-AI bug class. Do before #2.
+
+- ◻️ 🔧 **Refactor #2 — unify the nine fire-FX families (§6i)** (logged 2026-06-13) — waves/embers/fields/
+  jets/rings/bursts/crosses/trails/pillars are nine hand-rolled spawn/update/draw/remote families with separate
+  arrays + knob blocks (~143 knobs). One data-driven ground-FX entity system would collapse 1k+ lines and turn
+  each new god skill into a registration. Multi-session; canary `--batch` before/after each stage.
+
 - ◻️ 🎨 **Skin the Obelisk POI with its sprite** (↳ from ART, 2026-06-12) — the §12b Obelisk system (`gObelisks`, `_drawObeliskStone` `:16096`) draws a tiny ~42px procedural stone marker; replace it with the new art (same pattern as chest/barrel — skin the existing entity, keep the procedural fallback). Cutout committed: **`assets/world/obelisk.png`** (247×512, ~210 KB — transparent, feet-anchored, base at the cutout bottom; dark rune-stone with purple glowing runes + base crystals). Manifest (auto-loads via `gInitArt`):
   ```
   'world.obelisk':'assets/world/obelisk.png',

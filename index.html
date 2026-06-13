@@ -3279,6 +3279,83 @@ function gUpdatePlayerArrows(dt=1){
   }
 }
 
+// ── §6.3c  Client arrow passes (MP non-host) ─────────────────────
+// The host runs the authoritative gUpdateArrows/gUpdatePlayerArrows above.
+// Clients advance arrows locally for responsiveness: enemy arrows check hits
+// on the LOCAL player only; player arrows report hits to the host via
+// Net.sendHits (the host applies the damage). Called from gSimUpdate.
+
+function gClientEnemyArrowTick(dt){
+  for(let i=gArrows.length-1;i>=0;i--){
+    const a=gArrows[i];
+    if(!Number.isFinite(a.vx)||!Number.isFinite(a.vy)||
+       !Number.isFinite(a.wx)||!Number.isFinite(a.wy)||!Number.isFinite(a.angle)){
+      gArrows.splice(i,1); continue;
+    }
+    a.wx+=a.vx*dt; a.wy+=a.vy*dt; a.life-=dt;
+    if(a.life<=0){gArrows.splice(i,1); continue;}
+    if(gPlayer.iFrames<=0&&gWithin(a.wx-gPlayer.wx,a.wy-gPlayer.wy, gPlayer.r+4)){
+      gArrows.splice(i,1);
+      gDamagePlayer(EntityDefs.archer.arrowDamage, {iframes:12, shake:[3,5],
+        particle:{col:'#c06020',n:6,spd:3}, number:{col:'#ffaa44'},
+        sounds:[gPlayArrowHit,gPlayGrunt]});
+    }
+  }
+}
+
+function gClientPlayerArrowTick(dt){
+  for(let i=gPlayerArrows.length-1;i>=0;i--){
+    const a=gPlayerArrows[i];
+    if(!Number.isFinite(a.vx)||!Number.isFinite(a.vy)||
+       !Number.isFinite(a.wx)||!Number.isFinite(a.wy)||!Number.isFinite(a.angle)){
+      gPlayerArrows.splice(i,1); continue;
+    }
+    a.wx+=a.vx*dt; a.wy+=a.vy*dt; a.life-=dt;
+    if(a.life<=0){gPlayerArrows.splice(i,1); continue;}
+
+    // Wall check (client-side — remove arrow so it doesn't linger visually)
+    const ctx2=Math.floor(a.wx/T), cty2=Math.floor(a.wy/T);
+    if(!gIsWalk(ctx2,cty2)){gPlayerArrows.splice(i,1); continue;}
+
+    // Enemy hit
+    if(!a._hitEnemies) a._hitEnemies = new Set();
+    let hitEnemy=false;
+    for(const en of gEnemies){
+      if(en.dead||a._hitEnemies.has(en)) continue;
+      if(gWithin(a.wx-en.wx,a.wy-en.wy, en.r+5)){
+        const dmg = a.dmg || WeaponRegistry.bow.arrowDamage;
+        Net.sendHits([{idx: gEnemies.indexOf(en), dmg}]);
+        spawnGP(en.wx,en.wy,'#ff4422',5,2.5);
+        addGDmg(en.wx,en.wy-16,dmg,'#ffe066');
+        gPlayHit();
+        if(a.pierce>0 && Math.random()<a.pierce){
+          a._hitEnemies.add(en);
+        } else {
+          gPlayerArrows.splice(i,1); hitEnemy=true;
+        }
+        break;
+      }
+    }
+    if(hitEnemy) continue;
+
+    // Destructible hit
+    if(gPlayerArrows[i]===a){
+      for(const d of gDestructibles){
+        if(d.broken) continue;
+        if(gWithin(a.wx-d.wx,a.wy-d.wy, d.r+4)){
+          Net.sendHits([{destructIdx: gDestructibles.indexOf(d)}]);
+          d.broken=true; d.breakAnim=20;
+          gPlayWoodBreak(); spawnGP(d.wx,d.wy,'#c89050',10,3); gRebuildNav();
+          if(!(a.pierce>0 && Math.random()<a.pierce)){
+            gPlayerArrows.splice(i,1);
+          }
+          break;
+        }
+      }
+    }
+  }
+}
+
 
 function gameLoad(mapData) {
   gMapW=mapData.width; gMapH=mapData.height;
@@ -5036,15 +5113,12 @@ function gUpdatePlayer(dt=1){
   }
 }
 
-// Returns the nearest alive player to world position (ex,ey).
 // ═══════════════════════════════════════════════════════════════
-// §6e  ENEMY SYSTEM
-//      gHitPlayer · gUpdateEnemies (all AI) · gCheckEnemyDamage
-//      Adding a new enemy: implement AI block in gUpdateEnemies,
-//      add hit detection in gCheckEnemyDamage, register in
-//      ENTITY_PAL and EntityDefs. Use gHitPlayer for all damage.
+// §6c  HAZARDS & PICKUPS
+//      targeting helpers · bombs · traps · potions
 // ═══════════════════════════════════════════════════════════════
 
+// Returns the nearest alive player to world position (ex,ey).
 function mpNearestTarget(ex, ey) {
   let best = gPlayer, bestD = gPlayer ? Math.hypot(ex-gPlayer.wx, ey-gPlayer.wy) : Infinity;
   if (MP.active) {
@@ -5062,10 +5136,6 @@ function mpNearestTarget(ex, ey) {
 // Stagger updates by enemy index to avoid all enemies recalculating the same frame.
 
 // ── Goblin Bombs — update, explode, damage ──────────────────────
-// ═══════════════════════════════════════════════════════════════
-// §6c  HAZARDS & PICKUPS
-//      bombs · traps · potions · enemy arrows
-// ═══════════════════════════════════════════════════════════════
 
 // ── Bomb explosion feedback — runs on ALL peers (host + clients) ─
 // Handles: particles, screenshake, local damage numbers + iframes.
@@ -5389,8 +5459,9 @@ function eAnyPlayerNear(ex, ey, range, ignoreNight) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// §6d  TRAINING DUMMY
-//      Sanctum-only hit target — recoils, shows damage numbers
+// §6d  TRAINING DUMMY & SANCTUM PROPS
+//      dummy (recoils, damage numbers, never dies) · weapon forge ·
+//      stat forge
 // ═══════════════════════════════════════════════════════════════
 
 // ── Training Dummy ────────────────────────────────────────────────
@@ -5615,6 +5686,11 @@ function checkDummyHit(wx, wy, r, dmg, col){
 }
 
 
+// ═══════════════════════════════════════════════════════════════
+// §6h  PLAYER DAMAGE & GRIT
+//      gDamagePlayer (canonical entry) · gHitPlayer · Grit shield
+// ═══════════════════════════════════════════════════════════════
+
 // ── Canonical player-damage entry point ─────────────────────────
 // ALL player damage flows through here: shield absorption, HP, i-frames,
 // and feedback (shake / particles / floating number / sounds). This is the
@@ -5705,11 +5781,21 @@ function gUpdateShield(dt){
   if(gPlayer.shieldTimer <= 0){ gPlayer.shieldTimer = 0; gPlayer.shield = 0; }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// §6e  ENEMY SYSTEM
+//      EnemyRegistry · per-type _ai* blocks · burn & death helpers
+//      (king/bomber AI, gUpdateEnemies and gCheckEnemyDamage sit in
+//       §6e-ii, after the §6i fire-FX block)
+// ═══════════════════════════════════════════════════════════════
+
 // ── Enemy behaviour registry ─────────────────────────────────────
 // To add a new enemy:
 //   1. Write _aiNewEnemy(e, dt) below
 //   2. Add an entry to EnemyRegistry with its defId
-//   3. The loop + hit detection handle the rest automatically
+//   3. Add the type to gUpdateEnemies' goblin exclusion list —
+//      otherwise it runs ITS AI **and** goblin AI (double movement)
+//   4. Register stats in EntityDefs (hp is MANDATORY) + ENTITY_PAL
+//   Use gHitPlayer for all damage to the player.
 const EnemyRegistry = {
   goblin:  { ai: _aiGoblin,  flagProp: null        },
   archer:  { ai: _aiArcher,  flagProp: 'isArcher'  },
@@ -6399,6 +6485,13 @@ function gDealEnemyDamage(e, dmg, opts){
     _villageCheckDamageAlert(e);
   }
 }
+
+// ═══════════════════════════════════════════════════════════════
+// §6i  FIRE FX — Cilia's god-skill arsenal
+//      nine spawn/update/draw families, each with its own knob
+//      block: waves · embers · fields · jets · rings · bursts ·
+//      crosses · trails · pillars (+ burning-body aura)
+// ═══════════════════════════════════════════════════════════════
 
 // Base wave at rank 0 — deliberately SMALL; the arc widens (waveStep.half) and the reach grows
 // (waveStep.rangeTiles) as Dance of Fire is leveled, so the wave visibly blossoms over a run.
@@ -7666,6 +7759,12 @@ function gDrawFirePillars(){
   gctx.globalAlpha = 1;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// §6e-ii  ENEMY SYSTEM (cont.)
+//      shaman buffs & draw · king/bomber AI · gUpdateEnemies ·
+//      gCheckEnemyDamage — continues §6e from above the fire block
+// ═══════════════════════════════════════════════════════════════
+
 // ── Update shaman buffs (tick down timer, expire) ─────────────────
 function gUpdateShamanBuffs(dt){
   for(const e of gEnemies){
@@ -8215,6 +8314,14 @@ function mpCheckEnemyAttacks(){
 }
 
 
+// ═══════════════════════════════════════════════════════════════
+// §6f  RENDER
+//      bobY · gDrawTile · drawSmearAt · drawAnyPlayer ·
+//      gDraw* enemies · gRender
+//      All rendering reads from game state but never writes it.
+//      Draw order: tiles → torches → drawables (z-sorted) → HUD
+// ═══════════════════════════════════════════════════════════════
+
 function bobY(wf,mv){if(!mv)return 0;return[0,-2,0,2][wf];}
 // Player walk bob: the same gentle up/down shape the goblins use (bobY), kept small. The player
 // rig draws at PLAYER_DRAW_SCALE (2×), so ±1 here reads ~±2px on screen — about a goblin's bounce.
@@ -8399,13 +8506,6 @@ function gDrawTile(sx,sy,sz,tid,tx,ty){
   if(tid===TILE_FLOOR){gctx.fillStyle=_TC_FLOOR[v];gctx.fillRect(sx,sy,sz,sz);return;}
   if(tid===TILE_EXIT){gctx.fillStyle='#0d0510';gctx.fillRect(sx,sy,sz,sz);const pulse=.3+.15*Math.sin(Date.now()*.003);gctx.fillStyle=`rgba(150,80,220,${pulse})`;gctx.fillRect(sx+4,sy+4,sz-8,sz-8);gctx.fillStyle=`rgba(210,130,255,${pulse*.5})`;gctx.fillRect(sx+8,sy+8,sz-16,sz-16);}
 }
-
-// ═══════════════════════════════════════════════════════════════
-// §6f  RENDER
-//      drawSmearAt · drawAnyPlayer · gDraw* enemies · gRender
-//      All rendering reads from game state but never writes it.
-//      Draw order: tiles → torches → drawables (z-sorted) → HUD
-// ═══════════════════════════════════════════════════════════════
 
 function gDrawTorches(){
   for(const t of gTorches){
@@ -10676,77 +10776,10 @@ function gSimUpdate(dt){
     if(gPlayer)gFogReveal(); // wilderness fog of war — throttled inside
     if(gPlayer&&!gPlayer.dead)mpCheckEnemyAttacks();
     mpInterpolateEnemies(); // smooth enemy positions on client between world syncs
-    // Client arrow passes — enemy and player arrows are completely separate
+    // Client arrow passes (§6.3c) — enemy and player arrows are completely separate
     if(MP.active&&!MP.isHost&&gPlayer&&!gPlayer.dead){
-
-      // ── Enemy arrows: advance + player hit check ──────────────
-      for(let i=gArrows.length-1;i>=0;i--){
-        const a=gArrows[i];
-        if(!Number.isFinite(a.vx)||!Number.isFinite(a.vy)||
-           !Number.isFinite(a.wx)||!Number.isFinite(a.wy)||!Number.isFinite(a.angle)){
-          gArrows.splice(i,1); continue;
-        }
-        a.wx+=a.vx*gLastDt; a.wy+=a.vy*gLastDt; a.life-=gLastDt;
-        if(a.life<=0){gArrows.splice(i,1); continue;}
-        if(gPlayer.iFrames<=0&&gWithin(a.wx-gPlayer.wx,a.wy-gPlayer.wy, gPlayer.r+4)){
-          gArrows.splice(i,1);
-          gDamagePlayer(EntityDefs.archer.arrowDamage, {iframes:12, shake:[3,5],
-            particle:{col:'#c06020',n:6,spd:3}, number:{col:'#ffaa44'},
-            sounds:[gPlayArrowHit,gPlayGrunt]});
-        }
-      }
-
-      // ── Player arrows: advance + enemy/destructible hit → sendHits ──
-      for(let i=gPlayerArrows.length-1;i>=0;i--){
-        const a=gPlayerArrows[i];
-        if(!Number.isFinite(a.vx)||!Number.isFinite(a.vy)||
-           !Number.isFinite(a.wx)||!Number.isFinite(a.wy)||!Number.isFinite(a.angle)){
-          gPlayerArrows.splice(i,1); continue;
-        }
-        a.wx+=a.vx*gLastDt; a.wy+=a.vy*gLastDt; a.life-=gLastDt;
-        if(a.life<=0){gPlayerArrows.splice(i,1); continue;}
-
-        // Wall check (client-side — remove arrow so it doesn't linger visually)
-        const ctx2=Math.floor(a.wx/T), cty2=Math.floor(a.wy/T);
-        if(!gIsWalk(ctx2,cty2)){gPlayerArrows.splice(i,1); continue;}
-
-        // Enemy hit
-        if(!a._hitEnemies) a._hitEnemies = new Set();
-        let hitEnemy=false;
-        for(const en of gEnemies){
-          if(en.dead||a._hitEnemies.has(en)) continue;
-          if(gWithin(a.wx-en.wx,a.wy-en.wy, en.r+5)){
-            const dmg = a.dmg || WeaponRegistry.bow.arrowDamage;
-            Net.sendHits([{idx: gEnemies.indexOf(en), dmg}]);
-            spawnGP(en.wx,en.wy,'#ff4422',5,2.5);
-            addGDmg(en.wx,en.wy-16,dmg,'#ffe066');
-            gPlayHit();
-            if(a.pierce>0 && Math.random()<a.pierce){
-              a._hitEnemies.add(en);
-            } else {
-              gPlayerArrows.splice(i,1); hitEnemy=true;
-            }
-            break;
-          }
-        }
-        if(hitEnemy) continue;
-
-        // Destructible hit
-        if(gPlayerArrows[i]===a){
-          for(const d of gDestructibles){
-            if(d.broken) continue;
-            if(gWithin(a.wx-d.wx,a.wy-d.wy, d.r+4)){
-              Net.sendHits([{destructIdx: gDestructibles.indexOf(d)}]);
-              d.broken=true; d.breakAnim=20;
-              gPlayWoodBreak(); spawnGP(d.wx,d.wy,'#c89050',10,3); gRebuildNav();
-              if(!(a.pierce>0 && Math.random()<a.pierce)){
-                gPlayerArrows.splice(i,1);
-              }
-              break;
-            }
-          }
-        }
-      }
+      gClientEnemyArrowTick(dt);
+      gClientPlayerArrowTick(dt);
     }
     for(const d of gDestructibles){if(d.breakAnim>0)d.breakAnim=Math.max(0,d.breakAnim-gLastDt);}
 }
